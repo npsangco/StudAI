@@ -10,9 +10,8 @@ function App() {
   return (
     <div className="min-h-screen">
       <Navigation />
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 min">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/quizzes" element={<Quizzes />} />
