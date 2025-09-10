@@ -12,7 +12,6 @@ export default function LandingNavigation() {
     <nav className="bg-yellow-300">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="relative flex h-16 items-center justify-between">
-          {/* Mobile menu button */}
           <div className="absolute inset-y-0 left-0 flex items-center sm:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -20,7 +19,6 @@ export default function LandingNavigation() {
             >
               <span className="absolute -inset-0.5" />
               <span className="sr-only">Open main menu</span>
-              {/* Menu icon */}
               <svg
                 className={`${isMenuOpen ? 'hidden' : 'block'} h-6 w-6`}
                 fill="none"
@@ -35,7 +33,6 @@ export default function LandingNavigation() {
                   d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
                 />
               </svg>
-              {/* X icon */}
               <svg
                 className={`${isMenuOpen ? 'block' : 'hidden'} h-6 w-6`}
                 fill="none"
@@ -53,7 +50,6 @@ export default function LandingNavigation() {
             </button>
           </div>
 
-          {/* Logo */}
           <div className="flex items-center">
             <div className="flex shrink-0 items-center ml-4 sm:ml-0">
               <button
@@ -65,7 +61,6 @@ export default function LandingNavigation() {
             </div>
           </div>
 
-          {/* Action buttons - visible on all screen sizes */}
           <div className="flex items-center space-x-4 ml-4">
             <button
               onClick={() => handleNavClick('/create')}
@@ -83,7 +78,6 @@ export default function LandingNavigation() {
         </div>
       </div>
 
-      {/* Mobile menu panel */}
       {isMenuOpen && (
         <div className="sm:hidden">
           <div className="space-y-1 px-2 pt-2 pb-3 bg-yellow-300 border-t border-black/10">
