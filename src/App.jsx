@@ -7,7 +7,6 @@ import Notes from "./pages/Notes";
 import Quizzes from "./pages/Quizzes";
 import Sessions from "./pages/Sessions";
 import Planner from "./pages/Planner";
-import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import 'primereact/resources/themes/lara-light-blue/theme.css';
@@ -38,9 +37,8 @@ function App() {
       <div className={requiresAuth ? "bg-gray-100" : ""}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/create" element={<CreatePage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
           
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/notes" element={<Notes />} />
