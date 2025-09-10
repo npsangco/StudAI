@@ -18,7 +18,7 @@ export default function LandingPage() {
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                     <button
-                        onClick={() => window.location.href = '/login'}
+                        onClick={() => window.location.href = '/signup'}
                         className="border-2 border-indigo-600 text-indigo-600 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-indigo-50 transition-colors"
                         >
                         Sign up for free

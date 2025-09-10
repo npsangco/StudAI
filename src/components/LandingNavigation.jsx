@@ -63,7 +63,7 @@ export default function LandingNavigation() {
 
           <div className="flex items-center space-x-4 ml-4">
             <button
-              onClick={() => handleNavClick('/create')}
+              onClick={() => handleNavClick('/signup')}
               className="text-black hover:text-gray-800 px-3 py-2 text-sm font-medium transition-colors"
             >
               + Create
@@ -82,7 +82,7 @@ export default function LandingNavigation() {
         <div className="sm:hidden">
           <div className="space-y-1 px-2 pt-2 pb-3 bg-yellow-300 border-t border-black/10">
             <button
-              onClick={() => handleNavClick('/create')}
+              onClick={() => handleNavClick('/signup')}
               className="text-black hover:bg-black/10 block rounded-md px-3 py-2 text-base font-medium w-full text-left"
             >
               + Create

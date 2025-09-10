@@ -214,7 +214,6 @@ app.post("/api/auth/signup", async (req, res) => {
 });
 
 // User Login Route
-// Make sure to install: npm install jsonwebtoken
 app.post("/api/auth/login", async (req, res) => {
     const { email, password } = req.body;
 
