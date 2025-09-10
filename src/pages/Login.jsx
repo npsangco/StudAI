@@ -25,6 +25,10 @@ function Login() {
     }
   };
 
+  const handleGoogleLogin = () =>{
+    window.location.href = "http://localhost:4000/auth/google/"
+  }
+
   return (
     <div className="min-h-screen flex">
       {/* Left Side - StudAI Branding */}
@@ -175,6 +179,7 @@ function Login() {
             {/* Google Button */}
             <button 
               type="button" 
+              onClick={handleGoogleLogin}
               className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition duration-200"
             >
               <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">

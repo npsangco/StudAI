@@ -1,6 +1,7 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import Navigation from "./components/Navigation";
 import LandingNavigation from "./components/LandingNavigation";
+import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Notes from "./pages/Notes";
 import Quizzes from "./pages/Quizzes";
@@ -29,10 +30,7 @@ function App() {
       <div className={requiresAuth ? "bg-gray-100" : ""}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
           <Route path="/create" element={<CreatePage />} />
-          
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/quizzes" element={<Quizzes />} />

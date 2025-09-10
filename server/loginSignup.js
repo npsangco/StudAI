@@ -6,8 +6,12 @@ const bcrypt = require("bcrypt");
 const session = require("express-session");
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const passport = require('passport'); //OAUTH
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
 const app = express();
+
+app.use(express.json());
 
 // CORS configuration - Add this BEFORE other middleware
 app.use(cors({
@@ -70,6 +74,77 @@ if (sessionStore) {
         })
     );
 }
+
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_ID,
+    clientSecret: process.env.GOOGLE_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL
+}, 
+async (accessToken, refreshToken, profile, done) => {
+    try {
+        const email = profile.emails && profile.emails[0].value;
+        if (!email) {
+            return done(new Error("No email found in Google profile"), null);
+        }
+
+        // 🔹 Check if user exists in Sequelize DB
+        let user = await User.findOne({ where: { email } });
+
+        if (!user) {
+            // 🔹 If not found, create new user
+
+            const dummyPass = Math.random().toString(36).slice(-8); //random string pass due to pass cannot be null
+
+            user = await User.create({
+                email,
+                username: profile.displayName || email, // fallback to email if no name
+                password: await bcrypt.hash(dummyPass, 10), // dummy random password
+                role: "Student", // default
+                status: "active" // default
+            });
+        }
+
+        return done(null, user); // pass Sequelize user
+    } catch (err) {
+        return done(err, null);
+    }
+}));
+
+passport.serializeUser((user, done) => {
+    done(null, user.user_id); // store only the primary key in session
+});
+
+passport.deserializeUser(async (id, done) => {
+    try {
+        const user = await User.findByPk(id);
+        done(null, user);
+    } catch (err) {
+        done(err, null);
+    }
+});
+
+
+
+// 🔹 Routes
+app.get("/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+app.get("/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "http://localhost:5173/" }),
+  (req, res) => {
+    res.redirect("http://localhost:5173/dashboard"); // frontend route
+  }
+);
+
+
+app.get("/api/user", (req, res) => {
+  if (req.user) res.json(req.user);
+  else res.status(401).json({ error: "Not logged in" });
+});
+
+app.listen(4000, () => console.log("Server running on http://localhost:4000"));
+
 
 // --- API Routes ---
 

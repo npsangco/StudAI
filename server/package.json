@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon loginSignup.js",
     "start": "node loginSignup.js",
-    "dev:all": "concurrently \"nodemon loginSignup.js\" \"cd .. && npm start\"",
+    "dev:all": "concurrently \"nodemon loginSignup.js\" \"cd .. && npm run dev\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -21,6 +21,8 @@
     "express-session": "^1.18.2",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.14.5",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "sequelize": "^6.37.7"
   },
   "devDependencies": {
