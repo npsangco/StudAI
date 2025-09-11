@@ -3,6 +3,7 @@ import { Dropdown } from "primereact/dropdown";
 import { NavLink, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE } from "./api";
+import { Eye, EyeOff } from "lucide-react";
 
 function Signup() {
     const [month, setMonth] = useState(null);
@@ -13,6 +14,9 @@ function Signup() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
     const navigate = useNavigate();
 
     const months = [
@@ -57,36 +61,22 @@ function Signup() {
     
         const birthday = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     
-        console.log("Birthday:", birthday);
-        console.log("Signup data:", { email, username, password, birthday });
-    
         try {
-            const response = await axios({
-                method: 'POST',
-                url: `${API_BASE}/api/auth/signup`,
-                data: {
-                    email, 
-                    username, 
-                    password, 
-                    birthday,
-                },
+            const response = await axios.post(`${API_BASE}/api/auth/signup`, {
+                email, 
+                username, 
+                password, 
+                birthday,
+            }, {
                 withCredentials: true,
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: { "Content-Type": "application/json" }
             });
             
-            console.log("Signup response:", response.data);
             alert("Registered successfully! You can now log in.");
-            
             resetForm();
-            
             navigate("/login");
             
         } catch (err) {
-            console.log("Signup Error:", err);
-            console.log("Error response:", err.response?.data);
-            
             const errorMessage = err.response?.data?.error || "Signup failed";
             alert(errorMessage);
         }
@@ -104,7 +94,6 @@ function Signup() {
                         today.
                     </h2>
                 </div>
-                
                 {/* Decorative Elements */}
                 <div className="absolute top-16 right-16">
                     <div className="w-8 h-8 bg-red-500 rounded-full opacity-80"></div>
@@ -115,8 +104,6 @@ function Signup() {
                 <div className="absolute bottom-1/3 left-16">
                     <div className="w-4 h-16 bg-red-500 rounded-full transform rotate-12"></div>
                 </div>
-                
-                {/* Paper/Study Elements */}
                 <div className="absolute bottom-16 right-16 transform rotate-12">
                     <div className="w-32 h-40 bg-white rounded-lg shadow-lg"></div>
                 </div>
@@ -195,14 +182,27 @@ function Signup() {
                             <label className="block text-sm font-medium text-black mb-2">
                                 Password <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="password"
-                                placeholder="P@ssword123"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                className="w-full px-4 py-3 bg-gray-100 border-0 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-0"
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="P@ssword123"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    className="w-full px-4 py-3 bg-gray-100 border-0 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-0"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="w-5 h-5" />
+                                    ) : (
+                                        <Eye className="w-5 h-5" />
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Confirm Password */}
@@ -210,14 +210,27 @@ function Signup() {
                             <label className="block text-sm font-medium text-black mb-2">
                                 Confirm Password <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="password"
-                                placeholder="P@ssword123"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                required
-                                className="w-full px-4 py-3 bg-gray-100 border-0 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-0"
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    placeholder="P@ssword123"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    required
+                                    className="w-full px-4 py-3 bg-gray-100 border-0 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-0"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                                >
+                                    {showConfirmPassword ? (
+                                        <EyeOff className="w-5 h-5" />
+                                    ) : (
+                                        <Eye className="w-5 h-5" />
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Birthday */}

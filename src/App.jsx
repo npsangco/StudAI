@@ -9,9 +9,13 @@ import Sessions from "./pages/Sessions";
 import Planner from "./pages/Planner";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+import ResetPassword from "./pages/ResetPassword";
+import PassRecovery from "./pages/PassRecovery";
+import Profile from "./pages/Profile";
 import 'primereact/resources/themes/lara-light-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
+
 
 function App() {
   const location = useLocation();
@@ -25,7 +29,7 @@ function App() {
   const isLandingPage = landingRoutes.includes(location.pathname);
   
   // Routes that should have authenticated navigation
-  const authenticatedRoutes = ['/dashboard', '/notes', '/quizzes', '/sessions', '/planner'];
+  const authenticatedRoutes = ['/dashboard', '/notes', '/quizzes', '/sessions', '/planner', '/profile'];
   const requiresAuth = authenticatedRoutes.includes(location.pathname);
 
   return (
@@ -39,12 +43,15 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/resetpassword" element={<ResetPassword />} />
+          <Route path="/passwordrecovery" element={<PassRecovery />} />
           
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/quizzes" element={<Quizzes />} />
           <Route path="/sessions" element={<Sessions />} />
           <Route path="/planner" element={<Planner />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
       </div>
     </div>
