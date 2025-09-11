@@ -4,7 +4,7 @@ import LandingNavigation from "./components/LandingNavigation";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Notes from "./pages/Notes";
-import Quizzes from "./pages/Quizzes";
+import QuizzesPage from "./pages/QuizzesPage";
 import Sessions from "./pages/Sessions";
 import Planner from "./pages/Planner";
 import Login from "./pages/Login";
@@ -48,7 +48,7 @@ function App() {
           
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/notes" element={<Notes />} />
-          <Route path="/quizzes" element={<Quizzes />} />
+          <Route path="/quizzes" element={<QuizzesPage />} />
           <Route path="/sessions" element={<Sessions />} />
           <Route path="/planner" element={<Planner />} />
           <Route path="/profile" element={<Profile />} />
