@@ -1,61 +1,59 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Lock, Eye, EyeOff } from "lucide-react";
+import axios from "axios";
 
 export default function Profile() {
-    // Initial/original values
-    const originalProfile = {
-        username: "Nimrod",
-        password: "P@ssword123",
-        month: "",
-        day: "",
-        year: "",
-        photo: null,
-    };
-
     const [showPassword, setShowPassword] = useState(false);
-    const [username, setUsername] = useState(originalProfile.username);
-    const [password, setPassword] = useState(originalProfile.password);
-    const [month, setMonth] = useState(originalProfile.month);
-    const [day, setDay] = useState(originalProfile.day);
-    const [year, setYear] = useState(originalProfile.year);
-    const [photo, setPhoto] = useState(originalProfile.photo);
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [month, setMonth] = useState("");
+    const [day, setDay] = useState("");
+    const [year, setYear] = useState("");
+    const [photo, setPhoto] = useState(null);
 
     const fileInputRef = useRef(null);
 
-    const months = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    ];
+    const months = [ "January","February","March","April","May","June",
+                     "July","August","September","October","November","December"];
     const days = Array.from({ length: 31 }, (_, i) => i + 1);
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: currentYear - 1950 + 1 }, (_, i) => 1950 + i);
 
-    const isValidDate = (y, m, d) => {
-        if (!y || !m || !d) return true;
-        const test = new Date(y, m - 1, d);
-        return (
-            test.getFullYear() === parseInt(y) &&
-            test.getMonth() === m - 1 &&
-            test.getDate() === parseInt(d)
-        );
-    };
+    // Fetch user profile when component loads
+    useEffect(() => {
+        axios.get("http://localhost:4000/api/user/profile", { withCredentials: true })
+            .then((res) => {
+                const user = res.data;
+                setUsername(user.username);
+                setEmail(user.email);
+                setPhoto(user.profile_picture || null);
 
-    const handleUpdate = () => {
-        if (!isValidDate(year, month, day)) {
-            alert("Invalid date selected");
-            setDay("");
-            return;
+                if (user.birthday) {
+                    const bday = new Date(user.birthday);
+                    setMonth(bday.getMonth() + 1);
+                    setDay(bday.getDate());
+                    setYear(bday.getFullYear());
+                }
+            })
+            .catch((err) => console.error("Profile fetch error:", err));
+    }, []);
+
+    const handleUpdate = async () => {
+        try {
+            const birthday = year && month && day ? `${year}-${month}-${day}` : null;
+            await axios.put("http://localhost:4000/api/user/profile", {
+                username,
+                password: password || null,
+                birthday,
+                profile_picture: photo
+            }, { withCredentials: true });
+
+            alert("Profile updated!");
+        } catch (err) {
+            console.error("Profile update error:", err);
+            alert("Update failed");
         }
-
-        alert("Profile updated!");
-
-        // Reset "originalProfile" to new values after update
-        originalProfile.username = username;
-        originalProfile.password = password;
-        originalProfile.month = month;
-        originalProfile.day = day;
-        originalProfile.year = year;
-        originalProfile.photo = photo;
     };
 
     const handlePhotoSelect = (e) => {
@@ -66,18 +64,9 @@ export default function Profile() {
                 e.target.value = "";
                 return;
             }
-            setPhoto(URL.createObjectURL(file));
+            setPhoto(URL.createObjectURL(file)); // You may later upload to backend
         }
     };
-
-    // Check if anything changed
-    const hasChanges =
-        username !== originalProfile.username ||
-        password !== originalProfile.password ||
-        month !== originalProfile.month ||
-        day !== originalProfile.day ||
-        year !== originalProfile.year ||
-        photo !== originalProfile.photo;
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -88,13 +77,7 @@ export default function Profile() {
                     <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
                         <div className="flex flex-col items-center">
                             <div className="w-32 h-32 bg-black rounded-full overflow-hidden">
-                                {photo && (
-                                    <img
-                                        src={photo}
-                                        alt="Profile Preview"
-                                        className="w-full h-full object-cover"
-                                    />
-                                )}
+                                {photo && <img src={photo} alt="Profile" className="w-full h-full object-cover" />}
                             </div>
                             <button
                                 type="button"
@@ -119,7 +102,7 @@ export default function Profile() {
                                 <div className="relative">
                                     <input
                                         type="email"
-                                        placeholder="user@email.com"
+                                        value={email}
                                         className="w-full px-4 py-2 border rounded-xl border-gray-300 bg-gray-100"
                                         disabled
                                     />
@@ -147,6 +130,7 @@ export default function Profile() {
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         className="w-full px-4 py-2 border rounded-xl border-gray-300"
+                                        placeholder="Enter new password"
                                     />
                                     <button
                                         type="button"
@@ -162,43 +146,21 @@ export default function Profile() {
                             <div>
                                 <label className="block mb-2 font-semibold">Birthday</label>
                                 <div className="flex gap-2 mb-3">
-                                    <select
-                                        value={month}
-                                        onChange={(e) => setMonth(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700"
-                                    >
+                                    <select value={month} onChange={(e) => setMonth(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700">
                                         <option value="">Month</option>
                                         {months.map((m, i) => (
-                                            <option key={i} value={i + 1}>
-                                                {m}
-                                            </option>
+                                            <option key={i} value={i + 1}>{m}</option>
                                         ))}
                                     </select>
 
-                                    <select
-                                        value={day}
-                                        onChange={(e) => setDay(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700"
-                                    >
+                                    <select value={day} onChange={(e) => setDay(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700">
                                         <option value="">Day</option>
-                                        {days.map((d) => (
-                                            <option key={d} value={d}>
-                                                {d}
-                                            </option>
-                                        ))}
+                                        {days.map((d) => <option key={d} value={d}>{d}</option>)}
                                     </select>
 
-                                    <select
-                                        value={year}
-                                        onChange={(e) => setYear(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700"
-                                    >
+                                    <select value={year} onChange={(e) => setYear(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700">
                                         <option value="">Year</option>
-                                        {years.map((y) => (
-                                            <option key={y} value={y}>
-                                                {y}
-                                            </option>
-                                        ))}
+                                        {years.map((y) => <option key={y} value={y}>{y}</option>)}
                                     </select>
                                 </div>
                             </div>
@@ -206,11 +168,7 @@ export default function Profile() {
                             <div className="text-center">
                                 <button
                                     onClick={handleUpdate}
-                                    disabled={!hasChanges}
-                                    className={`px-8 py-2 rounded-xl ${hasChanges
-                                        ? "bg-green-600 text-white hover:bg-green-700"
-                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                        }`}
+                                    className="px-8 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700"
                                 >
                                     Update
                                 </button>
