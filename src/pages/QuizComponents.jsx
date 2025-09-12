@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Trash2, Plus, GripVertical } from 'lucide-react';
+import { Edit, Trash2, Plus, GripVertical, Play } from 'lucide-react';
 
 // Quiz Controls Component
 export const QuizControls = ({ quiz, onBack, onAddQuestion, onSave }) => (
@@ -150,13 +150,13 @@ export const QuestionCard = ({ question, index, onUpdateQuestion, onUpdateChoice
 );
 
 // Quiz Item Component
-export const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit }) => (
+export const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect }) => (
   <div 
     draggable
     onDragStart={(e) => onDragStart(e, index)}
     onDragOver={onDragOver}
     onDrop={(e) => onDrop(e, index)}
-    className={`flex flex-col sm:flex-row sm:items-center p-3 bg-gray-50 rounded-lg cursor-move transition-all duration-200 gap-3 sm:gap-0 ${
+    className={`flex flex-col sm:flex-row sm:items-center p-3 bg-gray-50 rounded-lg transition-all duration-200 gap-3 sm:gap-0 ${
       draggedIndex === index ? 'opacity-50 scale-95' : 'hover:bg-gray-100'
     }`}
   >
@@ -166,25 +166,46 @@ export const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, o
       <GripVertical className="w-4 h-4 text-gray-400" />
     </div>
     
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-6 flex-1">
-      <h3 className="font-semibold text-black text-left sm:text-left min-w-0 flex-1">{quiz.title}</h3>
+    <div 
+      onClick={() => onSelect(quiz)}
+      className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-6 flex-1 cursor-pointer"
+    >
+      <h3 className="font-semibold text-black text-left sm:text-left min-w-0 flex-1 hover:text-blue-600 transition-colors">
+        {quiz.title}
+      </h3>
       <div className="flex flex-col sm:flex-row gap-1 sm:gap-6 text-sm">
         <span className="text-gray-500 whitespace-nowrap">{quiz.questions} Questions</span>
         <span className="text-gray-500 whitespace-nowrap">{quiz.created}</span>
       </div>
     </div>
     
-    <button 
-      onClick={() => onEdit(quiz)}
-      className="p-2 hover:bg-gray-200 rounded-lg transition-colors ml-0 sm:ml-3 self-end sm:self-center"
-    >
-      <Edit className="w-4 h-4 text-gray-600" />
-    </button>
+    <div className="flex gap-2 ml-0 sm:ml-3 self-end sm:self-center">
+      <button 
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(quiz);
+        }}
+        className="p-2 hover:bg-green-100 rounded-lg transition-colors text-green-600"
+        title="Start Quiz"
+      >
+        <Play className="w-4 h-4" />
+      </button>
+      <button 
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit(quiz);
+        }}
+        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+        title="Edit Quiz"
+      >
+        <Edit className="w-4 h-4 text-gray-600" />
+      </button>
+    </div>
   </div>
 );
 
 // Quiz List Component
-export const QuizList = ({ quizzes, draggedIndex, onDragStart, onDragOver, onDrop, onEditQuiz }) => (
+export const QuizList = ({ quizzes, draggedIndex, onDragStart, onDragOver, onDrop, onEditQuiz, onQuizSelect }) => (
   <div className="bg-white rounded-xl p-6 shadow-sm text-center">
     <h2 className="text-2xl font-bold text-black mb-6">Your Quizzes</h2>
     
@@ -199,6 +220,7 @@ export const QuizList = ({ quizzes, draggedIndex, onDragStart, onDragOver, onDro
           onDragOver={onDragOver}
           onDrop={onDrop}
           onEdit={onEditQuiz}
+          onSelect={onQuizSelect}
         />
       ))}
     </div>

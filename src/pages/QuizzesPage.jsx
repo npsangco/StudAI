@@ -5,12 +5,25 @@ import {
   QuizList, 
   QuizBattles 
 } from './QuizComponents';
+import QuizModal from './QuizModal';
+import QuizSolo from './QuizSolo'; 
+import QuizBattle from './QuizBattle';
+import QuizLeaderboard from './QuizLeaderboard';
+import QuizSoloResult from './QuizSoloResult';
 
 function QuizzesPage() {
   // State Management
   const [gamePin, setGamePin] = useState('');
   const [editingQuiz, setEditingQuiz] = useState(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showSoloResults, setShowSoloResults] = useState(false);
+  const [gameResults, setGameResults] = useState(null);
+  const [soloResults, setSoloResults] = useState(null);
+  const [currentView, setCurrentView] = useState('list'); // 'list', 'editing', 'solo', 'battle'
+  const [quizKey, setQuizKey] = useState(0);
   
   const [quizList, setQuizList] = useState([
     {
@@ -59,13 +72,75 @@ function QuizzesPage() {
     }
   ]);
 
+  // Quiz Selection Handlers
+  const handleQuizSelect = (quiz) => {
+    setSelectedQuiz(quiz);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedQuiz(null);
+  };
+
+  const handleSoloQuiz = () => {
+    setCurrentView('solo');
+    setShowModal(false);
+  };
+
+  const handleQuizBattle = () => {
+    setCurrentView('battle');
+    setShowModal(false);
+  };
+
+  // Solo Quiz Results Handlers
+  const handleShowSoloResults = (results) => {
+    setSoloResults(results);
+    setShowSoloResults(true);
+  };
+
+  const handleCloseSoloResults = () => {
+    setShowSoloResults(false);
+    setSoloResults(null);
+    setCurrentView('list');
+  };
+
+  const handleRetrySoloQuiz = () => {
+    setShowSoloResults(false);
+    // Force re-mount of QuizSolo component by incrementing the key
+    setQuizKey(prev => prev + 1);
+    // Keep the same view to restart the solo quiz
+  };
+
+  // Quiz Battle Results and Leaderboard Handlers
+  const handleShowLeaderboard = (results) => {
+    setGameResults(results);
+    setShowLeaderboard(true);
+  };
+
+  const handleCloseLeaderboard = () => {
+    setShowLeaderboard(false);
+    setGameResults(null);
+    setCurrentView('list');
+  };
+
+  const handleRetryQuiz = () => {
+    setShowLeaderboard(false);
+    // Force re-mount of QuizBattle component by incrementing the key
+    setQuizKey(prev => prev + 1);
+    // Keep the same view to restart the battle quiz
+  };
+
   // Quiz Management Handlers
   const handleEditQuiz = (quiz) => {
     setEditingQuiz(quiz);
+    setCurrentView('editing');
   };
 
   const handleBackToList = () => {
     setEditingQuiz(null);
+    setSelectedQuiz(null);
+    setCurrentView('list');
   };
 
   // Question Management Handlers
@@ -144,8 +219,56 @@ function QuizzesPage() {
     setDraggedIndex(null);
   };
 
+  // Render Solo Quiz View
+  if (currentView === 'solo' && selectedQuiz) {
+    return (
+      <>
+        <QuizSolo 
+          key={`solo-${quizKey}`} // Force re-mount on retry
+          quiz={selectedQuiz}
+          onBack={handleBackToList}
+          onShowResults={handleShowSoloResults}
+        />
+        
+        {/* Solo Quiz Results Modal */}
+        <QuizSoloResult
+          isOpen={showSoloResults}
+          onClose={handleCloseSoloResults}
+          onRetry={handleRetrySoloQuiz}
+          score={soloResults?.score}
+          totalQuestions={soloResults?.totalQuestions}
+          timeSpent={soloResults?.timeSpent}
+          quizTitle={soloResults?.quizTitle}
+        />
+      </>
+    );
+  }
+
+  // Render Quiz Battle View
+  if (currentView === 'battle' && selectedQuiz) {
+    return (
+      <>
+        <QuizBattle 
+          key={`battle-${quizKey}`} // Force re-mount on retry
+          quiz={selectedQuiz}
+          onBack={handleBackToList}
+          onShowLeaderboard={handleShowLeaderboard}
+        />
+        
+        {/* Leaderboard Modal */}
+        <QuizLeaderboard
+          isOpen={showLeaderboard}
+          onClose={handleCloseLeaderboard}
+          onRetry={handleRetryQuiz}
+          winner={gameResults?.winner}
+          players={gameResults?.players || []}
+        />
+      </>
+    );
+  }
+
   // Render Quiz Editing View
-  if (editingQuiz) {
+  if (currentView === 'editing' && editingQuiz) {
     return (
       <div className="min-h-screen bg-gray-50">
         <QuizControls 
@@ -186,6 +309,7 @@ function QuizzesPage() {
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             onEditQuiz={handleEditQuiz}
+            onQuizSelect={handleQuizSelect}
           />
           
           <QuizBattles 
@@ -194,6 +318,35 @@ function QuizzesPage() {
           />
         </div>
       </div>
+      
+      {/* Quiz Selection Modal */}
+      <QuizModal
+        quiz={selectedQuiz}
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        onSoloQuiz={handleSoloQuiz}
+        onQuizBattle={handleQuizBattle}
+      />
+      
+      {/* Solo Quiz Results Modal */}
+      <QuizSoloResult
+        isOpen={showSoloResults}
+        onClose={handleCloseSoloResults}
+        onRetry={handleRetrySoloQuiz}
+        score={soloResults?.score}
+        totalQuestions={soloResults?.totalQuestions}
+        timeSpent={soloResults?.timeSpent}
+        quizTitle={soloResults?.quizTitle}
+      />
+      
+      {/* Battle Leaderboard Modal */}
+      <QuizLeaderboard
+        isOpen={showLeaderboard}
+        onClose={handleCloseLeaderboard}
+        onRetry={handleRetryQuiz}
+        winner={gameResults?.winner}
+        players={gameResults?.players || []}
+      />
     </div>
   );
 }
