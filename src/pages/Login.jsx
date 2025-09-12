@@ -19,7 +19,7 @@ function Login() {
       });
       localStorage.setItem("token", data.token);
       alert("Logged in!");
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       alert(err.response?.data?.error || "Login failed");
     }
