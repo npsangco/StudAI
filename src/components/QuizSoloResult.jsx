@@ -4,7 +4,13 @@ import { Trophy, Target, Clock, RotateCcw, X } from 'lucide-react';
 const QuizSoloResult = ({ isOpen, onClose, onRetry, score, totalQuestions, timeSpent, quizTitle }) => {
   if (!isOpen) return null;
 
-  const percentage = Math.round((score / totalQuestions) * 100);
+  // Ensure we have valid numbers, with better fallbacks
+  const validScore = typeof score === 'number' ? score : 0;
+  const validTotal = typeof totalQuestions === 'number' ? totalQuestions : 1;
+  const validTime = timeSpent || '0:00';
+  const validTitle = quizTitle || 'Quiz';
+
+  const percentage = Math.round((validScore / validTotal) * 100);
   
   const getPerformanceMessage = () => {
     if (percentage >= 90) return "Outstanding! 🏆";
@@ -27,13 +33,13 @@ const QuizSoloResult = ({ isOpen, onClose, onRetry, score, totalQuestions, timeS
           {/* Header */}
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-black mb-2">Quiz Complete!</h2>
-            <p className="text-gray-600">{quizTitle}</p>
+            <p className="text-gray-600">{validTitle}</p>
           </div>
 
           {/* Score Display */}
           <div className="bg-gray-50 rounded-lg p-6 mb-6">
             <div className={`text-4xl font-bold mb-2 ${getPerformanceColor()}`}>
-              {score}/{totalQuestions}
+              {validScore}/{validTotal}
             </div>
             <div className={`text-2xl font-semibold mb-2 ${getPerformanceColor()}`}>
               {percentage}%
@@ -49,14 +55,14 @@ const QuizSoloResult = ({ isOpen, onClose, onRetry, score, totalQuestions, timeS
               <div className="flex items-center justify-center gap-2 text-blue-600 mb-1">
                 <Target className="w-5 h-5" />
               </div>
-              <div className="text-2xl font-bold text-black">{score}</div>
+              <div className="text-2xl font-bold text-black">{validScore}</div>
               <div className="text-sm text-gray-600">Correct</div>
             </div>
             <div className="bg-purple-50 rounded-lg p-4">
               <div className="flex items-center justify-center gap-2 text-purple-600 mb-1">
                 <Clock className="w-5 h-5" />
               </div>
-              <div className="text-2xl font-bold text-black">{timeSpent || '2:30'}</div>
+              <div className="text-2xl font-bold text-black">{validTime}</div>
               <div className="text-sm text-gray-600">Time</div>
             </div>
           </div>
@@ -67,7 +73,7 @@ const QuizSoloResult = ({ isOpen, onClose, onRetry, score, totalQuestions, timeS
               <Trophy className="w-5 h-5" />
             </div>
             <p className="text-sm text-gray-700">
-              You earned <span className="font-semibold">{score * 10} Companion Points</span> and <span className="font-semibold">{score * 5} EXP</span>!
+              You earned <span className="font-semibold">{validScore * 10} Companion Points</span> and <span className="font-semibold">{validScore * 5} EXP</span>!
             </p>
           </div>
 

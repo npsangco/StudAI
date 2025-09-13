@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Clock } from 'lucide-react';
 
 const QuizSolo = ({ quiz, onBack, onShowResults }) => {
@@ -6,8 +6,11 @@ const QuizSolo = ({ quiz, onBack, onShowResults }) => {
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [userAnswers, setUserAnswers] = useState([]);
   const [timeLeft, setTimeLeft] = useState(30);
-  const [score, setScore] = useState(0);
-  const [startTime, setStartTime] = useState(Date.now());
+  const [startTime] = useState(Date.now());
+  
+  // Use ref to track score immediately and accurately
+  const scoreRef = useRef(0);
+  const [displayScore, setDisplayScore] = useState(0);
 
   // Sample questions for the quiz
   const questions = [
@@ -49,10 +52,11 @@ const QuizSolo = ({ quiz, onBack, onShowResults }) => {
     
     setSelectedAnswer(answer);
     
-    // Update score immediately if correct
+    // Update score IMMEDIATELY using ref for instant accuracy
     const isCorrect = answer === questions[currentQuestion].correctAnswer;
     if (isCorrect) {
-      setScore(prevScore => prevScore + 1);
+      scoreRef.current += 1;
+      setDisplayScore(scoreRef.current);
     }
     
     // Auto-advance to next question after 2 seconds
@@ -80,18 +84,11 @@ const QuizSolo = ({ quiz, onBack, onShowResults }) => {
   };
 
   const finishQuiz = (answers) => {
-    let correctCount = 0;
-    questions.forEach((question, index) => {
-      if (answers[index] === question.correctAnswer) {
-        correctCount++;
-      }
-    });
-    
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
     
-    // Show solo quiz results
+    // Use the ref score which is always accurate and up-to-date
     onShowResults({
-      score: correctCount,
+      score: scoreRef.current,
       totalQuestions: questions.length,
       timeSpent: formatTime(timeSpent),
       quizTitle: quiz.title
@@ -126,7 +123,7 @@ const QuizSolo = ({ quiz, onBack, onShowResults }) => {
               <span className="font-semibold text-black">{timeLeft}s</span>
             </div>
             <div className="text-sm text-gray-700">
-              Score: {score}/{questions.length}
+              Score: {displayScore}/{questions.length}
             </div>
           </div>
         </div>

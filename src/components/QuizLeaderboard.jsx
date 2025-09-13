@@ -4,7 +4,12 @@ import { X } from 'lucide-react';
 const QuizLeaderboard = ({ isOpen, onClose, onRetry, winner, players }) => {
   if (!isOpen) return null;
 
-  const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+  // Ensure we have valid data with fallbacks
+  const validPlayers = players || [];
+  const validWinner = winner || { name: 'Unknown', initial: 'U', score: 0 };
+  
+  // Sort players by score if not already sorted
+  const sortedPlayers = [...validPlayers].sort((a, b) => b.score - a.score);
 
   const getRankColor = (index) => {
     switch (index) {
@@ -35,17 +40,17 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, winner, players }) => {
             <div className="bg-yellow-100 rounded-lg p-4 mb-6">
               <div className="flex items-center justify-center gap-3">
                 <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center text-white font-bold">
-                  {winner?.initial || 'N'}
+                  {validWinner.initial}
                 </div>
                 <div className="text-left">
-                  <div className="font-semibold text-black">{winner?.name || 'Nimrod'}</div>
-                  <div className="text-green-600 font-bold">{winner?.score || 50}pts</div>
+                  <div className="font-semibold text-black">{validWinner.name}</div>
+                  <div className="text-green-600 font-bold">{validWinner.score}pts</div>
                 </div>
               </div>
             </div>
             
             <p className="text-gray-600 mb-6 text-sm">
-              Congratulations you earned 50 Companion Points and EXP!
+              Congratulations you earned {validWinner.score * 10} Companion Points and {validWinner.score * 5} EXP!
             </p>
             
             <div className="flex gap-3">

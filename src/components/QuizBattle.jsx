@@ -1,19 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Users, Clock, Crown } from 'lucide-react';
 
 const QuizBattle = ({ quiz, onBack, onShowLeaderboard }) => {
   const [gameState, setGameState] = useState('lobby'); // lobby, countdown, playing, results
-  const [players, setPlayers] = useState([
-    { id: 1, name: 'Denise', score: 0, initial: 'D', isReady: true },
-    { id: 2, name: 'Den', score: 0, initial: 'D', isReady: false },
-    { id: 3, name: 'Nimrod', score: 0, initial: 'N', isReady: false },
-    { id: 4, name: 'Bins', score: 0, initial: 'B', isReady: false },
-  ]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [timeLeft, setTimeLeft] = useState(15);
   const [countdown, setCountdown] = useState(3);
   const [gamePin] = useState('ABC123');
+  
+  // Use ref to track scores immediately and accurately
+  const playersRef = useRef([
+    { id: 1, name: 'Denise', score: 0, initial: 'D', isReady: true },
+    { id: 2, name: 'Den', score: 0, initial: 'D', isReady: false },
+    { id: 3, name: 'Nimrod', score: 0, initial: 'N', isReady: false },
+    { id: 4, name: 'Bins', score: 0, initial: 'B', isReady: false },
+  ]);
+  
+  const [players, setPlayers] = useState(playersRef.current);
 
   const questions = [
     {
@@ -43,7 +47,8 @@ const QuizBattle = ({ quiz, onBack, onShowLeaderboard }) => {
   useEffect(() => {
     if (gameState === 'lobby') {
       const timer = setTimeout(() => {
-        setPlayers(prev => prev.map(player => ({ ...player, isReady: true })));
+        playersRef.current = playersRef.current.map(player => ({ ...player, isReady: true }));
+        setPlayers([...playersRef.current]);
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -51,7 +56,7 @@ const QuizBattle = ({ quiz, onBack, onShowLeaderboard }) => {
 
   // Start countdown when all players are ready
   useEffect(() => {
-    if (gameState === 'lobby' && players.every(player => player.isReady)) {
+    if (gameState === 'lobby' && playersRef.current.every(player => player.isReady)) {
       setTimeout(() => setGameState('countdown'), 1000);
     }
   }, [players, gameState]);
@@ -77,28 +82,44 @@ const QuizBattle = ({ quiz, onBack, onShowLeaderboard }) => {
     }
   }, [timeLeft, gameState]);
 
+  const updatePlayerScore = (playerId, increment = 1) => {
+    // Update ref immediately for instant accuracy
+    playersRef.current = playersRef.current.map(player => 
+      player.id === playerId ? { ...player, score: player.score + increment } : player
+    );
+    // Update state for display
+    setPlayers([...playersRef.current]);
+  };
+
   const handleAnswerSelect = (answer) => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || selectedAnswer) return;
     setSelectedAnswer(answer);
     
-    // Simulate scoring
+    // Update the current player's score IMMEDIATELY
     const isCorrect = answer === questions[currentQuestion].correctAnswer;
     if (isCorrect) {
-      setPlayers(prev => prev.map(player => 
-        player.id === 1 ? { ...player, score: player.score + 1 } : player
-      ));
+      updatePlayerScore(1); // Player 1 is the human player
     }
     
-    // Simulate AI players answering randomly
+    // Simulate AI players answering - also immediate updates
     setTimeout(() => {
-      setPlayers(prev => prev.map(player => {
+      playersRef.current.forEach(player => {
         if (player.id !== 1) {
-          const randomCorrect = Math.random() > 0.4;
-          return randomCorrect ? { ...player, score: player.score + 1 } : player;
+          // Give AI players different skill levels
+          let correctChance;
+          switch (player.id) {
+            case 2: correctChance = 0.7; break; // Den - pretty good
+            case 3: correctChance = 0.85; break; // Nimrod - very good  
+            case 4: correctChance = 0.6; break; // Bins - decent
+            default: correctChance = 0.5;
+          }
+          
+          if (Math.random() < correctChance) {
+            updatePlayerScore(player.id);
+          }
         }
-        return player;
-      }));
-    }, 1000);
+      });
+    }, Math.random() * 1000 + 200); // Random delay between 0.2-1.2s
     
     setTimeout(() => handleNextQuestion(), 2000);
   };
@@ -109,20 +130,31 @@ const QuizBattle = ({ quiz, onBack, onShowLeaderboard }) => {
       setSelectedAnswer('');
       setTimeLeft(15);
     } else {
-      // Show leaderboard when quiz is complete
-      const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-      const winner = sortedPlayers[0];
-      onShowLeaderboard({ winner, players });
+      // Use the ref data which is always up-to-date
+      const finalPlayers = [...playersRef.current].sort((a, b) => b.score - a.score);
+      const winner = finalPlayers[0];
+      
+      onShowLeaderboard({ 
+        winner: winner, 
+        players: finalPlayers,
+        quizTitle: quiz.title 
+      });
     }
   };
 
   const handlePlayAgain = () => {
+    // Reset everything properly
+    playersRef.current = playersRef.current.map(player => ({ 
+      ...player, 
+      score: 0, 
+      isReady: player.id === 1 
+    }));
+    setPlayers([...playersRef.current]);
     setGameState('lobby');
     setCurrentQuestion(0);
     setSelectedAnswer('');
     setTimeLeft(15);
     setCountdown(3);
-    setPlayers(prev => prev.map(player => ({ ...player, score: 0, isReady: player.id === 1 })));
   };
 
   // Lobby State
@@ -204,6 +236,9 @@ const QuizBattle = ({ quiz, onBack, onShowLeaderboard }) => {
 
   // Playing State - WITH LEFT SIDEBAR
   const currentQ = questions[currentQuestion];
+  
+  // Sort players for display in sidebar
+  const sortedPlayersForDisplay = [...players].sort((a, b) => b.score - a.score);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -238,7 +273,7 @@ const QuizBattle = ({ quiz, onBack, onShowLeaderboard }) => {
               <h3 className="font-semibold text-black mb-4 text-center">{quiz.title}</h3>
               
               <div className="space-y-3">
-                {players.map((player, index) => (
+                {sortedPlayersForDisplay.map((player, index) => (
                   <div
                     key={player.id}
                     className={`flex items-center p-3 rounded-lg border-l-4 ${
