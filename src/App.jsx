@@ -4,13 +4,13 @@ import LandingNavigation from "./components/LandingNavigation";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Notes from "./pages/Notes";
-import QuizzesPage from "./pages/QuizzesPage";
-import Sessions from "./pages/Sessions";
+import Quizzes from "./pages/Quizzes";
+import Sessions from "./components/Sessions";
 import Planner from "./pages/Planner";
-import Login from "./pages/Login";
-import SignUp from "./pages/SignUp";
-import ResetPassword from "./pages/ResetPassword";
-import PassRecovery from "./pages/PassRecovery";
+import Login from "./components/Login";
+import SignUp from "./components/SignUp";
+import ResetPassword from "./components/ResetPassword";
+import PassRecovery from "./components/PassRecovery";
 import Profile from "./pages/Profile";
 import 'primereact/resources/themes/lara-light-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
@@ -48,7 +48,7 @@ function App() {
           
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/notes" element={<Notes />} />
-          <Route path="/quizzes" element={<QuizzesPage />} />
+          <Route path="/quizzes" element={<Quizzes />} />
           <Route path="/sessions" element={<Sessions />} />
           <Route path="/planner" element={<Planner />} />
           <Route path="/profile" element={<Profile />} />

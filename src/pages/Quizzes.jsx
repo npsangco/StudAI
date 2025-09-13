@@ -3,13 +3,13 @@ import {
   QuizControls, 
   QuestionCard, 
   QuizList, 
-  QuizBattles 
-} from './QuizComponents';
-import QuizModal from './QuizModal';
-import QuizSolo from './QuizSolo'; 
-import QuizBattle from './QuizBattle';
-import QuizLeaderboard from './QuizLeaderboard';
-import QuizSoloResult from './QuizSoloResult';
+  QuizBattles
+} from '../components/QuizComponents';
+import QuizModal from '../components/QuizModal';
+import QuizSolo from '../components/QuizSolo';
+import QuizBattle from '../components/QuizBattle';
+import QuizLeaderboard from '../components/QuizLeaderboard';
+import QuizSoloResult from '../components/QuizSoloResult';
 
 function QuizzesPage() {
   // State Management
