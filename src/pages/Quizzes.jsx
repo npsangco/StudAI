@@ -1,56 +1,54 @@
 import React, { useState } from 'react';
 import { 
   QuizControls, 
-  QuestionCard, 
   QuizList, 
-  QuizBattles
-} from '../components/QuizComponents';
-import QuizModal from '../components/QuizModal';
-import QuizSolo from '../components/QuizSolo';
-import QuizBattle from '../components/QuizBattle';
-import QuizLeaderboard from '../components/QuizLeaderboard';
-import QuizSoloResult from '../components/QuizSoloResult';
+  QuizBattles,
+  QuestionCard  
+} from '../components/quizzes/QuizComponents';
+import QuizModal from '../components/quizzes/QuizModal';
+import QuizGame from '../components/quizzes/QuizGame';
+import QuizResults from '../components/quizzes/QuizResults';
+import QuizLeaderboard from '../components/quizzes/QuizLeaderboard';
 
 function QuizzesPage() {
-  // State Management
   const [gamePin, setGamePin] = useState('');
   const [editingQuiz, setEditingQuiz] = useState(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [showSoloResults, setShowSoloResults] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const [gameResults, setGameResults] = useState(null);
   const [soloResults, setSoloResults] = useState(null);
-  const [currentView, setCurrentView] = useState('list'); // 'list', 'editing', 'solo', 'battle'
+  const [currentView, setCurrentView] = useState('list');
   const [quizKey, setQuizKey] = useState(0);
   
   const [quizList, setQuizList] = useState([
     {
       id: 1,
       title: 'Data Algorithms',
-      questions: 50,
+      questionCount: 50, 
       created: 'Created today',
       isPublic: true
     },
     {
       id: 2,
       title: 'Database',
-      questions: 15,
+      questionCount: 15,
       created: 'Created 9d ago',
       isPublic: false
     },
     {
       id: 3,
       title: 'Web Development',
-      questions: 20,
+      questionCount: 20,
       created: 'Created 10d ago',
       isPublic: false
     },
     {
       id: 4,
       title: 'Data Structures',
-      questions: 25,
+      questionCount: 25,
       created: 'Created 12d ago',
       isPublic: false
     }
@@ -82,7 +80,6 @@ function QuizzesPage() {
     }
   ]);
 
-  // Helper function to create new question based on type
   const createNewQuestion = (type = 'Multiple Choice') => {
     const baseQuestion = {
       id: questions.length > 0 ? Math.max(...questions.map(q => q.id)) + 1 : 1,
@@ -117,7 +114,6 @@ function QuizzesPage() {
     }
   };
 
-  // Quiz Selection Handlers
   const handleQuizSelect = (quiz) => {
     setSelectedQuiz(quiz);
     setShowModal(true);
@@ -138,26 +134,22 @@ function QuizzesPage() {
     setShowModal(false);
   };
 
-  // Solo Quiz Results Handlers
   const handleShowSoloResults = (results) => {
     setSoloResults(results);
-    setShowSoloResults(true);
+    setShowResults(true);
   };
 
   const handleCloseSoloResults = () => {
-    setShowSoloResults(false);
+    setShowResults(false);
     setSoloResults(null);
     setCurrentView('list');
   };
 
   const handleRetrySoloQuiz = () => {
-    setShowSoloResults(false);
-    // Force re-mount of QuizSolo component by incrementing the key
+    setShowResults(false);
     setQuizKey(prev => prev + 1);
-    // Keep the same view to restart the solo quiz
   };
 
-  // Quiz Battle Results and Leaderboard Handlers
   const handleShowLeaderboard = (results) => {
     setGameResults(results);
     setShowLeaderboard(true);
@@ -171,14 +163,13 @@ function QuizzesPage() {
 
   const handleRetryQuiz = () => {
     setShowLeaderboard(false);
-    // Force re-mount of QuizBattle component by incrementing the key
     setQuizKey(prev => prev + 1);
-    // Keep the same view to restart the battle quiz
   };
 
-  // Quiz Management Handlers
   const handleEditQuiz = (quiz) => {
     setEditingQuiz(quiz);
+    // For now, use global questions - later you'll load from database
+    setQuestions(questions.length > 0 ? questions : []);
     setCurrentView('editing');
   };
 
@@ -188,7 +179,6 @@ function QuizzesPage() {
     setCurrentView('list');
   };
 
-  // Question Management Handlers
   const handleDeleteQuestion = (questionId) => {
     setQuestions(questions.filter(q => q.id !== questionId));
   };
@@ -198,17 +188,15 @@ function QuizzesPage() {
     setQuestions([...questions, newQuestion]);
   };
 
-  // Updated question handler with proper type switching
   const handleUpdateQuestion = (questionId, field, value) => {
     setQuestions(questions.map(q => {
       if (q.id === questionId) {
         if (field === 'type' && value !== q.type) {
-          // When changing question type, create a new question structure
           const newQuestion = createNewQuestion(value);
           return {
             ...newQuestion,
             id: q.id,
-            question: q.question // Preserve the question text
+            question: q.question
           };
         }
         return { ...q, [field]: value };
@@ -237,7 +225,6 @@ function QuizzesPage() {
     }));
   };
 
-  // Matching question handlers
   const handleAddMatchingPair = (questionId) => {
     setQuestions(questions.map(q => {
       if (q.id === questionId) {
@@ -284,7 +271,6 @@ function QuizzesPage() {
     alert('Quiz saved successfully!');
   };
 
-  // Drag and Drop Handlers
   const handleDragStart = (e, index) => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
@@ -310,55 +296,55 @@ function QuizzesPage() {
     setDraggedIndex(null);
   };
 
-  // Render Solo Quiz View
   if (currentView === 'solo' && selectedQuiz) {
     return (
       <>
-        <QuizSolo 
-          key={`solo-${quizKey}`} // Force re-mount on retry
-          quiz={selectedQuiz}
+        <QuizGame 
+          key={`solo-${quizKey}`}
+          quiz={{
+            ...selectedQuiz,
+            questions: questions // Pass the actual questions array
+          }}
+          mode="solo"
           onBack={handleBackToList}
-          onShowResults={handleShowSoloResults}
+          onComplete={handleShowSoloResults}
         />
         
-        {/* Solo Quiz Results Modal */}
-        <QuizSoloResult
-          isOpen={showSoloResults}
+        <QuizResults
+          isOpen={showResults}
           onClose={handleCloseSoloResults}
           onRetry={handleRetrySoloQuiz}
-          score={soloResults?.score}
-          totalQuestions={soloResults?.totalQuestions}
-          timeSpent={soloResults?.timeSpent}
-          quizTitle={soloResults?.quizTitle}
+          results={soloResults}
+          mode="solo"
         />
       </>
     );
   }
-
-  // Render Quiz Battle View
+  
   if (currentView === 'battle' && selectedQuiz) {
     return (
       <>
-        <QuizBattle 
-          key={`battle-${quizKey}`} // Force re-mount on retry
-          quiz={selectedQuiz}
+        <QuizGame 
+          key={`battle-${quizKey}`}
+          quiz={{
+            ...selectedQuiz,
+            questions: questions // Pass the actual questions array
+          }}
+          mode="battle"
           onBack={handleBackToList}
-          onShowLeaderboard={handleShowLeaderboard}
+          onComplete={handleShowLeaderboard}
         />
         
-        {/* Leaderboard Modal */}
         <QuizLeaderboard
           isOpen={showLeaderboard}
           onClose={handleCloseLeaderboard}
           onRetry={handleRetryQuiz}
-          winner={gameResults?.winner}
-          players={gameResults?.players || []}
+          results={gameResults}
         />
       </>
     );
   }
 
-  // Render Quiz Editing View
   if (currentView === 'editing' && editingQuiz) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -391,7 +377,6 @@ function QuizzesPage() {
     );
   }
 
-  // Render Main Quiz List View
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-6xl mx-auto">
@@ -413,7 +398,6 @@ function QuizzesPage() {
         </div>
       </div>
       
-      {/* Quiz Selection Modal */}
       <QuizModal
         quiz={selectedQuiz}
         isOpen={showModal}
@@ -422,24 +406,19 @@ function QuizzesPage() {
         onQuizBattle={handleQuizBattle}
       />
       
-      {/* Solo Quiz Results Modal */}
-      <QuizSoloResult
-        isOpen={showSoloResults}
+      <QuizResults
+        isOpen={showResults}
         onClose={handleCloseSoloResults}
         onRetry={handleRetrySoloQuiz}
-        score={soloResults?.score}
-        totalQuestions={soloResults?.totalQuestions}
-        timeSpent={soloResults?.timeSpent}
-        quizTitle={soloResults?.quizTitle}
+        results={soloResults}
+        mode="solo"
       />
       
-      {/* Battle Leaderboard Modal */}
       <QuizLeaderboard
         isOpen={showLeaderboard}
         onClose={handleCloseLeaderboard}
         onRetry={handleRetryQuiz}
-        winner={gameResults?.winner}
-        players={gameResults?.players || []}
+        results={gameResults}
       />
     </div>
   );

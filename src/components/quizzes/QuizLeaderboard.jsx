@@ -1,14 +1,12 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-const QuizLeaderboard = ({ isOpen, onClose, onRetry, winner, players }) => {
+const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   if (!isOpen) return null;
 
-  // Ensure we have valid data with fallbacks
-  const validPlayers = players || [];
-  const validWinner = winner || { name: 'Unknown', initial: 'U', score: 0 };
+  const validPlayers = results?.players || [];
+  const validWinner = results?.winner || { name: 'Unknown', initial: 'U', score: 0 };
   
-  // Sort players by score if not already sorted
   const sortedPlayers = [...validPlayers].sort((a, b) => b.score - a.score);
 
   const getRankColor = (index) => {
@@ -30,8 +28,8 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, winner, players }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-[rgba(107,114,128,0.6)] flex items-center justify-center z-50">
-      <div className="flex gap-4 max-w-4xl w-full mx-4">
+    <div className="fixed inset-0 bg-[rgba(107,114,128,0.6)] flex items-center justify-center z-50 p-4">
+      <div className="flex flex-col lg:flex-row gap-4 max-w-4xl w-full">
         {/* Congratulations Card */}
         <div className="bg-white rounded-lg p-6 shadow-xl flex-1">
           <div className="text-center">

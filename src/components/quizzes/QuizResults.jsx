@@ -1,14 +1,13 @@
 import React from 'react';
 import { Trophy, Target, Clock, RotateCcw, X } from 'lucide-react';
 
-const QuizSoloResult = ({ isOpen, onClose, onRetry, score, totalQuestions, timeSpent, quizTitle }) => {
+const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
   if (!isOpen) return null;
 
-  // Ensure we have valid numbers, with better fallbacks
-  const validScore = typeof score === 'number' ? score : 0;
-  const validTotal = typeof totalQuestions === 'number' ? totalQuestions : 1;
-  const validTime = timeSpent || '0:00';
-  const validTitle = quizTitle || 'Quiz';
+  const validScore = typeof results?.score === 'number' ? results.score : 0;
+  const validTotal = typeof results?.totalQuestions === 'number' ? results.totalQuestions : 1;
+  const validTime = results?.timeSpent || '0:00';
+  const validTitle = results?.quizTitle || 'Quiz';
 
   const percentage = Math.round((validScore / validTotal) * 100);
   
@@ -30,13 +29,13 @@ const QuizSoloResult = ({ isOpen, onClose, onRetry, score, totalQuestions, timeS
     <div className="fixed inset-0 bg-[rgba(107,114,128,0.6)] flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-8 shadow-2xl max-w-md w-full mx-4">
         <div className="text-center">
-          {/* Header */}
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-black mb-2">Quiz Complete!</h2>
+            <h2 className="text-2xl font-bold text-black mb-2">
+              {mode === 'solo' ? 'Quiz Complete!' : 'Battle Results!'}
+            </h2>
             <p className="text-gray-600">{validTitle}</p>
           </div>
 
-          {/* Score Display */}
           <div className="bg-gray-50 rounded-lg p-6 mb-6">
             <div className={`text-4xl font-bold mb-2 ${getPerformanceColor()}`}>
               {validScore}/{validTotal}
@@ -49,7 +48,6 @@ const QuizSoloResult = ({ isOpen, onClose, onRetry, score, totalQuestions, timeS
             </p>
           </div>
 
-          {/* Stats */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="flex items-center justify-center gap-2 text-blue-600 mb-1">
@@ -67,7 +65,6 @@ const QuizSoloResult = ({ isOpen, onClose, onRetry, score, totalQuestions, timeS
             </div>
           </div>
 
-          {/* Reward Message */}
           <div className="bg-yellow-50 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-center gap-2 text-yellow-600 mb-2">
               <Trophy className="w-5 h-5" />
@@ -77,7 +74,6 @@ const QuizSoloResult = ({ isOpen, onClose, onRetry, score, totalQuestions, timeS
             </p>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-3">
             <button 
               onClick={onClose}
@@ -100,4 +96,4 @@ const QuizSoloResult = ({ isOpen, onClose, onRetry, score, totalQuestions, timeS
   );
 };
 
-export default QuizSoloResult;
+export default QuizResults;

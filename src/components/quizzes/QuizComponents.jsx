@@ -42,51 +42,57 @@ export const QuizControls = ({ quiz, onBack, onAddQuestion, onSave }) => (
 
 // Multiple Choice Question Component
 export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateChoice, onAddChoice }) => (
-  <div className="space-y-2">
-    <div className="grid grid-cols-2 gap-2">
-      {question.choices?.map((choice, choiceIndex) => (
-        <div
-          key={choiceIndex}
-          onClick={(e) => {
-            // Only trigger if clicking the container, not the input
-            if (e.target === e.currentTarget) {
-              onUpdateQuestion(question.id, 'correctAnswer', choiceIndex); // Use index instead of value
-            }
-          }}
-          className={`p-3 rounded border transition-colors cursor-pointer ${
-            question.correctAnswer === choiceIndex // Compare with index instead of value
-              ? 'bg-green-500 text-white border-green-500'
-              : 'bg-white border-gray-200 hover:border-gray-300'
-          }`}
-        >
-          <input
-            type="text"
-            value={choice}
-            onChange={(e) => {
-              e.stopPropagation();
-              onUpdateChoice(question.id, choiceIndex, e.target.value);
-            }}
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        {question.choices?.map((choice, choiceIndex) => (
+          <div
+            key={choiceIndex}
             onClick={(e) => {
-              e.stopPropagation(); // Prevent container click when clicking input
+              if (e.target === e.currentTarget) {
+                // Use the actual choice value, not the index
+                onUpdateQuestion(question.id, 'correctAnswer', choice);
+              }
             }}
-            className={`w-full bg-transparent border-0 text-sm focus:outline-none ${
-              question.correctAnswer === choiceIndex ? 'text-white placeholder-green-200' : 'text-gray-800 placeholder-gray-400'
+            className={`p-3 rounded border transition-colors cursor-pointer ${
+              question.correctAnswer === choice // Compare with choice value
+                ? 'bg-green-500 text-white border-green-500'
+                : 'bg-white border-gray-200 hover:border-gray-300'
             }`}
-            placeholder={`Option ${choiceIndex + 1}`}
-          />
-        </div>
-      ))}
+          >
+            <input
+              type="text"
+              value={choice}
+              onChange={(e) => {
+                e.stopPropagation();
+                const newValue = e.target.value;
+                onUpdateChoice(question.id, choiceIndex, newValue);
+                
+                // If this was the correct answer, update it too
+                if (question.correctAnswer === choice) {
+                  onUpdateQuestion(question.id, 'correctAnswer', newValue);
+                }
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              className={`w-full bg-transparent border-0 text-sm focus:outline-none ${
+                question.correctAnswer === choice ? 'text-white placeholder-green-200' : 'text-gray-800 placeholder-gray-400'
+              }`}
+              placeholder={`Option ${choiceIndex + 1}`}
+            />
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() => onAddChoice(question.id)}
+        className="flex items-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+        type="button"
+      >
+        <Plus className="w-4 h-4" />
+        Add more choices 
+      </button>
     </div>
-    <button
-      onClick={() => onAddChoice(question.id)}
-      className="flex items-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
-      type="button"
-    >
-      <Plus className="w-4 h-4" />
-      Add more choices 
-    </button>
-  </div>
-);
+  );  
 
 // Fill in the Blanks Question Component
 export const FillInBlanksQuestion = ({ question, onUpdateQuestion }) => (
@@ -188,14 +194,13 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
   );
 };
 
-// Matching Quiz Player Component (for playing the quiz) - EXPORTED
-export const MatchingQuizPlayer = ({ question, onSubmit, timeLeft }) => {
-  const [pairs, setPairs] = useState(question.matchingPairs || []);
+// Matching Quiz Player Component
+export const MatchingQuizPlayer = ({ question, onSubmit, timeLeft, isPaused = false }) => {
   const [selectedLeft, setSelectedLeft] = useState(null);
   const [selectedRight, setSelectedRight] = useState(null);
   const [matches, setMatches] = useState([]);
-  const [leftItems, setLeftItems] = useState(pairs.map(p => p.left));
-  const [rightItems, setRightItems] = useState([...pairs.map(p => p.right)].sort(() => Math.random() - 0.5));
+  const [leftItems] = useState(question.matchingPairs.map(p => p.left));
+  const [rightItems] = useState([...question.matchingPairs.map(p => p.right)].sort(() => Math.random() - 0.5));
 
   const colors = [
     'bg-red-200 border-red-400',
@@ -209,10 +214,11 @@ export const MatchingQuizPlayer = ({ question, onSubmit, timeLeft }) => {
   ];
 
   const handleLeftClick = (item, index) => {
+    if (isPaused) return;
+    
     const existingMatch = matches.find(m => m.left === item);
     
     if (existingMatch) {
-      // If already matched, remove the match (unmatch)
       setMatches(prev => prev.filter(m => m.left !== item));
       setSelectedLeft(null);
       setSelectedRight(null);
@@ -220,14 +226,13 @@ export const MatchingQuizPlayer = ({ question, onSubmit, timeLeft }) => {
     }
     
     if (selectedLeft === index) {
-      setSelectedLeft(null); // Unselect if same item clicked
+      setSelectedLeft(null);
       return;
     }
     
     setSelectedLeft(index);
     
     if (selectedRight !== null) {
-      // Create match
       const rightItem = rightItems[selectedRight];
       const newMatch = {
         left: item,
@@ -244,10 +249,11 @@ export const MatchingQuizPlayer = ({ question, onSubmit, timeLeft }) => {
   };
 
   const handleRightClick = (item, index) => {
+    if (isPaused) return;
+    
     const existingMatch = matches.find(m => m.right === item);
     
     if (existingMatch) {
-      // If already matched, remove the match (unmatch)
       setMatches(prev => prev.filter(m => m.right !== item));
       setSelectedLeft(null);
       setSelectedRight(null);
@@ -255,14 +261,13 @@ export const MatchingQuizPlayer = ({ question, onSubmit, timeLeft }) => {
     }
     
     if (selectedRight === index) {
-      setSelectedRight(null); // Unselect if same item clicked
+      setSelectedRight(null);
       return;
     }
     
     setSelectedRight(index);
     
     if (selectedLeft !== null) {
-      // Create match
       const leftItem = leftItems[selectedLeft];
       const newMatch = {
         left: leftItem,
@@ -279,6 +284,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, timeLeft }) => {
   };
 
   const handleSubmit = () => {
+    if (isPaused) return;
     onSubmit(matches);
   };
 
@@ -296,11 +302,6 @@ export const MatchingQuizPlayer = ({ question, onSubmit, timeLeft }) => {
       <div className="mb-6 text-center">
         <h2 className="text-2xl font-bold mb-2">{question.question}</h2>
         <p className="text-gray-600 mb-4">Click items from both columns to create pairs. Click matched items to unmatch them.</p>
-        {timeLeft && (
-          <div className="text-lg font-medium text-blue-600">
-            Time: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-          </div>
-        )}
         {matches.length > 0 && (
           <div className="text-sm text-green-600 font-medium">
             {matches.length} pair{matches.length !== 1 ? 's' : ''} matched
@@ -351,9 +352,9 @@ export const MatchingQuizPlayer = ({ question, onSubmit, timeLeft }) => {
       <div className="text-center">
         <button
           onClick={handleSubmit}
-          disabled={matches.length === 0}
+          disabled={matches.length === 0 || isPaused}
           className={`px-6 py-3 rounded-lg font-medium text-white transition-colors ${
-            matches.length === 0
+            matches.length === 0 || isPaused
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-green-600 hover:bg-green-700'
           }`}
@@ -474,7 +475,7 @@ export const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, o
         {quiz.title}
       </h3>
       <div className="flex flex-col sm:flex-row gap-1 sm:gap-6 text-sm">
-        <span className="text-gray-500 whitespace-nowrap">{quiz.questions} Questions</span>
+        <span className="text-gray-500 whitespace-nowrap">{quiz.questionCount} Questions</span>
         <span className="text-gray-500 whitespace-nowrap">{quiz.created}</span>
       </div>
     </div>
