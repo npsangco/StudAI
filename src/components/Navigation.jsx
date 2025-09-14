@@ -1,6 +1,8 @@
 import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import axios from 'axios'
+import { API_BASE } from './api'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard' },
@@ -16,6 +18,17 @@ function classNames(...classes) {
 
 export default function Navigation() {
   const location = useLocation()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    try {
+      await axios.post(`${API_BASE}/api/auth/logout`, {}, { withCredentials: true })
+      navigate('/login')  // redirect to login after logout
+    } catch (err) {
+      console.error('Logout error:', err)
+      alert('Failed to log out')
+    }
+  }
 
   return (
     <Disclosure
@@ -98,7 +111,7 @@ export default function Navigation() {
                 </MenuItem>
                 <MenuItem>
                   <button
-                    onClick={() => {/* Handle logout */}}
+                    onClick={handleLogout}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:outline-hidden"
                   >
                     Sign out

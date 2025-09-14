@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import axios from "axios";
+import { API_BASE } from "../components/api";
 
 export default function Profile() {
     const [showPassword, setShowPassword] = useState(false);
@@ -14,19 +15,19 @@ export default function Profile() {
 
     const fileInputRef = useRef(null);
 
-    const months = [ "January","February","March","April","May","June",
-                     "July","August","September","October","November","December"];
+    const months = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
     const days = Array.from({ length: 31 }, (_, i) => i + 1);
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: currentYear - 1950 + 1 }, (_, i) => 1950 + i);
 
-    // Fetch user profile when component loads
+    // Fetch user profile
     useEffect(() => {
-        axios.get("http://localhost:4000/api/user/profile", { withCredentials: true })
+        axios.get(`${API_BASE}/api/user/profile`, { withCredentials: true })
             .then((res) => {
                 const user = res.data;
-                setUsername(user.username);
-                setEmail(user.email);
+                setUsername(user.username || "");
+                setEmail(user.email || "");
                 setPhoto(user.profile_picture || null);
 
                 if (user.birthday) {
@@ -36,20 +37,29 @@ export default function Profile() {
                     setYear(bday.getFullYear());
                 }
             })
-            .catch((err) => console.error("Profile fetch error:", err));
+            .catch((err) => {
+                console.error("Profile fetch error:", err);
+                alert("You must log in to view your profile.");
+            });
     }, []);
 
     const handleUpdate = async () => {
         try {
-            const birthday = year && month && day ? `${year}-${month}-${day}` : null;
-            await axios.put("http://localhost:4000/api/user/profile", {
-                username,
-                password: password || null,
-                birthday,
-                profile_picture: photo
-            }, { withCredentials: true });
+            const birthday = year && month && day ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null;
+
+            await axios.put(
+                `${API_BASE}/api/user/profile`,
+                {
+                    username,
+                    password: password || null,
+                    birthday,
+                    profile_picture: photo, // sending base64 or URL
+                },
+                { withCredentials: true }
+            );
 
             alert("Profile updated!");
+            setPassword(""); // clear password field after update
         } catch (err) {
             console.error("Profile update error:", err);
             alert("Update failed");
@@ -64,7 +74,13 @@ export default function Profile() {
                 e.target.value = "";
                 return;
             }
-            setPhoto(URL.createObjectURL(file)); // You may later upload to backend
+
+            // Convert file to base64 so backend can store it directly
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPhoto(reader.result); // base64 string
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -76,7 +92,7 @@ export default function Profile() {
 
                     <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
                         <div className="flex flex-col items-center">
-                            <div className="w-32 h-32 bg-black rounded-full overflow-hidden">
+                            <div className="w-32 h-32 bg-gray-200 rounded-full overflow-hidden">
                                 {photo && <img src={photo} alt="Profile" className="w-full h-full object-cover" />}
                             </div>
                             <button
