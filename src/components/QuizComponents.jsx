@@ -1,5 +1,5 @@
-import React from 'react';
-import { Edit, Trash2, Plus, GripVertical, Play } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit, Trash2, Plus, GripVertical, Play, X } from 'lucide-react';
 
 // Quiz Controls Component
 export const QuizControls = ({ quiz, onBack, onAddQuestion, onSave }) => (
@@ -44,12 +44,17 @@ export const QuizControls = ({ quiz, onBack, onAddQuestion, onSave }) => (
 export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateChoice, onAddChoice }) => (
   <div className="space-y-2">
     <div className="grid grid-cols-2 gap-2">
-      {question.choices.map((choice, choiceIndex) => (
+      {question.choices?.map((choice, choiceIndex) => (
         <div
           key={choiceIndex}
-          onClick={() => onUpdateQuestion(question.id, 'correctAnswer', choice)}
+          onClick={(e) => {
+            // Only trigger if clicking the container, not the input
+            if (e.target === e.currentTarget) {
+              onUpdateQuestion(question.id, 'correctAnswer', choiceIndex); // Use index instead of value
+            }
+          }}
           className={`p-3 rounded border transition-colors cursor-pointer ${
-            question.correctAnswer === choice
+            question.correctAnswer === choiceIndex // Compare with index instead of value
               ? 'bg-green-500 text-white border-green-500'
               : 'bg-white border-gray-200 hover:border-gray-300'
           }`}
@@ -61,8 +66,11 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
               e.stopPropagation();
               onUpdateChoice(question.id, choiceIndex, e.target.value);
             }}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent container click when clicking input
+            }}
             className={`w-full bg-transparent border-0 text-sm focus:outline-none ${
-              question.correctAnswer === choice ? 'text-white placeholder-green-200' : 'text-gray-800 placeholder-gray-400'
+              question.correctAnswer === choiceIndex ? 'text-white placeholder-green-200' : 'text-gray-800 placeholder-gray-400'
             }`}
             placeholder={`Option ${choiceIndex + 1}`}
           />
@@ -72,9 +80,10 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
     <button
       onClick={() => onAddChoice(question.id)}
       className="flex items-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+      type="button"
     >
       <Plus className="w-4 h-4" />
-      Add more choices +
+      Add more choices 
     </button>
   </div>
 );
@@ -92,8 +101,282 @@ export const FillInBlanksQuestion = ({ question, onUpdateQuestion }) => (
   </div>
 );
 
+// True/False Question Component
+export const TrueFalseQuestion = ({ question, onUpdateQuestion }) => (
+  <div className="space-y-2">
+    <div className="grid grid-cols-2 gap-2">
+      <div
+        onClick={() => onUpdateQuestion(question.id, 'correctAnswer', 'True')}
+        className={`p-3 rounded border transition-colors cursor-pointer ${
+          question.correctAnswer === 'True'
+            ? 'bg-green-500 text-white border-green-500'
+            : 'bg-white border-gray-200 hover:border-gray-300'
+        }`}
+      >
+        <div className="text-sm text-center font-medium">True</div>
+      </div>
+      <div
+        onClick={() => onUpdateQuestion(question.id, 'correctAnswer', 'False')}
+        className={`p-3 rounded border transition-colors cursor-pointer ${
+          question.correctAnswer === 'False'
+            ? 'bg-green-500 text-white border-green-500'
+            : 'bg-white border-gray-200 hover:border-gray-300'
+        }`}
+      >
+        <div className="text-sm text-center font-medium">False</div>
+      </div>
+    </div>
+  </div>
+);
+
+// Matching Question Component
+export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatchingPair, onRemoveMatchingPair }) => {
+  const pairs = question.matchingPairs || [];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-gray-700">Left Column</h4>
+          {pairs.map((pair, index) => (
+            <div key={index} className="relative">
+              <input
+                type="text"
+                value={pair.left || ''}
+                onChange={(e) => onUpdateMatchingPair(question.id, index, 'left', e.target.value)}
+                className="w-full p-3 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={`Left item ${index + 1}`}
+              />
+            </div>
+          ))}
+        </div>
+        
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-gray-700">Right Column</h4>
+          {pairs.map((pair, index) => (
+            <div key={index} className="relative flex gap-2">
+              <input
+                type="text"
+                value={pair.right || ''}
+                onChange={(e) => onUpdateMatchingPair(question.id, index, 'right', e.target.value)}
+                className="flex-1 p-3 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={`Right item ${index + 1}`}
+              />
+              {pairs.length > 1 && (
+                <button
+                  onClick={() => onRemoveMatchingPair(question.id, index)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded"
+                  type="button"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <button
+        onClick={() => onAddMatchingPair(question.id)}
+        className="flex items-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+        type="button"
+      >
+        <Plus className="w-4 h-4" />
+        Add matching pair 
+      </button>
+    </div>
+  );
+};
+
+// Matching Quiz Player Component (for playing the quiz) - EXPORTED
+export const MatchingQuizPlayer = ({ question, onSubmit, timeLeft }) => {
+  const [pairs, setPairs] = useState(question.matchingPairs || []);
+  const [selectedLeft, setSelectedLeft] = useState(null);
+  const [selectedRight, setSelectedRight] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [leftItems, setLeftItems] = useState(pairs.map(p => p.left));
+  const [rightItems, setRightItems] = useState([...pairs.map(p => p.right)].sort(() => Math.random() - 0.5));
+
+  const colors = [
+    'bg-red-200 border-red-400',
+    'bg-blue-200 border-blue-400', 
+    'bg-green-200 border-green-400',
+    'bg-yellow-200 border-yellow-400',
+    'bg-purple-200 border-purple-400',
+    'bg-pink-200 border-pink-400',
+    'bg-indigo-200 border-indigo-400',
+    'bg-orange-200 border-orange-400'
+  ];
+
+  const handleLeftClick = (item, index) => {
+    const existingMatch = matches.find(m => m.left === item);
+    
+    if (existingMatch) {
+      // If already matched, remove the match (unmatch)
+      setMatches(prev => prev.filter(m => m.left !== item));
+      setSelectedLeft(null);
+      setSelectedRight(null);
+      return;
+    }
+    
+    if (selectedLeft === index) {
+      setSelectedLeft(null); // Unselect if same item clicked
+      return;
+    }
+    
+    setSelectedLeft(index);
+    
+    if (selectedRight !== null) {
+      // Create match
+      const rightItem = rightItems[selectedRight];
+      const newMatch = {
+        left: item,
+        right: rightItem,
+        leftIndex: index,
+        rightIndex: selectedRight,
+        color: colors[matches.length % colors.length]
+      };
+      
+      setMatches(prev => [...prev, newMatch]);
+      setSelectedLeft(null);
+      setSelectedRight(null);
+    }
+  };
+
+  const handleRightClick = (item, index) => {
+    const existingMatch = matches.find(m => m.right === item);
+    
+    if (existingMatch) {
+      // If already matched, remove the match (unmatch)
+      setMatches(prev => prev.filter(m => m.right !== item));
+      setSelectedLeft(null);
+      setSelectedRight(null);
+      return;
+    }
+    
+    if (selectedRight === index) {
+      setSelectedRight(null); // Unselect if same item clicked
+      return;
+    }
+    
+    setSelectedRight(index);
+    
+    if (selectedLeft !== null) {
+      // Create match
+      const leftItem = leftItems[selectedLeft];
+      const newMatch = {
+        left: leftItem,
+        right: item,
+        leftIndex: selectedLeft,
+        rightIndex: index,
+        color: colors[matches.length % colors.length]
+      };
+      
+      setMatches(prev => [...prev, newMatch]);
+      setSelectedLeft(null);
+      setSelectedRight(null);
+    }
+  };
+
+  const handleSubmit = () => {
+    onSubmit(matches);
+  };
+
+  const getItemColor = (item, side) => {
+    const match = matches.find(m => m[side] === item);
+    return match ? match.color : '';
+  };
+
+  const isMatched = (item, side) => {
+    return matches.some(m => m[side] === item);
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="mb-6 text-center">
+        <h2 className="text-2xl font-bold mb-2">{question.question}</h2>
+        <p className="text-gray-600 mb-4">Click items from both columns to create pairs. Click matched items to unmatch them.</p>
+        {timeLeft && (
+          <div className="text-lg font-medium text-blue-600">
+            Time: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+          </div>
+        )}
+        {matches.length > 0 && (
+          <div className="text-sm text-green-600 font-medium">
+            {matches.length} pair{matches.length !== 1 ? 's' : ''} matched
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-8 mb-6">
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-center mb-4">Column A</h3>
+          {leftItems.map((item, index) => (
+            <div
+              key={index}
+              onClick={() => handleLeftClick(item, index)}
+              className={`p-4 border-2 rounded-lg cursor-pointer transition-all text-center font-medium ${
+                isMatched(item, 'left')
+                  ? `${getItemColor(item, 'left')} cursor-pointer`
+                  : selectedLeft === index
+                  ? 'bg-blue-100 border-blue-500'
+                  : 'bg-white border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              {item}
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-center mb-4">Column B</h3>
+          {rightItems.map((item, index) => (
+            <div
+              key={index}
+              onClick={() => handleRightClick(item, index)}
+              className={`p-4 border-2 rounded-lg cursor-pointer transition-all text-center font-medium ${
+                isMatched(item, 'right')
+                  ? `${getItemColor(item, 'right')} cursor-pointer`
+                  : selectedRight === index
+                  ? 'bg-blue-100 border-blue-500'
+                  : 'bg-white border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              {item}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="text-center">
+        <button
+          onClick={handleSubmit}
+          disabled={matches.length === 0}
+          className={`px-6 py-3 rounded-lg font-medium text-white transition-colors ${
+            matches.length === 0
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-green-600 hover:bg-green-700'
+          }`}
+        >
+          Submit {matches.length > 0 ? `(${matches.length} matches)` : ''}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Individual Question Card Component
-export const QuestionCard = ({ question, index, onUpdateQuestion, onUpdateChoice, onAddChoice, onDeleteQuestion }) => (
+export const QuestionCard = ({ 
+  question, 
+  index, 
+  onUpdateQuestion, 
+  onUpdateChoice, 
+  onAddChoice, 
+  onDeleteQuestion,
+  onAddMatchingPair,
+  onUpdateMatchingPair,
+  onRemoveMatchingPair
+}) => (
   <div className="bg-white rounded-lg border-l-4 border-green-500 p-4 shadow-sm">
     <div className="flex items-start justify-between mb-3">
       <div className="flex items-center gap-3">
@@ -108,6 +391,7 @@ export const QuestionCard = ({ question, index, onUpdateQuestion, onUpdateChoice
           <option>Multiple Choice</option>
           <option>Fill in the blanks</option>
           <option>True/False</option>
+          <option>Matching</option>
         </select>
       </div>
       <button 
@@ -144,6 +428,22 @@ export const QuestionCard = ({ question, index, onUpdateQuestion, onUpdateChoice
       <FillInBlanksQuestion 
         question={question}
         onUpdateQuestion={onUpdateQuestion}
+      />
+    )}
+
+    {question.type === 'True/False' && (
+      <TrueFalseQuestion 
+        question={question}
+        onUpdateQuestion={onUpdateQuestion}
+      />
+    )}
+
+    {question.type === 'Matching' && (
+      <MatchingQuestion 
+        question={question}
+        onAddMatchingPair={onAddMatchingPair}
+        onUpdateMatchingPair={onUpdateMatchingPair}
+        onRemoveMatchingPair={onRemoveMatchingPair}
       />
     )}
   </div>

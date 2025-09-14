@@ -69,8 +69,53 @@ function QuizzesPage() {
       type: 'Fill in the blanks',
       question: 'The _______ complexity of binary search is O(log n), which makes it significantly more efficient than linear search\'s O(n) complexity when searching through sorted datasets.',
       answer: 'time'
+    },
+    {
+      id: 3,
+      type: 'Matching',
+      question: 'Match the programming concepts with their definitions:',
+      matchingPairs: [
+        { left: 'Variable', right: 'A named storage location' },
+        { left: 'Function', right: 'A reusable block of code' },
+        { left: 'Loop', right: 'A control structure for repetition' }
+      ]
     }
   ]);
+
+  // Helper function to create new question based on type
+  const createNewQuestion = (type = 'Multiple Choice') => {
+    const baseQuestion = {
+      id: questions.length > 0 ? Math.max(...questions.map(q => q.id)) + 1 : 1,
+      question: '',
+      type: type
+    };
+
+    switch (type) {
+      case 'Multiple Choice':
+        return {
+          ...baseQuestion,
+          choices: ['Option 1', 'Option 2', 'Option 3', 'Option 4'],
+          correctAnswer: 'Option 1'
+        };
+      case 'Fill in the blanks':
+        return {
+          ...baseQuestion,
+          answer: ''
+        };
+      case 'True/False':
+        return {
+          ...baseQuestion,
+          correctAnswer: 'True'
+        };
+      case 'Matching':
+        return {
+          ...baseQuestion,
+          matchingPairs: [{ left: '', right: '' }]
+        };
+      default:
+        return baseQuestion;
+    }
+  };
 
   // Quiz Selection Handlers
   const handleQuizSelect = (quiz) => {
@@ -149,19 +194,23 @@ function QuizzesPage() {
   };
 
   const handleAddQuestion = () => {
-    const newQuestion = {
-      id: questions.length > 0 ? Math.max(...questions.map(q => q.id)) + 1 : 1,
-      type: 'Multiple Choice',
-      question: 'New question',
-      choices: ['Option 1', 'Option 2', 'Option 3', 'Option 4'],
-      correctAnswer: 'Option 1'
-    };
+    const newQuestion = createNewQuestion('Multiple Choice');
     setQuestions([...questions, newQuestion]);
   };
 
+  // Updated question handler with proper type switching
   const handleUpdateQuestion = (questionId, field, value) => {
     setQuestions(questions.map(q => {
       if (q.id === questionId) {
+        if (field === 'type' && value !== q.type) {
+          // When changing question type, create a new question structure
+          const newQuestion = createNewQuestion(value);
+          return {
+            ...newQuestion,
+            id: q.id,
+            question: q.question // Preserve the question text
+          };
+        }
         return { ...q, [field]: value };
       }
       return q;
@@ -183,6 +232,48 @@ function QuizzesPage() {
     setQuestions(questions.map(q => {
       if (q.id === questionId && q.choices) {
         return { ...q, choices: [...q.choices, ''] };
+      }
+      return q;
+    }));
+  };
+
+  // Matching question handlers
+  const handleAddMatchingPair = (questionId) => {
+    setQuestions(questions.map(q => {
+      if (q.id === questionId) {
+        return {
+          ...q,
+          matchingPairs: [
+            ...(q.matchingPairs || []),
+            { left: '', right: '' }
+          ]
+        };
+      }
+      return q;
+    }));
+  };
+
+  const handleUpdateMatchingPair = (questionId, pairIndex, side, value) => {
+    setQuestions(questions.map(q => {
+      if (q.id === questionId && q.matchingPairs) {
+        const newPairs = [...q.matchingPairs];
+        newPairs[pairIndex] = {
+          ...newPairs[pairIndex],
+          [side]: value
+        };
+        return { ...q, matchingPairs: newPairs };
+      }
+      return q;
+    }));
+  };
+
+  const handleRemoveMatchingPair = (questionId, pairIndex) => {
+    setQuestions(questions.map(q => {
+      if (q.id === questionId && q.matchingPairs) {
+        return {
+          ...q,
+          matchingPairs: q.matchingPairs.filter((_, index) => index !== pairIndex)
+        };
       }
       return q;
     }));
@@ -289,6 +380,9 @@ function QuizzesPage() {
                 onUpdateChoice={handleUpdateChoice}
                 onAddChoice={handleAddChoice}
                 onDeleteQuestion={handleDeleteQuestion}
+                onAddMatchingPair={handleAddMatchingPair}
+                onUpdateMatchingPair={handleUpdateMatchingPair}
+                onRemoveMatchingPair={handleRemoveMatchingPair}
               />
             ))}
           </div>
