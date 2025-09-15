@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { 
   QuizControls, 
   QuizList, 
-  QuizBattles,
-  QuestionCard  
-} from '../components/quizzes/QuizComponents';
+  QuizBattles
+} from '../components/quizzes/QuizUIComponents';
+import { QuestionCard } from '../components/quizzes/QuizComponents';
 import QuizModal from '../components/quizzes/QuizModal';
 import QuizGame from '../components/quizzes/QuizGame';
 import QuizResults from '../components/quizzes/QuizResults';

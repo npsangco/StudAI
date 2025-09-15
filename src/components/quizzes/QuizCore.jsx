@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MatchingQuizPlayer } from './QuizComponents';
+import { MatchingQuizPlayer } from './QuestionTypes';
 
 // Shared quiz logic hook
 export const useQuizCore = (questions, mode = 'solo', timeLimit = 30) => {
@@ -79,6 +79,7 @@ export const useQuizCore = (questions, mode = 'solo', timeLimit = 30) => {
     isPaused,
     displayScore,
     score: scoreRef.current,
+    scoreRef,
     setCurrentQuestion,
     setSelectedAnswer,
     setUserAnswer,
