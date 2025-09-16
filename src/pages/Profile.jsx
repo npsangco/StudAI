@@ -12,16 +12,18 @@ export default function Profile() {
     const [day, setDay] = useState("");
     const [year, setYear] = useState("");
     const [photo, setPhoto] = useState(null);
+    const [passwordMessage, setPasswordMessage] = useState("");
 
     const fileInputRef = useRef(null);
 
-    const months = ["January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"];
+    const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
     const days = Array.from({ length: 31 }, (_, i) => i + 1);
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: currentYear - 1950 + 1 }, (_, i) => 1950 + i);
 
-    // Fetch user profile
     useEffect(() => {
         axios.get(`${API_BASE}/api/user/profile`, { withCredentials: true })
             .then((res) => {
@@ -45,26 +47,55 @@ export default function Profile() {
 
     const handleUpdate = async () => {
         try {
-            const birthday = year && month && day ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null;
+            const passwordRegex =
+                /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-            await axios.put(
+            if (password && !passwordRegex.test(password)) {
+                setPasswordMessage(
+                    "Password must be at least 8 characters, include uppercase, lowercase, number, and special character."
+                );
+                return;
+            } else {
+                setPasswordMessage("");
+            }
+
+            const birthday =
+                year && month && day
+                    ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+                    : null;
+
+            const res = await axios.put(
                 `${API_BASE}/api/user/profile`,
                 {
                     username,
                     password: password || null,
                     birthday,
-                    profile_picture: photo, // sending base64 or URL
+                    profile_picture: photo,
                 },
                 { withCredentials: true }
             );
 
-            alert("Profile updated!");
-            setPassword(""); // clear password field after update
+            alert("Profile updated successfully!");
+            setPassword("");
+            setPasswordMessage("");
         } catch (err) {
+            if (err.response) {
+                // Check if backend says password is same as old
+                if (err.response.data.error === "PasswordCannotBeOld") {
+                    setPasswordMessage("Password cannot be the same as old password");
+                    setPassword(""); // clear input
+                    return;
+                }
+                if (err.response.data.error) {
+                    alert(err.response.data.error);
+                    return;
+                }
+            }
             console.error("Profile update error:", err);
             alert("Update failed");
         }
     };
+
 
     const handlePhotoSelect = (e) => {
         const file = e.target.files[0];
@@ -74,12 +105,8 @@ export default function Profile() {
                 e.target.value = "";
                 return;
             }
-
-            // Convert file to base64 so backend can store it directly
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setPhoto(reader.result); // base64 string
-            };
+            reader.onloadend = () => setPhoto(reader.result);
             reader.readAsDataURL(file);
         }
     };
@@ -97,7 +124,7 @@ export default function Profile() {
                             </div>
                             <button
                                 type="button"
-                                className="mt-4 px-4 py-1 rounded-xl text-sm bg-black text-white hover:bg-gray-800 transition"
+                                className="mt-4 px-4 py-1 rounded-xl text-sm bg-black text-white hover:bg-gray-800 transition cursor-pointer"
                                 onClick={() => fileInputRef.current.click()}
                             >
                                 Upload Photo
@@ -145,8 +172,8 @@ export default function Profile() {
                                         type={showPassword ? "text" : "password"}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full px-4 py-2 border rounded-xl border-gray-300"
                                         placeholder="Enter new password"
+                                        className="w-full px-4 py-2 border rounded-xl border-gray-300"
                                     />
                                     <button
                                         type="button"
@@ -156,35 +183,51 @@ export default function Profile() {
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
                                 </div>
+                                {passwordMessage && (
+                                    <p className="mt-2 text-sm text-red-600">{passwordMessage}</p>
+                                )}
                             </div>
 
                             {/* Birthday */}
                             <div>
                                 <label className="block mb-2 font-semibold">Birthday</label>
                                 <div className="flex gap-2 mb-3">
-                                    <select value={month} onChange={(e) => setMonth(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700">
+                                    <select
+                                        value={month}
+                                        onChange={(e) => setMonth(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700"
+                                    >
                                         <option value="">Month</option>
                                         {months.map((m, i) => (
                                             <option key={i} value={i + 1}>{m}</option>
                                         ))}
                                     </select>
 
-                                    <select value={day} onChange={(e) => setDay(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700">
+                                    <select
+                                        value={day}
+                                        onChange={(e) => setDay(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700"
+                                    >
                                         <option value="">Day</option>
                                         {days.map((d) => <option key={d} value={d}>{d}</option>)}
                                     </select>
 
-                                    <select value={year} onChange={(e) => setYear(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700">
+                                    <select
+                                        value={year}
+                                        onChange={(e) => setYear(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700"
+                                    >
                                         <option value="">Year</option>
                                         {years.map((y) => <option key={y} value={y}>{y}</option>)}
                                     </select>
                                 </div>
                             </div>
 
+                            {/* Update Button */}
                             <div className="text-center">
                                 <button
                                     onClick={handleUpdate}
-                                    className="px-8 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700"
+                                    className="px-8 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 cursor-pointer"
                                 >
                                     Update
                                 </button>

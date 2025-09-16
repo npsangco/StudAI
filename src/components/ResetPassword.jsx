@@ -1,9 +1,35 @@
-import React from "react";
-import { NavLink } from "react-router-dom";
+import React, { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 function ResetPassword() {
+    const [email, setEmail] = useState("");
+    const [message, setMessage] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [disabled, setDisabled] = useState(false);
+    const navigate = useNavigate();
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const res = await axios.post("http://localhost:4000/api/auth/reset-request", { email });
+            setMessage("Password reset link sent. Redirecting to Login...");
+            setDisabled(true);
+
+            setTimeout(() => {
+                navigate("/login");
+            }, 5000);
+        } catch (err) {
+            setMessage(err.response?.data?.error || "Something went wrong");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="flex min-h-screen">
+            {/* LEFT SIDE */}
             <div className="w-1/2 bg-gradient-to-br from-yellow-400 to-yellow-500 relative overflow-hidden">
                 <div className="absolute inset-0 p-12 flex flex-col justify-center">
                     <h1 className="text-white text-4xl font-bold mb-8">StudAI</h1>
@@ -30,40 +56,56 @@ function ResetPassword() {
                 </div>
             </div>
 
+            {/* RIGHT SIDE */}
             <div className="w-1/2 bg-white flex items-center justify-center p-8">
                 <div className="w-full max-w-md">
                     <h2 className="text-2xl font-semibold mb-3">Reset your password</h2>
                     <p className="text-gray-600 mb-6">
-                        Enter the email you signed up with. We'll send you a link to log in
-                        and reset your password.
+                        Enter the email you signed up with. We'll send you a link to reset your password.
                     </p>
 
-                    <form className="space-y-4">
+                    <form className="space-y-4" onSubmit={handleSubmit}>
                         <div>
                             <label className="block text-sm font-medium text-black mb-2">
                                 Email <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 placeholder="user@email.com"
+                                required
                                 className="w-full px-4 py-3 bg-gray-100 border-0 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-0"
+                                disabled={disabled}
                             />
                         </div>
 
-                        <NavLink
-                            to="/login"
-                            className="block text-right text-sm text-blue-600 hover:text-blue-700 mb-3"
-                        >
-                            Log In
-                        </NavLink>
+                        <div className="text-right">
+                            <NavLink
+                                to="/login"
+                                className="text-sm text-blue-600 hover:text-blue-500"
+                            >
+                                Log in
+                            </NavLink>
+                        </div>
 
                         <button
                             type="submit"
-                            className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition duration-200 mt-2"
+                            disabled={disabled || loading}
+                            className={`w-full py-3 rounded-lg font-medium transition duration-200 mt-2
+                                ${disabled
+                                    ? "bg-gray-400 text-white cursor-not-allowed"
+                                    : loading
+                                        ? "bg-black text-white cursor-wait"
+                                        : "bg-black text-white hover:bg-gray-800 cursor-pointer"}`}
                         >
-                            Send link
+                            {loading ? "Sending..." : "Send link"}
                         </button>
                     </form>
+
+                    {message && (
+                        <p className="mt-4 text-sm text-gray-700">{message}</p>
+                    )}
                 </div>
             </div>
         </div>

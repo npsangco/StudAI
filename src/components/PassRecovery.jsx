@@ -1,12 +1,66 @@
 import React, { useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 import { Eye, EyeOff } from "lucide-react";
 
 function PassRecovery() {
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+  const navigate = useNavigate();
+
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isDisabled, setIsDisabled] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Regex: Minimum 8 chars, at least one uppercase, one lowercase, one number, one special char
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+    if (!passwordRegex.test(password)) {
+      setMessage(
+        "Password must be at least 8 characters, include uppercase, lowercase, number, and special character."
+      );
+      return;
+    }
+
+    if (password !== confirm) {
+      setMessage("Passwords do not match");
+      return;
+    }
+
+    try {
+      // Check with backend if new password == old password
+      const res = await axios.post("http://localhost:4000/api/auth/reset-password", {
+        token,
+        newPassword: password,
+      });
+
+      if (res.data.error === "SameAsOld") {
+        setMessage("New password cannot be the same as your old password");
+        return;
+      }
+
+      setMessage("Password reset successful. Redirecting to login...");
+      setIsDisabled(true);
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 5000);
+    } catch (err) {
+      setMessage(err.response?.data?.error || "Something went wrong");
+    }
+  };
+
 
   return (
     <div className="flex min-h-screen">
+      {/* LEFT SIDE */}
       <div className="w-1/2 bg-gradient-to-br from-yellow-400 to-yellow-500 relative overflow-hidden">
         <div className="absolute inset-0 p-12 flex flex-col justify-center">
           <h1 className="text-white text-4xl font-bold mb-8">StudAI</h1>
@@ -17,29 +71,15 @@ function PassRecovery() {
             password.
           </h2>
         </div>
-        <div className="absolute top-16 right-16">
-          <div className="w-8 h-8 bg-red-500 rounded-full opacity-80"></div>
-        </div>
-        <div className="absolute top-32 right-32">
-          <div className="w-6 h-6 bg-red-400 rounded-full opacity-60"></div>
-        </div>
-        <div className="absolute bottom-1/3 left-16">
-          <div className="w-4 h-16 bg-red-500 rounded-full transform rotate-12"></div>
-        </div>
-        <div className="absolute bottom-16 right-16 transform rotate-12">
-          <div className="w-32 h-40 bg-white rounded-lg shadow-lg"></div>
-        </div>
-        <div className="absolute bottom-24 right-32 transform -rotate-6">
-          <div className="w-28 h-36 bg-red-500 rounded-lg shadow-lg"></div>
-        </div>
       </div>
 
+      {/* RIGHT SIDE */}
       <div className="w-1/2 bg-white flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <h2 className="text-2xl font-semibold mb-3">Password Recovery</h2>
           <p className="text-gray-600 mb-6">Enter your new password.</p>
 
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit}>
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-black mb-2">
@@ -48,24 +88,25 @@ function PassRecovery() {
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="P@ssword123"
-                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-0"
+                  required
+                  disabled={isDisabled}
+                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-0 disabled:opacity-50"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-gray-500"
+                  disabled={isDisabled}
+                  className="absolute right-3 top-3 text-gray-500 disabled:cursor-not-allowed"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
 
-            {/* Confirm Password */}
+            {/* Confirm */}
             <div>
               <label className="block text-sm font-medium text-black mb-2">
                 Confirm Password <span className="text-red-500">*</span>
@@ -73,31 +114,36 @@ function PassRecovery() {
               <div className="relative">
                 <input
                   type={showConfirm ? "text" : "password"}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
                   placeholder="P@ssword123"
-                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-0"
+                  required
+                  disabled={isDisabled}
+                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-lg placeholder-gray-500 focus:outline-none focus:ring-0 disabled:opacity-50"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3 top-3 text-gray-500"
+                  disabled={isDisabled}
+                  className="absolute right-3 top-3 text-gray-500 disabled:cursor-not-allowed"
                 >
-                  {showConfirm ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition duration-200 mt-2"
+              disabled={isDisabled}
+              className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition duration-200 mt-2 cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Submit
             </button>
           </form>
+
+          {message && (
+            <p className="mt-4 text-sm text-gray-700">{message}</p>
+          )}
         </div>
       </div>
     </div>

@@ -6,8 +6,9 @@ const bcrypt = require("bcrypt");
 const session = require("express-session");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
-const passport = require("passport"); 
+const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const nodemailer = require("nodemailer");
 
 const app = express();
 app.use(express.json());
@@ -19,7 +20,7 @@ app.use(cors({
         "http://localhost:5174",
         "http://localhost:3000",
     ],
-    credentials: true, 
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
@@ -127,11 +128,20 @@ app.get("/api/ping", (req, res) => {
     res.json({ message: "Server running fine ✅" });
 });
 
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
 // Signup
 app.post("/api/auth/signup", async (req, res) => {
     const { email, username, password, birthday } = req.body;
     if (!email || !username || !password) {
         return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Check regex
+    if (!passwordRegex.test(password)) {
+        return res.status(400).json({
+            error: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
+        });
     }
 
     try {
@@ -155,6 +165,7 @@ app.post("/api/auth/signup", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
 
 // Login
 app.post("/api/auth/login", async (req, res) => {
@@ -224,6 +235,7 @@ app.get("/api/user/profile", async (req, res) => {
     }
 });
 
+// Update profile
 app.put("/api/user/profile", async (req, res) => {
     if (!req.session || !req.session.userId) {
         return res.status(401).json({ error: "Not logged in" });
@@ -233,16 +245,109 @@ app.put("/api/user/profile", async (req, res) => {
         const { username, password, birthday, profile_picture } = req.body;
         const updates = { username, birthday, profile_picture };
 
-        if (password) updates.password = await bcrypt.hash(password, 10);
+        if (password) {
+            const passwordRegex =
+                /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+            // Validate new password
+            if (!passwordRegex.test(password)) {
+                return res.status(400).json({
+                    error: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
+                });
+            }
+
+            // Check if new password is same as old
+            const user = await User.findByPk(req.session.userId);
+            const isSame = await bcrypt.compare(password, user.password);
+            if (isSame) {
+                return res.status(400).json({ error: "PasswordCannotBeOld" });
+            }
+
+            updates.password = await bcrypt.hash(password, 10);
+        }
 
         await User.update(updates, { where: { user_id: req.session.userId } });
-
         res.json({ message: "Profile updated successfully" });
     } catch (err) {
         console.error("Profile update error:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+
+// ----------------- RESET PASSWORD ROUTES -----------------
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
+// Request password reset
+app.post("/api/auth/reset-request", async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email required" });
+
+    try {
+        const user = await User.findOne({ where: { email } });
+        if (!user) return res.status(404).json({ error: "No user with that email" });
+
+        const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, { expiresIn: "10m" });
+
+        const resetLink = `http://localhost:5173/passwordrecovery?token=${token}`;
+
+        await transporter.sendMail({
+            from: `"StudAI" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: "Password Reset Request",
+            text: `Click here to reset your password: ${resetLink}`,
+            html: `<p>Click here to reset your password:</p><a href="${resetLink}">${resetLink}</a>`,
+        });
+
+        res.json({ message: "Password reset link sent" });
+    } catch (err) {
+        console.error("Reset request error:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+
+// Handle password reset
+app.post("/api/auth/reset-password", async (req, res) => {
+    const { token, newPassword } = req.body;
+
+    try {
+        // Check regex
+        if (!passwordRegex.test(newPassword)) {
+            return res.status(400).json({
+                error: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
+            });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        // Fetch the current password from DB
+        const user = await User.findByPk(decoded.userId);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Prevent reuse of old password
+        const isSamePassword = await bcrypt.compare(newPassword, user.password);
+        if (isSamePassword) {
+            return res.status(400).json({ error: "New password cannot be the same as the old password." });
+        }
+
+        // Hash and update
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await User.update({ password: hashed }, { where: { user_id: decoded.userId } });
+
+        res.json({ message: "Password reset successful" });
+    } catch (err) {
+        console.error("Password reset error:", err);
+        res.status(400).json({ error: "Invalid or expired token" });
+    }
+});
+
 
 // ----------------- START SERVER -----------------
 const PORT = process.env.PORT || 4000;

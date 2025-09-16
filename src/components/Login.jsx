@@ -16,7 +16,7 @@ function Login() {
       const { data } = await axios.post(`${API_BASE}/api/auth/login`, {
         email,
         password,
-      });
+      }, { withCredentials: true });
       localStorage.setItem("token", data.token);
       alert("Logged in!");
       navigate("/dashboard");
@@ -71,10 +71,9 @@ function Login() {
             <NavLink
               to="/signup"
               className={({ isActive }) =>
-                `mr-6 pb-2 text-lg font-medium ${
-                  isActive
-                    ? "text-black border-b-2 border-black"
-                    : "text-gray-400"
+                `mr-6 pb-2 text-lg font-medium ${isActive
+                  ? "text-black border-b-2 border-black"
+                  : "text-gray-400"
                 }`
               }
             >
@@ -83,10 +82,9 @@ function Login() {
             <NavLink
               to="/login"
               className={({ isActive }) =>
-                `pb-2 text-lg font-medium ${
-                  isActive
-                    ? "text-black border-b-2 border-black"
-                    : "text-gray-400"
+                `pb-2 text-lg font-medium ${isActive
+                  ? "text-black border-b-2 border-black"
+                  : "text-gray-400"
                 }`
               }
             >
@@ -152,7 +150,7 @@ function Login() {
             {/* Login Button */}
             <button
               type="submit"
-              className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition duration-200"
+              className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition duration-200 cursor-pointer"
             >
               Log in
             </button>
@@ -161,7 +159,7 @@ function Login() {
             <button
               type="button"
               onClick={() => navigate("/signup")}
-              className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition duration-200"
+              className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition duration-200 cursor-pointer"
             >
               New to StudAI? Create an Account
             </button>
@@ -180,7 +178,7 @@ function Login() {
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition duration-200"
+              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition duration-200 cursor-pointer"
             >
               <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
                 <path
