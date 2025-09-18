@@ -190,7 +190,7 @@ export default function Profile() {
 
                             {/* Birthday */}
                             <div>
-                                <label className="block mb-2 font-semibold">Birthday</label>
+                                <label className="block text-sm font-medium mb-1">Birthday</label>
                                 <div className="flex gap-2 mb-3">
                                     <select
                                         value={month}
