@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import axios from 'axios';
 
 export default function Dashboard() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
+  const [restriction, setRestriction] = useState("none"); // wait lang, will implement after file-to-text works
+
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -29,6 +33,7 @@ export default function Dashboard() {
     const files = Array.from(e.target.files);
     handleFiles(files);
   };
+
 
   const handleFiles = (files) => {
     setError('');
@@ -66,6 +71,37 @@ export default function Dashboard() {
       return;
     }
     setShowModal(true);
+    setUploadStatus(""); //RESET
+  };
+
+  // this is your upload handler
+  const handleUpload = async () => {
+    if (uploadedFiles.length === 0) return alert("No file selected!");
+
+    const formData = new FormData();
+    formData.append("myFile", uploadedFiles[0] );
+
+    try {
+      const res = await axios.post("http://localhost:4000/api/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true
+      });
+
+      console.log("Upload success:", res.data.filename);
+    } catch (err) {
+      if (err.response) {
+        if (err.response.status === 409) {
+          //Duplicate file
+          alert("File with the same name already exists. Please rename your file.");
+        } else if (err.response.status === 401) {
+          alert("You must be logged in to upload files.");
+        } else {
+          alert("Upload failed: " + err.response.data.error);
+        }
+      } else {
+        alert("Network error, please try again later.");
+      }    
+    }
   };
 
   const GenerateModal = () => (
@@ -105,6 +141,7 @@ export default function Dashboard() {
             onClick={() => {
               setShowModal(false);
               alert('Generating summary...');
+              handleUpload();
             }}
             className="w-full sm:flex-1 bg-black text-white py-3 px-4 rounded-xl font-medium hover:bg-gray-800 transition-colors text-sm sm:text-base"
           >
@@ -146,10 +183,10 @@ export default function Dashboard() {
                 <input
                   id="fileInput"
                   type="file"
-
                   accept=".pdf,.ppt,.pptx"
                   onChange={handleFileInput}
                   className="hidden"
+                  name='myFile'
                 />
                 <div className="mx-auto mb-4 h-12 w-12 text-gray-400 flex items-center justify-center text-2xl">📤</div>
                 <p className="font-medium text-gray-700 mb-2">Upload Study Materials</p>
@@ -191,6 +228,7 @@ export default function Dashboard() {
               )}
 
               <button
+                type='button'
                 onClick={handleGenerate}
                 disabled={uploadedFiles.length === 0}
                 className={`mt-6 w-full py-4 rounded-xl font-medium transition-all transform ${

@@ -28,7 +28,7 @@ const sessionStore = new connectSessionSequelize({
         type: sequelize.Sequelize.STRING,
         allowNull: true,
       },
-      expires_at: {
+      expires_at: { 
         type: sequelize.Sequelize.DATE,
         allowNull: false,
         defaultValue: defaults.expires.defaultValue

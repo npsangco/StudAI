@@ -53,8 +53,8 @@ export default function LandingNavigation() {
           <div className="flex items-center">
             <div className="flex shrink-0 items-center ml-4 sm:ml-0">
               <button
-                onClick={() => handleNavClick('/')}
-                className="text-2xl font-bold tracking-tight text-black hover:text-gray-800 transition-colors cursor-pointer"
+              onClick={() => window.location.href = '/'}
+              className="text-2xl font-bold tracking-tight text-black hover:text-gray-800 transition-colors cursor-pointer"
               >
                 Stud<span className="text-indigo-600">AI</span>
               </button>
@@ -63,13 +63,13 @@ export default function LandingNavigation() {
 
           <div className="flex items-center space-x-4 ml-4">
             <button
-              onClick={() => handleNavClick('/signup')}
+              onClick={() => window.location.href = '/signup'}
               className="text-black hover:text-gray-800 px-3 py-2 text-sm font-medium transition-colors"
             >
               + Create
             </button>
             <button
-              onClick={() => handleNavClick('/login')}
+              onClick={() => window.location.href = '/login'}
               className="bg-black text-white hover:bg-gray-800 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
             >
               Log in
@@ -82,13 +82,13 @@ export default function LandingNavigation() {
         <div className="sm:hidden">
           <div className="space-y-1 px-2 pt-2 pb-3 bg-yellow-300 border-t border-black/10">
             <button
-              onClick={() => handleNavClick('/signup')}
+              onClick={() => window.location.href = '/signup'}
               className="text-black hover:bg-black/10 block rounded-md px-3 py-2 text-base font-medium w-full text-left"
             >
               + Create
             </button>
             <button
-              onClick={() => handleNavClick('/login')}
+              onClick={() => window.location.href = '/login'}
               className="text-black hover:bg-black/10 block rounded-md px-3 py-2 text-base font-medium w-full text-left"
             >
               Log in

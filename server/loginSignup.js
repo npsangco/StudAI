@@ -9,9 +9,11 @@ const cors = require("cors");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const nodemailer = require("nodemailer");
+const multer = require("multer");
 
 const app = express();
 app.use(express.json());
+app.use("/uploads", express.static("uploads"));
 
 // ----------------- CORS -----------------
 app.use(cors({
@@ -348,7 +350,85 @@ app.post("/api/auth/reset-password", async (req, res) => {
     }
 });
 
+//----------------- FILE UPLOAD -----------------
+var storage = multer.diskStorage({
+    destination: function(req, file, cb){
+        cb(null, 'uploads/')
+    },
+    filename: function(req, file, cb) {
+        cb(null, file.originalname)
+    }
+})
+
+var upload = multer({storage: storage})
+
+const File = require('./models/File');
+
+
+app.post('/api/upload', upload.single('myFile'), async (req,res,next) => {
+    try {
+        console.log("Incoming file upload...");
+
+        const file = req.file;
+        if (!file) {
+            console.log("❌ No file uploaded");
+            return res.status(400).json({ error: "Please upload a file" });
+        }
+
+        const userId = req.session.userId;
+        if (!userId) {
+            console.log("❌ No session / not logged in");
+            return res.status(401).json({ error: "Not logged in" });
+        }
+
+        console.log("✅ File received:", file);
+
+        // 🔎 Check for duplicate filename for this user
+        const existingFile = await File.findOne({
+        where: {
+            user_id: userId,
+            filename: file.filename
+        }
+        });
+
+        if (existingFile) {
+            console.log("Duplicate file:", file.filename);
+            return res.status(409).json({ error: "File with this name already exists for this user" });
+        }
+
+        // Save to DB
+        const newFile = await File.create({
+            user_id: userId,
+            filename: file.filename,
+            file_path: file.path,
+            upload_date: new Date(), // add this if your model expects it
+        });
+
+        console.log("✅ File saved to DB:", newFile.file_id);
+
+        res.json({
+            file_id: newFile.file_id,
+            filename: file.filename,
+            url: `/uploads/${file.filename}`
+        });
+    } catch (err) {
+        console.error("❌ Upload DB error:", err);
+        res.status(500).json({ error: err.message || "Failed to save file to database" });
+    }
+});
+
+
+
+
+
+
+
 
 // ----------------- START SERVER -----------------
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+
+
+
+
+

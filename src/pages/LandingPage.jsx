@@ -2,12 +2,6 @@ export default function LandingPage() {
     return (
     <div className="min-h-screen bg-gray-100">
         <div className="container mx-auto px-6 py-16">
-            <div className="mt-8 p-4 bg-red-200 rounded-lg text-center mx-auto max-w-md">
-                <p className="text-sm text-gray-600 mb-2">Authenticated:</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                    <a href="/dashboard" className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Dashboard</a>
-                </div>
-            </div>
             <div className="text-center max-w-4xl mx-auto">
                 <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
                     Welcome to <span className="text-indigo-600">StudAI</span>
@@ -41,7 +35,7 @@ export default function LandingPage() {
                 </div>
       
                 <div className="bg-white p-8 rounded-2xl shadow-lg text-center">
-                    <div className="text-4xl mb-4">Ai Summarization</div>
+                    <div className="text-4xl mb-4">AI Summarization</div>
                     <h3 className="text-xl font-bold mb-3">Turn your studying materials into something more</h3>
                     <p className="text-gray-600">
                         Transform your notes, textbooks, and lectures into engaging study guides, flashcards, and interactive content that makes learning more effective and enjoyable.
