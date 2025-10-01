@@ -27,7 +27,8 @@ export default function Navigation() {
       try {
         const res = await axios.get(`${API_BASE}/api/user/profile`, { withCredentials: true });
         if (res.data?.profile_picture) {
-          setUserPhoto(`${API_BASE}${res.data.profile_picture}`);
+          const pic = res.data.profile_picture;
+          setUserPhoto(pic.startsWith("http") ? pic : `${API_BASE}${pic}`);
         } else {
           setUserPhoto(null);
         }
@@ -37,7 +38,7 @@ export default function Navigation() {
       }
     };
 
-    fetchUser(); // fetch on mount
+    fetchUser();
 
     // 🔔 Listen for profile update events
     const handleProfileUpdate = () => fetchUser();
@@ -116,10 +117,11 @@ export default function Navigation() {
                 <span className="absolute -inset-1.5" />
                 <span className="sr-only">Open user menu</span>
                 <img
-                  alt="Profile"
-                  src={userPhoto || "/profile_pictures/default-avatar.png"}
-                  className="size-8 rounded-full bg-gray-800 outline -outline-offset-1 outline-white/10 object-cover"
+                  alt=""
+                  src={userPhoto || `${API_BASE}/uploads/profile_pictures/default-avatar.png`}
+                  className="size-8 rounded-full bg-gray-800 object-cover"
                 />
+
               </MenuButton>
 
               <MenuItems

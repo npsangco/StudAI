@@ -89,22 +89,34 @@ passport.use(new GoogleStrategy({
         if (!email) return done(new Error("No email from Google"), null);
 
         let user = await User.findOne({ where: { email } });
+
         if (!user) {
             const dummyPass = Math.random().toString(36).slice(-8);
+
             user = await User.create({
                 email,
                 username: profile.displayName || email,
                 password: await bcrypt.hash(dummyPass, 10),
                 role: "Student",
                 status: "active",
-                profile_picture: "/uploads/profile_pictures/default-avatar.png"
+                profile_picture: profile.photos && profile.photos.length > 0
+                    ? profile.photos[0].value
+                    : "/uploads/profile_pictures/default-avatar.png"
             });
+        } else {
+            if ((!user.profile_picture || user.profile_picture.includes("default-avatar")) &&
+                profile.photos && profile.photos.length > 0) {
+                user.profile_picture = profile.photos[0].value;
+                await user.save();
+            }
         }
+
         return done(null, user);
     } catch (err) {
         return done(err, null);
     }
 }));
+
 
 passport.serializeUser((user, done) => {
     done(null, user.user_id);
@@ -122,10 +134,28 @@ passport.deserializeUser(async (id, done) => {
 // ----------------- AUTH ROUTES -----------------
 app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
-app.get("/auth/google/callback",
+app.get(
+    "/auth/google/callback",
     passport.authenticate("google", { failureRedirect: "http://localhost:5173/" }),
-    (req, res) => res.redirect("http://localhost:5173/dashboard")
+    async (req, res) => {
+        try {
+            // Save user details into session
+            req.session.userId = req.user.user_id;
+            req.session.email = req.user.email;
+            req.session.username = req.user.username;
+            req.session.role = req.user.role;
+
+            console.log("✅ Google login session set:", req.session);
+
+            // redirect to dashboard
+            res.redirect("http://localhost:5173/dashboard");
+        } catch (err) {
+            console.error("Google login session error:", err);
+            res.redirect("http://localhost:5173/");
+        }
+    }
 );
+
 
 // Ping test
 app.get("/api/ping", (req, res) => {

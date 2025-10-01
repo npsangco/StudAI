@@ -12,9 +12,9 @@ export default function Profile() {
     const [day, setDay] = useState("");
     const [year, setYear] = useState("");
     const [photo, setPhoto] = useState(null);
-    const [previewPhoto, setPreviewPhoto] = useState(null);
     const [savedPhoto, setSavedPhoto] = useState(null);
     const [passwordMessage, setPasswordMessage] = useState("");
+    const [originalProfile, setOriginalProfile] = useState(null);
 
     const fileInputRef = useRef(null);
 
@@ -33,13 +33,29 @@ export default function Profile() {
                 setUsername(user.username || "");
                 setEmail(user.email || "");
                 setPhoto(user.profile_picture || null);
+                setSavedPhoto(user.profile_picture || null);
 
+                let bMonth = "";
+                let bDay = "";
+                let bYear = "";
                 if (user.birthday) {
                     const bday = new Date(user.birthday);
-                    setMonth(bday.getMonth() + 1);
-                    setDay(bday.getDate());
-                    setYear(bday.getFullYear());
+                    bMonth = bday.getMonth() + 1;
+                    bDay = bday.getDate();
+                    bYear = bday.getFullYear();
+                    setMonth(bMonth);
+                    setDay(bDay);
+                    setYear(bYear);
                 }
+
+                setOriginalProfile({
+                    username: user.username || "",
+                    email: user.email || "",
+                    photo: user.profile_picture || null,
+                    month: bMonth,
+                    day: bDay,
+                    year: bYear,
+                });
             })
             .catch((err) => {
                 console.error("Profile fetch error:", err);
@@ -54,17 +70,29 @@ export default function Profile() {
                     ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
                     : null;
 
-            // request email verification
             if (password) {
-                await axios.post(
-                    `${API_BASE}/api/user/request-password-update`,
-                    { newPassword: password },
-                    { withCredentials: true }
-                );
-                alert("A verification email has been sent. Please confirm to update your password.");
+                try {
+                    await axios.post(
+                        `${API_BASE}/api/user/request-password-update`,
+                        { newPassword: password },
+                        { withCredentials: true }
+                    );
+                    alert("A verification email has been sent. Please confirm to update your password.");
+                } catch (err) {
+                    console.error("Password update error:", err);
+
+                    if (err.response && err.response.data && err.response.data.error) {
+                        setPasswordMessage(err.response.data.error);
+                    } else {
+                        setPasswordMessage("Failed to update password.");
+                    }
+
+                    setPassword("");
+
+                    return; 
+                }
             }
 
-            // Update profile except password
             await axios.put(
                 `${API_BASE}/api/user/profile`,
                 { username, birthday, profile_picture: photo },
@@ -72,16 +100,17 @@ export default function Profile() {
             );
 
             setSavedPhoto(photo);
-            alert("Profile updated (password requires email confirmation).");
+            setOriginalProfile({ username, email, photo, month, day, year });
+            setPassword(""); 
+            setPasswordMessage(""); 
 
+            alert("Profile updated.");
             window.dispatchEvent(new CustomEvent("profileUpdated"));
         } catch (err) {
             console.error("Profile update error:", err);
             alert("Update failed");
         }
     };
-
-
 
 
 
@@ -110,6 +139,14 @@ export default function Profile() {
         }
     };
 
+    const isChanged = originalProfile && (
+        username !== originalProfile.username ||
+        photo !== originalProfile.photo ||
+        month !== originalProfile.month ||
+        day !== originalProfile.day ||
+        year !== originalProfile.year ||
+        password.length > 0
+    );
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -118,16 +155,20 @@ export default function Profile() {
                     <h2 className="text-2xl font-bold text-center mb-8">Profile</h2>
 
                     <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
+                        {/* Profile Picture */}
                         <div className="flex flex-col items-center">
                             <div className="w-32 h-32 bg-gray-200 rounded-full overflow-hidden">
                                 <img
-                                    src={previewPhoto ? `${API_BASE}${previewPhoto}`
-                                        : photo ? `${API_BASE}${photo}`
-                                            : "/uploads/profile_pictures/default-avatar.png"}
+                                    src={
+                                        photo
+                                            ? photo.startsWith("http")
+                                                ? photo
+                                                : `${API_BASE}${photo}`
+                                            : "/uploads/profile_pictures/default-avatar.png"
+                                    }
                                     alt=""
                                     className="w-full h-full object-cover"
                                 />
-
                             </div>
 
                             <button
@@ -146,6 +187,7 @@ export default function Profile() {
                             />
                         </div>
 
+                        {/* Profile Fields */}
                         <div className="flex-1 space-y-6">
                             {/* Email */}
                             <div>
@@ -235,7 +277,11 @@ export default function Profile() {
                             <div className="text-center">
                                 <button
                                     onClick={handleUpdate}
-                                    className="px-8 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 cursor-pointer"
+                                    disabled={!isChanged} // ✅ disable when unchanged
+                                    className={`px-8 py-2 rounded-xl text-white ${isChanged
+                                        ? "bg-green-600 hover:bg-green-700 cursor-pointer"
+                                        : "bg-gray-400 cursor-not-allowed"
+                                        }`}
                                 >
                                     Update
                                 </button>
