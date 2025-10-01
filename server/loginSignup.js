@@ -299,7 +299,6 @@ app.post('/api/upload/profile', profileUpload.single('profilePic'), async (req, 
         const file = req.file;
         if (!file) return res.status(400).json({ error: "No file uploaded" });
 
-        // Just return path, don't save to DB yet
         const photoUrl = `/uploads/profile_pictures/${file.filename}`;
         res.json({ message: "Profile picture uploaded", photoUrl });
     } catch (err) {
@@ -310,6 +309,79 @@ app.post('/api/upload/profile', profileUpload.single('profilePic'), async (req, 
 
 
 app.use('/uploads/profile_pictures', express.static('uploads/profile_pictures'));
+
+// ----------------- PASSWORD UPDATE WITH EMAIL VERIFICATION -----------------
+
+// Request password update (send verification email)
+app.post("/api/user/request-password-update", async (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Not logged in" });
+    }
+
+    const { newPassword } = req.body;
+    if (!newPassword) return res.status(400).json({ error: "Password required" });
+
+    // Validate password
+    if (!passwordRegex.test(newPassword)) {
+        return res.status(400).json({
+            error: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
+        });
+    }
+
+    try {
+        const user = await User.findByPk(req.session.userId);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Prevent reusing the old password
+        const isSame = await bcrypt.compare(newPassword, user.password);
+        if (isSame) return res.status(400).json({ error: "Password cannot be the same as the old one" });
+
+        // Create token with userId and newPassword (hashed inside token for security)
+        const token = jwt.sign(
+            { userId: user.user_id, newPassword: await bcrypt.hash(newPassword, 10) },
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" }
+        );
+
+        const confirmLink = `http://localhost:4000/api/user/confirm-password-update?token=${token}`;
+
+        await transporter.sendMail({
+            from: `"StudAI" <${process.env.EMAIL_USER}>`,
+            to: user.email,
+            subject: "Confirm Your Password Update",
+            html: `
+                <p>You requested to update your password. Click below to confirm:</p>
+                <a href="${confirmLink}">${confirmLink}</a>
+                <p>This link will expire in 15 minutes.</p>
+            `,
+        });
+
+        res.json({ message: "Verification email sent. Please check your inbox." });
+    } catch (err) {
+        console.error("Password update request error:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Confirm password update (when user clicks email link)
+app.get("/api/user/confirm-password-update", async (req, res) => {
+    const { token } = req.query;
+    if (!token) return res.status(400).send("Invalid request");
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        await User.update(
+            { password: decoded.newPassword },
+            { where: { user_id: decoded.userId } }
+        );
+
+        res.send("<h2>Password updated successfully ✅</h2>");
+    } catch (err) {
+        console.error("Password confirm error:", err);
+        res.status(400).send("Invalid or expired token");
+    }
+});
 
 
 

@@ -54,19 +54,25 @@ export default function Profile() {
                     ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
                     : null;
 
+            // request email verification
+            if (password) {
+                await axios.post(
+                    `${API_BASE}/api/user/request-password-update`,
+                    { newPassword: password },
+                    { withCredentials: true }
+                );
+                alert("A verification email has been sent. Please confirm to update your password.");
+            }
+
+            // Update profile except password
             await axios.put(
                 `${API_BASE}/api/user/profile`,
-                {
-                    username,
-                    password: password || null,
-                    birthday,
-                    profile_picture: photo,
-                },
+                { username, birthday, profile_picture: photo },
                 { withCredentials: true }
             );
 
-            setSavedPhoto(photo); // Confirm the photo
-            alert("Profile updated successfully!");
+            setSavedPhoto(photo);
+            alert("Profile updated (password requires email confirmation).");
 
             window.dispatchEvent(new CustomEvent("profileUpdated"));
         } catch (err) {
@@ -74,6 +80,7 @@ export default function Profile() {
             alert("Update failed");
         }
     };
+
 
 
 
