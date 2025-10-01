@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -19,11 +20,39 @@ function classNames(...classes) {
 export default function Navigation() {
   const location = useLocation()
   const navigate = useNavigate()
+  const [userPhoto, setUserPhoto] = useState(null)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/api/user/profile`, { withCredentials: true });
+        if (res.data?.profile_picture) {
+          setUserPhoto(`${API_BASE}${res.data.profile_picture}`);
+        } else {
+          setUserPhoto(null);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user:", err);
+        setUserPhoto(null);
+      }
+    };
+
+    fetchUser(); // fetch on mount
+
+    // 🔔 Listen for profile update events
+    const handleProfileUpdate = () => fetchUser();
+    window.addEventListener("profileUpdated", handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener("profileUpdated", handleProfileUpdate);
+    };
+  }, []);
+
 
   const handleLogout = async () => {
     try {
       await axios.post(`${API_BASE}/api/auth/logout`, {}, { withCredentials: true })
-      navigate('/login')  // redirect to login after logout
+      navigate('/login')
     } catch (err) {
       console.error('Logout error:', err)
       alert('Failed to log out')
@@ -38,7 +67,6 @@ export default function Navigation() {
       <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
         <div className="relative flex h-16 items-center justify-between">
           <div className="absolute inset-y-0 left-0 flex items-center sm:hidden">
-            {/* Mobile menu button*/}
             <DisclosureButton className="group relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-white/5 hover:text-white focus:outline-2 focus:-outline-offset-1 focus:outline-indigo-500">
               <span className="absolute -inset-0.5" />
               <span className="sr-only">Open main menu</span>
@@ -46,6 +74,8 @@ export default function Navigation() {
               <XMarkIcon aria-hidden="true" className="hidden size-6 group-data-open:block" />
             </DisclosureButton>
           </div>
+
+          {/* Logo + nav links */}
           <div className="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
             <div className="flex shrink-0 items-center">
               <Link
@@ -65,7 +95,9 @@ export default function Navigation() {
                       to={item.href}
                       aria-current={isCurrent ? 'page' : undefined}
                       className={classNames(
-                        isCurrent ? 'bg-gray-950/50 text-white' : 'text-black hover:bg-white/5 hover:text-white',
+                        isCurrent
+                          ? 'bg-gray-950/50 text-white'
+                          : 'text-black hover:bg-white/5 hover:text-white',
                         'rounded-md px-3 py-2 text-sm font-medium',
                       )}
                     >
@@ -76,16 +108,17 @@ export default function Navigation() {
               </div>
             </div>
           </div>
+
+          {/* Profile dropdown */}
           <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
-            {/* Profile dropdown */}
             <Menu as="div" className="relative ml-3">
               <MenuButton className="relative flex rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
                 <span className="absolute -inset-1.5" />
                 <span className="sr-only">Open user menu</span>
                 <img
-                  alt=""
-                  src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                  className="size-8 rounded-full bg-gray-800 outline -outline-offset-1 outline-white/10"
+                  alt="Profile"
+                  src={userPhoto || "/profile_pictures/default-avatar.png"}
+                  className="size-8 rounded-full bg-gray-800 outline -outline-offset-1 outline-white/10 object-cover"
                 />
               </MenuButton>
 
@@ -134,7 +167,9 @@ export default function Navigation() {
                 to={item.href}
                 aria-current={isCurrent ? 'page' : undefined}
                 className={classNames(
-                  isCurrent ? 'bg-gray-950/50 text-white' : 'text-white hover:bg-white/5 hover:text-white',
+                  isCurrent
+                    ? 'bg-gray-950/50 text-white'
+                    : 'text-white hover:bg-white/5 hover:text-white',
                   'block rounded-md px-3 py-2 text-base font-medium',
                 )}
               >

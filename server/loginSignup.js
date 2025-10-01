@@ -10,6 +10,7 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const nodemailer = require("nodemailer");
 const multer = require("multer");
+const path = require('path');
 
 const app = express();
 app.use(express.json());
@@ -96,6 +97,7 @@ passport.use(new GoogleStrategy({
                 password: await bcrypt.hash(dummyPass, 10),
                 role: "Student",
                 status: "active",
+                profile_picture: "/uploads/profile_pictures/default-avatar.png"
             });
         }
         return done(null, user);
@@ -230,6 +232,10 @@ app.get("/api/user/profile", async (req, res) => {
 
         if (!user) return res.status(404).json({ error: "User not found" });
 
+        if (!user.profile_picture) {
+            user.profile_picture = "/uploads/profile_pictures/default-avatar.png";
+        }
+
         res.json(user);
     } catch (err) {
         console.error("Profile fetch error:", err);
@@ -275,6 +281,36 @@ app.put("/api/user/profile", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+const profileStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/profile_pictures');
+    },
+    filename: function (req, file, cb) {
+        const ext = path.extname(file.originalname);
+        cb(null, Date.now() + '-' + file.fieldname + ext);
+    }
+});
+
+const profileUpload = multer({ storage: profileStorage });
+
+app.post('/api/upload/profile', profileUpload.single('profilePic'), async (req, res) => {
+    try {
+        const file = req.file;
+        if (!file) return res.status(400).json({ error: "No file uploaded" });
+
+        // Just return path, don't save to DB yet
+        const photoUrl = `/uploads/profile_pictures/${file.filename}`;
+        res.json({ message: "Profile picture uploaded", photoUrl });
+    } catch (err) {
+        console.error("❌ Profile upload error:", err);
+        res.status(500).json({ error: "Failed to upload profile picture" });
+    }
+});
+
+
+app.use('/uploads/profile_pictures', express.static('uploads/profile_pictures'));
+
 
 
 // ----------------- RESET PASSWORD ROUTES -----------------
@@ -352,20 +388,20 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
 //----------------- FILE UPLOAD -----------------
 var storage = multer.diskStorage({
-    destination: function(req, file, cb){
+    destination: function (req, file, cb) {
         cb(null, 'uploads/')
     },
-    filename: function(req, file, cb) {
+    filename: function (req, file, cb) {
         cb(null, file.originalname)
     }
 })
 
-var upload = multer({storage: storage})
+var upload = multer({ storage: storage })
 
 const File = require('./models/File');
 
 
-app.post('/api/upload', upload.single('myFile'), async (req,res,next) => {
+app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
     try {
         console.log("Incoming file upload...");
 
@@ -385,10 +421,10 @@ app.post('/api/upload', upload.single('myFile'), async (req,res,next) => {
 
         // 🔎 Check for duplicate filename for this user
         const existingFile = await File.findOne({
-        where: {
-            user_id: userId,
-            filename: file.filename
-        }
+            where: {
+                user_id: userId,
+                filename: file.filename
+            }
         });
 
         if (existingFile) {

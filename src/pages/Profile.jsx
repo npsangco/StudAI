@@ -12,6 +12,8 @@ export default function Profile() {
     const [day, setDay] = useState("");
     const [year, setYear] = useState("");
     const [photo, setPhoto] = useState(null);
+    const [previewPhoto, setPreviewPhoto] = useState(null);
+    const [savedPhoto, setSavedPhoto] = useState(null);
     const [passwordMessage, setPasswordMessage] = useState("");
 
     const fileInputRef = useRef(null);
@@ -47,24 +49,12 @@ export default function Profile() {
 
     const handleUpdate = async () => {
         try {
-            const passwordRegex =
-                /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
-            if (password && !passwordRegex.test(password)) {
-                setPasswordMessage(
-                    "Password must be at least 8 characters, include uppercase, lowercase, number, and special character."
-                );
-                return;
-            } else {
-                setPasswordMessage("");
-            }
-
             const birthday =
                 year && month && day
                     ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
                     : null;
 
-            const res = await axios.put(
+            await axios.put(
                 `${API_BASE}/api/user/profile`,
                 {
                     username,
@@ -75,41 +65,44 @@ export default function Profile() {
                 { withCredentials: true }
             );
 
+            setSavedPhoto(photo); // Confirm the photo
             alert("Profile updated successfully!");
-            setPassword("");
-            setPasswordMessage("");
+
+            window.dispatchEvent(new CustomEvent("profileUpdated"));
         } catch (err) {
-            if (err.response) {
-                // Check if backend says password is same as old
-                if (err.response.data.error === "PasswordCannotBeOld") {
-                    setPasswordMessage("Password cannot be the same as old password");
-                    setPassword(""); // clear input
-                    return;
-                }
-                if (err.response.data.error) {
-                    alert(err.response.data.error);
-                    return;
-                }
-            }
             console.error("Profile update error:", err);
             alert("Update failed");
         }
     };
 
 
-    const handlePhotoSelect = (e) => {
+
+
+    const handlePhotoSelect = async (e) => {
         const file = e.target.files[0];
-        if (file) {
-            if (file.size > 25 * 1024 * 1024) {
-                alert("File size must be less than 25MB");
-                e.target.value = "";
-                return;
-            }
-            const reader = new FileReader();
-            reader.onloadend = () => setPhoto(reader.result);
-            reader.readAsDataURL(file);
+        if (!file) return;
+
+        if (file.size > 25 * 1024 * 1024) {
+            alert("File size must be less than 25MB");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("profilePic", file);
+
+        try {
+            const res = await axios.post(`${API_BASE}/api/upload/profile`, formData, {
+                withCredentials: true,
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            setPhoto(res.data.photoUrl);
+        } catch (err) {
+            console.error("Upload error:", err);
+            alert("Failed to upload photo");
         }
     };
+
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -120,8 +113,16 @@ export default function Profile() {
                     <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
                         <div className="flex flex-col items-center">
                             <div className="w-32 h-32 bg-gray-200 rounded-full overflow-hidden">
-                                {photo && <img src={photo} alt="Profile" className="w-full h-full object-cover" />}
+                                <img
+                                    src={previewPhoto ? `${API_BASE}${previewPhoto}`
+                                        : photo ? `${API_BASE}${photo}`
+                                            : "/uploads/profile_pictures/default-avatar.png"}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                />
+
                             </div>
+
                             <button
                                 type="button"
                                 className="mt-4 px-4 py-1 rounded-xl text-sm bg-black text-white hover:bg-gray-800 transition cursor-pointer"
