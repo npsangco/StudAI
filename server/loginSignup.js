@@ -498,7 +498,6 @@ var storage = multer.diskStorage({
 
 var upload = multer({ storage: storage })
 
-const File = require('./models/File');
 
 
 app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
@@ -520,10 +519,6 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
         console.log("✅ File received:", file);
 
         const existingFile = await File.findOne({
-            where: {
-                user_id: userId,
-                filename: file.filename
-            }
             where: {
                 user_id: userId,
                 filename: file.filename
