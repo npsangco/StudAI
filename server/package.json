@@ -17,15 +17,17 @@
     "bcrypt": "^6.0.0",
     "connect-session-sequelize": "^8.0.2",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.2",
+    "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "mysql2": "^3.14.5",
+    "node-pptx-parser": "^1.0.1",
     "nodemailer": "^7.0.6",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "pdf-parse": "^1.1.1",
     "sequelize": "^6.37.7"
   },
   "devDependencies": {

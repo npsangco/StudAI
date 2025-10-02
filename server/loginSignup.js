@@ -1,15 +1,40 @@
-// Load .env file
-require("dotenv").config();
+// 🌍 Environment variables
+import dotenv from "dotenv";
+dotenv.config();
 
-const express = require("express");
-const bcrypt = require("bcrypt");
-const session = require("express-session");
-const jwt = require("jsonwebtoken");
-const cors = require("cors");
-const passport = require("passport");
-const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const nodemailer = require("nodemailer");
-const multer = require("multer");
+// 📦 Core modules
+import fs from "fs";
+import path from "path";
+
+// 🚀 Framework
+import express from "express";
+import session from "express-session";
+import multer from "multer";
+import cors from "cors";
+
+// 🗄️ Database + Models
+import sequelize from "./db.js";
+import User from "./models/User.js";
+import File from "./models/File.js";
+import sessionStore from "./sessionStore.js";
+
+// Import Note model after creating it
+let Note;
+try {
+    const noteModule = await import("./models/Note.js");
+    Note = noteModule.default;
+} catch (error) {
+    console.warn("⚠️ Note model not found - notes features will be disabled");
+}
+
+// 🖼️ PPTX Parser (for text extraction)
+import pptxParser from "node-pptx-parser"; 
+
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import nodemailer from "nodemailer";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const app = express();
 app.use(express.json());
@@ -27,37 +52,25 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-// ----------------- DB + User Model -----------------
-let sequelize, User;
-try {
-    sequelize = require("./db");
-    User = require("./models/User");
-} catch (error) {
-    console.error("Failed to load DB or User model:", error.message);
-    process.exit(1);
-}
-
+// ----------------- DB Connection -----------------
 sequelize.authenticate()
     .then(() => {
         console.log("✅ Database connected");
-        return User.sync({ force: false });
+        return Promise.all([
+            User.sync({ force: false }),
+            File.sync({ force: false }),
+            Note ? Note.sync({ force: false }) : Promise.resolve()
+        ]);
     })
     .then(() => {
-        console.log("✅ User model synced");
+        console.log("✅ Models synced");
     })
     .catch((err) => {
         console.error("❌ Database error:", err);
         process.exit(1);
     });
 
-// ----------------- Session Store -----------------
-let sessionStore;
-try {
-    sessionStore = require("./sessionStore");
-} catch (error) {
-    console.error("Failed to load session store:", error.message);
-}
-
+// ----------------- Session Configuration -----------------
 if (sessionStore) {
     app.use(
         session({
@@ -68,9 +81,9 @@ if (sessionStore) {
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: false, // 🔑 keep false for local HTTP
-                maxAge: 1000 * 60 * 60 * 24, // 1 day
-                sameSite: "lax", // 🔑 change to "none" if testing cross-domain with HTTPS
+                secure: false,
+                maxAge: 1000 * 60 * 60 * 24,
+                sameSite: "lax",
             },
             rolling: true,
         })
@@ -78,6 +91,9 @@ if (sessionStore) {
 }
 
 // ----------------- PASSPORT (Google OAuth) -----------------
+app.use(passport.initialize());
+app.use(passport.session());
+
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_ID,
     clientSecret: process.env.GOOGLE_SECRET,
@@ -106,7 +122,7 @@ passport.use(new GoogleStrategy({
 
 passport.serializeUser((user, done) => {
     done(null, user.user_id);
-});
+}); 
 
 passport.deserializeUser(async (id, done) => {
     try {
@@ -125,7 +141,6 @@ app.get("/auth/google/callback",
     (req, res) => res.redirect("http://localhost:5173/dashboard")
 );
 
-// Ping test
 app.get("/api/ping", (req, res) => {
     res.json({ message: "Server running fine ✅" });
 });
@@ -139,7 +154,6 @@ app.post("/api/auth/signup", async (req, res) => {
         return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Check regex
     if (!passwordRegex.test(password)) {
         return res.status(400).json({
             error: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
@@ -168,7 +182,6 @@ app.post("/api/auth/signup", async (req, res) => {
     }
 });
 
-
 // Login
 app.post("/api/auth/login", async (req, res) => {
     const { email, password } = req.body;
@@ -180,8 +193,7 @@ app.post("/api/auth/login", async (req, res) => {
 
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return res.status(401).json({ error: "Invalid credentials" });
-
-        // Store session
+        
         req.session.userId = user.user_id;
         req.session.email = user.email;
         req.session.username = user.username;
@@ -237,7 +249,6 @@ app.get("/api/user/profile", async (req, res) => {
     }
 });
 
-// Update profile
 app.put("/api/user/profile", async (req, res) => {
     if (!req.session || !req.session.userId) {
         return res.status(401).json({ error: "Not logged in" });
@@ -248,17 +259,12 @@ app.put("/api/user/profile", async (req, res) => {
         const updates = { username, birthday, profile_picture };
 
         if (password) {
-            const passwordRegex =
-                /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
-            // Validate new password
             if (!passwordRegex.test(password)) {
                 return res.status(400).json({
                     error: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
                 });
             }
 
-            // Check if new password is same as old
             const user = await User.findByPk(req.session.userId);
             const isSame = await bcrypt.compare(password, user.password);
             if (isSame) {
@@ -276,7 +282,6 @@ app.put("/api/user/profile", async (req, res) => {
     }
 });
 
-
 // ----------------- RESET PASSWORD ROUTES -----------------
 const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -286,7 +291,6 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// Request password reset
 app.post("/api/auth/reset-request", async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Email required" });
@@ -314,13 +318,10 @@ app.post("/api/auth/reset-request", async (req, res) => {
     }
 });
 
-
-// Handle password reset
 app.post("/api/auth/reset-password", async (req, res) => {
     const { token, newPassword } = req.body;
 
     try {
-        // Check regex
         if (!passwordRegex.test(newPassword)) {
             return res.status(400).json({
                 error: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
@@ -329,17 +330,14 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Fetch the current password from DB
         const user = await User.findByPk(decoded.userId);
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        // Prevent reuse of old password
         const isSamePassword = await bcrypt.compare(newPassword, user.password);
         if (isSamePassword) {
             return res.status(400).json({ error: "New password cannot be the same as the old password." });
         }
 
-        // Hash and update
         const hashed = await bcrypt.hash(newPassword, 10);
         await User.update({ password: hashed }, { where: { user_id: decoded.userId } });
 
@@ -350,22 +348,19 @@ app.post("/api/auth/reset-password", async (req, res) => {
     }
 });
 
-//----------------- FILE UPLOAD -----------------
-var storage = multer.diskStorage({
+// ----------------- FILE UPLOAD -----------------
+const storage = multer.diskStorage({
     destination: function(req, file, cb){
         cb(null, 'uploads/')
     },
     filename: function(req, file, cb) {
         cb(null, file.originalname)
     }
-})
+});
 
-var upload = multer({storage: storage})
+const upload = multer({storage: storage});
 
-const File = require('./models/File');
-
-
-app.post('/api/upload', upload.single('myFile'), async (req,res,next) => {
+app.post('/api/upload', upload.single('myFile'), async (req, res) => {
     try {
         console.log("Incoming file upload...");
 
@@ -383,12 +378,11 @@ app.post('/api/upload', upload.single('myFile'), async (req,res,next) => {
 
         console.log("✅ File received:", file);
 
-        // 🔎 Check for duplicate filename for this user
         const existingFile = await File.findOne({
-        where: {
-            user_id: userId,
-            filename: file.filename
-        }
+            where: {
+                user_id: userId,
+                filename: file.filename
+            }
         });
 
         if (existingFile) {
@@ -396,12 +390,11 @@ app.post('/api/upload', upload.single('myFile'), async (req,res,next) => {
             return res.status(409).json({ error: "File with this name already exists for this user" });
         }
 
-        // Save to DB
         const newFile = await File.create({
             user_id: userId,
             filename: file.filename,
             file_path: file.path,
-            upload_date: new Date(), // add this if your model expects it
+            upload_date: new Date(),
         });
 
         console.log("✅ File saved to DB:", newFile.file_id);
@@ -417,18 +410,346 @@ app.post('/api/upload', upload.single('myFile'), async (req,res,next) => {
     }
 });
 
+// ----------------- PPTX EXTRACTION ENDPOINT (ONLY) -----------------
+app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
+    try {
+        const filePath = req.file.path;
+        console.log("📊 Processing PPTX:", filePath);
 
+        const parser = new pptxParser(filePath);
+        const parsedContent = await parser.parse();
 
+        let extractedText = "";
+        let slideCount = 0;
 
+        if (parsedContent.slides && Array.isArray(parsedContent.slides)) {
+            slideCount = parsedContent.slides.length;
+            
+            extractedText = parsedContent.slides
+                .map((slide, index) => {
+                    const slideNum = slide.id || index + 1;
+                    let slideText = "";
 
+                    if (typeof slide.parsed === 'string') {
+                        slideText = slide.parsed;
+                    } else if (typeof slide.parsed === 'object' && slide.parsed !== null) {
+                        slideText = extractTextFromObject(slide.parsed);
+                    } else if (slide.text) {
+                        slideText = typeof slide.text === 'string' ? slide.text : extractTextFromObject(slide.text);
+                    }
 
+                    slideText = cleanPPTXText(slideText);
+                    
+                    return slideText ? `Slide ${slideNum}:\n${slideText}\n` : '';
+                })
+                .filter(text => text.length > 0)
+                .join("\n");
+        }
 
+        function cleanPPTXText(text) {
+            if (!text) return '';
+            
+            // Remove XML namespaces and schemas
+            text = text.replace(/http:\/\/schemas\.[^\s]+/g, '');
+            text = text.replace(/urn:schemas-[^\s]+/g, '');
+            
+            // Remove common PPTX metadata patterns
+            text = text.replace(/\brId\d+\b/g, '');
+            text = text.replace(/\bShape\s+\d+\b/g, '');
+            text = text.replace(/\bGoogle\s+Shape;[^\s]+/g, '');
+            text = text.replace(/\b(rect|flowChartTerminator|flowChartConnector|straightConnector\d+)\b/g, '');
+            text = text.replace(/\b(title|body|ctr|ctrTitle)\b/g, '');
+            text = text.replace(/\b(solid|flat|sng|none|noStrike|square|arabicPeriod)\b/g, '');
+            text = text.replace(/\b(dk1|lt1|sm)\b/g, '');
+            
+            // Remove font names
+            text = text.replace(/\b(Arial|Proxima Nova|Twentieth Century|Corsiva|Times New Roman|Architects Daughter)\b/g, '');
+            
+            // Remove language codes
+            text = text.replace(/\ben-US\b/g, '');
+            
+            // Remove hex color codes (6 digit)
+            text = text.replace(/\b[0-9A-Fa-f]{6}\b/g, '');
+            
+            // Remove large numbers (coordinates, dimensions)
+            text = text.replace(/\b\d{4,}\b/g, '');
+            
+            // Remove small isolated numbers and formatting codes
+            text = text.replace(/\bl\s+\d+\b/g, '');
+            text = text.replace(/\bt\s+\d+\b/g, '');
+            text = text.replace(/\b\d+\s+l\b/g, '');
+            text = text.replace(/\b\d+\s+t\b/g, '');
+            
+            // Remove image references
+            text = text.replace(/\b(Related image|Image result for[^\n]*)\b/gi, '');
+            text = text.replace(/\b[\w-]+\.(jpg|jpeg|png|gif|JPG|PNG)\b/g, '');
+            
+            // Remove standalone single letters and numbers
+            text = text.replace(/\b[a-z]\s+\d+\b/gi, '');
+            text = text.replace(/\b\d+\s+[a-z]\b/gi, '');
+            
+            // Remove excessive whitespace
+            text = text.replace(/\s+/g, ' ');
+            
+            // Split by common delimiters
+            const sentences = text.split(/[•\-–—\n]/);
+            
+            const cleanedSentences = sentences
+                .map(s => s.trim())
+                .filter(s => {
+                    // Must be at least 10 characters
+                    if (s.length < 10) return false;
+                    
+                    // Must not be mostly numbers
+                    const letterCount = (s.match(/[a-zA-Z]/g) || []).length;
+                    const digitCount = (s.match(/\d/g) || []).length;
+                    if (digitCount > letterCount) return false;
+                    
+                    // Must have at least 3 words
+                    const words = s.split(/\s+/).filter(w => w.length > 0);
+                    if (words.length < 3) return false;
+                    
+                    // Check if it's mostly real words (alphabetic content)
+                    const alphaRatio = letterCount / s.replace(/\s/g, '').length;
+                    if (alphaRatio < 0.6) return false;
+                    
+                    return true;
+                });
+            
+            return cleanedSentences.join('\n• ');
+        }
+
+        function extractTextFromObject(obj) {
+            if (typeof obj === 'string') {
+                return obj;
+            }
+            
+            if (Array.isArray(obj)) {
+                return obj.map(item => extractTextFromObject(item)).join(' ');
+            }
+            
+            if (typeof obj === 'object' && obj !== null) {
+                if (obj.text) return extractTextFromObject(obj.text);
+                if (obj.content) return extractTextFromObject(obj.content);
+                if (obj.value) return extractTextFromObject(obj.value);
+                
+                return Object.values(obj)
+                    .map(value => extractTextFromObject(value))
+                    .filter(text => text && text.trim().length > 0)
+                    .join(' ');
+            }
+            
+            return '';
+        }
+
+        fs.unlinkSync(filePath);
+
+        console.log(`✅ Extracted ${extractedText.length} characters from ${slideCount} slides`);
+
+        res.json({ 
+            text: extractedText, 
+            slideCount,
+            wordCount: extractedText.trim().split(/\s+/).filter(w => w.length > 0).length
+        });
+    } catch (err) {
+        console.error("❌ PPTX extraction error:", err);
+        
+        if (req.file && req.file.path) {
+            try {
+                fs.unlinkSync(req.file.path);
+            } catch (e) {
+                console.error("Failed to clean up file:", e);
+            }
+        }
+        
+        res.status(500).json({ error: "Failed to extract text from PPTX" });
+    }
+});
+
+// ----------------- SUMMARY GENERATION -----------------
+app.post("/api/generate-summary", async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        if (!userId) {
+            return res.status(401).json({ error: "Not logged in" });
+        }
+
+        if (!Note) {
+            return res.status(503).json({ error: "Notes feature not available" });
+        }
+
+        const { content, title, restrictions, metadata } = req.body;
+
+        if (!content || !title) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        // Here you would implement your AI summary generation logic
+        // For now, just create a note with the content
+        const newNote = await Note.create({
+            user_id: userId,
+            file_id: null, // Can be linked to uploaded file if needed
+            title: title,
+            content: content
+        });
+
+        res.json({
+            message: "Summary generated successfully",
+            note: newNote
+        });
+
+    } catch (err) {
+        console.error("❌ Summary generation error:", err);
+        res.status(500).json({ error: "Failed to generate summary" });
+    }
+});
+
+// ----------------- NOTES ROUTES -----------------
+app.get("/api/notes", async (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Not logged in" });
+    }
+
+    if (!Note) {
+        return res.status(503).json({ error: "Notes feature not available" });
+    }
+
+    try {
+        const notes = await Note.findAll({
+            where: { user_id: req.session.userId },
+            order: [['createdAt', 'DESC']]
+        });
+
+        // Add computed fields that your frontend expects
+        const notesWithExtras = notes.map(note => {
+            const noteData = note.toJSON();
+            return {
+                ...noteData,
+                created_at: noteData.createdAt, // Map createdAt to created_at for frontend
+                words: noteData.content ? noteData.content.split(/\s+/).length : 0,
+                is_shared: false // Default value since not in DB
+            };
+        });
+
+        res.json({ notes: notesWithExtras });
+    } catch (err) {
+        console.error("Failed to fetch notes:", err);
+        res.status(500).json({ error: "Failed to fetch notes" });
+    }
+});
+
+app.post("/api/notes/create", async (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Not logged in" });
+    }
+
+    if (!Note) {
+        return res.status(503).json({ error: "Notes feature not available" });
+    }
+
+    try {
+        const { title, content, file_id } = req.body;
+        
+        const newNote = await Note.create({
+            user_id: req.session.userId,
+            file_id: file_id || null,
+            title,
+            content: content || ''
+        });
+
+        // Add computed fields for frontend
+        const noteData = newNote.toJSON();
+        const noteWithExtras = {
+            ...noteData,
+            created_at: noteData.createdAt,
+            words: noteData.content ? noteData.content.split(/\s+/).length : 0,
+            is_shared: false
+        };
+
+        res.status(201).json({ note: noteWithExtras });
+    } catch (err) {
+        console.error("Failed to create note:", err);
+        res.status(500).json({ error: "Failed to create note" });
+    }
+});
+
+app.put("/api/notes/:id", async (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Not logged in" });
+    }
+
+    if (!Note) {
+        return res.status(503).json({ error: "Notes feature not available" });
+    }
+
+    try {
+        const { title, content } = req.body;
+        const noteId = req.params.id;
+
+        const note = await Note.findOne({
+            where: { 
+                note_id: noteId,
+                user_id: req.session.userId 
+            }
+        });
+
+        if (!note) {
+            return res.status(404).json({ error: "Note not found" });
+        }
+
+        await note.update({
+            title,
+            content
+        });
+
+        // Add computed fields for frontend
+        const noteData = note.toJSON();
+        const noteWithExtras = {
+            ...noteData,
+            created_at: noteData.createdAt,
+            words: noteData.content ? noteData.content.split(/\s+/).length : 0,
+            is_shared: false
+        };
+
+        res.json({ note: noteWithExtras });
+    } catch (err) {
+        console.error("Failed to update note:", err);
+        res.status(500).json({ error: "Failed to update note" });
+    }
+});
+
+app.delete("/api/notes/:id", async (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Not logged in" });
+    }
+
+    if (!Note) {
+        return res.status(503).json({ error: "Notes feature not available" });
+    }
+
+    try {
+        const noteId = req.params.id;
+
+        const note = await Note.findOne({
+            where: { 
+                note_id: noteId,
+                user_id: req.session.userId 
+            }
+        });
+
+        if (!note) {
+            return res.status(404).json({ error: "Note not found" });
+        }
+
+        await note.destroy();
+
+        res.json({ message: "Note deleted successfully" });
+    } catch (err) {
+        console.error("Failed to delete note:", err);
+        res.status(500).json({ error: "Failed to delete note" });
+    }
+});
 
 // ----------------- START SERVER -----------------
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
-
-
-
-
-

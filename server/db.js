@@ -1,4 +1,8 @@
-const { Sequelize } = require('sequelize'); // Import Sequelize
+// const { Sequelize } = require('sequelize'); // Import Sequelize
+import { Sequelize } from "sequelize";
+import dotenv from "dotenv";
+dotenv.config();
+
 
 // Create a new Sequelize instance
 const sequelize = new Sequelize(
@@ -20,8 +24,7 @@ sequelize.authenticate()
     console.error('Unable to connect to the database:', err);
   });
 
-// Export the Sequelize instance
-module.exports = sequelize;
+export default sequelize;
 
 
 

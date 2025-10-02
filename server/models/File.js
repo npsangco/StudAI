@@ -1,5 +1,7 @@
-const { DataTypes } = require("sequelize");
-const sequelize = require("../db");
+// const { DataTypes } = require("sequelize");
+// const sequelize = require("../db");
+import DataTypes from "sequelize";
+import sequelize from "../db.js";
 
 const File = sequelize.define("File", {
   file_id: {
@@ -28,4 +30,5 @@ const File = sequelize.define("File", {
   timestamps: false,
 });
 
-module.exports = File;
+// module.exports = File;
+export default File;

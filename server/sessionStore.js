@@ -1,8 +1,16 @@
-const session = require("express-session");
-const connectSessionSequelize = require("connect-session-sequelize")(session.Store);
-const sequelize = require("./db");  
+// const session = require("express-session");
+// const connectSessionSequelize = require("connect-session-sequelize")(session.Store);
+// const sequelize = require("./db");  
+import session from "express-session";
+// import connectSessionSequelize from "connect-session-sequelize";
+import sequelize from "./db.js";
+import {createRequire} from "module";
 
-const sessionStore = new connectSessionSequelize({
+const require = createRequire(import.meta.url);
+const connectSessionSequelize = require("connect-session-sequelize");
+const  SequelizeStore = connectSessionSequelize(session.Store);
+
+const sessionStore = new SequelizeStore({
   db: sequelize,
   // Custom table name instead of Sessions
   tableName: 'user_sessions',
@@ -50,5 +58,6 @@ sessionStore.sync({
   alter: false
 });
 
-module.exports = sessionStore;
+// module.exports = sessionStore;
 
+export default sessionStore;

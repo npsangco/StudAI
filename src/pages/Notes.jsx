@@ -1,31 +1,73 @@
 // Notes.js - Main Notes List Component
 import React, { useState } from 'react';
 import { Plus, Share2, Trash2, Save, Copy, Search, Filter, Clock, FileText, MessageCircle, Edit3 } from 'lucide-react';
+import { useEffect } from 'react'; // Make sure useEffect is imported
 import NoteEditor from '../components/NoteEditor';
 import Chatbot from '../components/Chatbot';
 
 const Notes = () => {
   const [notes, setNotes] = useState([
-    {
-      id: 1,
-      title: 'Data Algorithms',
-      words: 500,
-      createdAt: new Date().toISOString(),
-      content: 'Comprehensive notes on data algorithms including sorting, searching, and optimization techniques.\n\nThis includes various sorting algorithms like quicksort, mergesort, and heapsort. Each algorithm has different time complexities and use cases.\n\nSearching algorithms include binary search, linear search, and hash-based searching methods.',
-      isShared: false
-    }
+    // {
+    //   id: 1,
+    //   title: 'Data Algorithms',
+    //   words: 500,
+    //   createdAt: new Date().toISOString(),
+    //   content: 'Comprehensive notes on data algorithms including sorting, searching, and optimization techniques.\n\nThis includes various sorting algorithms like quicksort, mergesort, and heapsort. Each algorithm has different time complexities and use cases.\n\nSearching algorithms include binary search, linear search, and hash-based searching methods.',
+    //   isShared: false
+    // }
   ]);
   
   const [sharedNotes, setSharedNotes] = useState([
-    {
-      id: 1,
-      title: 'Data Structures',
-      words: 500,
-      createdAt: new Date().toISOString(),
-      content: 'Shared notes on fundamental data structures: arrays, linked lists, trees, and graphs.\n\nArrays provide O(1) access time but fixed size. Linked lists offer dynamic sizing but O(n) access time.\n\nTrees are hierarchical structures perfect for searching and sorting operations.',
-      isShared: true
-    }
+    // {
+    //   id: 1,
+    //   title: 'Data Structures',
+    //   words: 500,
+    //   createdAt: new Date().toISOString(),
+    //   content: 'Shared notes on fundamental data structures: arrays, linked lists, trees, and graphs.\n\nArrays provide O(1) access time but fixed size. Linked lists offer dynamic sizing but O(n) access time.\n\nTrees are hierarchical structures perfect for searching and sorting operations.',
+    //   isShared: true
+    // }
   ]);
+
+  useEffect(() => {
+    fetchNotesFromDatabase();
+  }, []);
+
+  const fetchNotesFromDatabase = async () => {
+    try {
+      const response = await fetch('http://localhost:4000/api/notes', {
+        method: 'GET',
+        credentials: 'include', // Important for session authentication
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Map the database notes to match your UI structure
+        const mappedNotes = data.notes.map(note => ({
+          id: note.note_id,
+          title: note.title,
+          words: note.words || (note.content ? note.content.split(/\s+/).length : 0),
+          createdAt: note.created_at || note.createdAt,
+          content: note.content || '',
+          isShared: note.is_shared || false
+        }));
+
+        // Separate personal and shared notes
+        const personal = mappedNotes.filter(note => !note.isShared);
+        const shared = mappedNotes.filter(note => note.isShared);
+
+        setNotes(personal);
+        setSharedNotes(shared);
+      } else if (response.status === 401) {
+        console.error('Not logged in');
+        // You might want to redirect to login page here
+      } else {
+        console.error('Failed to fetch notes');
+      }
+    } catch (error) {
+      console.error('Error fetching notes:', error);
+    }
+  };
   
   const [shareLink, setShareLink] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,32 +88,100 @@ const Notes = () => {
     return `Created ${diffDays} days ago`;
   };
 
-  const addNote = () => {
+  // MODIFY YOUR addNote FUNCTION to save to database:
+  const addNote = async () => {
     if (!newNoteTitle.trim()) return;
     
-    const newNote = {
-      id: Date.now(),
-      title: newNoteTitle,
-      words: 0,
-      createdAt: new Date().toISOString(),
-      content: '',
-      isShared: false
-    };
-    
-    setNotes([newNote, ...notes]);
-    setNewNoteTitle('');
-    setShowAddNote(false);
-    openEditPage(newNote);
+    try {
+      const response = await fetch('http://localhost:4000/api/notes/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: newNoteTitle,
+          content: '',
+          file_id: null
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newNote = {
+          id: data.note.note_id,
+          title: data.note.title,
+          words: data.note.words || 0,
+          createdAt: data.note.created_at || data.note.createdAt,
+          content: data.note.content || '',
+          isShared: data.note.is_shared || false
+        };
+        
+        setNotes([newNote, ...notes]);
+        setNewNoteTitle('');
+        setShowAddNote(false);
+        openEditPage(newNote);
+      } else {
+        console.error('Failed to create note');
+      }
+    } catch (error) {
+      console.error('Error creating note:', error);
+    }
   };
 
-  const updateNote = (updatedNote) => {
-    setNotes(notes.map(note => 
-      note.id === updatedNote.id ? updatedNote : note
-    ));
+  // MODIFY YOUR updateNote FUNCTION to save to database:
+  const updateNote = async (updatedNote) => {
+    try {
+      const response = await fetch(`http://localhost:4000/api/notes/${updatedNote.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: updatedNote.title,
+          content: updatedNote.content
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const mappedNote = {
+          id: data.note.note_id,
+          title: data.note.title,
+          words: data.note.words || (data.note.content ? data.note.content.split(/\s+/).length : 0),
+          createdAt: data.note.created_at || data.note.createdAt,
+          content: data.note.content || '',
+          isShared: data.note.is_shared || false
+        };
+        
+        setNotes(notes.map(note => 
+          note.id === mappedNote.id ? mappedNote : note
+        ));
+      } else {
+        console.error('Failed to update note');
+      }
+    } catch (error) {
+      console.error('Error updating note:', error);
+    }
   };
 
-  const deleteNote = (id) => {
-    setNotes(notes.filter(note => note.id !== id));
+  // MODIFY YOUR deleteNote FUNCTION to delete from database:
+  const deleteNote = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:4000/api/notes/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        setNotes(notes.filter(note => note.id !== id));
+      } else {
+        console.error('Failed to delete note');
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error);
+    }
   };
 
   const shareNote = (id) => {

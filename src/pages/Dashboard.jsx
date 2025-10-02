@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import axios from 'axios';
+import TextExtractor from '../components/TextExtractor';
 
 export default function Dashboard() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState("");
-  const [restriction, setRestriction] = useState("none"); // wait lang, will implement after file-to-text works
-
+  const [restriction, setRestriction] = useState({ uploaded: false, openai: false });
+  const [extractedContent, setExtractedContent] = useState(null);
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -34,9 +35,9 @@ export default function Dashboard() {
     handleFiles(files);
   };
 
-
   const handleFiles = (files) => {
     setError('');
+    setExtractedContent(null);
     
     for (let file of files) {
       const fileType = file.type;
@@ -58,11 +59,19 @@ export default function Dashboard() {
     }
 
     setUploadedFiles(prev => [...prev, ...files]);
+    setIsExtracting(true);
   };
 
   const removeFile = (index) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setExtractedContent(null);
     setError('');
+  };
+
+  const handleTextExtracted = (data) => {
+    console.log('Text extracted:', data);
+    setExtractedContent(data);
+    setIsExtracting(false);
   };
 
   const handleGenerate = () => {
@@ -70,28 +79,38 @@ export default function Dashboard() {
       setError('Error: Please upload at least one file');
       return;
     }
+    
+    if (!extractedContent) {
+      setError('Error: Still extracting text from file. Please wait.');
+      return;
+    }
+    
     setShowModal(true);
-    setUploadStatus(""); //RESET
   };
 
-  // this is your upload handler
-  const handleUpload = async () => {
-    if (uploadedFiles.length === 0) return alert("No file selected!");
+  const handleUploadAndGenerate = async () => {
+    if (uploadedFiles.length === 0) {
+      alert("No file selected!");
+      return;
+    }
 
     const formData = new FormData();
-    formData.append("myFile", uploadedFiles[0] );
+    formData.append("myFile", uploadedFiles[0]);
 
     try {
       const res = await axios.post("http://localhost:4000/api/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
         withCredentials: true
       });
-
+      
       console.log("Upload success:", res.data.filename);
+      
+      // Now send the extracted content to generate summary
+      await generateSummary();
+      
     } catch (err) {
       if (err.response) {
         if (err.response.status === 409) {
-          //Duplicate file
           alert("File with the same name already exists. Please rename your file.");
         } else if (err.response.status === 401) {
           alert("You must be logged in to upload files.");
@@ -104,28 +123,80 @@ export default function Dashboard() {
     }
   };
 
+  const generateSummary = async () => {
+    try {
+      const payload = {
+        content: extractedContent.content,
+        title: extractedContent.title,
+        restrictions: restriction,
+        metadata: {
+          source: extractedContent.source,
+          wordCount: extractedContent.wordCount,
+          slideCount: extractedContent.slideCount
+        }
+      };
+
+      const response = await axios.post(
+        "http://localhost:4000/api/generate-summary",
+        payload,
+        { withCredentials: true }
+      );
+
+      console.log("Summary generated:", response.data);
+      alert("Summary generated successfully!");
+      
+      // Optionally redirect to notes page or show summary
+      
+    } catch (err) {
+      console.error("Summary generation error:", err);
+      alert("Failed to generate summary");
+    }
+  };
+
   const GenerateModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
       <div className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-sm sm:max-w-md lg:max-w-lg shadow-2xl transform transition-all scale-100 animate-in fade-in duration-200">
         <div className="text-center mb-6 sm:mb-8">
           <h2 className="text-xl sm:text-2xl font-bold mb-2">GENERATE SUMMARY</h2>
-          <p className="text-gray-600 text-sm sm:text-base">Choose a restriction:</p>
+          <p className="text-gray-600 text-sm sm:text-base">Choose restrictions:</p>
         </div>
+
+        {extractedContent && (
+          <div className="mb-6 bg-green-50 border border-green-200 p-4 rounded-xl">
+            <p className="text-sm text-gray-700">
+              <strong>Extracted:</strong> {extractedContent.wordCount} words from {extractedContent.source}
+            </p>
+          </div>
+        )}
 
         <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
           <label className="flex items-start sm:items-center space-x-3 cursor-pointer p-3 rounded-xl hover:bg-gray-50 transition-colors">
-            <input type="checkbox" className="w-4 h-4 mt-1 sm:mt-0 flex-shrink-0" />
+            <input 
+              type="checkbox" 
+              className="w-4 h-4 mt-1 sm:mt-0 flex-shrink-0"
+              checked={restriction.uploaded}
+              onChange={(e) => setRestriction(prev => ({ ...prev, uploaded: e.target.checked }))}
+            />
             <div className="flex-1">
-              <span className="font-medium text-sm sm:text-base">Uploaded</span>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">Restrict the generation to the uploaded file only</p>
+              <span className="font-medium text-sm sm:text-base">Uploaded File Only</span>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                Restrict the generation to the uploaded file content only
+              </p>
             </div>
           </label>
 
           <label className="flex items-start sm:items-center space-x-3 cursor-pointer p-3 rounded-xl hover:bg-gray-50 transition-colors">
-            <input type="checkbox" className="w-4 h-4 mt-1 sm:mt-0 flex-shrink-0" />
+            <input 
+              type="checkbox" 
+              className="w-4 h-4 mt-1 sm:mt-0 flex-shrink-0"
+              checked={restriction.openai}
+              onChange={(e) => setRestriction(prev => ({ ...prev, openai: e.target.checked }))}
+            />
             <div className="flex-1">
-              <span className="font-medium text-sm sm:text-base">OpenAI</span>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">Restrict the generation to its own knowledge about technology subjects</p>
+              <span className="font-medium text-sm sm:text-base">AI Knowledge Base</span>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                Allow AI to use its knowledge about technology subjects
+              </p>
             </div>
           </label>
         </div>
@@ -140,8 +211,7 @@ export default function Dashboard() {
           <button 
             onClick={() => {
               setShowModal(false);
-              alert('Generating summary...');
-              handleUpload();
+              handleUploadAndGenerate();
             }}
             className="w-full sm:flex-1 bg-black text-white py-3 px-4 rounded-xl font-medium hover:bg-gray-800 transition-colors text-sm sm:text-base"
           >
@@ -156,7 +226,6 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-100">
       <div className="mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
           <div className="space-y-6">
             <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
               <h1 className="text-2xl font-bold text-gray-800 mb-2">Welcome back, Nimrod! ✨</h1>
@@ -188,37 +257,59 @@ export default function Dashboard() {
                   className="hidden"
                   name='myFile'
                 />
+                
                 <div className="mx-auto mb-4 h-12 w-12 text-gray-400 flex items-center justify-center text-2xl">📤</div>
                 <p className="font-medium text-gray-700 mb-2">Upload Study Materials</p>
                 <p className="text-sm text-gray-500">Drag & drop or click to upload PPT, PDF files (max 25MB each)</p>
               </div>
 
               {uploadedFiles.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-sm font-medium text-gray-700">Uploaded File:</p>
-                  {uploadedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between bg-green-50 border border-green-200 p-3 rounded-xl">
-                      <div className="flex items-center space-x-2">
-                        {file.name.toLowerCase().includes('pdf') ? (
-                          <span className="text-red-600">📄</span>
-                        ) : (
-                          <span className="text-orange-600">📊</span>
-                        )}
-                        <span className="text-sm font-medium text-gray-700 truncate">{file.name}</span>
-                        <span className="text-xs text-gray-500">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+                <>
+                  <TextExtractor 
+                    file={uploadedFiles[0]} 
+                    onTextExtracted={handleTextExtracted}
+                  />
+                  
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium text-gray-700">Uploaded File:</p>
+                    {uploadedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-green-50 border border-green-200 p-3 rounded-xl">
+                        <div className="flex items-center space-x-2">
+                          {file.name.toLowerCase().includes('pdf') ? (
+                            <span className="text-red-600">📄</span>
+                          ) : (
+                            <span className="text-orange-600">📊</span>
+                          )}
+                          <span className="text-sm font-medium text-gray-700 truncate">{file.name}</span>
+                          <span className="text-xs text-gray-500">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFile(index);
+                          }}
+                          className="text-gray-400 hover:text-red-500 transition-colors text-lg"
+                        >
+                          ✕
+                        </button>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeFile(index);
-                        }}
-                        className="text-gray-400 hover:text-red-500 transition-colors text-lg"
-                      >
-                        ✕
-                      </button>
+                    ))}
+                  </div>
+
+                  {extractedContent && (
+                    <div className="mt-4 bg-blue-50 border border-blue-200 p-4 rounded-xl">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Extraction Complete!</p>
+                      <p className="text-xs text-gray-600">
+                        {extractedContent.wordCount} words extracted from {extractedContent.source}
+                      </p>
+                      {extractedContent.slideCount && (
+                        <p className="text-xs text-gray-600">
+                          {extractedContent.slideCount} slides processed
+                        </p>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
 
               {error && (
@@ -230,14 +321,14 @@ export default function Dashboard() {
               <button
                 type='button'
                 onClick={handleGenerate}
-                disabled={uploadedFiles.length === 0}
+                disabled={uploadedFiles.length === 0 || isExtracting || !extractedContent}
                 className={`mt-6 w-full py-4 rounded-xl font-medium transition-all transform ${
-                  uploadedFiles.length > 0
+                  uploadedFiles.length > 0 && !isExtracting && extractedContent
                     ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 hover:scale-105 shadow-lg'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                Generate Summary ✨
+                {isExtracting ? 'Extracting Text...' : 'Generate Summary ✨'}
               </button>
             </div>
           </div>
@@ -318,7 +409,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
         </div>
       </div>
       {showModal && <GenerateModal />}
