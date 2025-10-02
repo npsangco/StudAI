@@ -104,21 +104,34 @@ passport.use(new GoogleStrategy({
         if (!email) return done(new Error("No email from Google"), null);
 
         let user = await User.findOne({ where: { email } });
+
         if (!user) {
             const dummyPass = Math.random().toString(36).slice(-8);
+
             user = await User.create({
                 email,
                 username: profile.displayName || email,
                 password: await bcrypt.hash(dummyPass, 10),
                 role: "Student",
                 status: "active",
+                profile_picture: profile.photos && profile.photos.length > 0
+                    ? profile.photos[0].value
+                    : "/uploads/profile_pictures/default-avatar.png"
             });
+        } else {
+            if ((!user.profile_picture || user.profile_picture.includes("default-avatar")) &&
+                profile.photos && profile.photos.length > 0) {
+                user.profile_picture = profile.photos[0].value;
+                await user.save();
+            }
         }
+
         return done(null, user);
     } catch (err) {
         return done(err, null);
     }
 }));
+
 
 passport.serializeUser((user, done) => {
     done(null, user.user_id);
@@ -136,10 +149,28 @@ passport.deserializeUser(async (id, done) => {
 // ----------------- AUTH ROUTES -----------------
 app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
-app.get("/auth/google/callback",
+app.get(
+    "/auth/google/callback",
     passport.authenticate("google", { failureRedirect: "http://localhost:5173/" }),
-    (req, res) => res.redirect("http://localhost:5173/dashboard")
+    async (req, res) => {
+        try {
+            // Save user details into session
+            req.session.userId = req.user.user_id;
+            req.session.email = req.user.email;
+            req.session.username = req.user.username;
+            req.session.role = req.user.role;
+
+            console.log("✅ Google login session set:", req.session);
+
+            // redirect to dashboard
+            res.redirect("http://localhost:5173/dashboard");
+        } catch (err) {
+            console.error("Google login session error:", err);
+            res.redirect("http://localhost:5173/");
+        }
+    }
 );
+
 
 app.get("/api/ping", (req, res) => {
     res.json({ message: "Server running fine ✅" });
@@ -242,6 +273,10 @@ app.get("/api/user/profile", async (req, res) => {
 
         if (!user) return res.status(404).json({ error: "User not found" });
 
+        if (!user.profile_picture) {
+            user.profile_picture = "/uploads/profile_pictures/default-avatar.png";
+        }
+
         res.json(user);
     } catch (err) {
         console.error("Profile fetch error:", err);
@@ -281,6 +316,109 @@ app.put("/api/user/profile", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+const profileStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/profile_pictures');
+    },
+    filename: function (req, file, cb) {
+        const ext = path.extname(file.originalname);
+        cb(null, Date.now() + '-' + file.fieldname + ext);
+    }
+});
+
+const profileUpload = multer({ storage: profileStorage });
+
+app.post('/api/upload/profile', profileUpload.single('profilePic'), async (req, res) => {
+    try {
+        const file = req.file;
+        if (!file) return res.status(400).json({ error: "No file uploaded" });
+
+        const photoUrl = `/uploads/profile_pictures/${file.filename}`;
+        res.json({ message: "Profile picture uploaded", photoUrl });
+    } catch (err) {
+        console.error("❌ Profile upload error:", err);
+        res.status(500).json({ error: "Failed to upload profile picture" });
+    }
+});
+
+
+app.use('/uploads/profile_pictures', express.static('uploads/profile_pictures'));
+
+// ----------------- PASSWORD UPDATE WITH EMAIL VERIFICATION -----------------
+
+// Request password update (send verification email)
+app.post("/api/user/request-password-update", async (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Not logged in" });
+    }
+
+    const { newPassword } = req.body;
+    if (!newPassword) return res.status(400).json({ error: "Password required" });
+
+    // Validate password
+    if (!passwordRegex.test(newPassword)) {
+        return res.status(400).json({
+            error: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
+        });
+    }
+
+    try {
+        const user = await User.findByPk(req.session.userId);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Prevent reusing the old password
+        const isSame = await bcrypt.compare(newPassword, user.password);
+        if (isSame) return res.status(400).json({ error: "Password cannot be the same as the old one" });
+
+        // Create token with userId and newPassword (hashed inside token for security)
+        const token = jwt.sign(
+            { userId: user.user_id, newPassword: await bcrypt.hash(newPassword, 10) },
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" }
+        );
+
+        const confirmLink = `http://localhost:4000/api/user/confirm-password-update?token=${token}`;
+
+        await transporter.sendMail({
+            from: `"StudAI" <${process.env.EMAIL_USER}>`,
+            to: user.email,
+            subject: "Confirm Your Password Update",
+            html: `
+                <p>You requested to update your password. Click below to confirm:</p>
+                <a href="${confirmLink}">${confirmLink}</a>
+                <p>This link will expire in 15 minutes.</p>
+            `,
+        });
+
+        res.json({ message: "Verification email sent. Please check your inbox." });
+    } catch (err) {
+        console.error("Password update request error:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Confirm password update (when user clicks email link)
+app.get("/api/user/confirm-password-update", async (req, res) => {
+    const { token } = req.query;
+    if (!token) return res.status(400).send("Invalid request");
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        await User.update(
+            { password: decoded.newPassword },
+            { where: { user_id: decoded.userId } }
+        );
+
+        res.send("<h2>Password updated successfully ✅</h2>");
+    } catch (err) {
+        console.error("Password confirm error:", err);
+        res.status(400).send("Invalid or expired token");
+    }
+});
+
+
 
 // ----------------- RESET PASSWORD ROUTES -----------------
 const transporter = nodemailer.createTransport({
@@ -348,19 +486,22 @@ app.post("/api/auth/reset-password", async (req, res) => {
     }
 });
 
-// ----------------- FILE UPLOAD -----------------
-const storage = multer.diskStorage({
-    destination: function(req, file, cb){
+//----------------- FILE UPLOAD -----------------
+var storage = multer.diskStorage({
+    destination: function (req, file, cb) {
         cb(null, 'uploads/')
     },
-    filename: function(req, file, cb) {
+    filename: function (req, file, cb) {
         cb(null, file.originalname)
     }
 });
 
-const upload = multer({storage: storage});
+var upload = multer({ storage: storage })
 
-app.post('/api/upload', upload.single('myFile'), async (req, res) => {
+const File = require('./models/File');
+
+
+app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
     try {
         console.log("Incoming file upload...");
 
@@ -379,6 +520,10 @@ app.post('/api/upload', upload.single('myFile'), async (req, res) => {
         console.log("✅ File received:", file);
 
         const existingFile = await File.findOne({
+            where: {
+                user_id: userId,
+                filename: file.filename
+            }
             where: {
                 user_id: userId,
                 filename: file.filename
