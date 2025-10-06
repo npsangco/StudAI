@@ -28,7 +28,9 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pdf-parse": "^1.1.1",
-    "sequelize": "^6.37.7"
+    "pptx-parser": "^1.1.7-beta.9",
+    "sequelize": "^6.37.7",
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
