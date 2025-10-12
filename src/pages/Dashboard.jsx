@@ -3,6 +3,7 @@ import axios from 'axios';
 import TextExtractor from '../components/TextExtractor';
 
 export default function Dashboard() {
+  const [user, setUser] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -11,6 +12,22 @@ export default function Dashboard() {
   const [extractedContent, setExtractedContent] = useState(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [upcomingPlans, setUpcomingPlans] = useState([]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await axios.get("http://localhost:4000/api/user/profile", {
+          withCredentials: true,
+        });
+        setUser(res.data);
+      } catch (err) {
+        console.error("Failed to fetch user:", err);
+        window.location.href = "/";
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -253,7 +270,10 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="space-y-6">
             <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
-              <h1 className="text-2xl font-bold text-gray-800 mb-2">Welcome back, Nimrod! ✨</h1>
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                {user ? `Welcome back, ${user.username}! ✨` : "Welcome back! ✨"}
+              </h1>
+
               <p className="text-gray-600">
                 Ready to boost your studies with AI-powered study tools?
               </p>
