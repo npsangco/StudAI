@@ -21,7 +21,17 @@ export default function Planner() {
     setError(null);
     try {
       const res = await axios.get(`${API_BASE}/api/plans`, { withCredentials: true });
-      setPlans(Array.isArray(res.data.plans) ? res.data.plans : []);
+      const fetched = Array.isArray(res.data.plans) ? res.data.plans : [];
+
+      const sorted = fetched.sort((a, b) => {
+        if (!a.due_date && !b.due_date) return 0;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return new Date(a.due_date) - new Date(b.due_date);
+      });
+
+      setPlans(sorted);
+
     } catch (err) {
       console.error("Failed to fetch plans:", err);
       setError("Failed to load plans");
@@ -42,6 +52,15 @@ export default function Planner() {
     const diffTime = selectedDate - today;
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
+    // Overdue 
+    if (diffDays < 0) {
+      return `Overdue: ${selectedDate.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })}`;
+    }
+
     if (diffDays === 0) return "today";
     if (diffDays === 1) return "tomorrow";
     if (diffDays === 2) return "in 2 days";
@@ -53,6 +72,7 @@ export default function Planner() {
       day: "numeric",
     });
   };
+
 
   const addPlan = async () => {
     if (!title.trim()) return;
@@ -67,7 +87,16 @@ export default function Planner() {
 
       const created = res.data.plan;
       if (created) {
-        setPlans((prev) => [created, ...prev]);
+        setPlans((prev) => {
+          const updated = [created, ...prev];
+          return updated.sort((a, b) => {
+            if (!a.due_date && !b.due_date) return 0;
+            if (!a.due_date) return 1;
+            if (!b.due_date) return -1;
+            return new Date(a.due_date) - new Date(b.due_date);
+          });
+        });
+
       } else {
         fetchPlans();
       }
@@ -123,9 +152,17 @@ export default function Planner() {
                     <p className="text-gray-500 text-sm">{plan.description}</p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-sm">
-                      Due <span className="font-bold">{formatDueDate(plan.due_date)}</span>
+                    <span
+                      className={`text-sm ${plan.due_date && new Date(plan.due_date) < new Date().setHours(0, 0, 0, 0)
+                          ? "text-red-600 font-semibold"
+                          : ""
+                        }`}
+                    >
+                      {plan.due_date && new Date(plan.due_date) < new Date().setHours(0, 0, 0, 0)
+                        ? formatDueDate(plan.due_date)
+                        : <>Due <span className="font-bold">{formatDueDate(plan.due_date)}</span></>}
                     </span>
+
                     <button onClick={() => deletePlan(plan.planner_id)} className="bg-red-500 text-white px-3 py-1 rounded-xl hover:bg-red-600">
                       Delete
                     </button>

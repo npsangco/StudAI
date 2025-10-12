@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import TextExtractor from '../components/TextExtractor';
 
@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [restriction, setRestriction] = useState({ uploaded: false, openai: false });
   const [extractedContent, setExtractedContent] = useState(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [upcomingPlans, setUpcomingPlans] = useState([]);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -25,7 +26,7 @@ export default function Dashboard() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     handleFiles(files);
   };
@@ -38,16 +39,16 @@ export default function Dashboard() {
   const handleFiles = (files) => {
     setError('');
     setExtractedContent(null);
-    
+
     for (let file of files) {
       const fileType = file.type;
       const fileName = file.name.toLowerCase();
-      
-      if (!fileType.includes('pdf') && 
-          !fileType.includes('presentation') && 
-          !fileName.endsWith('.pdf') && 
-          !fileName.endsWith('.ppt') && 
-          !fileName.endsWith('.pptx')) {
+
+      if (!fileType.includes('pdf') &&
+        !fileType.includes('presentation') &&
+        !fileName.endsWith('.pdf') &&
+        !fileName.endsWith('.ppt') &&
+        !fileName.endsWith('.pptx')) {
         setError('Error: Only PDF and PowerPoint files are allowed');
         return;
       }
@@ -79,12 +80,12 @@ export default function Dashboard() {
       setError('Error: Please upload at least one file');
       return;
     }
-    
+
     if (!extractedContent) {
       setError('Error: Still extracting text from file. Please wait.');
       return;
     }
-    
+
     setShowModal(true);
   };
 
@@ -102,12 +103,12 @@ export default function Dashboard() {
         headers: { "Content-Type": "multipart/form-data" },
         withCredentials: true
       });
-      
+
       console.log("Upload success:", res.data.filename);
-      
+
       // Now send the extracted content to generate summary
       await generateSummary();
-      
+
     } catch (err) {
       if (err.response) {
         if (err.response.status === 409) {
@@ -119,7 +120,7 @@ export default function Dashboard() {
         }
       } else {
         alert("Network error, please try again later.");
-      }    
+      }
     }
   };
 
@@ -144,9 +145,9 @@ export default function Dashboard() {
 
       console.log("Summary generated:", response.data);
       alert("Summary generated successfully!");
-      
+
       // Optionally redirect to notes page or show summary
-      
+
     } catch (err) {
       console.error("Summary generation error:", err);
       alert("Failed to generate summary");
@@ -171,8 +172,8 @@ export default function Dashboard() {
 
         <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
           <label className="flex items-start sm:items-center space-x-3 cursor-pointer p-3 rounded-xl hover:bg-gray-50 transition-colors">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               className="w-4 h-4 mt-1 sm:mt-0 flex-shrink-0"
               checked={restriction.uploaded}
               onChange={(e) => setRestriction(prev => ({ ...prev, uploaded: e.target.checked }))}
@@ -186,8 +187,8 @@ export default function Dashboard() {
           </label>
 
           <label className="flex items-start sm:items-center space-x-3 cursor-pointer p-3 rounded-xl hover:bg-gray-50 transition-colors">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               className="w-4 h-4 mt-1 sm:mt-0 flex-shrink-0"
               checked={restriction.openai}
               onChange={(e) => setRestriction(prev => ({ ...prev, openai: e.target.checked }))}
@@ -202,13 +203,13 @@ export default function Dashboard() {
         </div>
 
         <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-          <button 
+          <button
             onClick={() => setShowModal(false)}
             className="w-full sm:flex-1 bg-gray-200 text-gray-800 py-3 px-4 rounded-xl font-medium hover:bg-gray-300 transition-colors text-sm sm:text-base"
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={() => {
               setShowModal(false);
               handleUploadAndGenerate();
@@ -221,6 +222,30 @@ export default function Dashboard() {
       </div>
     </div>
   );
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const res = await axios.get("http://localhost:4000/api/plans", { withCredentials: true });
+        if (Array.isArray(res.data.plans)) {
+          const now = new Date();
+
+          const withDueDate = res.data.plans
+            .filter(p => p.due_date)
+            .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+
+          const noDueDate = res.data.plans.filter(p => !p.due_date);
+
+          setUpcomingPlans([...withDueDate, ...noDueDate]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch upcoming plans:", err);
+      }
+    };
+    fetchPlans();
+  }, []);
+
+
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -238,11 +263,10 @@ export default function Dashboard() {
               <h2 className="font-bold text-lg mb-4 text-gray-800">🤖 AI Summarizer</h2>
 
               <div
-                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
-                  dragActive 
-                    ? 'border-blue-500 bg-blue-50' 
-                    : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400'
-                }`}
+                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${dragActive
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400'
+                  }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
@@ -257,7 +281,7 @@ export default function Dashboard() {
                   className="hidden"
                   name='myFile'
                 />
-                
+
                 <div className="mx-auto mb-4 h-12 w-12 text-gray-400 flex items-center justify-center text-2xl">📤</div>
                 <p className="font-medium text-gray-700 mb-2">Upload Study Materials</p>
                 <p className="text-sm text-gray-500">Drag & drop or click to upload PPT, PDF files (max 25MB each)</p>
@@ -265,11 +289,11 @@ export default function Dashboard() {
 
               {uploadedFiles.length > 0 && (
                 <>
-                  <TextExtractor 
-                    file={uploadedFiles[0]} 
+                  <TextExtractor
+                    file={uploadedFiles[0]}
                     onTextExtracted={handleTextExtracted}
                   />
-                  
+
                   <div className="mt-4 space-y-2">
                     <p className="text-sm font-medium text-gray-700">Uploaded File:</p>
                     {uploadedFiles.map((file, index) => (
@@ -322,11 +346,10 @@ export default function Dashboard() {
                 type='button'
                 onClick={handleGenerate}
                 disabled={uploadedFiles.length === 0 || isExtracting || !extractedContent}
-                className={`mt-6 w-full py-4 rounded-xl font-medium transition-all transform ${
-                  uploadedFiles.length > 0 && !isExtracting && extractedContent
-                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 hover:scale-105 shadow-lg'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                className={`mt-6 w-full py-4 rounded-xl font-medium transition-all transform ${uploadedFiles.length > 0 && !isExtracting && extractedContent
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 hover:scale-105 shadow-lg'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
               >
                 {isExtracting ? 'Extracting Text...' : 'Generate Summary ✨'}
               </button>
@@ -337,15 +360,67 @@ export default function Dashboard() {
             <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
               <h2 className="font-bold text-lg mb-4 text-gray-800">📅 Upcoming Deadlines</h2>
               <div className="space-y-3">
-                <div className="flex justify-between items-center bg-red-50 border border-red-200 p-4 rounded-xl">
-                  <span className="font-medium text-gray-800">Capstone Defense</span>
-                  <span className="text-red-600 font-medium bg-red-100 px-3 py-1 rounded-full text-sm">Due today</span>
-                </div>
-                <div className="flex justify-between items-center bg-blue-50 border border-blue-200 p-4 rounded-xl">
-                  <span className="font-medium text-gray-800">Web Dev Quiz</span>
-                  <span className="text-blue-600 font-medium bg-blue-100 px-3 py-1 rounded-full text-sm">Due in 2 weeks</span>
-                </div>
+                {upcomingPlans.length > 0 ? (
+                  upcomingPlans.map((plan) => {
+                    let label = "";
+                    let color = "";
+
+                    if (!plan.due_date) {
+                      label = "No deadline";
+                      color = "gray";
+                    } else {
+                      const dueDate = new Date(plan.due_date);
+                      const today = new Date();
+                      const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+
+                      if (diffDays < 0) {
+                        label = `Overdue: ${dueDate.toLocaleDateString()}`;
+                        color = "red";
+                      } else if (diffDays === 0) {
+                        label = "Due today";
+                        color = "orange";
+                      } else if (diffDays === 1) {
+                        label = "Due tomorrow";
+                        color = "yellow";
+                      } else if (diffDays < 7) {
+                        label = `Due in ${diffDays} days`;
+                        color = "blue";
+                      } else {
+                        label = `Due on ${dueDate.toLocaleDateString()}`;
+                        color = "gray";
+                      }
+                    }
+
+                    return (
+                      <div
+                        key={plan.planner_id}
+                        className={`flex justify-between items-center border p-4 rounded-xl ${color === "red"
+                          ? "bg-red-50 border-red-200"
+                          : color === "orange"
+                            ? "bg-orange-50 border-orange-200"
+                            : color === "yellow"
+                              ? "bg-yellow-50 border-yellow-200"
+                              : color === "blue"
+                                ? "bg-blue-50 border-blue-200"
+                                : "bg-gray-50 border-gray-200"
+                          }`}
+
+                      >
+                        <span className="font-medium text-gray-800">{plan.title}</span>
+                        <span
+                          className={`text-${color}-600 font-medium bg-${color}-100 px-3 py-1 rounded-full text-sm`}
+                        >
+                          {label}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-gray-500 text-sm">No upcoming deadlines 🎉</div>
+                )}
+
               </div>
+
             </div>
           </div>
 
@@ -373,13 +448,12 @@ export default function Dashboard() {
                       <span className="text-xs text-gray-500">80%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className={`h-3 rounded-full transition-all duration-300 ${
-                          index === 0 ? 'bg-gradient-to-r from-green-400 to-green-600' :
+                      <div
+                        className={`h-3 rounded-full transition-all duration-300 ${index === 0 ? 'bg-gradient-to-r from-green-400 to-green-600' :
                           index === 1 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
-                          index === 2 ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
-                          'bg-gradient-to-r from-purple-400 to-purple-600'
-                        }`}
+                            index === 2 ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
+                              'bg-gradient-to-r from-purple-400 to-purple-600'
+                          }`}
                         style={{ width: '80%' }}
                       ></div>
                     </div>

@@ -20,7 +20,7 @@ const Plan = sequelize.define("Plan", {
     allowNull: true,
   },
   due_date: {
-    type: DataTypes.DATE,  // maps to DATETIME in SQL
+    type: DataTypes.DATE,  
     allowNull: true,
   },
   createdAt: {
