@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Play, GripVertical } from 'lucide-react';
+import { Edit, Play, GripVertical, Trash2 } from 'lucide-react';
 
 // Quiz Controls Component
 export const QuizControls = ({ quiz, onBack, onAddQuestion, onSave }) => (
@@ -41,7 +41,7 @@ export const QuizControls = ({ quiz, onBack, onAddQuestion, onSave }) => (
 );
 
 // Quiz Item Component
-export const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect }) => (
+export const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete }) => (
   <div 
     draggable
     onDragStart={(e) => onDragStart(e, index)}
@@ -91,12 +91,22 @@ export const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, o
       >
         <Edit className="w-4 h-4 text-gray-600" />
       </button>
+      <button 
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(quiz);
+        }}
+        className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
+        title="Delete Quiz"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
     </div>
   </div>
 );
 
 // Quiz List Component
-export const QuizList = ({ quizzes, draggedIndex, onDragStart, onDragOver, onDrop, onEditQuiz, onQuizSelect }) => (
+export const QuizList = ({ quizzes, draggedIndex, onDragStart, onDragOver, onDrop, onEditQuiz, onQuizSelect, onDeleteQuiz }) => (
   <div className="bg-white rounded-xl p-6 shadow-sm text-center">
     <h2 className="text-2xl font-bold text-black mb-6">Your Quizzes</h2>
     
@@ -112,6 +122,7 @@ export const QuizList = ({ quizzes, draggedIndex, onDragStart, onDragOver, onDro
           onDrop={onDrop}
           onEdit={onEditQuiz}
           onSelect={onQuizSelect}
+          onDelete={onDeleteQuiz}
         />
       ))}
     </div>

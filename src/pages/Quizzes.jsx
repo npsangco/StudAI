@@ -310,6 +310,12 @@ function QuizzesPage() {
     setCurrentView('editing');
   };
 
+  const handleDeleteQuiz = (quiz) => {
+    if (window.confirm(`Are you sure you want to delete "${quiz.title}"?`)) {
+      setQuizList(quizList.filter(q => q.id !== quiz.id));
+    }
+  };
+
   const handleBackToList = () => {
     setEditingQuiz(null);
     setSelectedQuiz(null);
@@ -560,8 +566,8 @@ function QuizzesPage() {
     <>
       <style>{styles}</style>
       <div className="min-h-screen bg-gray-100 p-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             <QuizList 
               quizzes={quizList}
               draggedIndex={draggedIndex}
@@ -569,6 +575,7 @@ function QuizzesPage() {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
               onEditQuiz={handleEditQuiz}
+              onDeleteQuiz={handleDeleteQuiz}
               onQuizSelect={handleQuizSelect}
             />
             
