@@ -44,14 +44,31 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You' }) => {
   );
 };
 
-// Simulated Players Hook (remove when adding database)
-export const useSimulatedPlayers = (totalQuestions, currentQuestion) => {
-  const [simulatedPlayers] = useState([
-    { id: 1, name: 'Denise', initial: 'D', score: 0, accuracy: 0.85 },
-    { id: 2, name: 'Den', initial: 'D', score: 0, accuracy: 0.75 },
-    { id: 3, name: 'Nimrod', initial: 'N', score: 0, accuracy: 0.70 },
-    { id: 4, name: 'Bins', initial: 'B', score: 0, accuracy: 0.65 }
-  ]);
+// Simulated Players Hook - ONLY used during actual quiz battle gameplay
+// This creates AI opponents that answer questions during the game
+export const useSimulatedPlayers = (totalQuestions, currentQuestion, lobbyPlayers = []) => {
+  // If lobbyPlayers are provided (from real lobby), use those
+  // Otherwise fall back to default simulated players
+  const [simulatedPlayers] = useState(() => {
+    if (lobbyPlayers.length > 1) {
+      // Use the players from lobby (excluding the user)
+      return lobbyPlayers
+        .filter(p => p.id !== 'user')
+        .map(p => ({
+          ...p,
+          score: 0,
+          accuracy: Math.random() * 0.3 + 0.6 // Random accuracy between 60-90%
+        }));
+    }
+    
+    // Default simulated players if no lobby data
+    return [
+      { id: 1, name: 'Denise', initial: 'D', score: 0, accuracy: 0.85 },
+      { id: 2, name: 'Den', initial: 'D', score: 0, accuracy: 0.75 },
+      { id: 3, name: 'Nimrod', initial: 'N', score: 0, accuracy: 0.70 },
+      { id: 4, name: 'Bins', initial: 'B', score: 0, accuracy: 0.65 }
+    ];
+  });
 
   const [players, setPlayers] = useState(simulatedPlayers);
 
