@@ -236,7 +236,7 @@ export const QuizQuestion = ({
                currentQ.type === 'Matching' && userMatches?.length > 0 && isAnswerCorrect(currentQ, userMatches)
                 ? '✓ Correct!' : 
                 currentQ.type === 'Fill in the blanks' && userAnswer?.includes('_submitted')
-                  ? `✗ Incorrect. Answer: ${currentQ.answer}`
+                  ? `✗ Answer: ${currentQ.answer}`
                   : '✗ Incorrect'}
             </div>
           </div>
