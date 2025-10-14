@@ -1,4 +1,5 @@
 import { Routes, Route, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Navigation from "./components/Navigation";
 import LandingNavigation from "./components/LandingNavigation";
 import Login from "./components/Login";
@@ -16,10 +17,24 @@ import 'primereact/resources/themes/lara-light-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
 
-
 function App() {
   const location = useLocation();
+  const [hideNavbar, setHideNavbar] = useState(false);
   
+  // Check if body has hide-navbar class
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setHideNavbar(document.body.classList.contains('hide-navbar'));
+    });
+
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   // Routes that should have NO navigation
   const noNavRoutes = ['/login', '/signup'];
   const shouldHideNav = noNavRoutes.includes(location.pathname);
@@ -34,9 +49,9 @@ function App() {
 
   return (
     <div className="min-h-screen">
-      {/* Only show navigation if not on login/signup pages */}
-      {!shouldHideNav && isLandingPage && <LandingNavigation />}
-      {!shouldHideNav && requiresAuth && <Navigation />}
+      {/* Only show navigation if not on login/signup pages and not hidden by quiz game */}
+      {!shouldHideNav && !hideNavbar && isLandingPage && <LandingNavigation />}
+      {!shouldHideNav && !hideNavbar && requiresAuth && <Navigation />}
       
       <div className={requiresAuth ? "bg-gray-100" : ""}>
         <Routes>

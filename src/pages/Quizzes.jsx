@@ -9,22 +9,11 @@ import QuizModal from '../components/quizzes/QuizModal';
 import QuizGame from '../components/quizzes/QuizGame';
 import QuizResults from '../components/quizzes/QuizResults';
 import QuizLeaderboard from '../components/quizzes/QuizLeaderboard';
-import { Loader2, Users, UserCircle } from 'lucide-react';
+import { SoloLoadingScreen, BattleLobbyScreen } from '../components/quizzes/QuizLoadingScreens';
 import { useLobbySimulation } from '../components/quizzes/QuizLobbySimulation';
 
 // Animations
 const styles = `
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: scale(0.9);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
   @keyframes slideIn {
     from {
       opacity: 0;
@@ -36,48 +25,9 @@ const styles = `
     }
   }
 
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-20px);
-    }
-  }
-
-  @keyframes pulse-glow {
-    0%, 100% {
-      box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
-    }
-    50% {
-      box-shadow: 0 0 40px rgba(34, 197, 94, 0.8);
-    }
-  }
-
-  .animate-fade-in {
-    animation: fadeIn 0.5s ease-out;
-  }
-
   .animate-slide-in {
     animation: slideIn 0.3s ease-out forwards;
     opacity: 0;
-  }
-
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-
-  .player-icon {
-    transition: transform 0.3s ease;
-    cursor: pointer;
-  }
-
-  .player-icon:hover {
-    transform: scale(1.1);
   }
 `;
 
@@ -94,10 +44,26 @@ function QuizzesPage() {
   const [currentView, setCurrentView] = useState('list');
   const [quizKey, setQuizKey] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [countdown, setCountdown] = useState(3);
+  const [countdown, setCountdown] = useState(5);
   const [lobbyPlayers, setLobbyPlayers] = useState([]);
   const [playerPositions, setPlayerPositions] = useState([]);
-    useLobbySimulation(lobbyPlayers, setLobbyPlayers, currentView === 'lobby');
+  
+  useLobbySimulation(lobbyPlayers, setLobbyPlayers, currentView === 'lobby');
+
+  // Hide/Show navbar based on current view
+  useEffect(() => {
+    const shouldHideNavbar = ['loading', 'loadingBattle', 'lobby', 'solo', 'battle'].includes(currentView);
+    
+    if (shouldHideNavbar) {
+      document.body.classList.add('hide-navbar');
+    } else {
+      document.body.classList.remove('hide-navbar');
+    }
+
+    return () => {
+      document.body.classList.remove('hide-navbar');
+    };
+  }, [currentView]);
 
   // Generate random positions for players when they join
   useEffect(() => {
@@ -105,13 +71,37 @@ function QuizzesPage() {
       setPlayerPositions(prev => {
         const newPositions = [...prev];
         
-        // Add positions for new players
+        const radius = 2.5;
+        
         for (let i = prev.length; i < lobbyPlayers.length; i++) {
+          let x, y, tooClose;
+          let attempts = 0;
+          
+          do {
+            x = Math.random() * (100 - radius * 4) + radius * 2;
+            y = Math.random() * (73 - radius * 2) + (12 + radius);
+            tooClose = false;
+            
+            for (let j = 0; j < newPositions.length; j++) {
+              const dx = x - newPositions[j].x;
+              const dy = y - newPositions[j].y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              
+              if (distance < radius * 2 + 3) {
+                tooClose = true;
+                break;
+              }
+            }
+            
+            attempts++;
+          } while (tooClose && attempts < 50);
+          
+          // Walking speed
           newPositions.push({
-            x: Math.random() * 70 + 15, // 15-85% from left
-            y: Math.random() * 60 + 20, // 20-80% from top
-            vx: (Math.random() - 0.5) * 0.5, // velocity x
-            vy: (Math.random() - 0.5) * 0.5  // velocity y
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 1.2,
+            vy: (Math.random() - 0.5) * 1.2
           });
         }
         
@@ -119,55 +109,6 @@ function QuizzesPage() {
       });
     }
   }, [lobbyPlayers.length, currentView]);
-
-  // Animate player positions
-  useEffect(() => {
-    if (currentView !== 'lobby') return;
-    
-    const animationInterval = setInterval(() => {
-      setPlayerPositions(prev => {
-        return prev.map((pos, index) => {
-          let newX = pos.x + pos.vx;
-          let newY = pos.y + pos.vy;
-          let newVx = pos.vx;
-          let newVy = pos.vy;
-
-          // Bounce off walls
-          if (newX <= 5 || newX >= 90) {
-            newVx = -pos.vx;
-            newX = newX <= 5 ? 5 : 90;
-          }
-          if (newY <= 10 || newY >= 85) {
-            newVy = -pos.vy;
-            newY = newY <= 10 ? 10 : 85;
-          }
-
-          // Check collision with other players
-          prev.forEach((otherPos, otherIndex) => {
-            if (index !== otherIndex) {
-              const dx = newX - otherPos.x;
-              const dy = newY - otherPos.y;
-              const distance = Math.sqrt(dx * dx + dy * dy);
-              
-              if (distance < 10) { // Collision threshold
-                newVx = -newVx;
-                newVy = -newVy;
-              }
-            }
-          });
-
-          return {
-            x: newX,
-            y: newY,
-            vx: newVx,
-            vy: newVy
-          };
-        });
-      });
-    }, 50);
-
-    return () => clearInterval(animationInterval);
-  }, [currentView]);
   
   const [quizList, setQuizList] = useState([
     {
@@ -273,10 +214,9 @@ function QuizzesPage() {
   const handleSoloQuiz = () => {
     setShowModal(false);
     setIsLoading(true);
-    setCountdown(3);
+    setCountdown(5);
     setCurrentView('loading');
     
-    // Countdown timer
     const countdownInterval = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -296,7 +236,6 @@ function QuizzesPage() {
     setShowModal(false);
     setCurrentView('lobby');
     
-    // Start with just the user
     const initialPlayers = [
       { id: 'user', name: 'You', initial: 'Y', isReady: false }
     ];
@@ -309,12 +248,12 @@ function QuizzesPage() {
     ));
   };
 
-  // Check if all players are ready and start countdown
   useEffect(() => {
     if (currentView === 'lobby' && lobbyPlayers.length > 0 && lobbyPlayers.every(p => p.isReady)) {
       setTimeout(() => {
         setIsLoading(true);
-        setCountdown(3);
+        setCountdown(5); // Changed to 5 seconds like solo
+        setCurrentView('loadingBattle'); // New loading state for battle
         
         const countdownInterval = setInterval(() => {
           setCountdown(prev => {
@@ -376,7 +315,7 @@ function QuizzesPage() {
     setSelectedQuiz(null);
     setCurrentView('list');
     setIsLoading(false);
-    setCountdown(3);
+    setCountdown(5);
     setLobbyPlayers([]);
     setPlayerPositions([]);
   };
@@ -498,149 +437,36 @@ function QuizzesPage() {
     setDraggedIndex(null);
   };
 
-  // Loading Screen
+  // Solo Loading Screen
   if (currentView === 'loading') {
     return (
-      <>
-        <style>{styles}</style>
-        <div className="min-h-screen bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 flex items-center justify-center">
-          <div className="text-center animate-fade-in">
-            <div className="mb-8">
-              {countdown > 0 ? (
-                <div className="text-9xl font-bold text-black animate-bounce">
-                  {countdown}
-                </div>
-              ) : (
-                <Loader2 className="w-24 h-24 text-black animate-spin mx-auto" />
-              )}
-            </div>
-            <h2 className="text-3xl font-bold text-black mb-2">
-              {countdown > 0 ? 'Get Ready!' : 'Loading Quiz...'}
-            </h2>
-            <p className="text-gray-800 text-lg font-medium">
-              {selectedQuiz?.title}
-            </p>
-          </div>
-        </div>
-      </>
+      <SoloLoadingScreen 
+        countdown={countdown} 
+        quizTitle={selectedQuiz?.title} 
+      />
     );
   }
 
-  // Lobby Screen
-  if (currentView === 'lobby') {
-    const userPlayer = lobbyPlayers.find(p => p.id === 'user');
-    const totalPlayers = lobbyPlayers.length;
-    const readyPlayers = lobbyPlayers.filter(p => p.isReady).length;
-    const allReady = totalPlayers > 1 && lobbyPlayers.every(p => p.isReady);
-    
+  // Battle Loading Screen (after all players ready)
+  if (currentView === 'loadingBattle') {
     return (
-      <>
-        <style>{styles}</style>
-        <div className="min-h-screen bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 relative overflow-hidden">
-          {/* Header */}
-          <div className="absolute top-0 left-0 right-0 z-10 p-6">
-            <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-4xl font-bold text-black mb-2 drop-shadow-lg">Quiz Battle Lobby</h1>
-              <p className="text-black text-lg font-medium mb-4">{selectedQuiz?.title}</p>
-              
-              <div className="inline-flex items-center gap-3 px-6 py-3 bg-white bg-opacity-90 rounded-full shadow-lg">
-                <Users className="w-6 h-6 text-yellow-700" />
-                <span className="font-bold text-yellow-700 text-lg">
-                  {readyPlayers}/{totalPlayers} Ready
-                </span>
-              </div>
-            </div>
-          </div>
+      <SoloLoadingScreen 
+        countdown={countdown} 
+        quizTitle={selectedQuiz?.title} 
+      />
+    );
+  }
 
-          {/* Floating Players */}
-          <div className="absolute inset-0">
-            {lobbyPlayers.map((player, index) => {
-              const pos = playerPositions[index] || { x: 50, y: 50 };
-              
-              return (
-                <div
-                  key={player.id}
-                  className="absolute player-icon animate-float"
-                  style={{
-                    left: `${pos.x}%`,
-                    top: `${pos.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    animationDelay: `${index * 0.3}s`
-                  }}
-                >
-                  <div className="text-center">
-                    <div 
-                      className={`w-24 h-24 bg-gradient-to-br from-white to-gray-100 rounded-full flex items-center justify-center text-black font-bold text-3xl shadow-2xl border-4 ${
-                        player.isReady 
-                          ? 'border-green-500 animate-pulse-glow' 
-                          : 'border-yellow-600'
-                      }`}
-                    >
-                      {player.initial}
-                    </div>
-                    <div className="mt-2 bg-black bg-opacity-70 px-3 py-1 rounded-full">
-                      <div className="font-bold text-white text-sm">{player.name}</div>
-                      {player.isReady ? (
-                        <div className="text-xs text-green-400 font-medium flex items-center justify-center gap-1">
-                          <span>✓</span> Ready
-                        </div>
-                      ) : (
-                        <div className="text-xs text-gray-300">Waiting...</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Bottom Controls */}
-          <div className="absolute bottom-0 left-0 right-0 z-10 p-6">
-            <div className="max-w-4xl mx-auto text-center space-y-4">
-              {/* Ready Button for User */}
-              {userPlayer && !userPlayer.isReady && (
-                <button
-                  onClick={handleUserReady}
-                  className="px-12 py-5 bg-green-500 text-white rounded-2xl font-bold text-2xl hover:bg-green-600 transition-all shadow-2xl hover:scale-105"
-                >
-                  I'm Ready!
-                </button>
-              )}
-
-              {/* Status Messages */}
-              {allReady && (
-                <div className="inline-flex items-center gap-3 px-8 py-4 bg-white bg-opacity-95 text-black rounded-2xl font-bold text-xl shadow-2xl">
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  All players ready! Starting quiz...
-                </div>
-              )}
-
-              {userPlayer && userPlayer.isReady && !allReady && totalPlayers === 1 && (
-                <div className="inline-flex items-center gap-3 px-8 py-4 bg-white bg-opacity-90 text-blue-700 rounded-2xl font-semibold text-lg shadow-xl">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Waiting for other players to join...
-                </div>
-              )}
-
-              {userPlayer && userPlayer.isReady && !allReady && totalPlayers > 1 && (
-                <div className="inline-flex items-center gap-3 px-8 py-4 bg-white bg-opacity-90 text-blue-700 rounded-2xl font-semibold text-lg shadow-xl">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Waiting for {totalPlayers - readyPlayers} more player{totalPlayers - readyPlayers !== 1 ? 's' : ''} to ready up...
-                </div>
-              )}
-              
-              <div>
-                <button 
-                  onClick={handleBackToList}
-                  className="text-black hover:text-gray-800 font-bold text-lg bg-white bg-opacity-70 px-6 py-2 rounded-full hover:bg-opacity-90 transition-all"
-                >
-                  ← Leave Lobby
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
+  // Battle Lobby Screen
+  if (currentView === 'lobby') {
+    return (
+      <BattleLobbyScreen
+        lobbyPlayers={lobbyPlayers}
+        playerPositions={playerPositions}
+        quizTitle={selectedQuiz?.title}
+        onUserReady={handleUserReady}
+        onLeave={handleBackToList}
+      />
     );
   }
 
