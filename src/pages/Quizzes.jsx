@@ -5,7 +5,7 @@ import {
   QuizBattles
 } from '../components/quizzes/QuizUIComponents';
 import { QuestionCard } from '../components/quizzes/QuizComponents';
-import QuizModal from '../components/quizzes/QuizModal';
+import { QuizModal, DeleteConfirmationModal } from '../components/quizzes/QuizModal';
 import QuizGame from '../components/quizzes/QuizGame';
 import QuizResults from '../components/quizzes/QuizResults';
 import QuizLeaderboard from '../components/quizzes/QuizLeaderboard';
@@ -47,6 +47,8 @@ function QuizzesPage() {
   const [countdown, setCountdown] = useState(5);
   const [lobbyPlayers, setLobbyPlayers] = useState([]);
   const [playerPositions, setPlayerPositions] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [quizToDelete, setQuizToDelete] = useState(null);
   
   useLobbySimulation(lobbyPlayers, setLobbyPlayers, currentView === 'lobby');
 
@@ -206,6 +208,18 @@ function QuizzesPage() {
     setShowModal(true);
   };
 
+  const handleUpdateQuizTitle = (newTitle) => {
+    if (editingQuiz) {
+      // Update the editing quiz
+      setEditingQuiz({ ...editingQuiz, title: newTitle });
+      
+      // Also update in the quiz list
+      setQuizList(quizList.map(q => 
+        q.id === editingQuiz.id ? { ...q, title: newTitle } : q
+      ));
+    }
+  };
+
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedQuiz(null);
@@ -311,9 +325,30 @@ function QuizzesPage() {
   };
 
   const handleDeleteQuiz = (quiz) => {
-    if (window.confirm(`Are you sure you want to delete "${quiz.title}"?`)) {
-      setQuizList(quizList.filter(q => q.id !== quiz.id));
+    setQuizToDelete(quiz);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (quizToDelete) {
+      setQuizList(quizList.filter(q => q.id !== quizToDelete.id));
+      setQuizToDelete(null);
     }
+  };
+
+  const handleCreateQuiz = () => {
+    const newQuiz = {
+      id: quizList.length > 0 ? Math.max(...quizList.map(q => q.id)) + 1 : 1,
+      title: 'New Quiz',
+      questionCount: 0,
+      created: 'Created just now',
+      isPublic: false
+    };
+    
+    setQuizList([newQuiz, ...quizList]);
+    setEditingQuiz(newQuiz);
+    setQuestions([]);
+    setCurrentView('editing');
   };
 
   const handleBackToList = () => {
@@ -537,6 +572,7 @@ function QuizzesPage() {
             onBack={handleBackToList}
             onAddQuestion={handleAddQuestion}
             onSave={handleSaveQuiz}
+            onUpdateTitle={handleUpdateQuizTitle}
           />
           
           <div className="max-w-4xl mx-auto p-6">
@@ -575,8 +611,9 @@ function QuizzesPage() {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
               onEditQuiz={handleEditQuiz}
-              onDeleteQuiz={handleDeleteQuiz}
               onQuizSelect={handleQuizSelect}
+              onDeleteQuiz={handleDeleteQuiz}
+              onCreateQuiz={handleCreateQuiz}
             />
             
             <QuizBattles 
@@ -593,7 +630,18 @@ function QuizzesPage() {
           onSoloQuiz={handleSoloQuiz}
           onQuizBattle={handleQuizBattle}
         />
-        
+
+        <DeleteConfirmationModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false); 
+            setQuizToDelete(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          itemName={quizToDelete?.title || ''}
+          itemType="quiz"
+        />
+
         <QuizResults
           isOpen={showResults}
           onClose={handleCloseSoloResults}
