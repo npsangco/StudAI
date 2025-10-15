@@ -135,11 +135,13 @@ export const QuizQuestion = ({
     selectedAnswer, 
     userAnswer, 
     userMatches,
-    isMatchingSubmitted, 
+    isMatchingSubmitted,
+    mode = 'solo', // ✅ ADDED
     onAnswerSelect,
     onFillInAnswer,
     onMatchingSubmit,
-    onUserAnswerChange, 
+    onUserAnswerChange,
+    onNextQuestion, // ✅ ADDED (but not used for non-matching)
     timeLeft,
     isPaused = false,
     isAnswerCorrect
@@ -256,25 +258,30 @@ export const QuizQuestion = ({
         )}
         
         {/* Result display */}
-        {(selectedAnswer || userAnswer?.includes('_submitted') || isMatchingSubmitted) && (
-          <div className="text-center">
+        {(selectedAnswer || userAnswer?.includes('_submitted')) && (
+          <div className="text-center space-y-4">
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-semibold ${
               (currentQ.type === 'Multiple Choice' || currentQ.type === 'True/False') && selectedAnswer === currentQ.correctAnswer ||
               currentQ.type === 'Fill in the blanks' && userAnswer?.includes('_submitted') && 
-                isAnswerCorrect(currentQ, userAnswer.replace('_submitted', '')) ||
-              currentQ.type === 'Matching' && isMatchingSubmitted && isAnswerCorrect(currentQ, userMatches)
+                isAnswerCorrect(currentQ, userAnswer.replace('_submitted', ''))
                 ? 'bg-green-100 text-green-700'
                 : 'bg-red-100 text-red-700'
             }`}>
               {(currentQ.type === 'Multiple Choice' || currentQ.type === 'True/False') && selectedAnswer === currentQ.correctAnswer ||
-               currentQ.type === 'Fill in the blanks' && userAnswer?.includes('_submitted') && 
-                 isAnswerCorrect(currentQ, userAnswer.replace('_submitted', '')) ||
-               currentQ.type === 'Matching' && isMatchingSubmitted && isAnswerCorrect(currentQ, userMatches)
+              currentQ.type === 'Fill in the blanks' && userAnswer?.includes('_submitted') && 
+                isAnswerCorrect(currentQ, userAnswer.replace('_submitted', ''))
                 ? '✓ Correct!' : 
                 currentQ.type === 'Fill in the blanks' && userAnswer?.includes('_submitted')
                   ? `✗ Answer: ${currentQ.answer}`
                   : '✗ Incorrect'}
             </div>
+
+            {/* ✅ ADDED: Show "Next question..." message for Battle mode */}
+            {mode === 'battle' && (
+              <p className="text-sm text-gray-600 animate-pulse">
+                Next question in a moment...
+              </p>
+            )}
           </div>
         )}
       </div>

@@ -66,6 +66,7 @@ const QuizGame = ({
     }
   }, [timeLeft, currentQuestion, questions.length, selectedAnswer, userAnswer, isMatchingSubmitted, isProcessing]);
 
+  // ✅ ORIGINAL: Multiple Choice & True/False - 2 seconds auto-advance for all modes
   const handleAnswerSelect = (answer) => {
     if (selectedAnswer || isPaused || isProcessing) return;
     
@@ -86,6 +87,7 @@ const QuizGame = ({
     }, 2000);
   };
 
+  // ✅ ORIGINAL: Fill in the Blanks - 2 seconds auto-advance for all modes
   const handleFillInAnswer = () => {
     if (!userAnswer?.trim() || userAnswer.includes('_submitted') || isPaused || isProcessing) return;
     
@@ -108,12 +110,13 @@ const QuizGame = ({
     }, 2000);
   };
 
+  // ✅ NEW: Matching - Solo: Manual button, Battle: 7 seconds
   const handleMatchingSubmit = (matches) => {
     if (isPaused || isProcessing) return;
     
     setIsProcessing(true);
     setUserMatches(matches);
-    setIsMatchingSubmitted(true); 
+    setIsMatchingSubmitted(true);
     const isCorrect = isAnswerCorrect(currentQ, matches);
     
     if (isCorrect) {
@@ -123,10 +126,16 @@ const QuizGame = ({
       }
     }
     
-    setTimeout(() => {
+    if (mode === 'battle') {
+      // Battle mode: 7 seconds review time
+      setTimeout(() => {
+        setIsProcessing(false);
+        handleNextQuestion();
+      }, 7000);
+    } else {
+      // Solo mode: Manual next button (no auto-advance)
       setIsProcessing(false);
-      handleNextQuestion();
-    }, 2000);
+    }
   };
 
   const handleNextQuestion = () => {
@@ -141,6 +150,11 @@ const QuizGame = ({
     } else {
       finishQuiz();
     }
+  };
+
+  // ✅ Manual next handler for Solo matching
+  const handleManualNext = () => {
+    handleNextQuestion();
   };
 
   const finishQuiz = () => {
@@ -202,15 +216,38 @@ const QuizGame = ({
               selectedAnswer={selectedAnswer}
               userAnswer={userAnswer}
               userMatches={userMatches}
-              isMatchingSubmitted={isMatchingSubmitted} 
+              isMatchingSubmitted={isMatchingSubmitted}
+              mode={mode}
               onAnswerSelect={handleAnswerSelect}
               onFillInAnswer={handleFillInAnswer}
               onMatchingSubmit={handleMatchingSubmit}
               onUserAnswerChange={setUserAnswer}
+              onNextQuestion={handleManualNext}
               timeLeft={timeLeft}
               isPaused={isPaused || isProcessing}
               isAnswerCorrect={isAnswerCorrect}
             />
+
+            {/* ✅ Show Next button for Solo Matching after submission */}
+            {currentQ.type === 'Matching' && isMatchingSubmitted && mode === 'solo' && (
+              <div className="text-center mt-6">
+                <button
+                  onClick={handleManualNext}
+                  className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+                >
+                  Next Question →
+                </button>
+              </div>
+            )}
+            
+            {/* ✅ Show message for Battle Matching after submission */}
+            {currentQ.type === 'Matching' && isMatchingSubmitted && mode === 'battle' && (
+              <div className="text-center mt-6">
+                <p className="text-sm text-gray-600 animate-pulse">
+                  Next question in a moment...
+                </p>
+              </div>
+            )}
           </div>
           
           {/* Live Leaderboard (Battle Mode Only) */}
