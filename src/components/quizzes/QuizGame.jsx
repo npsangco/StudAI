@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuizCore, QuizQuestion } from './QuizCore';
 import { QuizGameHeader } from './QuizGameHeader';
 import { LiveLeaderboard, useSimulatedPlayers } from './QuizSimulation';
@@ -18,15 +18,18 @@ const QuizGame = ({
     selectedAnswer,
     userAnswer,
     userMatches,
+    isMatchingSubmitted, 
     timeLeft,
     isPaused,
     displayScore,
     score,
     scoreRef,
+    isProcessingRef, 
     setCurrentQuestion,
     setSelectedAnswer,
     setUserAnswer,
     setUserMatches,
+    setIsMatchingSubmitted, 
     setTimeLeft,
     setIsPaused,
     isAnswerCorrect,
@@ -45,6 +48,23 @@ const QuizGame = ({
   ] : [];
 
   const currentQ = questions[currentQuestion];
+
+  // Sync local isProcessing with the ref
+  useEffect(() => {
+    isProcessingRef.current = isProcessing;
+  }, [isProcessing, isProcessingRef]);
+
+  // Handle auto-complete immediately when time runs out on last question
+  useEffect(() => {
+    const hasAnswer = selectedAnswer || 
+                      userAnswer?.includes('_submitted') || 
+                      isMatchingSubmitted;
+    
+    if (timeLeft === 0 && !hasAnswer && currentQuestion === questions.length - 1 && !isProcessing) {
+      // Last question and time ran out - finish the quiz immediately
+      finishQuiz();
+    }
+  }, [timeLeft, currentQuestion, questions.length, selectedAnswer, userAnswer, isMatchingSubmitted, isProcessing]);
 
   const handleAnswerSelect = (answer) => {
     if (selectedAnswer || isPaused || isProcessing) return;
@@ -93,6 +113,7 @@ const QuizGame = ({
     
     setIsProcessing(true);
     setUserMatches(matches);
+    setIsMatchingSubmitted(true); 
     const isCorrect = isAnswerCorrect(currentQ, matches);
     
     if (isCorrect) {
@@ -115,6 +136,7 @@ const QuizGame = ({
       setSelectedAnswer('');
       setUserAnswer('');
       setUserMatches([]);
+      setIsMatchingSubmitted(false);
       setTimeLeft(30);
     } else {
       finishQuiz();
@@ -180,6 +202,7 @@ const QuizGame = ({
               selectedAnswer={selectedAnswer}
               userAnswer={userAnswer}
               userMatches={userMatches}
+              isMatchingSubmitted={isMatchingSubmitted} 
               onAnswerSelect={handleAnswerSelect}
               onFillInAnswer={handleFillInAnswer}
               onMatchingSubmit={handleMatchingSubmit}

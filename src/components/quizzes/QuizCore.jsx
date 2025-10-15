@@ -7,20 +7,50 @@ export const useQuizCore = (questions, mode = 'solo', timeLimit = 30) => {
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [userAnswer, setUserAnswer] = useState('');
   const [userMatches, setUserMatches] = useState([]);
+  const [isMatchingSubmitted, setIsMatchingSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [isPaused, setIsPaused] = useState(false);
   const scoreRef = useRef(0);
   const [displayScore, setDisplayScore] = useState(0);
   const startTimeRef = useRef(Date.now());
+  const isProcessingRef = useRef(false);
 
+  // Timer ALWAYS counts down, no matter what
   useEffect(() => {
     if (timeLeft > 0 && !isPaused) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
     } else if (timeLeft === 0 && !isPaused) {
-      // Auto-advance when time runs out
+      // Check if we have an answer already (for any question type)
+      const hasAnswer = selectedAnswer || 
+                        userAnswer?.includes('_submitted') || 
+                        isMatchingSubmitted;
+      
+      if (!hasAnswer && !isProcessingRef.current) {
+        // No answer given - auto-advance immediately
+        handleTimeUp();
+      }
     }
   }, [timeLeft, isPaused]);
+
+  // Auto-advance immediately without delay
+  const handleTimeUp = () => {
+    isProcessingRef.current = true;
+    
+    if (currentQuestion < questions.length - 1) {
+      // Move to next question immediately
+      setCurrentQuestion(currentQuestion + 1);
+      setSelectedAnswer('');
+      setUserAnswer('');
+      setUserMatches([]);
+      setIsMatchingSubmitted(false);
+      setTimeLeft(timeLimit);
+      isProcessingRef.current = false;
+    } else {
+      // Quiz is complete - this will be handled by the parent component
+      isProcessingRef.current = false;
+    }
+  };
 
   const isAnswerCorrect = (question, answer) => {
     switch (question.type) {
@@ -52,11 +82,13 @@ export const useQuizCore = (questions, mode = 'solo', timeLimit = 30) => {
     setSelectedAnswer('');
     setUserAnswer('');
     setUserMatches([]);
+    setIsMatchingSubmitted(false);
     setTimeLeft(timeLimit);
     scoreRef.current = 0;
     setDisplayScore(0);
     startTimeRef.current = Date.now();
     setIsPaused(false);
+    isProcessingRef.current = false;
   };
 
   const formatTime = (seconds) => {
@@ -74,22 +106,26 @@ export const useQuizCore = (questions, mode = 'solo', timeLimit = 30) => {
     selectedAnswer,
     userAnswer,
     userMatches,
+    isMatchingSubmitted,
     timeLeft,
     isPaused,
     displayScore,
     score: scoreRef.current,
     scoreRef,
+    isProcessingRef,
     setCurrentQuestion,
     setSelectedAnswer,
     setUserAnswer,
     setUserMatches,
+    setIsMatchingSubmitted,
     setTimeLeft,
     setIsPaused,
     isAnswerCorrect,
     updateScore,
     resetQuiz,
     formatTime,
-    getTimeSpent
+    getTimeSpent,
+    handleTimeUp
   };
 };
 
@@ -99,6 +135,7 @@ export const QuizQuestion = ({
     selectedAnswer, 
     userAnswer, 
     userMatches,
+    isMatchingSubmitted, 
     onAnswerSelect,
     onFillInAnswer,
     onMatchingSubmit,
@@ -219,20 +256,20 @@ export const QuizQuestion = ({
         )}
         
         {/* Result display */}
-        {(selectedAnswer || userAnswer?.includes('_submitted') || userMatches?.length > 0) && (
+        {(selectedAnswer || userAnswer?.includes('_submitted') || isMatchingSubmitted) && (
           <div className="text-center">
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-semibold ${
               (currentQ.type === 'Multiple Choice' || currentQ.type === 'True/False') && selectedAnswer === currentQ.correctAnswer ||
               currentQ.type === 'Fill in the blanks' && userAnswer?.includes('_submitted') && 
                 isAnswerCorrect(currentQ, userAnswer.replace('_submitted', '')) ||
-              currentQ.type === 'Matching' && userMatches?.length > 0 && isAnswerCorrect(currentQ, userMatches)
+              currentQ.type === 'Matching' && isMatchingSubmitted && isAnswerCorrect(currentQ, userMatches)
                 ? 'bg-green-100 text-green-700'
                 : 'bg-red-100 text-red-700'
             }`}>
               {(currentQ.type === 'Multiple Choice' || currentQ.type === 'True/False') && selectedAnswer === currentQ.correctAnswer ||
                currentQ.type === 'Fill in the blanks' && userAnswer?.includes('_submitted') && 
                  isAnswerCorrect(currentQ, userAnswer.replace('_submitted', '')) ||
-               currentQ.type === 'Matching' && userMatches?.length > 0 && isAnswerCorrect(currentQ, userMatches)
+               currentQ.type === 'Matching' && isMatchingSubmitted && isAnswerCorrect(currentQ, userMatches)
                 ? '✓ Correct!' : 
                 currentQ.type === 'Fill in the blanks' && userAnswer?.includes('_submitted')
                   ? `✗ Answer: ${currentQ.answer}`
