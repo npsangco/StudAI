@@ -99,8 +99,7 @@ export const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, o
       draggedIndex === index ? 'opacity-50 scale-95' : 'hover:bg-gray-100'
     }`}
   >
-    <div className="w-1 h-8 bg-green-500 rounded-full mr-0 sm:mr-3 hidden sm:block"></div>
-    
+  
     <div className="flex items-center justify-center gap-2 mr-0 sm:mr-3">
       <GripVertical className="w-4 h-4 text-gray-400" />
     </div>

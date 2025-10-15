@@ -87,7 +87,6 @@ export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
               style={{
                 left: `${(i * 15) % 100}%`,
                 top: `${(i * 20) % 100}%`,
-                animationDelay: `${i * 0.5}s`,
                 animationDuration: `${3 + (i % 3)}s`
               }}
             >
@@ -335,7 +334,6 @@ export const BattleLobbyScreen = ({
               style={{
                 left: `${(i * 15) % 100}%`,
                 top: `${(i * 20) % 100}%`,
-                animationDelay: `${i * 0.5}s`,
                 animationDuration: `${3 + (i % 3)}s`
               }}
             >
