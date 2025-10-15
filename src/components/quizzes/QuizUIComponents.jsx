@@ -88,69 +88,136 @@ export const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitl
   );
 };
 
-// Quiz Item Component
-export const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete }) => (
-  <div 
-    draggable
-    onDragStart={(e) => onDragStart(e, index)}
-    onDragOver={onDragOver}
-    onDrop={(e) => onDrop(e, index)}
-    className={`flex flex-col sm:flex-row sm:items-center p-3 bg-gray-50 rounded-lg transition-all duration-200 gap-3 sm:gap-0 ${
-      draggedIndex === index ? 'opacity-50 scale-95' : 'hover:bg-gray-100'
-    }`}
-  >
-  
-    <div className="flex items-center justify-center gap-2 mr-0 sm:mr-3">
-      <GripVertical className="w-4 h-4 text-gray-400" />
-    </div>
-    
-    <div 
-      onClick={() => onSelect(quiz)}
-      className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-6 flex-1 cursor-pointer"
-    >
-      <h3 className="font-semibold text-black text-left sm:text-left min-w-0 flex-1 hover:text-blue-600 transition-colors">
-        {quiz.title}
-      </h3>
-      <div className="flex flex-col sm:flex-row gap-1 sm:gap-6 text-sm">
-        <span className="text-gray-500 whitespace-nowrap">{quiz.questionCount || quiz.questions} Questions</span>
-        <span className="text-gray-500 whitespace-nowrap">{quiz.created}</span>
+// Quiz Item Component with Drag & Drop
+export const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete }) => {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const isBeingDragged = draggedIndex === index;
+  const showDropIndicator = isDragOver && !isBeingDragged;
+
+  const handleDragStart = (e) => {
+    e.currentTarget.style.cursor = 'grabbing';
+    onDragStart(e, index);
+  };
+
+  const handleDragEnd = (e) => {
+    e.currentTarget.style.cursor = 'grab';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    if (!isBeingDragged) {
+      setIsDragOver(true);
+      onDragOver(e);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    // Only clear isDragOver if we're actually leaving the component
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    setIsDragOver(false);
+    onDrop(e, index);
+  };
+
+  // Determine drop indicator position based on drag direction
+  const showTopIndicator = showDropIndicator && draggedIndex > index;
+  const showBottomIndicator = showDropIndicator && draggedIndex < index;
+
+  return (
+    <div className="relative">
+      {/* Drop zone indicator - top */}
+      {showTopIndicator && (
+        <div className="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 rounded-full shadow-lg shadow-blue-500/50 z-10">
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full -ml-1"></div>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full -mr-1"></div>
+        </div>
+      )}
+      
+      {/* Drop zone indicator - bottom */}
+      {showBottomIndicator && (
+        <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 rounded-full shadow-lg shadow-blue-500/50 z-10">
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full -ml-1"></div>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full -mr-1"></div>
+        </div>
+      )}
+      
+      <div 
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`flex flex-col sm:flex-row sm:items-center p-3 bg-gray-50 rounded-lg transition-all duration-200 gap-3 sm:gap-0 ${
+          isBeingDragged 
+            ? 'opacity-40 scale-95 shadow-2xl border-2 border-dashed border-blue-400 bg-blue-50' 
+            : showDropIndicator
+            ? 'bg-blue-50 border-2 border-blue-200'
+            : 'hover:bg-gray-100 border-2 border-transparent'
+        } ${isBeingDragged ? 'cursor-grabbing' : 'cursor-grab'}`}
+        style={{
+          touchAction: 'none'
+        }}
+      >
+      
+        {/* Drag handle - hidden on mobile */}
+        <div className="hidden sm:flex items-center justify-center gap-2 mr-3">
+          <GripVertical className={`w-4 h-4 transition-colors ${isBeingDragged ? 'text-blue-500' : 'text-gray-400'}`} />
+        </div>
+        
+        <div 
+          onClick={() => onSelect(quiz)}
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-6 flex-1 cursor-pointer"
+        >
+          <h3 className="font-semibold text-black text-left sm:text-left min-w-0 flex-1 hover:text-blue-600 transition-colors">
+            {quiz.title}
+          </h3>
+          <div className="flex flex-col sm:flex-row gap-1 sm:gap-6 text-sm">
+            <span className="text-gray-500 whitespace-nowrap">{quiz.questionCount || quiz.questions} Questions</span>
+            <span className="text-gray-500 whitespace-nowrap">{quiz.created}</span>
+          </div>
+        </div>
+        
+        <div className="flex gap-2 ml-0 sm:ml-3 self-end sm:self-center">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(quiz);
+            }}
+            className="p-2 hover:bg-green-100 rounded-lg transition-colors text-green-600"
+            title="Start Quiz"
+          >
+            <Play className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(quiz);
+            }}
+            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+            title="Edit Quiz"
+          >
+            <Edit className="w-4 h-4 text-gray-600" />
+          </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(quiz);
+            }}
+            className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
+            title="Delete Quiz"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
-    
-    <div className="flex gap-2 ml-0 sm:ml-3 self-end sm:self-center">
-      <button 
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect(quiz);
-        }}
-        className="p-2 hover:bg-green-100 rounded-lg transition-colors text-green-600"
-        title="Start Quiz"
-      >
-        <Play className="w-4 h-4" />
-      </button>
-      <button 
-        onClick={(e) => {
-          e.stopPropagation();
-          onEdit(quiz);
-        }}
-        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-        title="Edit Quiz"
-      >
-        <Edit className="w-4 h-4 text-gray-600" />
-      </button>
-      <button 
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(quiz);
-        }}
-        className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
-        title="Delete Quiz"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
-    </div>
-  </div>
-);
+  );
+};
 
 // Quiz List Component
 export const QuizList = ({ quizzes, draggedIndex, onDragStart, onDragOver, onDrop, onEditQuiz, onQuizSelect, onDeleteQuiz, onCreateQuiz }) => (

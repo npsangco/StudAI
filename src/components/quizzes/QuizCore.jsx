@@ -19,7 +19,6 @@ export const useQuizCore = (questions, mode = 'solo', timeLimit = 30) => {
       return () => clearTimeout(timer);
     } else if (timeLeft === 0 && !isPaused) {
       // Auto-advance when time runs out
-      // You might want to call a callback here to handle timeout
     }
   }, [timeLeft, isPaused]);
 
@@ -103,7 +102,7 @@ export const QuizQuestion = ({
     onAnswerSelect,
     onFillInAnswer,
     onMatchingSubmit,
-    onUserAnswerChange, // ✅ ADD THIS PROP
+    onUserAnswerChange, 
     timeLeft,
     isPaused = false,
     isAnswerCorrect
@@ -191,14 +190,14 @@ export const QuizQuestion = ({
           </div>
         )}
   
-        {/* ✅ FIXED - Fill in the blanks section */}
+        {/* Fill in the blanks section */}
         {currentQ.type === 'Fill in the blanks' && (
           <div className="space-y-4 mb-8">
             <div className="flex gap-3">
               <input
                 type="text"
                 value={userAnswer?.replace('_submitted', '') || ''}
-                onChange={(e) => onUserAnswerChange && onUserAnswerChange(e.target.value)} // ✅ FIXED
+                onChange={(e) => onUserAnswerChange && onUserAnswerChange(e.target.value)}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' && !userAnswer?.includes('_submitted') && onFillInAnswer) {
                     onFillInAnswer();
