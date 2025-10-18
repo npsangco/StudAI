@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import TextExtractor from '../components/TextExtractor';
+import PetBuddy from '../components/PetBuddy';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -445,63 +446,7 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 flex flex-col">
-              <div className="border-2 border-gray-900 p-6 rounded-2xl mb-6 bg-gradient-to-b from-blue-50 to-purple-50">
-                <div className="aspect-video bg-gradient-to-r from-pink-200 to-purple-200 rounded-xl mb-4 flex items-center justify-center overflow-hidden">
-                  <img
-                    src="https://placekitten.com/400/300"
-                    alt="Buddy"
-                    className="w-full h-full object-cover rounded-xl"
-                  />
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-lg">Buddy</p>
-                  <p className="text-sm text-gray-600 bg-yellow-100 px-3 py-1 rounded-full inline-block">Level 1</p>
-                </div>
-              </div>
-
-              <div className="space-y-4 mb-6">
-                {["Hunger", "Happiness", "Cleanliness", "Energy"].map((stat, index) => (
-                  <div key={stat} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <p className="text-sm font-medium text-gray-700">{stat}</p>
-                      <span className="text-xs text-gray-500">80%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className={`h-3 rounded-full transition-all duration-300 ${index === 0 ? 'bg-gradient-to-r from-green-400 to-green-600' :
-                          index === 1 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
-                            index === 2 ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
-                              'bg-gradient-to-r from-purple-400 to-purple-600'
-                          }`}
-                        style={{ width: '80%' }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <button className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-3 rounded-xl font-medium hover:from-green-600 hover:to-green-700 transition-all transform hover:scale-105 shadow-lg">
-                  Feed (6)
-                </button>
-                <button className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-4 py-3 rounded-xl font-medium hover:from-yellow-600 hover:to-yellow-700 transition-all transform hover:scale-105 shadow-lg">
-                  Play (2)
-                </button>
-                <button className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg">
-                  Clean (5)
-                </button>
-              </div>
-
-              <div className="flex gap-3">
-                <button className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-600 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg">
-                  Shop
-                </button>
-                <button className="flex-1 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-6 py-3 rounded-xl font-medium hover:from-pink-600 hover:to-pink-700 transition-all transform hover:scale-105 shadow-lg">
-                  Clothes
-                </button>
-              </div>
-            </div>
+            <PetBuddy userId={user?.user_id} />
           </div>
         </div>
       </div>

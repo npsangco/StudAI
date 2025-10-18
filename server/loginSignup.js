@@ -37,6 +37,9 @@ import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
+//pet companion route
+import petRoutes from "./routes/petRoutes.js";
+
 const app = express();
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
@@ -954,8 +957,8 @@ app.delete("/api/plans/:id", async (req, res) => {
   }
 });
 
-
-
+// ----------------- PET SYSTEM ROUTES -----------------
+app.use("/api/pet", petRoutes);
 
 // ----------------- START SERVER -----------------
 const PORT = process.env.PORT || 4000;
