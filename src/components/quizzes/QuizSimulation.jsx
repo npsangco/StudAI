@@ -44,24 +44,19 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You' }) => {
   );
 };
 
-// Simulated Players Hook - ONLY used during actual quiz battle gameplay
-// This creates AI opponents that answer questions during the game
+// Simulated Players Hook
 export const useSimulatedPlayers = (totalQuestions, currentQuestion, lobbyPlayers = []) => {
-  // If lobbyPlayers are provided (from real lobby), use those
-  // Otherwise fall back to default simulated players
   const [simulatedPlayers] = useState(() => {
     if (lobbyPlayers.length > 1) {
-      // Use the players from lobby (excluding the user)
       return lobbyPlayers
         .filter(p => p.id !== 'user')
         .map(p => ({
           ...p,
           score: 0,
-          accuracy: Math.random() * 0.3 + 0.6 // Random accuracy between 60-90%
+          accuracy: Math.random() * 0.3 + 0.6
         }));
     }
     
-    // Default simulated players if no lobby data
     return [
       { id: 1, name: 'Denise', initial: 'D', score: 0, accuracy: 0.85 },
       { id: 2, name: 'Den', initial: 'D', score: 0, accuracy: 0.75 },
@@ -72,19 +67,17 @@ export const useSimulatedPlayers = (totalQuestions, currentQuestion, lobbyPlayer
 
   const [players, setPlayers] = useState(simulatedPlayers);
 
-  // Simulate other players answering when current question changes
   useEffect(() => {
     if (currentQuestion > 0) {
       const timer = setTimeout(() => {
         setPlayers(prev => prev.map(player => {
-          // Simulate answer based on player's accuracy
           const gotCorrect = Math.random() < player.accuracy;
           return {
             ...player,
             score: gotCorrect ? player.score + 1 : player.score
           };
         }));
-      }, Math.random() * 3000 + 1000); // Random delay 1-4 seconds
+      }, Math.random() * 3000 + 1000);
 
       return () => clearTimeout(timer);
     }

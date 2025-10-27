@@ -7,7 +7,7 @@ import {
   MatchingQuestion
 } from './QuestionTypes';
 
-// Individual Question Card Component (Complex - combines all question types)
+// Individual Question Card Component
 export const QuestionCard = ({ 
   question, 
   index, 

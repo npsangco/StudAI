@@ -51,20 +51,14 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
               Congratulations you earned {validWinner.score * 10} Companion Points and {validWinner.score * 5} EXP!
             </p>
             
-            <div className="flex gap-3">
-              <button 
-                onClick={onClose}
-                className="flex-1 bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
-              >
-                Exit
-              </button>
-              <button 
-                onClick={onRetry}
-                className="flex-1 bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
-              >
-                Retry
-              </button>
-            </div>
+            {/* Only Exit button (no Retry in Battle mode) */}
+            <button 
+              onClick={onClose}
+              className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+            >
+              <X className="w-4 h-4" />
+              Exit
+            </button>
           </div>
         </div>
 
