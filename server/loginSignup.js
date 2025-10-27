@@ -18,6 +18,9 @@ import User from "./models/User.js";
 import File from "./models/File.js";
 import sessionStore from "./sessionStore.js";
 import Plan from "./models/Plan.js";
+import Quiz from "./models/Quiz.js";
+import Question from "./models/Question.js";
+import QuizAttempt from "./models/QuizAttempt.js";
 
 // Import Note model after creating it
 let Note;
@@ -37,9 +40,10 @@ import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-//pet companion route
+// Import routes
 import petRoutes from "./routes/petRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
+import quizRoutes from "./routes/quizRoutes.js"; 
 import SharedNote from "./models/SharedNote.js";
 
 const app = express();
@@ -58,6 +62,22 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
+// ============================================
+// ✅ MODEL ASSOCIATIONS (MUST BE HERE, BEFORE sequelize.authenticate)
+// ============================================
+
+Quiz.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
+User.hasMany(Quiz, { foreignKey: 'created_by', as: 'quizzes' });
+
+Quiz.hasMany(Question, { foreignKey: 'quiz_id', as: 'questions' });
+Question.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
+
+QuizAttempt.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasMany(QuizAttempt, { foreignKey: 'user_id', as: 'attempts' });
+
+QuizAttempt.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
+Quiz.hasMany(QuizAttempt, { foreignKey: 'quiz_id', as: 'attempts' });
+
 // ----------------- DB Connection -----------------
 sequelize.authenticate()
     .then(() => {
@@ -67,7 +87,10 @@ sequelize.authenticate()
             File.sync({ force: false }),
             Note ? Note.sync({ force: false }) : Promise.resolve(),
             SharedNote.sync({ force: false }),
-            Plan.sync({ force: false })
+            Plan.sync({ force: false }),
+            Quiz.sync({ force: false }),
+            Question.sync({ force: false }),
+            QuizAttempt.sync({ force: false })
         ]);
     })
     .then(() => {
@@ -816,7 +839,8 @@ app.delete("/api/plans/:id", async (req, res) => {
 // ----------------- PET SYSTEM ROUTES -----------------
 app.use("/api/pet", petRoutes);
 app.use("/api/notes", noteRoutes);
-
+// ----------------- QUIZ SYSTEM ROUTES -----------------
+app.use("/api/quizzes", quizRoutes);
 
 // ----------------- START SERVER -----------------
 const PORT = process.env.PORT || 4000;

@@ -76,4 +76,43 @@ export const sharedNotesApi = {
   getMyShares: () => api.get('/notes/shared/my-shares'),
 };
 
+// Quiz API
+export const quizApi = {
+  // Get all quizzes
+  getAll: () => api.get('/quizzes'),
+  
+  // Get single quiz with questions
+  getById: (id) => api.get(`/quizzes/${id}`),
+  
+  // Create new quiz
+  create: (quizData) => api.post('/quizzes', quizData),
+  
+  // Update quiz
+  update: (id, quizData) => api.put(`/quizzes/${id}`, quizData),
+  
+  // Delete quiz
+  delete: (id) => api.delete(`/quizzes/${id}`),
+  
+  // Add question to quiz
+  addQuestion: (quizId, questionData) => api.post(`/quizzes/${quizId}/questions`, questionData),
+  
+  // Update question
+  updateQuestion: (quizId, questionId, questionData) => 
+    api.put(`/quizzes/${quizId}/questions/${questionId}`, questionData),
+  
+  // Delete question
+  deleteQuestion: (quizId, questionId) => 
+    api.delete(`/quizzes/${quizId}/questions/${questionId}`),
+  
+  // Submit quiz attempt
+  submitAttempt: (quizId, attemptData) => 
+    api.post(`/quizzes/${quizId}/attempt`, attemptData),
+  
+  // Get user's attempts for a quiz
+  getAttempts: (quizId) => api.get(`/quizzes/${quizId}/attempts`),
+  
+  // Get quiz leaderboard
+  getLeaderboard: (quizId) => api.get(`/quizzes/${quizId}/leaderboard`),
+};
+
 export default api;
