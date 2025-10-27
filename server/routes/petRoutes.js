@@ -1,4 +1,4 @@
-// petRoutes.js (Optimized with Caching & Performance)
+// petRoutes.js (Optimized with Caching & Performance & Authentication)
 import express from "express";
 import sequelize from "../db.js";
 import PetCompanion from "../models/PetCompanion.js";
@@ -10,15 +10,21 @@ import NodeCache from "node-cache";
 
 const router = express.Router();
 
-// -----------------------------------------------
-// Performance Optimizations
-// -----------------------------------------------
+// Authentication Middleware
+const requireAuth = (req, res, next) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ error: 'Not logged in' });
+  }
+  next();
+};
+
+// Performance Optimizations using nodecache
 const cache = new NodeCache({ 
   stdTTL: 300, // 5 minutes cache
   checkperiod: 60 
 });
 
-// Rate limiting configurations
+// rate limiter
 const actionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 15, // 15 requests per minute
@@ -38,9 +44,7 @@ const generalLimiter = rateLimit({
   message: { error: "Too many requests, please try again later." }
 });
 
-// -----------------------------------------------
-// Helper Configurations & Functions
-// -----------------------------------------------
+// Helper configurations for actions
 const DECAY_RATES = { hunger: 10, happiness: 10, cleanliness: 5 };
 const DECAY_INTERVALS = { hunger: 1, happiness: 1, cleanliness: 1 };
 const ENERGY_REPLENISH = { amount: 10, interval: 10 };
@@ -147,10 +151,10 @@ function selectItemsToUse(equippedItems, currentLevel, maxLevel = 100) {
   return itemsToUse;
 }
 
-// Auto-equip first item of each category for new users
+// Auto-equip first item of each category
 async function autoEquipFirstItems(userId) {
   try {
-    // Get all inventory items grouped by effect type
+    // Group items in the invv by categories
     const inventoryItems = await UserPetItem.findAll({
       where: { user_id: userId },
       include: [PetItem],
@@ -193,13 +197,9 @@ function clearUserCache(userId) {
   cache.del(getUserCacheKey(userId));
 }
 
-// -----------------------------------------------
-// ROUTES WITH CACHING & RATE LIMITING
-// -----------------------------------------------
-
 // Get user's pet with caching
-router.get("/:userId", generalLimiter, async (req, res) => {
-  const { userId } = req.params;
+router.get("/", generalLimiter, requireAuth, async (req, res) => {
+  const userId = req.session.userId;
 
   try {
     const cacheKey = getPetCacheKey(userId);
@@ -228,31 +228,10 @@ router.get("/:userId", generalLimiter, async (req, res) => {
   }
 });
 
-// User profile with caching
-router.get("/profile/:userId", generalLimiter, async (req, res) => {
-  const { userId } = req.params;
-  try {
-    const cacheKey = getUserCacheKey(userId);
-    const cachedUser = cache.get(cacheKey);
-    
-    if (cachedUser) {
-      return res.json(cachedUser);
-    }
-
-    const user = await User.findByPk(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
-    
-    // Cache user data for 2 minutes
-    cache.set(cacheKey, user, 120);
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch user profile" });
-  }
-});
-
 // Pet adoption
-router.post("/", generalLimiter, async (req, res) => {
-  const { userId, petType, petName } = req.body;
+router.post("/", generalLimiter, requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const { petType, petName } = req.body;
 
   try {
     const existingPet = await PetCompanion.findOne({ where: { user_id: userId } });
@@ -311,12 +290,12 @@ router.post("/", generalLimiter, async (req, res) => {
 });
 
 // Update pet name
-router.put("/:petId/name", generalLimiter, async (req, res) => {
-  const { petId } = req.params;
+router.put("/name", generalLimiter, requireAuth, async (req, res) => {
+  const userId = req.session.userId;
   const { petName } = req.body;
 
   try {
-    const pet = await PetCompanion.findOne({ where: { pet_id: petId } });
+    const pet = await PetCompanion.findOne({ where: { user_id: userId } });
     if (!pet) {
       return res.status(404).json({ error: "Pet not found." });
     }
@@ -335,7 +314,7 @@ router.put("/:petId/name", generalLimiter, async (req, res) => {
     });
 
     // Clear cache for this user
-    clearUserCache(pet.user_id);
+    clearUserCache(userId);
     
     res.json(pet);
   } catch (err) {
@@ -344,9 +323,10 @@ router.put("/:petId/name", generalLimiter, async (req, res) => {
   }
 });
 
-// Pet actions - UPDATED with equipped items logic and rate limiting
-router.post("/action", actionLimiter, async (req, res) => {
-  const { userId, actionType } = req.body;
+// Pet actions
+router.post("/action", actionLimiter, requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const { actionType } = req.body;
 
   try {
     let pet = await PetCompanion.findOne({ where: { user_id: userId } });
@@ -476,8 +456,9 @@ router.post("/action", actionLimiter, async (req, res) => {
 });
 
 // Equip/Unequip item endpoint
-router.post("/inventory/equip", generalLimiter, async (req, res) => {
-  const { userId, inventoryId, isEquipped } = req.body;
+router.post("/inventory/equip", generalLimiter, requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const { inventoryId, isEquipped } = req.body;
 
   try {
     const inventoryItem = await UserPetItem.findOne({
@@ -507,8 +488,8 @@ router.post("/inventory/equip", generalLimiter, async (req, res) => {
 });
 
 // Auto-equip first items endpoint
-router.post("/inventory/auto-equip", generalLimiter, async (req, res) => {
-  const { userId } = req.body;
+router.post("/inventory/auto-equip", generalLimiter, requireAuth, async (req, res) => {
+  const userId = req.session.userId;
 
   try {
     await autoEquipFirstItems(userId);
@@ -525,7 +506,7 @@ router.post("/inventory/auto-equip", generalLimiter, async (req, res) => {
 
 // ----------------- SHOP & INVENTORY ROUTES -----------------
 
-// Get shop items with caching
+// get shop items
 router.get("/shop/items", generalLimiter, async (req, res) => {
   try {
     const cacheKey = getShopCacheKey();
@@ -548,9 +529,10 @@ router.get("/shop/items", generalLimiter, async (req, res) => {
   }
 });
 
-// Purchase item with rate limiting
-router.post("/shop/purchase", purchaseLimiter, async (req, res) => {
-  const { userId, itemId } = req.body;
+// Purchase item with rate limiting 
+router.post("/shop/purchase", purchaseLimiter, requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const { itemId } = req.body;
 
   try {
     const user = await User.findByPk(userId);
@@ -596,7 +578,7 @@ router.post("/shop/purchase", purchaseLimiter, async (req, res) => {
       try {
         await autoEquipFirstItems(userId);
       } catch (equipError) {
-        console.log("Auto-equip not critical, continuing...");
+        console.log("Auto-equip not critical, continuing...", equipError);
       }
 
       // Clear all user-related cache
@@ -620,8 +602,8 @@ router.post("/shop/purchase", purchaseLimiter, async (req, res) => {
 });
 
 // Get user inventory with caching
-router.get("/inventory/:userId", generalLimiter, async (req, res) => {
-  const { userId } = req.params;
+router.get("/inventory", generalLimiter, requireAuth, async (req, res) => {
+  const userId = req.session.userId;
 
   try {
     const cacheKey = getInventoryCacheKey(userId);
@@ -663,8 +645,9 @@ router.get("/inventory/:userId", generalLimiter, async (req, res) => {
 });
 
 // Use item from inventory (manual use)
-router.post("/inventory/use", actionLimiter, async (req, res) => {
-  const { userId, inventoryId, itemId } = req.body;
+router.post("/inventory/use", actionLimiter, requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const { inventoryId } = req.body;
 
   try {
     const inventoryItem = await UserPetItem.findOne({

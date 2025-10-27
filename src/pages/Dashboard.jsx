@@ -246,7 +246,6 @@ export default function Dashboard() {
       try {
         const res = await axios.get("http://localhost:4000/api/plans", { withCredentials: true });
         if (Array.isArray(res.data.plans)) {
-          const now = new Date();
 
           const withDueDate = res.data.plans
             .filter(p => p.due_date)

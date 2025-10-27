@@ -1,8 +1,8 @@
 // PetShop.jsx - Optimized with Quantity Input
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { petApi } from "../api/api";
 
-export default function PetShop({ userId, onClose, onItemPurchase }) {
+export default function PetShop({ onClose, onItemPurchase }) {
   const [items, setItems] = useState([]);
   const [userPoints, setUserPoints] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -16,7 +16,7 @@ export default function PetShop({ userId, onClose, onItemPurchase }) {
 
     try {
       // Load shop items
-      const itemsRes = await axios.get("http://localhost:4000/api/pet/shop/items");
+      const itemsRes = await petApi.getShopItems();
       setItems(itemsRes.data.items || []);
 
       // Initialize quantities to 1
@@ -27,9 +27,7 @@ export default function PetShop({ userId, onClose, onItemPurchase }) {
       setQuantities(initialQuantities);
 
       // Load user points
-      const userRes = await axios.get("http://localhost:4000/api/user/profile", {
-        withCredentials: true,
-      });
+      const userRes = await petApi.getUserProfile();
       setUserPoints(userRes.data.points || 0);
     } catch (err) {
       console.error("Failed to load shop data:", err);
@@ -41,7 +39,7 @@ export default function PetShop({ userId, onClose, onItemPurchase }) {
 
   useEffect(() => {
     loadShopData();
-  }, [userId]);
+  }, []);
 
   // Handle quantity change
   const handleQuantityChange = (itemId, newQuantity) => {
@@ -69,8 +67,7 @@ export default function PetShop({ userId, onClose, onItemPurchase }) {
     try {
       // Purchase multiple items
       for (let i = 0; i < quantity; i++) {
-        await axios.post("http://localhost:4000/api/pet/shop/purchase", {
-          userId,
+        await petApi.purchaseItem({
           itemId,
         });
       }

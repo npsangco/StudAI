@@ -1,74 +1,12 @@
-// Notes.js - Main Notes List Component
-import React, { useState } from 'react';
-import { Plus, Share2, Trash2, Save, Copy, Search, Filter, Clock, FileText, MessageCircle, Edit3 } from 'lucide-react';
-import { useEffect } from 'react'; // Make sure useEffect is imported
+import React, { useState, useEffect } from 'react';
+import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText, MessageCircle, Edit3, ExternalLink } from 'lucide-react';
 import NoteEditor from '../components/NoteEditor';
 import Chatbot from '../components/Chatbot';
+import { notesApi, sharedNotesApi } from '../api/api';
 
 const Notes = () => {
-  const [notes, setNotes] = useState([
-    // {
-    //   id: 1,
-    //   title: 'Data Algorithms',
-    //   words: 500,
-    //   createdAt: new Date().toISOString(),
-    //   content: 'Comprehensive notes on data algorithms including sorting, searching, and optimization techniques.\n\nThis includes various sorting algorithms like quicksort, mergesort, and heapsort. Each algorithm has different time complexities and use cases.\n\nSearching algorithms include binary search, linear search, and hash-based searching methods.',
-    //   isShared: false
-    // }
-  ]);
-  
-  const [sharedNotes, setSharedNotes] = useState([
-    // {
-    //   id: 1,
-    //   title: 'Data Structures',
-    //   words: 500,
-    //   createdAt: new Date().toISOString(),
-    //   content: 'Shared notes on fundamental data structures: arrays, linked lists, trees, and graphs.\n\nArrays provide O(1) access time but fixed size. Linked lists offer dynamic sizing but O(n) access time.\n\nTrees are hierarchical structures perfect for searching and sorting operations.',
-    //   isShared: true
-    // }
-  ]);
-
-  useEffect(() => {
-    fetchNotesFromDatabase();
-  }, []);
-
-  const fetchNotesFromDatabase = async () => {
-    try {
-      const response = await fetch('http://localhost:4000/api/notes', {
-        method: 'GET',
-        credentials: 'include', // Important for session authentication
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Map the database notes to match your UI structure
-        const mappedNotes = data.notes.map(note => ({
-          id: note.note_id,
-          title: note.title,
-          words: note.words || (note.content ? note.content.split(/\s+/).length : 0),
-          createdAt: note.created_at || note.createdAt,
-          content: note.content || '',
-          isShared: note.is_shared || false
-        }));
-
-        // Separate personal and shared notes
-        const personal = mappedNotes.filter(note => !note.isShared);
-        const shared = mappedNotes.filter(note => note.isShared);
-
-        setNotes(personal);
-        setSharedNotes(shared);
-      } else if (response.status === 401) {
-        console.error('Not logged in');
-        // You might want to redirect to login page here
-      } else {
-        console.error('Failed to fetch notes');
-      }
-    } catch (error) {
-      console.error('Error fetching notes:', error);
-    }
-  };
-  
+  const [notes, setNotes] = useState([]);
+  const [myShares, setMyShares] = useState([]);
   const [shareLink, setShareLink] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddNote, setShowAddNote] = useState(false);
@@ -76,6 +14,43 @@ const Notes = () => {
   const [currentView, setCurrentView] = useState('list');
   const [editingNote, setEditingNote] = useState(null);
   const [chatbotNote, setChatbotNote] = useState(null);
+
+  useEffect(() => {
+    fetchNotesFromDatabase();
+    fetchMyShares();
+  }, []);
+
+  const fetchNotesFromDatabase = async () => {
+    try {
+      const response = await notesApi.getAll();
+      
+      const mappedNotes = response.data.notes.map(note => ({
+        id: note.note_id,
+        title: note.title,
+        words: note.words || (note.content ? note.content.split(/\s+/).length : 0),
+        createdAt: note.created_at || note.createdAt,
+        content: note.content || '',
+        isShared: note.is_shared || false
+      }));
+
+      setNotes(mappedNotes);
+    } catch (error) {
+      if (error.response?.status === 401) {
+        console.error('Not logged in');
+      } else {
+        console.error('Failed to fetch notes:', error);
+      }
+    }
+  };
+
+  const fetchMyShares = async () => {
+    try {
+      const response = await sharedNotesApi.getMyShares();
+      setMyShares(response.data.shares);
+    } catch (error) {
+      console.error('Failed to fetch my shares:', error);
+    }
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -88,136 +63,140 @@ const Notes = () => {
     return `Created ${diffDays} days ago`;
   };
 
-  // MODIFY YOUR addNote FUNCTION to save to database:
   const addNote = async () => {
     if (!newNoteTitle.trim()) return;
     
     try {
-      const response = await fetch('http://localhost:4000/api/notes/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: newNoteTitle,
-          content: '',
-          file_id: null
-        })
+      const response = await notesApi.create({
+        title: newNoteTitle,
+        content: '',
+        file_id: null
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const newNote = {
-          id: data.note.note_id,
-          title: data.note.title,
-          words: data.note.words || 0,
-          createdAt: data.note.created_at || data.note.createdAt,
-          content: data.note.content || '',
-          isShared: data.note.is_shared || false
-        };
-        
-        setNotes([newNote, ...notes]);
-        setNewNoteTitle('');
-        setShowAddNote(false);
-        openEditPage(newNote);
-      } else {
-        console.error('Failed to create note');
-      }
+      const newNote = {
+        id: response.data.note.note_id,
+        title: response.data.note.title,
+        words: response.data.note.words || 0,
+        createdAt: response.data.note.created_at || response.data.note.createdAt,
+        content: response.data.note.content || '',
+        isShared: response.data.note.is_shared || false
+      };
+      
+      setNotes([newNote, ...notes]);
+      setNewNoteTitle('');
+      setShowAddNote(false);
+      openEditPage(newNote);
     } catch (error) {
       console.error('Error creating note:', error);
+      alert('Failed to create note. Please try again.');
     }
   };
 
-  // MODIFY YOUR updateNote FUNCTION to save to database:
   const updateNote = async (updatedNote) => {
     try {
-      const response = await fetch(`http://localhost:4000/api/notes/${updatedNote.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: updatedNote.title,
-          content: updatedNote.content
-        })
+      const response = await notesApi.update(updatedNote.id, {
+        title: updatedNote.title,
+        content: updatedNote.content
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const mappedNote = {
-          id: data.note.note_id,
-          title: data.note.title,
-          words: data.note.words || (data.note.content ? data.note.content.split(/\s+/).length : 0),
-          createdAt: data.note.created_at || data.note.createdAt,
-          content: data.note.content || '',
-          isShared: data.note.is_shared || false
-        };
-        
-        setNotes(notes.map(note => 
-          note.id === mappedNote.id ? mappedNote : note
-        ));
-      } else {
-        console.error('Failed to update note');
-      }
+      const mappedNote = {
+        id: response.data.note.note_id,
+        title: response.data.note.title,
+        words: response.data.note.words || (response.data.note.content ? response.data.note.content.split(/\s+/).length : 0),
+        createdAt: response.data.note.created_at || response.data.note.createdAt,
+        content: response.data.note.content || '',
+        isShared: response.data.note.is_shared || false
+      };
+      
+      setNotes(notes.map(note => 
+        note.id === mappedNote.id ? mappedNote : note
+      ));
     } catch (error) {
       console.error('Error updating note:', error);
+      alert('Failed to update note. Please try again.');
     }
   };
 
-  // MODIFY YOUR deleteNote FUNCTION to delete from database:
   const deleteNote = async (id) => {
     try {
-      const response = await fetch(`http://localhost:4000/api/notes/${id}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        setNotes(notes.filter(note => note.id !== id));
-      } else {
-        console.error('Failed to delete note');
-      }
+      await notesApi.delete(id);
+      setNotes(notes.filter(note => note.id !== id));
     } catch (error) {
       console.error('Error deleting note:', error);
+      alert('Failed to delete note. Please try again.');
     }
   };
 
-  const shareNote = (id) => {
-    const note = notes.find(n => n.id === id);
-    if (note) {
-      const sharedNote = { ...note, isShared: true };
-      setSharedNotes([sharedNote, ...sharedNotes]);
-      setShareLink(`https://notes.app/shared/${id}`);
+  const shareNote = async (id) => {
+    try {
+      const response = await notesApi.share(id);
+
+      // copies share code automatically
+      navigator.clipboard.writeText(response.data.shareCode)
+        .then(() => alert(`✅ Share code copied: ${response.data.shareCode}\n\nShare this code with others!`))
+        .catch(() => alert(`Share code: ${response.data.shareCode}\n\nCopy this code to share your note.`));
+
+      // refreshses share list
+      fetchMyShares();
+    } catch (error) {
+      console.error('Error sharing note:', error);
+      const errorMsg = error.response?.data?.error || 'Failed to share note';
+      alert(`❌ ${errorMsg}`);
     }
   };
 
-  const copyShareLink = () => {
-    navigator.clipboard.writeText(shareLink);
+  const stopSharing = async (noteId) => {
+    if (!confirm('Stop sharing this note? The share code will no longer work.')) {
+      return;
+    }
+
+    try {
+      await notesApi.stopSharing(noteId);
+      alert('✅ Share deactivated successfully');
+      fetchMyShares();
+    } catch (error) {
+      console.error('Error stopping share:', error);
+      const errorMsg = error.response?.data?.error || 'Unknown error';
+      alert(`❌ Failed to stop sharing: ${errorMsg}`);
+    }
   };
 
-  const handleShareLinkSubmit = () => {
-    if (shareLink.trim()) {
-      const newSharedNote = {
-        id: Date.now(),
-        title: 'Imported Note',
-        words: Math.floor(Math.random() * 1000),
-        createdAt: new Date().toISOString(),
-        content: 'This note was imported from a shared link.',
-        isShared: true
-      };
-      setSharedNotes([newSharedNote, ...sharedNotes]);
+  const copyShareCode = (code) => {
+    navigator.clipboard.writeText(code)
+      .then(() => alert(`✅ Share code copied: ${code}`))
+      .catch(() => alert(`Share code: ${code}`));
+  };
+
+  const handleShareLinkSubmit = async () => {
+    const code = shareLink.trim().toUpperCase();
+    
+    if (!code || code.length !== 6) {
+      alert('⚠️ Please enter a valid 6-character share code');
+      return;
+    }
+
+    try {
+      await sharedNotesApi.retrieve(code);
+      
       setShareLink('');
+      alert('✅ Shared note added to your notes!');
+      fetchNotesFromDatabase();
+    } catch (error) {
+      console.error('Error retrieving shared note:', error);
+      const errorMsg = error.response?.data?.error;
+      
+      if (errorMsg === "You already have this shared note") {
+        alert('You already have this note in your collection.');
+      } else if (errorMsg === "Shared note not found or expired") {
+        alert('Invalid share code. Please check and try again.');
+      } else {
+        alert(`Error: ${errorMsg || 'Failed to retrieve shared note'}`);
+      }
     }
   };
 
   const handleChatbot = (noteId) => {
-    // Find the note from either personal notes or shared notes
     let note = notes.find(n => n.id === noteId);
-    if (!note) {
-      note = sharedNotes.find(n => n.id === noteId);
-    }
     
     if (note) {
       setChatbotNote(note);
@@ -234,28 +213,28 @@ const Notes = () => {
     setCurrentView('list');
     setEditingNote(null);
     setChatbotNote(null);
+    fetchNotesFromDatabase();
+    fetchMyShares();
   };
 
   const filteredNotes = notes.filter(note =>
     note.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredSharedNotes = sharedNotes.filter(note =>
-    note.title.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredMyShares = myShares.filter(share =>
+    share.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Show chatbot if chatbot view is active
   if (currentView === 'chatbot' && chatbotNote) {
     return (
       <Chatbot
         currentNote={chatbotNote}
-        notes={[...notes, ...sharedNotes]}
+        notes={notes}
         onBack={goBackToList}
       />
     );
   }
 
-  // Show editor if editing
   if (currentView === 'edit' && editingNote) {
     return (
       <NoteEditor
@@ -270,7 +249,6 @@ const Notes = () => {
     );
   }
 
-  // Main Notes List View
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
@@ -299,11 +277,10 @@ const Notes = () => {
           {/* Personal Notes */}
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h2 className="text-xl sm:text-2xl font-semibold text-slate-800">Notes</h2>
+              <h2 className="text-xl sm:text-2xl font-semibold text-slate-800">My Notes</h2>
               <span className="text-xs sm:text-sm text-slate-500">{filteredNotes.length} notes</span>
             </div>
 
-            {/* Add Note Section */}
             {showAddNote ? (
               <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
                 <input
@@ -333,14 +310,13 @@ const Notes = () => {
             ) : (
               <button
                 onClick={() => setShowAddNote(true)}
-                className="w-full mb-4 sm:mb-6 p-3 sm:p-4 bg-black text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm sm:text-base"
+                className="w-full mb-4 sm:mb-6 p-3 sm:p-4 bg-black text-white rounded-xl hover:bg-slate-800 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm sm:text-base"
               >
                 <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                 Add a note
               </button>
             )}
 
-            {/* Notes List */}
             <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
               {filteredNotes.map((note) => (
                 <div
@@ -417,91 +393,89 @@ const Notes = () => {
             </div>
           </div>
 
-          {/* Shared Notes */}
+          {/* My Shared Notes */}
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h2 className="text-xl sm:text-2xl font-semibold text-slate-800">Shared Notes</h2>
-              <span className="text-xs sm:text-sm text-slate-500">{filteredSharedNotes.length} shared</span>
+              <h2 className="text-xl sm:text-2xl font-semibold text-slate-800">My Shares</h2>
+              <span className="text-xs sm:text-sm text-slate-500">{filteredMyShares.length} shared</span>
             </div>
 
-            {/* Share Link Input */}
+            {/* Retrieve Shared Note Input */}
             <div className="mb-4 sm:mb-6">
               <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
-                  placeholder="Enter share link..."
+                  placeholder="Enter share code..."
                   value={shareLink}
-                  onChange={(e) => setShareLink(e.target.value)}
+                  onChange={(e) => setShareLink(e.target.value.toUpperCase())}
                   onKeyPress={(e) => e.key === 'Enter' && handleShareLinkSubmit()}
-                  className="flex-1 p-2 sm:p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-sm sm:text-base"
+                  maxLength={6}
+                  className="flex-1 p-2 sm:p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-sm sm:text-base uppercase tracking-wider font-mono"
                 />
                 <button
                   onClick={handleShareLinkSubmit}
                   className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-medium shadow-lg hover:shadow-xl text-sm sm:text-base"
                 >
-                  Enter
+                  Retrieve
                 </button>
               </div>
+              <p className="text-xs text-slate-500 mt-2">Enter a 6-character code to retrieve shared notes</p>
             </div>
 
-            {/* Shared Notes List */}
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-xs text-slate-600">
+                Your shared notes. Click the copy icon to share the code with others.
+              </p>
+            </div>
+
             <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
-              {filteredSharedNotes.map((note) => (
+              {filteredMyShares.map((share) => (
                 <div
-                  key={note.id}
-                  className="group p-3 sm:p-4 border border-slate-200 rounded-lg sm:rounded-xl hover:border-slate-300 hover:shadow-md transition-all duration-200 bg-gradient-to-r from-purple-50 to-pink-50"
+                  key={share.share_code}
+                  className="group p-3 sm:p-4 border border-slate-200 rounded-lg sm:rounded-xl hover:border-blue-300 hover:shadow-md transition-all duration-200 bg-gradient-to-r from-blue-50 to-indigo-50"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-purple-400 to-pink-600 rounded-full flex-shrink-0"></div>
-                        <h3 className="font-semibold text-slate-800 group-hover:text-purple-600 transition-colors text-sm sm:text-base truncate">
-                          {note.title}
+                        <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-blue-400 to-indigo-600 rounded-full flex-shrink-0"></div>
+                        <h3 className="font-semibold text-slate-800 text-sm sm:text-base truncate">
+                          {share.title}
                         </h3>
+                        <ExternalLink className="w-3 h-3 text-blue-400 flex-shrink-0" />
                       </div>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-slate-500 mb-2">
-                        <span className="flex items-center gap-1">
-                          <FileText className="w-3 h-3 flex-shrink-0" />
-                          {note.words} words
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-1 bg-white border border-blue-300 rounded text-xs font-mono font-bold text-blue-700">
+                          {share.share_code}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">{formatDate(note.createdAt)}</span>
-                        </span>
+                        <button
+                          onClick={() => copyShareCode(share.share_code)}
+                          className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                          title="Copy share code"
+                        >
+                          <Copy className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-slate-500">
+                        <Clock className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{formatDate(share.created_at)}</span>
                       </div>
                     </div>
-                    <div className="flex gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleChatbot(note.id);
-                        }}
-                        className="p-1.5 sm:p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                        title="Ask AI Assistant"
+                        onClick={() => stopSharing(share.note_id)}
+                        className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Stop sharing"
                       >
-                        <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                      <button
-                        onClick={copyShareLink}
-                        className="p-1.5 sm:p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                        title="Copy Link"
-                      >
-                        <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                      <button 
-                        className="p-1.5 sm:p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Save"
-                      >
-                        <Save className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
               
-              {filteredSharedNotes.length === 0 && (
+              {filteredMyShares.length === 0 && (
                 <div className="text-center py-6 sm:py-8 text-slate-500 text-sm sm:text-base">
-                  {searchTerm ? 'No shared notes found matching your search.' : 'No shared notes yet. Share a note or add a shared link!'}
+                  {searchTerm ? 'No shared notes found.' : 'No notes shared yet. Share a note to get started!'}
                 </div>
               )}
             </div>

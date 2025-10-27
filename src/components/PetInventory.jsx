@@ -1,8 +1,8 @@
 // PetInventory.jsx
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { petApi } from "../api/api";
 
-export default function PetInventory({ userId, onClose, onUseItem }) {
+export default function PetInventory({ onClose, onUseItem }) {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [usingItem, setUsingItem] = useState(null);
@@ -12,9 +12,7 @@ export default function PetInventory({ userId, onClose, onUseItem }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get(`http://localhost:4000/api/pet/inventory/${userId}`, {
-        withCredentials: true,
-      });
+      const res = await petApi.getInventory();
       
       const inventory = res.data.inventory || [];
       
@@ -22,13 +20,9 @@ export default function PetInventory({ userId, onClose, onUseItem }) {
       const hasEquippedItems = inventory.some(item => item.is_equipped);
       if (!hasEquippedItems && inventory.length > 0) {
         try {
-          await axios.post("http://localhost:4000/api/pet/inventory/auto-equip", {
-            userId
-          });
+          await petApi.autoEquip();
           // Reload inventory after auto-equip
-          const updatedRes = await axios.get(`http://localhost:4000/api/pet/inventory/${userId}`, {
-            withCredentials: true,
-          });
+          const updatedRes = await petApi.getInventory();
           setInventory(updatedRes.data.inventory || []);
         } catch (equipError) {
           console.log("Auto-equip failed, using original inventory", equipError);
@@ -47,13 +41,12 @@ export default function PetInventory({ userId, onClose, onUseItem }) {
 
   useEffect(() => {
     loadInventory();
-  }, [userId]);
+  }, []);
 
   // Equip / Unequip items
   const toggleEquip = async (inventoryId, isEquipped) => {
     try {
-      await axios.post("http://localhost:4000/api/pet/inventory/equip", {
-        userId,
+      await petApi.toggleEquip({
         inventoryId,
         isEquipped,
       });
@@ -67,8 +60,7 @@ export default function PetInventory({ userId, onClose, onUseItem }) {
     if (usingItem) return;
     setUsingItem(inventoryId);
     try {
-      const res = await axios.post("http://localhost:4000/api/pet/inventory/use", {
-        userId,
+      const res = await petApi.useItem({
         inventoryId,
         itemId,
       });

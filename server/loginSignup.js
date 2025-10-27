@@ -39,6 +39,8 @@ import jwt from "jsonwebtoken";
 
 //pet companion route
 import petRoutes from "./routes/petRoutes.js";
+import noteRoutes from "./routes/noteRoutes.js";
+import SharedNote from "./models/SharedNote.js";
 
 const app = express();
 app.use(express.json());
@@ -64,6 +66,7 @@ sequelize.authenticate()
             User.sync({ force: false }),
             File.sync({ force: false }),
             Note ? Note.sync({ force: false }) : Promise.resolve(),
+            SharedNote.sync({ force: false }),
             Plan.sync({ force: false })
         ]);
     })
@@ -749,153 +752,6 @@ app.post("/api/generate-summary", async (req, res) => {
     }
 });
 
-// ----------------- NOTES ROUTES -----------------
-app.get("/api/notes", async (req, res) => {
-    if (!req.session || !req.session.userId) {
-        return res.status(401).json({ error: "Not logged in" });
-    }
-
-    if (!Note) {
-        return res.status(503).json({ error: "Notes feature not available" });
-    }
-
-    try {
-        const notes = await Note.findAll({
-            where: { user_id: req.session.userId },
-            order: [['createdAt', 'DESC']]
-        });
-
-        // Add computed fields that your frontend expects
-        const notesWithExtras = notes.map(note => {
-            const noteData = note.toJSON();
-            return {
-                ...noteData,
-                created_at: noteData.createdAt, // Map createdAt to created_at for frontend
-                words: noteData.content ? noteData.content.split(/\s+/).length : 0,
-                is_shared: false // Default value since not in DB
-            };
-        });
-
-        res.json({ notes: notesWithExtras });
-    } catch (err) {
-        console.error("Failed to fetch notes:", err);
-        res.status(500).json({ error: "Failed to fetch notes" });
-    }
-});
-
-app.post("/api/notes/create", async (req, res) => {
-    if (!req.session || !req.session.userId) {
-        return res.status(401).json({ error: "Not logged in" });
-    }
-
-    if (!Note) {
-        return res.status(503).json({ error: "Notes feature not available" });
-    }
-
-    try {
-        const { title, content, file_id } = req.body;
-        
-        const newNote = await Note.create({
-            user_id: req.session.userId,
-            file_id: file_id || null,
-            title,
-            content: content || ''
-        });
-
-        // Add computed fields for frontend
-        const noteData = newNote.toJSON();
-        const noteWithExtras = {
-            ...noteData,
-            created_at: noteData.createdAt,
-            words: noteData.content ? noteData.content.split(/\s+/).length : 0,
-            is_shared: false
-        };
-
-        res.status(201).json({ note: noteWithExtras });
-    } catch (err) {
-        console.error("Failed to create note:", err);
-        res.status(500).json({ error: "Failed to create note" });
-    }
-});
-
-app.put("/api/notes/:id", async (req, res) => {
-    if (!req.session || !req.session.userId) {
-        return res.status(401).json({ error: "Not logged in" });
-    }
-
-    if (!Note) {
-        return res.status(503).json({ error: "Notes feature not available" });
-    }
-
-    try {
-        const { title, content } = req.body;
-        const noteId = req.params.id;
-
-        const note = await Note.findOne({
-            where: { 
-                note_id: noteId,
-                user_id: req.session.userId 
-            }
-        });
-
-        if (!note) {
-            return res.status(404).json({ error: "Note not found" });
-        }
-
-        await note.update({
-            title,
-            content
-        });
-
-        // Add computed fields for frontend
-        const noteData = note.toJSON();
-        const noteWithExtras = {
-            ...noteData,
-            created_at: noteData.createdAt,
-            words: noteData.content ? noteData.content.split(/\s+/).length : 0,
-            is_shared: false
-        };
-
-        res.json({ note: noteWithExtras });
-    } catch (err) {
-        console.error("Failed to update note:", err);
-        res.status(500).json({ error: "Failed to update note" });
-    }
-});
-
-app.delete("/api/notes/:id", async (req, res) => {
-    if (!req.session || !req.session.userId) {
-        return res.status(401).json({ error: "Not logged in" });
-    }
-
-    if (!Note) {
-        return res.status(503).json({ error: "Notes feature not available" });
-    }
-
-    try {
-        const noteId = req.params.id;
-
-        const note = await Note.findOne({
-            where: { 
-                note_id: noteId,
-                user_id: req.session.userId 
-            }
-        });
-
-        if (!note) {
-            return res.status(404).json({ error: "Note not found" });
-        }
-
-        await note.destroy();
-
-        res.json({ message: "Note deleted successfully" });
-    } catch (err) {
-        console.error("Failed to delete note:", err);
-        res.status(500).json({ error: "Failed to delete note" });
-    }
-});
-
-
 // ----------------- PLANS ROUTES -----------------
 app.get("/api/plans", async (req, res) => {
   if (!req.session || !req.session.userId) {
@@ -959,6 +815,8 @@ app.delete("/api/plans/:id", async (req, res) => {
 
 // ----------------- PET SYSTEM ROUTES -----------------
 app.use("/api/pet", petRoutes);
+app.use("/api/notes", noteRoutes);
+
 
 // ----------------- START SERVER -----------------
 const PORT = process.env.PORT || 4000;

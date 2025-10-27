@@ -1,10 +1,10 @@
 // PetBuddy.jsx
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import { petApi } from "../api/api";
 import PetShop from "./PetShop";
 import PetInventory from "./PetInventory";
 
-export default function PetBuddy({ userId }) {
+export default function PetBuddy() {
   const [pet, setPet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState("pet");
@@ -18,10 +18,9 @@ export default function PetBuddy({ userId }) {
 
   // Load user pet
   const loadPet = useCallback(async () => {
-    if (!userId) return;
     try {
       setLoading(true);
-      const res = await axios.get(`http://localhost:4000/api/pet/${userId}`);
+      const res = await petApi.getPet();
       if (res.data.choosePet) {
         setChoosePet(true);
       } else {
@@ -33,7 +32,7 @@ export default function PetBuddy({ userId }) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     loadPet();
@@ -106,11 +105,9 @@ export default function PetBuddy({ userId }) {
 
   // Function to only refresh pet stats
   const refreshPetStats = async () => {
-    if (!userId) return;
     try {
-      const res = await axios.get(`http://localhost:4000/api/pet/${userId}`);
+      const res = await petApi.getPet();
       if (!res.data.choosePet && res.data) {
-        // Only update the stats part of the pet object
         setPet(prevPet => ({
           ...prevPet,
           hunger_level: res.data.hunger_level,
@@ -146,8 +143,7 @@ export default function PetBuddy({ userId }) {
     }
 
     try {
-      const res = await axios.post("http://localhost:4000/api/pet", {
-        userId,
+      const res = await petApi.adopt({
         petType: selectedPetType,
         petName: petName.trim(),
       });
@@ -177,9 +173,7 @@ export default function PetBuddy({ userId }) {
     }
 
     try {
-      const res = await axios.put(`http://localhost:4000/api/pet/${pet.pet_id}/name`, {
-        petName: newName.trim(),
-      });
+      const res = await petApi.updateName(newName.trim());
       setPet(res.data);
       alert(`Pet name updated to ${newName.trim()}!`);
       return true;
@@ -207,8 +201,7 @@ export default function PetBuddy({ userId }) {
 
     setActionLoading(type);
     try {
-      const res = await axios.post("http://localhost:4000/api/pet/action", {
-        userId,
+      const res = await petApi.doAction({
         actionType: type,
       });
 
@@ -264,13 +257,12 @@ export default function PetBuddy({ userId }) {
 
   // Show different views
   if (activeView === "shop") {
-    return <PetShop userId={userId} onClose={() => setActiveView("pet")} />;
+    return <PetShop onClose={() => setActiveView("pet")} />;
   }
 
   if (activeView === "inventory") {
     return (
       <PetInventory 
-        userId={userId} 
         onClose={() => setActiveView("pet")}
         onUseItem={handleItemUse}
       />
