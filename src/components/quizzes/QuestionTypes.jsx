@@ -153,16 +153,17 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
   );
 };
 
-// ✅ UPDATED: Matching Quiz Player Component with Drag & Drop
-export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false }) => {
+// Matching Quiz Player Component
+export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode = 'solo' }) => {
   const [matches, setMatches] = useState([]);
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverZone, setDragOverZone] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showCorrectMatches, setShowCorrectMatches] = useState(false);
+  const [showMistakes, setShowMistakes] = useState(false);
   const [leftItems] = useState(question.matchingPairs.map(p => p.left));
   const [rightItems] = useState([...question.matchingPairs.map(p => p.right)].sort(() => Math.random() - 0.5));
 
-  // ✅ Generate all colors upfront (random from the start)
   const [colorPalette] = useState(() => {
     const colors = [];
     for (let i = 0; i < question.matchingPairs.length; i++) {
@@ -225,7 +226,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false }) => 
     }
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = () => {
     setDragOverZone(null);
   };
 
@@ -277,218 +278,270 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false }) => 
   const isDragging = draggedItem !== null;
   const canSubmit = matches.length > 0 && matches.length === question.matchingPairs.length;
 
-  const correctMatches = matches.filter(isMatchCorrect).length;
-  const allCorrect = correctMatches === question.matchingPairs.length;
+  // Calculate results
+  const correctMatches = matches.filter(isMatchCorrect);
+  const incorrectMatches = matches.filter(match => !isMatchCorrect(match));
+  const correctCount = correctMatches.length;
+  const totalCount = question.matchingPairs.length;
+  const percentage = Math.round((correctCount / totalCount) * 100);
+  const allCorrect = correctCount === totalCount;
+
+  // Get gradient colors based on score
+  const getGradientColors = () => {
+    if (percentage === 100) return 'from-green-400 to-green-500';
+    if (percentage >= 80) return 'from-green-400 to-yellow-400';
+    if (percentage >= 60) return 'from-yellow-400 to-orange-400';
+    if (percentage >= 40) return 'from-orange-400 to-red-400';
+    return 'from-red-400 to-red-500';
+  };
+
+  // Get encouraging message
+  const getMessage = () => {
+    if (percentage === 100) return 'Perfect! You nailed it! 🎉';
+    if (percentage >= 80) return 'Great job! Almost perfect! 🌟';
+    if (percentage >= 60) return 'Good effort! Review the mistakes. 👍';
+    if (percentage >= 40) return 'Keep trying! You\'re learning. 📚';
+    return 'Don\'t worry! Review and try again. 💪';
+  };
 
   return (
     <div className="max-w-5xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-3">{question.question}</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">{question.question}</h2>
+        
         {!isSubmitted ? (
-          <p className="text-gray-600 mb-2">Drag items from one column and drop them on matching items in the other column</p>
+          <p className="text-gray-600">Drag items from one column and drop them on matching items in the other column</p>
         ) : (
-          <div className={`mt-4 p-4 rounded-xl ${allCorrect ? 'bg-green-100 border-2 border-green-400' : 'bg-red-100 border-2 border-red-400'}`}>
-            <div className="flex items-center justify-center gap-3">
-              {allCorrect ? (
-                <>
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                    <Check className="w-7 h-7 text-white" />
+<>
+            {/* UPDATED: Compact Minimalist Score Card */}
+            <div className={`relative overflow-hidden rounded-xl shadow-lg mb-6 bg-gradient-to-r ${getGradientColors()}`}>
+              <div className="absolute inset-0 bg-white opacity-10"></div>
+              <div className="relative px-6 py-5 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-3xl font-bold mb-1">
+                      {correctCount}/{totalCount} CORRECT
+                    </div>
+                    <div className="text-sm font-medium opacity-90">{getMessage()}</div>
                   </div>
-                  <div className="text-left">
-                    <p className="text-xl font-bold text-green-700">Perfect! All Correct!</p>
-                    <p className="text-sm text-green-600">You matched all {correctMatches} pairs correctly</p>
+                  <div className="text-5xl font-bold">
+                    {percentage}%
                   </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center">
-                    <X className="w-7 h-7 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xl font-bold text-red-700">Not quite right</p>
-                    <p className="text-sm text-red-600">{correctMatches}/{question.matchingPairs.length} matches were correct</p>
-                  </div>
-                </>
-              )}
+                </div>
+              </div>
             </div>
-          </div>
+
+            {/* Correct Answers Section */}
+            {correctMatches.length > 0 && (
+              <div className="mb-4 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <button
+                  onClick={() => setShowCorrectMatches(!showCorrectMatches)}
+                  className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                      <Check className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-base font-semibold text-gray-900">
+                      Correct Answers ({correctMatches.length})
+                    </span>
+                  </div>
+                  <span className="text-gray-600 text-xl">
+                    {showCorrectMatches ? '▴' : '▾'}
+                  </span>
+                </button>
+                
+                {showCorrectMatches && (
+                  <div className="px-5 pb-4 space-y-2 border-t border-gray-200 pt-3">
+                    {correctMatches.map((match, index) => (
+                      <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2 text-sm text-gray-900">
+                          <span className="font-medium">{match.left}</span>
+                          <span className="text-green-600 font-bold">→</span>
+                          <span className="font-medium">{match.right}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Mistakes Section */}
+            {incorrectMatches.length > 0 && (
+              <div className="mb-4 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <button
+                  onClick={() => setShowMistakes(!showMistakes)}
+                  className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                      <X className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-base font-semibold text-gray-900">
+                      Mistakes to Review ({incorrectMatches.length})
+                    </span>
+                  </div>
+                  <span className="text-gray-600 text-xl">
+                    {showMistakes ? '▴' : '▾'}
+                  </span>
+                </button>
+                
+                {showMistakes && (
+                  <div className="px-5 pb-4 space-y-3 border-t border-gray-200 pt-3">
+                    {incorrectMatches.map((match, index) => {
+                      const correctLeft = getCorrectMatch(match.left, 'left');
+                      return (
+                        <div key={index} className="p-3 bg-gray-50 rounded-lg space-y-2">
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                              Your Answer:
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="font-medium text-gray-900">{match.left}</span>
+                              <span className="text-red-600 font-bold">→</span>
+                              <span className="font-medium line-through text-red-600">{match.right}</span>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">
+                              Correct Answer:
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="font-medium text-gray-900">{match.left}</span>
+                              <span className="text-green-600 font-bold">→</span>
+                              <span className="font-medium text-green-600">{correctLeft.right}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Matching Grid */}
-      <div className="grid grid-cols-2 gap-8 mb-8">
-        {/* Left Column */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-center text-gray-700 mb-4 pb-2 border-b-2 border-gray-200">
-            Column A
-          </h3>
-          {leftItems.map((item, index) => {
-            const match = getItemMatch(item, 'left');
-            const matched = isMatched(item, 'left');
-            const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'left';
-            const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'left' && draggedItem?.side !== 'left';
-            
-            const isCorrect = isSubmitted && matched ? isMatchCorrect(match) : null;
-            const correctPair = isSubmitted ? getCorrectMatch(item, 'left') : null;
-
-            return (
-              <div key={index} className="relative">
-                <div
-                  draggable={!isPaused && !isSubmitted}
-                  onDragStart={(e) => handleDragStart(e, item, 'left')}
-                  onDragOver={(e) => handleDragOver(e, item, 'left')}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, item, 'left')}
-                  onDragEnd={handleDragEnd}
-                  onClick={() => !isSubmitted && matched && handleUnmatch(item, 'left')}
-                  className={`
-                    relative p-4 rounded-xl border-2 font-medium text-center
-                    transition-all duration-300 transform
-                    ${isSubmitted 
-                      ? (isCorrect 
-                          ? 'bg-green-100 border-green-500 text-green-700' 
-                          : matched 
-                            ? 'bg-red-100 border-red-500 text-red-700'
-                            : 'bg-gray-100 border-gray-300 text-gray-600')
-                      : matched 
-                        ? `${match.color.border} ${match.color.text} cursor-pointer hover:scale-105` 
-                        : 'bg-white border-gray-300 text-gray-800 hover:border-gray-400 cursor-grab active:cursor-grabbing'
-                    }
-                    ${isDraggedItem ? 'opacity-40 scale-95' : ''}
-                    ${isDropZone ? 'ring-4 ring-blue-300 scale-105 border-blue-500' : ''}
-                    ${isDragging && !matched && !isDraggedItem && !isSubmitted ? 'hover:ring-2 hover:ring-blue-200' : ''}
-                    shadow-sm hover:shadow-md
-                  `}
-                  style={!isSubmitted && matched ? {
-                    backgroundColor: match.color.bg,
-                    borderColor: match.color.border,
-                    color: match.color.text
-                  } : {}}
-                >
-                  {isSubmitted && matched && (
-                    <div className={`absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center shadow-lg animate-scale-in ${
-                      isCorrect ? 'bg-green-500' : 'bg-red-500'
-                    }`}>
-                      {isCorrect ? (
-                        <Check className="w-5 h-5 text-white" />
-                      ) : (
-                        <X className="w-5 h-5 text-white" />
-                      )}
-                    </div>
-                  )}
-                  
-                  <span className="block">{item}</span>
-                </div>
-                
-                {/* ✅ FIXED: Show correct answer if wrong OR not matched */}
-                {isSubmitted && !isCorrect && correctPair && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-300 rounded-lg text-sm">
-                    <p className="text-green-700 font-medium">
-                      ✓ Correct match: <span className="font-bold">{correctPair.right}</span>
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Right Column */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-center text-gray-700 mb-4 pb-2 border-b-2 border-gray-200">
-            Column B
-          </h3>
-          {rightItems.map((item, index) => {
-            const match = getItemMatch(item, 'right');
-            const matched = isMatched(item, 'right');
-            const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'right';
-            const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'right' && draggedItem?.side !== 'right';
-            
-            const isCorrect = isSubmitted && matched ? isMatchCorrect(match) : null;
-            const correctPair = isSubmitted ? getCorrectMatch(item, 'right') : null;
-
-            return (
-              <div key={index} className="relative">
-                <div
-                  draggable={!isPaused && !isSubmitted}
-                  onDragStart={(e) => handleDragStart(e, item, 'right')}
-                  onDragOver={(e) => handleDragOver(e, item, 'right')}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, item, 'right')}
-                  onDragEnd={handleDragEnd}
-                  onClick={() => !isSubmitted && matched && handleUnmatch(item, 'right')}
-                  className={`
-                    relative p-4 rounded-xl border-2 font-medium text-center
-                    transition-all duration-300 transform
-                    ${isSubmitted 
-                      ? (isCorrect 
-                          ? 'bg-green-100 border-green-500 text-green-700' 
-                          : matched 
-                            ? 'bg-red-100 border-red-500 text-red-700'
-                            : 'bg-gray-100 border-gray-300 text-gray-600')
-                      : matched 
-                        ? `${match.color.border} ${match.color.text} cursor-pointer hover:scale-105` 
-                        : 'bg-white border-gray-300 text-gray-800 hover:border-gray-400 cursor-grab active:cursor-grabbing'
-                    }
-                    ${isDraggedItem ? 'opacity-40 scale-95' : ''}
-                    ${isDropZone ? 'ring-4 ring-blue-300 scale-105 border-blue-500' : ''}
-                    ${isDragging && !matched && !isDraggedItem && !isSubmitted ? 'hover:ring-2 hover:ring-blue-200' : ''}
-                    shadow-sm hover:shadow-md
-                  `}
-                  style={!isSubmitted && matched ? {
-                    backgroundColor: match.color.bg,
-                    borderColor: match.color.border,
-                    color: match.color.text
-                  } : {}}
-                >
-                  {isSubmitted && matched && (
-                    <div className={`absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center shadow-lg animate-scale-in ${
-                      isCorrect ? 'bg-green-500' : 'bg-red-500'
-                    }`}>
-                      {isCorrect ? (
-                        <Check className="w-5 h-5 text-white" />
-                      ) : (
-                        <X className="w-5 h-5 text-white" />
-                      )}
-                    </div>
-                  )}
-                  
-                  <span className="block">{item}</span>
-                </div>
-                
-                {/* ✅ FIXED: Show correct answer if wrong OR not matched */}
-                {isSubmitted && !isCorrect && correctPair && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-300 rounded-lg text-sm">
-                    <p className="text-green-700 font-medium">
-                      ✓ Correct match: <span className="font-bold">{correctPair.left}</span>
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Submit Button */}
+      {/* Only show matching grid if NOT submitted */}
       {!isSubmitted && (
-        <div className="text-center">
-          <button
-            onClick={handleSubmit}
-            disabled={!canSubmit || isPaused}
-            className={`
-              px-8 py-4 rounded-xl font-bold text-lg text-white 
-              transition-all duration-300 transform
-              ${canSubmit && !isPaused
-                ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:scale-105 shadow-lg hover:shadow-xl'
-                : 'bg-gray-400 cursor-not-allowed'
-              }
-            `}
-          >
-            {canSubmit ? 'Submit Answers ✓' : 'Match All Pairs to Submit'}
-          </button>
-        </div>
+        <>
+          {/* Matching Grid */}
+          <div className="grid grid-cols-2 gap-8 mb-8">
+            {/* Left Column */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-center text-gray-700 mb-4 pb-2 border-b-2 border-gray-200">
+                Column A
+              </h3>
+              {leftItems.map((item, index) => {
+                const match = getItemMatch(item, 'left');
+                const matched = isMatched(item, 'left');
+                const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'left';
+                const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'left' && draggedItem?.side !== 'left';
+
+                return (
+                  <div key={index} className="relative">
+                    <div
+                      draggable={!isPaused}
+                      onDragStart={(e) => handleDragStart(e, item, 'left')}
+                      onDragOver={(e) => handleDragOver(e, item, 'left')}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, item, 'left')}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => matched && handleUnmatch(item, 'left')}
+                      className={`
+                        relative p-4 rounded-xl border-2 font-medium text-center
+                        transition-all duration-300 transform
+                        ${matched 
+                          ? `${match.color.border} ${match.color.text} cursor-pointer hover:scale-105` 
+                          : 'bg-white border-gray-300 text-gray-800 hover:border-gray-400 cursor-grab active:cursor-grabbing'
+                        }
+                        ${isDraggedItem ? 'opacity-40 scale-95' : ''}
+                        ${isDropZone ? 'ring-4 ring-blue-300 scale-105 border-blue-500' : ''}
+                        ${isDragging && !matched && !isDraggedItem ? 'hover:ring-2 hover:ring-blue-200' : ''}
+                        shadow-sm hover:shadow-md
+                      `}
+                      style={matched ? {
+                        backgroundColor: match.color.bg,
+                        borderColor: match.color.border,
+                        color: match.color.text
+                      } : {}}
+                    >
+                      <span className="block">{item}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-center text-gray-700 mb-4 pb-2 border-b-2 border-gray-200">
+                Column B
+              </h3>
+              {rightItems.map((item, index) => {
+                const match = getItemMatch(item, 'right');
+                const matched = isMatched(item, 'right');
+                const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'right';
+                const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'right' && draggedItem?.side !== 'right';
+
+                return (
+                  <div key={index} className="relative">
+                    <div
+                      draggable={!isPaused}
+                      onDragStart={(e) => handleDragStart(e, item, 'right')}
+                      onDragOver={(e) => handleDragOver(e, item, 'right')}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, item, 'right')}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => matched && handleUnmatch(item, 'right')}
+                      className={`
+                        relative p-4 rounded-xl border-2 font-medium text-center
+                        transition-all duration-300 transform
+                        ${matched 
+                          ? `${match.color.border} ${match.color.text} cursor-pointer hover:scale-105` 
+                          : 'bg-white border-gray-300 text-gray-800 hover:border-gray-400 cursor-grab active:cursor-grabbing'
+                        }
+                        ${isDraggedItem ? 'opacity-40 scale-95' : ''}
+                        ${isDropZone ? 'ring-4 ring-blue-300 scale-105 border-blue-500' : ''}
+                        ${isDragging && !matched && !isDraggedItem ? 'hover:ring-2 hover:ring-blue-200' : ''}
+                        shadow-sm hover:shadow-md
+                      `}
+                      style={matched ? {
+                        backgroundColor: match.color.bg,
+                        borderColor: match.color.border,
+                        color: match.color.text
+                      } : {}}
+                    >
+                      <span className="block">{item}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="text-center">
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit || isPaused}
+              className={`
+                px-8 py-4 rounded-xl font-bold text-lg text-white 
+                transition-all duration-300 transform
+                ${canSubmit && !isPaused
+                  ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:scale-105 shadow-lg hover:shadow-xl'
+                  : 'bg-gray-400 cursor-not-allowed'
+                }
+              `}
+            >
+              {canSubmit ? 'Submit Answers ✓' : 'Match All Pairs to Submit'}
+            </button>
+          </div>
+        </>
       )}
 
       <style>{`

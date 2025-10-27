@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useQuizCore, QuizQuestion } from './QuizCore';
-import { QuizGameHeader } from './QuizGameHeader';
-import { LiveLeaderboard, useSimulatedPlayers } from './QuizSimulation';
+import { useQuizGame } from '../hooks/useQuizGame';
+import { useQuizTimer } from '../hooks/useQuizTimer';
+import { QuizGameHeader } from '../QuizGameHeader';
+import { QuizQuestion } from '../QuizCore';
+import { LiveLeaderboard, useSimulatedPlayers } from '../QuizSimulation';
+import { ANSWER_DISPLAY_DURATION, MATCHING_REVIEW_DURATION_BATTLE } from '../utils/constants';
 
 const QuizGame = ({ 
   quiz, 
@@ -13,69 +16,62 @@ const QuizGame = ({
   const questions = quiz?.questions || [];
   const [isProcessing, setIsProcessing] = useState(false);
   
-  const {
-    currentQuestion,
-    selectedAnswer,
-    userAnswer,
-    userMatches,
-    isMatchingSubmitted, 
-    timeLeft,
-    isPaused,
-    displayScore,
-    score,
-    scoreRef,
-    isProcessingRef, 
-    setCurrentQuestion,
-    setSelectedAnswer,
-    setUserAnswer,
-    setUserMatches,
-    setIsMatchingSubmitted, 
-    setTimeLeft,
-    setIsPaused,
-    isAnswerCorrect,
-    updateScore,
-    getTimeSpent
-  } = useQuizCore(questions, mode, 30);
-
-  // Simulated players for battle mode (remove when adding database)
-  const simulatedPlayers = useSimulatedPlayers(questions.length, currentQuestion);
+  const game = useQuizGame(questions, 30);
+  const simulatedPlayers = useSimulatedPlayers(questions.length, game.currentQuestionIndex);
   const [userPlayer] = useState({ id: 'user', name: 'You', initial: 'Y', score: 0 });
   
-  // Combine user with simulated players for battle mode
   const allPlayers = mode === 'battle' ? [
-    { ...userPlayer, score: score },
+    { ...userPlayer, score: game.displayScore },
     ...simulatedPlayers
   ] : [];
 
-  const currentQ = questions[currentQuestion];
+  const currentQ = game.currentQuestion;
 
-  // Sync local isProcessing with the ref
-  useEffect(() => {
-    isProcessingRef.current = isProcessing;
-  }, [isProcessing, isProcessingRef]);
-
-  // Handle auto-complete immediately when time runs out on last question
-  useEffect(() => {
-    const hasAnswer = selectedAnswer || 
-                      userAnswer?.includes('_submitted') || 
-                      isMatchingSubmitted;
+  const { timeLeft, resetTimer } = useQuizTimer(30, game.isPaused, () => {
+    const hasAnswer = game.selectedAnswer || 
+                      game.userAnswer?.includes('_submitted') || 
+                      game.isMatchingSubmitted;
     
-    if (timeLeft === 0 && !hasAnswer && currentQuestion === questions.length - 1 && !isProcessing) {
-      // Last question and time ran out - finish the quiz immediately
+    if (!hasAnswer && !isProcessing) {
+      handleTimeUp();
+    }
+  });
+
+  useEffect(() => {
+    game.isProcessingRef.current = isProcessing;
+  }, [isProcessing, game.isProcessingRef]);
+
+  useEffect(() => {
+    const hasAnswer = game.selectedAnswer || 
+                      game.userAnswer?.includes('_submitted') || 
+                      game.isMatchingSubmitted;
+    
+    if (timeLeft === 0 && !hasAnswer && game.currentQuestionIndex === questions.length - 1 && !isProcessing) {
       finishQuiz();
     }
-  }, [timeLeft, currentQuestion, questions.length, selectedAnswer, userAnswer, isMatchingSubmitted, isProcessing]);
+  }, [timeLeft, game.currentQuestionIndex, questions.length, game.selectedAnswer, game.userAnswer, game.isMatchingSubmitted, isProcessing]);
 
-  // ✅ ORIGINAL: Multiple Choice & True/False - 2 seconds auto-advance for all modes
+  const handleTimeUp = () => {
+    game.isProcessingRef.current = true;
+    
+    if (game.currentQuestionIndex < questions.length - 1) {
+      game.nextQuestion();
+      resetTimer(30);
+      game.isProcessingRef.current = false;
+    } else {
+      game.isProcessingRef.current = false;
+    }
+  };
+
   const handleAnswerSelect = (answer) => {
-    if (selectedAnswer || isPaused || isProcessing) return;
+    if (game.selectedAnswer || game.isPaused || isProcessing) return;
     
     setIsProcessing(true);
-    setSelectedAnswer(answer);
+    game.setSelectedAnswer(answer);
     
-    const isCorrect = isAnswerCorrect(currentQ, answer);
+    const isCorrect = game.isAnswerCorrect(currentQ, answer);
     if (isCorrect) {
-      updateScore(1);
+      game.updateScore(1);
       if (onPlayerScoreUpdate) {
         onPlayerScoreUpdate(1, 1);
       }
@@ -84,21 +80,20 @@ const QuizGame = ({
     setTimeout(() => {
       setIsProcessing(false);
       handleNextQuestion();
-    }, 2000);
+    }, ANSWER_DISPLAY_DURATION);
   };
 
-  // ✅ ORIGINAL: Fill in the Blanks - 2 seconds auto-advance for all modes
   const handleFillInAnswer = () => {
-    if (!userAnswer?.trim() || userAnswer.includes('_submitted') || isPaused || isProcessing) return;
+    if (!game.userAnswer?.trim() || game.userAnswer.includes('_submitted') || game.isPaused || isProcessing) return;
     
     setIsProcessing(true);
-    const actualAnswer = userAnswer.trim();
-    const isCorrect = isAnswerCorrect(currentQ, actualAnswer);
+    const actualAnswer = game.userAnswer.trim();
+    const isCorrect = game.isAnswerCorrect(currentQ, actualAnswer);
     
-    setUserAnswer(actualAnswer + '_submitted');
+    game.setUserAnswer(actualAnswer + '_submitted');
     
     if (isCorrect) {
-      updateScore(1);
+      game.updateScore(1);
       if (onPlayerScoreUpdate) {
         onPlayerScoreUpdate(1, 1);
       }
@@ -107,68 +102,58 @@ const QuizGame = ({
     setTimeout(() => {
       setIsProcessing(false);
       handleNextQuestion();
-    }, 2000);
+    }, ANSWER_DISPLAY_DURATION);
   };
 
-  // ✅ NEW: Matching - Solo: Manual button, Battle: 7 seconds
   const handleMatchingSubmit = (matches) => {
-    if (isPaused || isProcessing) return;
+    if (game.isPaused || isProcessing) return;
     
     setIsProcessing(true);
-    setUserMatches(matches);
-    setIsMatchingSubmitted(true);
-    const isCorrect = isAnswerCorrect(currentQ, matches);
+    game.setUserMatches(matches);
+    game.setIsMatchingSubmitted(true);
+    const isCorrect = game.isAnswerCorrect(currentQ, matches);
     
     if (isCorrect) {
-      updateScore(1);
+      game.updateScore(1);
       if (onPlayerScoreUpdate) {
         onPlayerScoreUpdate(1, 1);
       }
     }
     
     if (mode === 'battle') {
-      // Battle mode: 7 seconds review time
       setTimeout(() => {
         setIsProcessing(false);
         handleNextQuestion();
-      }, 7000);
+      }, MATCHING_REVIEW_DURATION_BATTLE);
     } else {
-      // Solo mode: Manual next button (no auto-advance)
       setIsProcessing(false);
     }
   };
 
   const handleNextQuestion = () => {
     setIsProcessing(false);
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setSelectedAnswer('');
-      setUserAnswer('');
-      setUserMatches([]);
-      setIsMatchingSubmitted(false);
-      setTimeLeft(30);
+    if (game.currentQuestionIndex < questions.length - 1) {
+      game.nextQuestion();
+      resetTimer(30);
     } else {
       finishQuiz();
     }
   };
 
-  // ✅ Manual next handler for Solo matching
   const handleManualNext = () => {
     handleNextQuestion();
   };
 
   const finishQuiz = () => {
     const results = {
-      score: scoreRef.current, 
-      totalQuestions: questions.length,
-      timeSpent: getTimeSpent(),
+      ...game.getResults(),
       quizTitle: quiz.title
     };
     
     if (mode === 'battle') {
       results.players = allPlayers.map(player => 
         player.name === 'You' 
-          ? { ...player, score: scoreRef.current } 
+          ? { ...player, score: game.scoreRef.current } 
           : player
       );
       results.winner = results.players.reduce((prev, current) => 
@@ -194,42 +179,38 @@ const QuizGame = ({
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
       <QuizGameHeader
         quiz={quiz}
-        currentQuestion={currentQuestion}
+        currentQuestion={game.currentQuestionIndex}
         totalQuestions={questions.length}
         timeLeft={timeLeft}
-        displayScore={displayScore}
+        displayScore={game.displayScore}
         mode={mode}
         playersCount={allPlayers.length}
         onBack={onBack}
       />
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
         <div className={`${mode === 'battle' ? 'grid grid-cols-1 lg:grid-cols-4 gap-6' : ''}`}>
-          {/* Quiz Question */}
           <div className={mode === 'battle' ? 'lg:col-span-3' : ''}>
             <QuizQuestion
               question={currentQ}
-              selectedAnswer={selectedAnswer}
-              userAnswer={userAnswer}
-              userMatches={userMatches}
-              isMatchingSubmitted={isMatchingSubmitted}
+              selectedAnswer={game.selectedAnswer}
+              userAnswer={game.userAnswer}
+              userMatches={game.userMatches}
+              isMatchingSubmitted={game.isMatchingSubmitted}
               mode={mode}
               onAnswerSelect={handleAnswerSelect}
               onFillInAnswer={handleFillInAnswer}
               onMatchingSubmit={handleMatchingSubmit}
-              onUserAnswerChange={setUserAnswer}
+              onUserAnswerChange={game.setUserAnswer}
               onNextQuestion={handleManualNext}
               timeLeft={timeLeft}
-              isPaused={isPaused || isProcessing}
-              isAnswerCorrect={isAnswerCorrect}
+              isPaused={game.isPaused || isProcessing}
+              isAnswerCorrect={game.isAnswerCorrect}
             />
 
-            {/* ✅ Show Next button for Solo Matching after submission */}
-            {currentQ.type === 'Matching' && isMatchingSubmitted && mode === 'solo' && (
+            {currentQ.type === 'Matching' && game.isMatchingSubmitted && mode === 'solo' && (
               <div className="text-center mt-6">
                 <button
                   onClick={handleManualNext}
@@ -240,8 +221,7 @@ const QuizGame = ({
               </div>
             )}
             
-            {/* ✅ Show message for Battle Matching after submission */}
-            {currentQ.type === 'Matching' && isMatchingSubmitted && mode === 'battle' && (
+            {currentQ.type === 'Matching' && game.isMatchingSubmitted && mode === 'battle' && (
               <div className="text-center mt-6">
                 <p className="text-sm text-gray-600 animate-pulse">
                   Next question in a moment...
@@ -250,7 +230,6 @@ const QuizGame = ({
             )}
           </div>
           
-          {/* Live Leaderboard (Battle Mode Only) */}
           {mode === 'battle' && (
             <div className="lg:col-span-1">
               <LiveLeaderboard players={allPlayers} currentPlayerName="You" />

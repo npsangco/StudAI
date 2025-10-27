@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, Users } from 'lucide-react';
+import { PHYSICS_UPDATE_INTERVAL, PLAYER_RADIUS } from '../utils/constants';
 
 // Animations
 const styles = `
@@ -53,7 +54,6 @@ const styles = `
     transform: scale(1.1);
   }
 
-  /* Remove all scrollbars */
   body, html {
     overflow: hidden !important;
   }
@@ -61,7 +61,6 @@ const styles = `
 
 // Solo Loading Screen Component
 export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
-  // Random pro tips
   const proTips = [
     "💪 Read each question carefully!",
     "🎯 Trust your first instinct!",
@@ -70,16 +69,13 @@ export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
     "✨ Every question is an opportunity!"
   ];
   
-  // Select random tip when component mounts
   const [randomTip] = useState(() => proTips[Math.floor(Math.random() * proTips.length)]);
   
   return (
     <>
       <style>{styles}</style>
       <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 flex items-center justify-center overflow-hidden">
-        {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Floating Question Marks */}
           {[...Array(8)].map((_, i) => (
             <div
               key={`q-${i}`}
@@ -94,7 +90,6 @@ export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
             </div>
           ))}
           
-          {/* Pulsing Circles */}
           {[...Array(5)].map((_, i) => (
             <div
               key={`circle-${i}`}
@@ -111,9 +106,7 @@ export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
           ))}
         </div>
 
-        {/* Main Content */}
         <div className="text-center animate-fade-in z-10 relative px-4">
-          {/* Countdown Circle */}
           <div className="mb-6 relative">
             <div className="w-32 h-32 mx-auto bg-white rounded-full flex items-center justify-center shadow-2xl">
               <div className="text-8xl font-bold text-yellow-500 animate-bounce">
@@ -122,7 +115,6 @@ export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
             </div>
           </div>
 
-          {/* Text Content */}
           <h2 className="text-4xl font-bold text-black mb-3 drop-shadow-lg">
             Get Ready!
           </h2>
@@ -130,7 +122,6 @@ export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
             {quizTitle}
           </p>
 
-          {/* Pro Tip */}
           <div className="mt-8 max-w-md mx-auto">
             <div className="bg-white bg-opacity-90 rounded-2xl p-4 shadow-lg">
               <p className="text-sm text-gray-700 font-medium">
@@ -150,42 +141,37 @@ export const BattleLobbyScreen = ({
   playerPositions: externalPositions,
   quizTitle, 
   onUserReady, 
-  onLeave 
+  onLeave,
+  setPlayerPositions
 }) => {
-  const [playerPositions, setPlayerPositions] = useState([]);
+  const [playerPositions, setLocalPlayerPositions] = useState([]);
 
-  // Initialize positions only for NEW players (don't reset existing ones)
   useEffect(() => {
     if (externalPositions && externalPositions.length > 0) {
-      setPlayerPositions(prev => {
-        // If no previous positions, use all external positions
+      setLocalPlayerPositions(prev => {
         if (prev.length === 0) {
           return externalPositions;
         }
         
-        // If new players joined, only add NEW positions
         if (externalPositions.length > prev.length) {
           const newPositions = [...prev];
-          // Add only the new players' positions
           for (let i = prev.length; i < externalPositions.length; i++) {
             newPositions.push(externalPositions[i]);
           }
           return newPositions;
         }
         
-        // Keep existing animated positions
         return prev;
       });
     }
-  }, [externalPositions?.length]); // Only trigger when length changes
+  }, [externalPositions?.length]);
 
-  // Animate player positions with predictive collision detection
   useEffect(() => {
     const animationInterval = setInterval(() => {
-      setPlayerPositions(prev => {
+      setLocalPlayerPositions(prev => {
         if (!prev || prev.length === 0) return prev;
         
-        const radius = 2.5;
+        const radius = PLAYER_RADIUS;
         
         let newPositions = prev.map((pos) => ({
           x: pos.x,
@@ -194,7 +180,6 @@ export const BattleLobbyScreen = ({
           vy: pos.vy
         }));
 
-        // STEP 1: PREDICTIVE collision detection - check BEFORE moving
         for (let i = 0; i < newPositions.length; i++) {
           for (let j = i + 1; j < newPositions.length; j++) {
             const dx = newPositions[j].x - newPositions[i].x;
@@ -245,13 +230,11 @@ export const BattleLobbyScreen = ({
           }
         }
 
-        // STEP 2: NOW move all circles with updated velocities
         for (let i = 0; i < newPositions.length; i++) {
           newPositions[i].x += newPositions[i].vx;
           newPositions[i].y += newPositions[i].vy;
         }
 
-        // STEP 3: Wall collisions
         for (let i = 0; i < newPositions.length; i++) {
           if (newPositions[i].x - radius <= 0) {
             newPositions[i].x = radius;
@@ -271,7 +254,6 @@ export const BattleLobbyScreen = ({
           }
         }
 
-        // STEP 4: Safety check - fix any remaining overlaps
         for (let pass = 0; pass < 5; pass++) {
           let foundOverlap = false;
           
@@ -302,7 +284,6 @@ export const BattleLobbyScreen = ({
           if (!foundOverlap) break;
         }
 
-        // STEP 5: Final bounds
         for (let i = 0; i < newPositions.length; i++) {
           newPositions[i].x = Math.max(radius, Math.min(100 - radius, newPositions[i].x));
           newPositions[i].y = Math.max(8 + radius, Math.min(88 - radius, newPositions[i].y));
@@ -310,7 +291,7 @@ export const BattleLobbyScreen = ({
 
         return newPositions;
       });
-    }, 30);
+    }, PHYSICS_UPDATE_INTERVAL);
 
     return () => clearInterval(animationInterval);
   }, []);
@@ -324,9 +305,7 @@ export const BattleLobbyScreen = ({
     <>
       <style>{styles}</style>
       <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 overflow-hidden">
-        {/* Animated Background Elements - Same as Solo */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Floating Question Marks */}
           {[...Array(8)].map((_, i) => (
             <div
               key={`q-${i}`}
@@ -341,7 +320,6 @@ export const BattleLobbyScreen = ({
             </div>
           ))}
           
-          {/* Pulsing Circles */}
           {[...Array(5)].map((_, i) => (
             <div
               key={`circle-${i}`}
@@ -358,7 +336,6 @@ export const BattleLobbyScreen = ({
           ))}
         </div>
 
-        {/* Header */}
         <div className="absolute top-0 left-0 right-0 z-10 p-4 md:p-6">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-3xl md:text-4xl font-bold text-black mb-2 drop-shadow-lg">Quiz Battle Lobby</h1>
@@ -373,7 +350,6 @@ export const BattleLobbyScreen = ({
           </div>
         </div>
 
-        {/* Floating Players - Above Background */}
         <div className="absolute inset-0 z-20 pointer-events-none">
           {lobbyPlayers.map((player, index) => {
             const pos = playerPositions[index] || { x: 50, y: 50 };
@@ -415,10 +391,8 @@ export const BattleLobbyScreen = ({
           })}
         </div>
 
-        {/* Bottom Controls */}
         <div className="absolute bottom-0 left-0 right-0 z-30 p-4 md:p-6">
           <div className="max-w-4xl mx-auto text-center space-y-3 md:space-y-4">
-            {/* Ready Button for User */}
             {userPlayer && !userPlayer.isReady && (
               <button
                 onClick={onUserReady}
@@ -428,7 +402,6 @@ export const BattleLobbyScreen = ({
               </button>
             )}
 
-            {/* Status Messages */}
             {allReady && (
               <div className="inline-flex items-center gap-3 px-6 md:px-8 py-3 md:py-4 bg-white bg-opacity-95 text-black rounded-2xl font-bold text-lg md:text-xl shadow-2xl">
                 <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin" />

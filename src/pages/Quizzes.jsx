@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  QuizControls, 
-  QuizList, 
-  QuizBattles
-} from '../components/quizzes/QuizUIComponents';
-import { QuestionCard } from '../components/quizzes/QuizComponents';
+import { QuizList } from '../components/quizzes/views/QuizList';
+import { QuizBattles } from '../components/quizzes/views/QuizBattles';
+import { QuizEditor } from '../components/quizzes/views/QuizEditor';
+import QuizGame from '../components/quizzes/views/QuizGame';
+import QuizResults from '../components/quizzes/views/QuizResults';
+import QuizLeaderboard from '../components/quizzes/views/QuizLeaderboard';
+import { SoloLoadingScreen, BattleLobbyScreen } from '../components/quizzes/views/QuizLoadingScreens';
 import { QuizModal, DeleteConfirmationModal } from '../components/quizzes/QuizModal';
-import QuizGame from '../components/quizzes/QuizGame';
-import QuizResults from '../components/quizzes/QuizResults';
-import QuizLeaderboard from '../components/quizzes/QuizLeaderboard';
-import { SoloLoadingScreen, BattleLobbyScreen } from '../components/quizzes/QuizLoadingScreens';
-import { useLobbySimulation } from '../components/quizzes/QuizLobbySimulation';
+import { useCountdown } from '../components/quizzes/hooks/useCountdown';
+import { useLobby } from '../components/quizzes/hooks/useLobby';
+import { createNewQuestion } from '../components/quizzes/utils/questionHelpers';
+import { initialQuizzes, initialQuestions } from '../components/quizzes/utils/mockData';
+import { VIEWS, COUNTDOWN_SECONDS } from '../components/quizzes/utils/constants';
 
-// Animations
 const styles = `
   @keyframes slideIn {
     from {
@@ -32,349 +32,159 @@ const styles = `
 `;
 
 function QuizzesPage() {
-  const [gamePin, setGamePin] = useState('');
-  const [editingQuiz, setEditingQuiz] = useState(null);
-  const [draggedIndex, setDraggedIndex] = useState(null);
-  const [selectedQuiz, setSelectedQuiz] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [gameResults, setGameResults] = useState(null);
-  const [soloResults, setSoloResults] = useState(null);
-  const [currentView, setCurrentView] = useState('list');
-  const [quizKey, setQuizKey] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [countdown, setCountdown] = useState(5);
-  const [lobbyPlayers, setLobbyPlayers] = useState([]);
-  const [playerPositions, setPlayerPositions] = useState([]);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [quizToDelete, setQuizToDelete] = useState(null);
-  
-  useLobbySimulation(lobbyPlayers, setLobbyPlayers, currentView === 'lobby');
+  // Grouped State
+  const [quizData, setQuizData] = useState({
+    list: initialQuizzes,
+    selected: null,
+    editing: null,
+    draggedIndex: null
+  });
 
-  // Hide/Show navbar based on current view
-  useEffect(() => {
-    const shouldHideNavbar = ['loading', 'loadingBattle', 'lobby', 'solo', 'battle'].includes(currentView);
-    
-    if (shouldHideNavbar) {
-      document.body.classList.add('hide-navbar');
-    } else {
-      document.body.classList.remove('hide-navbar');
-    }
+  const [questions, setQuestions] = useState(initialQuestions);
 
-    return () => {
-      document.body.classList.remove('hide-navbar');
-    };
-  }, [currentView]);
+  const [uiState, setUiState] = useState({
+    currentView: VIEWS.LIST,
+    showModal: false,
+    showResults: false,
+    showLeaderboard: false,
+    showDeleteModal: false
+  });
 
-  // Generate random positions for players when they join
-  useEffect(() => {
-    if (currentView === 'lobby' && lobbyPlayers.length > 0) {
-      setPlayerPositions(prev => {
-        const newPositions = [...prev];
-        
-        const radius = 2.5;
-        
-        for (let i = prev.length; i < lobbyPlayers.length; i++) {
-          let x, y, tooClose;
-          let attempts = 0;
-          
-          do {
-            x = Math.random() * (100 - radius * 4) + radius * 2;
-            y = Math.random() * (73 - radius * 2) + (12 + radius);
-            tooClose = false;
-            
-            for (let j = 0; j < newPositions.length; j++) {
-              const dx = x - newPositions[j].x;
-              const dy = y - newPositions[j].y;
-              const distance = Math.sqrt(dx * dx + dy * dy);
-              
-              if (distance < radius * 2 + 3) {
-                tooClose = true;
-                break;
-              }
-            }
-            
-            attempts++;
-          } while (tooClose && attempts < 50);
-          
-          // Walking speed
-          newPositions.push({
-            x: x,
-            y: y,
-            vx: (Math.random() - 0.5) * 1.2,
-            vy: (Math.random() - 0.5) * 1.2
-          });
-        }
-        
-        return newPositions;
-      });
-    }
-  }, [lobbyPlayers.length, currentView]);
-  
-  const [quizList, setQuizList] = useState([
-    {
-      id: 1,
-      title: 'Data Algorithms',
-      questionCount: 50, 
-      created: 'Created today',
-      isPublic: true
-    },
-    {
-      id: 2,
-      title: 'Database',
-      questionCount: 15,
-      created: 'Created 9d ago',
-      isPublic: false
-    },
-    {
-      id: 3,
-      title: 'Web Development',
-      questionCount: 20,
-      created: 'Created 10d ago',
-      isPublic: false
-    },
-    {
-      id: 4,
-      title: 'Data Structures',
-      questionCount: 25,
-      created: 'Created 12d ago',
-      isPublic: false
-    }
-  ]);
-  
-  const [questions, setQuestions] = useState([
-    {
-      id: 1,
-      type: 'Multiple Choice',
-      question: 'Which sorting algorithm has the most consistent time complexity performance regardless of input data arrangement?',
-      choices: ['Quick Sort', 'Bubble Sort', 'Merge Sort', 'Insertion Sort'],
-      correctAnswer: 'Merge Sort'
-    },
-    {
-      id: 2,
-      type: 'Fill in the blanks',
-      question: 'The _______ complexity of binary search is O(log n), which makes it significantly more efficient than linear search\'s O(n) complexity when searching through sorted datasets.',
-      answer: 'time'
-    },
-    {
-      id: 3,
-      type: 'Matching',
-      question: 'Match the programming concepts with their definitions:',
-      matchingPairs: [
-        { left: 'Variable', right: 'A named storage location' },
-        { left: 'Function', right: 'A reusable block of code' },
-        { left: 'Loop', right: 'A control structure for repetition' }
-      ]
-    }
-  ]);
+  const [gameState, setGameState] = useState({
+    results: null,
+    quizKey: 0,
+    gamePin: ''
+  });
 
-  const createNewQuestion = (type = 'Multiple Choice') => {
-    const baseQuestion = {
-      id: questions.length > 0 ? Math.max(...questions.map(q => q.id)) + 1 : 1,
-      question: '',
-      type: type
-    };
+  const [deleteState, setDeleteState] = useState({
+    quizToDelete: null
+  });
 
-    switch (type) {
-      case 'Multiple Choice':
-        return {
-          ...baseQuestion,
-          choices: ['Option 1', 'Option 2', 'Option 3', 'Option 4'],
-          correctAnswer: 'Option 1'
-        };
-      case 'Fill in the blanks':
-        return {
-          ...baseQuestion,
-          answer: ''
-        };
-      case 'True/False':
-        return {
-          ...baseQuestion,
-          correctAnswer: 'True'
-        };
-      case 'Matching':
-        return {
-          ...baseQuestion,
-          matchingPairs: [{ left: '', right: '' }]
-        };
-      default:
-        return baseQuestion;
-    }
+  // Custom Hooks
+  const countdown = useCountdown(COUNTDOWN_SECONDS, handleCountdownComplete);
+  const lobby = useLobby(uiState.currentView === VIEWS.LOBBY);
+
+  // Update Helpers
+  const updateQuizData = (updates) => {
+    setQuizData(prev => ({ ...prev, ...updates }));
   };
 
+  const updateUiState = (updates) => {
+    setUiState(prev => ({ ...prev, ...updates }));
+  };
+
+  const updateGameState = (updates) => {
+    setGameState(prev => ({ ...prev, ...updates }));
+  };
+
+  // Countdown Complete Handler
+  function handleCountdownComplete() {
+    const targetView = uiState.currentView === VIEWS.LOADING 
+      ? VIEWS.SOLO 
+      : VIEWS.BATTLE;
+    updateUiState({ currentView: targetView });
+  }
+
+  // Quiz Selection Handlers
   const handleQuizSelect = (quiz) => {
-    setSelectedQuiz(quiz);
-    setShowModal(true);
-  };
-
-  const handleUpdateQuizTitle = (newTitle) => {
-    if (editingQuiz) {
-      // Update the editing quiz
-      setEditingQuiz({ ...editingQuiz, title: newTitle });
-      
-      // Also update in the quiz list
-      setQuizList(quizList.map(q => 
-        q.id === editingQuiz.id ? { ...q, title: newTitle } : q
-      ));
-    }
+    updateQuizData({ selected: quiz });
+    updateUiState({ showModal: true });
   };
 
   const handleCloseModal = () => {
-    setShowModal(false);
-    setSelectedQuiz(null);
+    updateUiState({ showModal: false });
+    updateQuizData({ selected: null });
   };
 
   const handleSoloQuiz = () => {
-    setShowModal(false);
-    setIsLoading(true);
-    setCountdown(5);
-    setCurrentView('loading');
-    
-    const countdownInterval = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval);
-          setTimeout(() => {
-            setIsLoading(false);
-            setCurrentView('solo');
-          }, 500);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    updateUiState({ showModal: false, currentView: VIEWS.LOADING });
+    countdown.start();
   };
 
   const handleQuizBattle = () => {
-    setShowModal(false);
-    setCurrentView('lobby');
-    
-    const initialPlayers = [
-      { id: 'user', name: 'You', initial: 'Y', isReady: false }
-    ];
-    setLobbyPlayers(initialPlayers);
+    updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
   };
 
-  const handleUserReady = () => {
-    setLobbyPlayers(prev => prev.map(p => 
-      p.id === 'user' ? { ...p, isReady: true } : p
-    ));
+  const handleBackToList = () => {
+    updateQuizData({ selected: null, editing: null, draggedIndex: null });
+    updateUiState({
+      currentView: VIEWS.LIST,
+      showModal: false,
+      showResults: false,
+      showLeaderboard: false,
+      showDeleteModal: false
+    });
+    updateGameState({ results: null, gamePin: '' });
+    countdown.reset();
   };
 
-  useEffect(() => {
-    if (currentView === 'lobby' && lobbyPlayers.length > 0 && lobbyPlayers.every(p => p.isReady)) {
-      setTimeout(() => {
-        setIsLoading(true);
-        setCountdown(5); // Changed to 5 seconds like solo
-        setCurrentView('loadingBattle'); // New loading state for battle
-        
-        const countdownInterval = setInterval(() => {
-          setCountdown(prev => {
-            if (prev <= 1) {
-              clearInterval(countdownInterval);
-              setTimeout(() => {
-                setIsLoading(false);
-                setCurrentView('battle');
-              }, 500);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      }, 1000);
-    }
-  }, [lobbyPlayers, currentView]);
-
-  const handleShowSoloResults = (results) => {
-    setSoloResults(results);
-    setShowResults(true);
-  };
-
-  const handleCloseSoloResults = () => {
-    setShowResults(false);
-    setSoloResults(null);
-    setCurrentView('list');
-  };
-
-  const handleRetrySoloQuiz = () => {
-    setShowResults(false);
-    setQuizKey(prev => prev + 1);
-  };
-
-  const handleShowLeaderboard = (results) => {
-    setGameResults(results);
-    setShowLeaderboard(true);
-  };
-
-  const handleCloseLeaderboard = () => {
-    setShowLeaderboard(false);
-    setGameResults(null);
-    setCurrentView('list');
-  };
-
-  const handleRetryQuiz = () => {
-    setShowLeaderboard(false);
-    setQuizKey(prev => prev + 1);
-  };
-
+  // Quiz CRUD Handlers
   const handleEditQuiz = (quiz) => {
-    setEditingQuiz(quiz);
-    setQuestions(questions.length > 0 ? questions : []);
-    setCurrentView('editing');
-  };
-
-  const handleDeleteQuiz = (quiz) => {
-    setQuizToDelete(quiz);
-    setShowDeleteModal(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (quizToDelete) {
-      setQuizList(quizList.filter(q => q.id !== quizToDelete.id));
-      setQuizToDelete(null);
-    }
+    updateQuizData({ editing: quiz });
+    updateUiState({ currentView: VIEWS.EDITING });
   };
 
   const handleCreateQuiz = () => {
     const newQuiz = {
-      id: quizList.length > 0 ? Math.max(...quizList.map(q => q.id)) + 1 : 1,
+      id: quizData.list.length > 0 ? Math.max(...quizData.list.map(q => q.id)) + 1 : 1,
       title: 'New Quiz',
       questionCount: 0,
       created: 'Created just now',
       isPublic: false
     };
     
-    setQuizList([newQuiz, ...quizList]);
-    setEditingQuiz(newQuiz);
+    setQuizData(prev => ({
+      ...prev,
+      list: [newQuiz, ...prev.list],
+      editing: newQuiz
+    }));
     setQuestions([]);
-    setCurrentView('editing');
+    updateUiState({ currentView: VIEWS.EDITING });
   };
 
-  const handleBackToList = () => {
-    setEditingQuiz(null);
-    setSelectedQuiz(null);
-    setCurrentView('list');
-    setIsLoading(false);
-    setCountdown(5);
-    setLobbyPlayers([]);
-    setPlayerPositions([]);
+  const handleDeleteQuiz = (quiz) => {
+    setDeleteState({ quizToDelete: quiz });
+    updateUiState({ showDeleteModal: true });
+  };
+
+  const handleConfirmDelete = () => {
+    updateQuizData({
+      list: quizData.list.filter(q => q.id !== deleteState.quizToDelete.id)
+    });
+    setDeleteState({ quizToDelete: null });
+    updateUiState({ showDeleteModal: false });
+  };
+
+  const handleUpdateQuizTitle = (newTitle) => {
+    if (quizData.editing) {
+      const updatedQuiz = { ...quizData.editing, title: newTitle };
+      updateQuizData({ 
+        editing: updatedQuiz,
+        list: quizData.list.map(q => q.id === updatedQuiz.id ? updatedQuiz : q)
+      });
+    }
+  };
+
+  const handleSaveQuiz = () => {
+    console.log('Saving quiz:', quizData.editing.title, questions);
+    alert('Quiz saved successfully!');
+  };
+
+  // Question Handlers
+  const handleAddQuestion = () => {
+    const newQuestion = createNewQuestion('Multiple Choice', questions);
+    setQuestions([...questions, newQuestion]);
   };
 
   const handleDeleteQuestion = (questionId) => {
     setQuestions(questions.filter(q => q.id !== questionId));
   };
 
-  const handleAddQuestion = () => {
-    const newQuestion = createNewQuestion('Multiple Choice');
-    setQuestions([...questions, newQuestion]);
-  };
-
   const handleUpdateQuestion = (questionId, field, value) => {
     setQuestions(questions.map(q => {
       if (q.id === questionId) {
         if (field === 'type' && value !== q.type) {
-          const newQuestion = createNewQuestion(value);
+          const newQuestion = createNewQuestion(value, questions);
           return {
             ...newQuestion,
             id: q.id,
@@ -448,15 +258,10 @@ function QuizzesPage() {
     }));
   };
 
-  const handleSaveQuiz = () => {
-    console.log('Saving quiz:', editingQuiz.title, questions);
-    alert('Quiz saved successfully!');
-  };
-
+  // Drag & Drop Handlers
   const handleDragStart = (e, index) => {
-    setDraggedIndex(index);
+    updateQuizData({ draggedIndex: index });
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', e.target.outerHTML);
   };
 
   const handleDragOver = (e) => {
@@ -466,147 +271,167 @@ function QuizzesPage() {
 
   const handleDrop = (e, dropIndex) => {
     e.preventDefault();
-    if (draggedIndex !== null && draggedIndex !== dropIndex) {
-      const newQuizList = [...quizList];
-      const draggedItem = newQuizList[draggedIndex];
+    if (quizData.draggedIndex !== null && quizData.draggedIndex !== dropIndex) {
+      const newQuizList = [...quizData.list];
+      const draggedItem = newQuizList[quizData.draggedIndex];
       
-      newQuizList.splice(draggedIndex, 1);
+      newQuizList.splice(quizData.draggedIndex, 1);
       newQuizList.splice(dropIndex, 0, draggedItem);
       
-      setQuizList(newQuizList);
+      updateQuizData({ list: newQuizList, draggedIndex: null });
+    } else {
+      updateQuizData({ draggedIndex: null });
     }
-    setDraggedIndex(null);
   };
 
-  // Solo Loading Screen
-  if (currentView === 'loading') {
-    return (
-      <SoloLoadingScreen 
-        countdown={countdown} 
-        quizTitle={selectedQuiz?.title} 
-      />
-    );
+  // Game Result Handlers
+  const handleShowSoloResults = (results) => {
+    updateGameState({ results });
+    updateUiState({ showResults: true });
+  };
+
+  const handleCloseSoloResults = () => {
+    updateUiState({ showResults: false });
+    updateGameState({ results: null });
+    handleBackToList();
+  };
+
+  const handleRetrySoloQuiz = () => {
+    updateUiState({ showResults: false });
+    updateGameState(prev => ({ ...prev, quizKey: prev.quizKey + 1 }));
+  };
+
+  const handleShowLeaderboard = (results) => {
+    updateGameState({ results });
+    updateUiState({ showLeaderboard: true });
+  };
+
+  const handleCloseLeaderboard = () => {
+    updateUiState({ showLeaderboard: false });
+    updateGameState({ results: null });
+    handleBackToList();
+  };
+
+  // Hide navbar for game views
+  useEffect(() => {
+    const gameViews = [VIEWS.LOADING, VIEWS.LOADING_BATTLE, VIEWS.LOBBY, VIEWS.SOLO, VIEWS.BATTLE];
+    const shouldHide = gameViews.includes(uiState.currentView);
+
+    if (shouldHide) {
+      document.body.classList.add('hide-navbar');
+    } else {
+      document.body.classList.remove('hide-navbar');
+    }
+
+    return () => document.body.classList.remove('hide-navbar');
+  }, [uiState.currentView]);
+
+  // Auto-start battle when all ready
+  useEffect(() => {
+    if (lobby.allReady && uiState.currentView === VIEWS.LOBBY) {
+      setTimeout(() => {
+        updateUiState({ currentView: VIEWS.LOADING_BATTLE });
+        countdown.start();
+      }, 1000);
+    }
+  }, [lobby.allReady, uiState.currentView]);
+
+  // RENDER: Loading Screens
+  if (uiState.currentView === VIEWS.LOADING || uiState.currentView === VIEWS.LOADING_BATTLE) {
+    return <SoloLoadingScreen countdown={countdown.countdown} quizTitle={quizData.selected?.title} />;
   }
 
-  // Battle Loading Screen (after all players ready)
-  if (currentView === 'loadingBattle') {
-    return (
-      <SoloLoadingScreen 
-        countdown={countdown} 
-        quizTitle={selectedQuiz?.title} 
-      />
-    );
-  }
-
-  // Battle Lobby Screen
-  if (currentView === 'lobby') {
+  if (uiState.currentView === VIEWS.LOBBY) {
     return (
       <BattleLobbyScreen
-        lobbyPlayers={lobbyPlayers}
-        playerPositions={playerPositions}
-        quizTitle={selectedQuiz?.title}
-        onUserReady={handleUserReady}
+        lobbyPlayers={lobby.players}
+        playerPositions={lobby.playerPositions}
+        quizTitle={quizData.selected?.title}
+        onUserReady={lobby.markUserReady}
         onLeave={handleBackToList}
+        setPlayerPositions={lobby.setPlayerPositions}
       />
     );
   }
 
-  if (currentView === 'solo' && selectedQuiz) {
+  // RENDER: Solo Game
+  if (uiState.currentView === VIEWS.SOLO && quizData.selected) {
     return (
       <>
         <style>{styles}</style>
-        <QuizGame 
-          key={`solo-${quizKey}`}
-          quiz={{
-            ...selectedQuiz,
-            questions: questions
-          }}
+        <QuizGame
+          key={`solo-${gameState.quizKey}-${Date.now()}`}
+          quiz={{ ...quizData.selected, questions }}
           mode="solo"
           onBack={handleBackToList}
           onComplete={handleShowSoloResults}
         />
-        
         <QuizResults
-          isOpen={showResults}
+          isOpen={uiState.showResults}
           onClose={handleCloseSoloResults}
           onRetry={handleRetrySoloQuiz}
-          results={soloResults}
+          results={gameState.results}
           mode="solo"
         />
       </>
     );
   }
-  
-  if (currentView === 'battle' && selectedQuiz) {
+
+  // RENDER: Battle Game
+  if (uiState.currentView === VIEWS.BATTLE && quizData.selected) {
     return (
       <>
         <style>{styles}</style>
-        <QuizGame 
-          key={`battle-${quizKey}`}
-          quiz={{
-            ...selectedQuiz,
-            questions: questions
-          }}
+        <QuizGame
+          key={`battle-${gameState.quizKey}`}
+          quiz={{ ...quizData.selected, questions }}
           mode="battle"
           onBack={handleBackToList}
           onComplete={handleShowLeaderboard}
         />
-        
         <QuizLeaderboard
-          isOpen={showLeaderboard}
+          isOpen={uiState.showLeaderboard}
           onClose={handleCloseLeaderboard}
-          onRetry={handleRetryQuiz}
-          results={gameResults}
+          results={gameState.results}
         />
       </>
     );
   }
 
-  if (currentView === 'editing' && editingQuiz) {
+  // RENDER: Editor
+  if (uiState.currentView === VIEWS.EDITING && quizData.editing) {
     return (
       <>
         <style>{styles}</style>
-        <div className="min-h-screen bg-gray-50">
-          <QuizControls 
-            quiz={editingQuiz}
-            onBack={handleBackToList}
-            onAddQuestion={handleAddQuestion}
-            onSave={handleSaveQuiz}
-            onUpdateTitle={handleUpdateQuizTitle}
-          />
-          
-          <div className="max-w-4xl mx-auto p-6">
-            <div className="space-y-4">
-              {questions.map((question, index) => (
-                <QuestionCard
-                  key={question.id}
-                  question={question}
-                  index={index}
-                  onUpdateQuestion={handleUpdateQuestion}
-                  onUpdateChoice={handleUpdateChoice}
-                  onAddChoice={handleAddChoice}
-                  onDeleteQuestion={handleDeleteQuestion}
-                  onAddMatchingPair={handleAddMatchingPair}
-                  onUpdateMatchingPair={handleUpdateMatchingPair}
-                  onRemoveMatchingPair={handleRemoveMatchingPair}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+        <QuizEditor
+          quiz={quizData.editing}
+          questions={questions}
+          onBack={handleBackToList}
+          onSave={handleSaveQuiz}
+          onUpdateTitle={handleUpdateQuizTitle}
+          onAddQuestion={handleAddQuestion}
+          onDeleteQuestion={handleDeleteQuestion}
+          onUpdateQuestion={handleUpdateQuestion}
+          onUpdateChoice={handleUpdateChoice}
+          onAddChoice={handleAddChoice}
+          onAddMatchingPair={handleAddMatchingPair}
+          onUpdateMatchingPair={handleUpdateMatchingPair}
+          onRemoveMatchingPair={handleRemoveMatchingPair}
+        />
       </>
     );
   }
 
+  // RENDER: List View (Default)
   return (
     <>
       <style>{styles}</style>
       <div className="min-h-screen bg-gray-100 p-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-            <QuizList 
-              quizzes={quizList}
-              draggedIndex={draggedIndex}
+            <QuizList
+              quizzes={quizData.list}
+              draggedIndex={quizData.draggedIndex}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
@@ -615,46 +440,31 @@ function QuizzesPage() {
               onDeleteQuiz={handleDeleteQuiz}
               onCreateQuiz={handleCreateQuiz}
             />
-            
-            <QuizBattles 
-              gamePin={gamePin}
-              setGamePin={setGamePin}
+
+            <QuizBattles
+              gamePin={gameState.gamePin}
+              setGamePin={(pin) => updateGameState({ gamePin: pin })}
             />
           </div>
         </div>
-        
+
         <QuizModal
-          quiz={selectedQuiz}
-          isOpen={showModal}
+          quiz={quizData.selected}
+          isOpen={uiState.showModal}
           onClose={handleCloseModal}
           onSoloQuiz={handleSoloQuiz}
           onQuizBattle={handleQuizBattle}
         />
 
         <DeleteConfirmationModal
-          isOpen={showDeleteModal}
+          isOpen={uiState.showDeleteModal}
           onClose={() => {
-            setShowDeleteModal(false); 
-            setQuizToDelete(null);
+            updateUiState({ showDeleteModal: false });
+            setDeleteState({ quizToDelete: null });
           }}
           onConfirm={handleConfirmDelete}
-          itemName={quizToDelete?.title || ''}
+          itemName={deleteState.quizToDelete?.title || ''}
           itemType="quiz"
-        />
-
-        <QuizResults
-          isOpen={showResults}
-          onClose={handleCloseSoloResults}
-          onRetry={handleRetrySoloQuiz}
-          results={soloResults}
-          mode="solo"
-        />
-        
-        <QuizLeaderboard
-          isOpen={showLeaderboard}
-          onClose={handleCloseLeaderboard}
-          onRetry={handleRetryQuiz}
-          results={gameResults}
         />
       </div>
     </>
