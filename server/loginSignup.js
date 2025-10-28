@@ -21,6 +21,8 @@ import Plan from "./models/Plan.js";
 import Quiz from "./models/Quiz.js";
 import Question from "./models/Question.js";
 import QuizAttempt from "./models/QuizAttempt.js";
+import QuizBattle from "./models/QuizBattle.js";
+import BattleParticipant from "./models/BattleParticipant.js";
 
 // Import Note model after creating it
 let Note;
@@ -63,7 +65,7 @@ app.use(cors({
 }));
 
 // ============================================
-// ✅ MODEL ASSOCIATIONS (MUST BE HERE, BEFORE sequelize.authenticate)
+// MODEL ASSOCIATIONS (MUST BE HERE, BEFORE sequelize.authenticate)
 // ============================================
 
 Quiz.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
@@ -78,6 +80,23 @@ User.hasMany(QuizAttempt, { foreignKey: 'user_id', as: 'attempts' });
 QuizAttempt.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
 Quiz.hasMany(QuizAttempt, { foreignKey: 'quiz_id', as: 'attempts' });
 
+// QuizBattle associations
+QuizBattle.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
+Quiz.hasMany(QuizBattle, { foreignKey: 'quiz_id', as: 'battles' });
+
+QuizBattle.belongsTo(User, { foreignKey: 'host_id', as: 'host' });
+User.hasMany(QuizBattle, { foreignKey: 'host_id', as: 'hosted_battles' });
+
+QuizBattle.belongsTo(User, { foreignKey: 'winner_id', as: 'winner' });
+User.hasMany(QuizBattle, { foreignKey: 'winner_id', as: 'won_battles' });
+
+// BattleParticipant associations
+BattleParticipant.belongsTo(QuizBattle, { foreignKey: 'battle_id', as: 'battle' });
+QuizBattle.hasMany(BattleParticipant, { foreignKey: 'battle_id', as: 'participants' });
+
+BattleParticipant.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasMany(BattleParticipant, { foreignKey: 'user_id', as: 'battle_participations' });
+
 // ----------------- DB Connection -----------------
 sequelize.authenticate()
     .then(() => {
@@ -90,7 +109,9 @@ sequelize.authenticate()
             Plan.sync({ force: false }),
             Quiz.sync({ force: false }),
             Question.sync({ force: false }),
-            QuizAttempt.sync({ force: false })
+            QuizAttempt.sync({ force: false }),
+            QuizBattle.sync({ force: false }),
+            BattleParticipant.sync({ force: false })
         ]);
     })
     .then(() => {

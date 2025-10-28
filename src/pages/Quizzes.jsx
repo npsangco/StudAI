@@ -203,11 +203,61 @@ function QuizzesPage() {
   };
 
   const handleQuizBattle = async () => {
-    // Load questions before starting
+  try {
+    setLoading(true);
+    
+    // Load questions
     const data = await loadQuizWithQuestions(quizData.selected.id);
-    if (data) {
+    
+    if (data && data.questions) {
       setQuestions(data.questions);
+      
+      // Create battle room
+      const response = await quizApi.createBattle(quizData.selected.id);
+      const { battle, gamePin } = response.data;
+      
+      console.log('✅ Battle created:', gamePin);
+      
+      // Store battle info
+      updateGameState({ 
+        gamePin,
+        battleId: battle.battle_id,
+        isHost: true
+      });
+      
       updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
+    } else {
+      alert('Failed to load quiz questions');
+      updateUiState({ showModal: false });
+    }
+  } catch (err) {
+    console.error('Battle creation error:', err);
+    alert(err.response?.data?.error || 'Error creating battle');
+    updateUiState({ showModal: false });
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // Start battle handler
+  const handleStartBattle = async () => {
+    try {
+      setLoading(true);
+      
+      // Call API to start the battle
+      await quizApi.startBattle(gameState.gamePin);
+      
+      console.log('✅ Battle started by host!');
+      
+      // Transition to loading screen, then game starts
+      updateUiState({ currentView: VIEWS.LOADING_BATTLE });
+      countdown.start();
+      
+    } catch (err) {
+      console.error('Start battle error:', err);
+      alert(err.response?.data?.error || 'Failed to start battle');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -614,8 +664,11 @@ function QuizzesPage() {
         lobbyPlayers={lobby.players}
         playerPositions={lobby.playerPositions}
         quizTitle={quizData.selected?.title}
+        gamePin={gameState.gamePin} 
+        isHost={gameState.isHost}             
         onUserReady={lobby.markUserReady}
         onLeave={handleBackToList}
+        onStartBattle={handleStartBattle}     
         setPlayerPositions={lobby.setPlayerPositions}
       />
     );

@@ -113,6 +113,16 @@ export const quizApi = {
   
   // Get quiz leaderboard
   getLeaderboard: (quizId) => api.get(`/quizzes/${quizId}/leaderboard`),
+
+  // Battle endpoints
+  createBattle: (quizId) => api.post(`/quizzes/${quizId}/battle/create`),
+  joinBattle: (data) => api.post('/quizzes/battle/join', data),
+  getBattle: (gamePin) => api.get(`/quizzes/battle/${gamePin}`),
+  markReady: (gamePin) => api.post(`/quizzes/battle/${gamePin}/ready`),
+  startBattle: (gamePin) => api.post(`/quizzes/battle/${gamePin}/start`),
+  submitBattleScore: (gamePin, data) => api.post(`/quizzes/battle/${gamePin}/submit`, data),
+  getBattleResults: (gamePin) => api.get(`/quizzes/battle/${gamePin}/results`),
+  endBattle: (gamePin) => api.post(`/quizzes/battle/${gamePin}/end`),
 };
 
 export default api;
