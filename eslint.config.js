@@ -9,7 +9,7 @@ export default defineConfig([
   // Client-side (React) configuration
   {
     files: ['**/*.{js,jsx}'],
-    ignores: ['server/**', 'backend/**', '**/*.server.js', 'loginSignup.js'], // Ignore server files
+    ignores: ['server/**', 'backend/**', '**/*.server.js', 'server.js'], // Ignore server files
     extends: [
       js.configs.recommended,
       reactHooks.configs['recommended-latest'],
@@ -33,7 +33,7 @@ export default defineConfig([
   },
   // Server-side (Node.js) configuration
   {
-    files: ['server/**/*.js', 'backend/**/*.js', '**/*.server.js', 'loginSignup.js'],
+    files: ['server/**/*.js', 'backend/**/*.js', '**/*.server.js', 'server.js'],
     languageOptions: {
       ecmaVersion: 2022, // ← Change this to 2022 or latest
       globals: {

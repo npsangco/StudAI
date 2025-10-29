@@ -19,7 +19,8 @@ const formatNoteForFrontend = (note) => {
     ...noteData,
     created_at: noteData.createdAt,
     words: noteData.content ? noteData.content.split(/\s+/).length : 0,
-    is_shared: noteData.is_shared || false
+    is_shared: noteData.is_shared || false,
+    is_pinned: noteData.is_pinned || false
   };
 };
 
@@ -39,7 +40,10 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const notes = await Note.findAll({
       where: { user_id: req.session.userId },
-      order: [['createdAt', 'DESC']]
+      order: [
+        ['is_pinned', 'DESC'], // pinned notes first
+        ['createdAt', 'DESC']  // then by creation date
+      ]
     });
 
     const notesWithExtras = notes.map(formatNoteForFrontend);
@@ -59,7 +63,8 @@ router.post('/create', requireAuth, async (req, res) => {
       user_id: req.session.userId,
       file_id: file_id || null,
       title,
-      content: content || ''
+      content: content || '',
+      is_pinned: false
     });
 
     const noteWithExtras = formatNoteForFrontend(newNote);
@@ -301,6 +306,64 @@ router.delete('/:id/share', requireAuth, async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ error: 'Failed to deactivate share' });
+  }
+});
+
+// Pin a note
+router.post('/:id/pin', requireAuth, async (req, res) => {
+  try {
+    const noteId = req.params.id;
+
+    const note = await Note.findOne({
+      where: { 
+        note_id: noteId,
+        user_id: req.session.userId 
+      }
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+
+    await note.update({ is_pinned: true });
+
+    const noteWithExtras = formatNoteForFrontend(note);
+    res.json({ 
+      note: noteWithExtras,
+      message: 'Note pinned successfully'
+    });
+  } catch (err) {
+    console.error('Failed to pin note:', err);
+    res.status(500).json({ error: 'Failed to pin note' });
+  }
+});
+
+// Unpin a note
+router.post('/:id/unpin', requireAuth, async (req, res) => {
+  try {
+    const noteId = req.params.id;
+
+    const note = await Note.findOne({
+      where: { 
+        note_id: noteId,
+        user_id: req.session.userId 
+      }
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+
+    await note.update({ is_pinned: false });
+
+    const noteWithExtras = formatNoteForFrontend(note);
+    res.json({ 
+      note: noteWithExtras,
+      message: 'Note unpinned successfully'
+    });
+  } catch (err) {
+    console.error('Failed to unpin note:', err);
+    res.status(500).json({ error: 'Failed to unpin note' });
   }
 });
 

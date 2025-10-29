@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "server": "node zoomserver.cjs",
     "server:dev": "nodemon zoomserver.cjs",
-    "dev:all": "concurrently \"nodemon loginSignup.js\" \"cd .. && npm start\""
+    "dev:all": "concurrently \"nodemon server.js\" \"cd .. && npm start\""
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

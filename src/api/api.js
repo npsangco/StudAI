@@ -45,7 +45,6 @@ export const petApi = {
   purchaseItem: (data) => api.post('/pet/shop/purchase', data),
 };
 
-
 // Notes API
 export const notesApi = {
   // Get all notes
@@ -65,6 +64,14 @@ export const notesApi = {
   
   // Stop sharing a note
   stopSharing: (id) => api.delete(`/notes/${id}/share`),
+
+  pinNote: (id) => api.post(`/notes/${id}/pin`),
+
+  unpinNote: (id) => api.post(`/notes/${id}/unpin`),
+
+  // Category functions
+  getCategories: () => api.get('/notes/categories'),
+  createCategory: (categoryData) => api.post('/notes/categories', categoryData),
 };
 
 // Shared Notes API
@@ -74,6 +81,28 @@ export const sharedNotesApi = {
   
   // Get user's shared notes
   getMyShares: () => api.get('/notes/shared/my-shares'),
+};
+
+// Plans API
+export const plansApi = {
+  // Get all plans
+  getAll: () => api.get('/plans'),
+  
+  // Create a new plan
+  create: (planData) => api.post('/plans', planData),
+  
+  // Update a plan
+  update: (id, planData) => api.put(`/plans/${id}`, planData),
+  
+  // Delete a plan
+  delete: (id) => api.delete(`/plans/${id}`),
+  
+  // Get plans by date range
+  getByRange: (startDate, endDate) => 
+    api.get(`/plans/range?start_date=${startDate}&end_date=${endDate}`),
+  
+  // Get plans by specific date
+  getByDate: (date) => api.get(`/plans/date/${date}`),
 };
 
 export default api;

@@ -1,11 +1,11 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "main": "loginSignup.js",
+  "main": "server.js",
   "scripts": {
-    "dev": "nodemon loginSignup.js",
-    "start": "node loginSignup.js",
-    "dev:all": "concurrently \"nodemon loginSignup.js\" \"cd .. && npm run dev\"",
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "dev:all": "concurrently \"nodemon server.js\" \"cd .. && npm run dev\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

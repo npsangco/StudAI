@@ -41,6 +41,7 @@ import jwt from "jsonwebtoken";
 import petRoutes from "./routes/petRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
 import SharedNote from "./models/SharedNote.js";
+import planRoutes from "./routes/planRoutes.js";
 
 const app = express();
 app.use(express.json());
@@ -752,70 +753,10 @@ app.post("/api/generate-summary", async (req, res) => {
     }
 });
 
-// ----------------- PLANS ROUTES -----------------
-app.get("/api/plans", async (req, res) => {
-  if (!req.session || !req.session.userId) {
-    return res.status(401).json({ error: "Not logged in" });
-  }
-
-  try {
-    const plans = await Plan.findAll({
-      where: { user_id: req.session.userId },
-      order: [["createdAt", "DESC"]],
-    });
-
-    res.json({ plans });
-  } catch (err) {
-    console.error("❌ Failed to fetch plans:", err);
-    res.status(500).json({ error: "Failed to fetch plans" });
-  }
-});
-
-app.post("/api/plans", async (req, res) => {
-  if (!req.session || !req.session.userId) {
-    return res.status(401).json({ error: "Not logged in" });
-  }
-
-  try {
-    const { title, description, due_date } = req.body;
-    if (!title) return res.status(400).json({ error: "Title is required" });
-
-    const newPlan = await Plan.create({
-      user_id: req.session.userId,
-      title,
-      description,
-      due_date: due_date || null,
-    });
-
-    res.status(201).json({ plan: newPlan });
-  } catch (err) {
-    console.error("❌ Failed to create plan:", err);
-    res.status(500).json({ error: "Failed to create plan" });
-  }
-});
-
-app.delete("/api/plans/:id", async (req, res) => {
-  if (!req.session || !req.session.userId) {
-    return res.status(401).json({ error: "Not logged in" });
-  }
-
-  try {
-    const deleted = await Plan.destroy({
-      where: { planner_id: req.params.id, user_id: req.session.userId },
-    });
-
-    if (!deleted) return res.status(404).json({ error: "Plan not found" });
-
-    res.json({ message: "Plan deleted successfully" });
-  } catch (err) {
-    console.error("❌ Failed to delete plan:", err);
-    res.status(500).json({ error: "Failed to delete plan" });
-  }
-});
-
 // ----------------- PET SYSTEM ROUTES -----------------
 app.use("/api/pet", petRoutes);
 app.use("/api/notes", noteRoutes);
+app.use("/api/plans", planRoutes);
 
 
 // ----------------- START SERVER -----------------

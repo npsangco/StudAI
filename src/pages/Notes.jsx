@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText, MessageCircle, Edit3, ExternalLink } from 'lucide-react';
+import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText, MessageCircle, Edit3, ExternalLink, Pin, PinOff, FolderPlus } from 'lucide-react';
 import NoteEditor from '../components/NoteEditor';
 import Chatbot from '../components/Chatbot';
 import { notesApi, sharedNotesApi } from '../api/api';
@@ -14,6 +14,10 @@ const Notes = () => {
   const [currentView, setCurrentView] = useState('list');
   const [editingNote, setEditingNote] = useState(null);
   const [chatbotNote, setChatbotNote] = useState(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [categories, setCategories] = useState(['General']);
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   useEffect(() => {
     fetchNotesFromDatabase();
@@ -30,7 +34,9 @@ const Notes = () => {
         words: note.words || (note.content ? note.content.split(/\s+/).length : 0),
         createdAt: note.created_at || note.createdAt,
         content: note.content || '',
-        isShared: note.is_shared || false
+        isShared: note.is_shared || false,
+        isPinned: note.is_pinned || false,
+        category: note.category || 'General' // Default category
       }));
 
       setNotes(mappedNotes);
@@ -79,7 +85,9 @@ const Notes = () => {
         words: response.data.note.words || 0,
         createdAt: response.data.note.created_at || response.data.note.createdAt,
         content: response.data.note.content || '',
-        isShared: response.data.note.is_shared || false
+        isShared: response.data.note.is_shared || false,
+        isPinned: response.data.note.is_pinned || false,
+        category: 'General'
       };
       
       setNotes([newNote, ...notes]);
@@ -105,7 +113,9 @@ const Notes = () => {
         words: response.data.note.words || (response.data.note.content ? response.data.note.content.split(/\s+/).length : 0),
         createdAt: response.data.note.created_at || response.data.note.createdAt,
         content: response.data.note.content || '',
-        isShared: response.data.note.is_shared || false
+        isShared: response.data.note.is_shared || false,
+        isPinned: response.data.note.is_pinned || false,
+        category: updatedNote.category || 'General'
       };
       
       setNotes(notes.map(note => 
@@ -127,16 +137,34 @@ const Notes = () => {
     }
   };
 
+  const pinNote = async (id) => {
+    try {
+      await notesApi.pinNote(id);
+      fetchNotesFromDatabase();
+    } catch (error) {
+      console.error('Error pinning note:', error);
+      alert('Failed to pin note. Please try again.');
+    }
+  };
+
+  const unpinNote = async (id) => {
+    try {
+      await notesApi.unpinNote(id);
+      fetchNotesFromDatabase();
+    } catch (error) {
+      console.error('Error unpinning note:', error);
+      alert('Failed to unpin note. Please try again.');
+    }
+  };
+
   const shareNote = async (id) => {
     try {
       const response = await notesApi.share(id);
 
-      // copies share code automatically
       navigator.clipboard.writeText(response.data.shareCode)
         .then(() => alert(`✅ Share code copied: ${response.data.shareCode}\n\nShare this code with others!`))
         .catch(() => alert(`Share code: ${response.data.shareCode}\n\nCopy this code to share your note.`));
 
-      // refreshses share list
       fetchMyShares();
     } catch (error) {
       console.error('Error sharing note:', error);
@@ -217,12 +245,131 @@ const Notes = () => {
     fetchMyShares();
   };
 
-  const filteredNotes = notes.filter(note =>
-    note.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const addCategory = () => {
+    if (newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
+      setCategories([...categories, newCategoryName.trim()]);
+      setNewCategoryName('');
+      setShowCategoryModal(false);
+    }
+  };
+
+  const filteredNotes = notes.filter(note => {
+    const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || note.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const filteredMyShares = myShares.filter(share =>
     share.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Separate pinned and unpinned notes
+  const pinnedNotes = filteredNotes.filter(note => note.isPinned);
+  const unpinnedNotes = filteredNotes.filter(note => !note.isPinned);
+
+  const renderNoteItem = (note) => (
+    <div
+      key={note.id}
+      className={`group p-3 sm:p-4 border rounded-lg sm:rounded-xl hover:shadow-md transition-all duration-200 bg-white cursor-pointer ${
+        note.isPinned 
+          ? 'border-yellow-300 bg-yellow-50 hover:border-yellow-400' 
+          : 'border-slate-200 hover:border-slate-300'
+      }`}
+      onClick={() => openEditPage(note)}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            {note.isPinned && <Pin className="w-3 h-3 text-yellow-600 fill-yellow-600 flex-shrink-0" />}
+            <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full flex-shrink-0 ${
+              note.isPinned 
+                ? 'bg-gradient-to-r from-yellow-500 to-yellow-700' 
+                : 'bg-gradient-to-r from-green-400 to-green-600'
+            }`}></div>
+            <h3 className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors text-sm sm:text-base truncate">
+              {note.title}
+            </h3>
+            <Edit3 className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-slate-500 mb-2">
+            <span className="flex items-center gap-1">
+              <FileText className="w-3 h-3 flex-shrink-0" />
+              {note.words} words
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{formatDate(note.createdAt)}</span>
+            </span>
+            {note.category && (
+              <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-full text-xs">
+                {note.category}
+              </span>
+            )}
+          </div>
+          {note.content && (
+            <p className="text-xs sm:text-sm text-slate-600 mt-2 line-clamp-2">
+              {note.content.substring(0, 100)}...
+            </p>
+          )}
+        </div>
+        {/* Vertically aligned action buttons */}
+        <div className="flex flex-col gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleChatbot(note.id);
+            }}
+            className="p-1.5 sm:p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+            title="Ask AI Assistant"
+          >
+            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+          </button>
+          {note.isPinned ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                unpinNote(note.id);
+              }}
+              className="p-1.5 sm:p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+              title="Unpin note"
+            >
+              <PinOff className="w-3 h-3 sm:w-4 sm:h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                pinNote(note.id);
+              }}
+              className="p-1.5 sm:p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+              title="Pin note"
+            >
+              <Pin className="w-3 h-3 sm:w-4 sm:h-4" />
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              shareNote(note.id);
+            }}
+            className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="Share"
+          >
+            <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteNote(note.id);
+            }}
+            className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 
   if (currentView === 'chatbot' && chatbotNote) {
@@ -245,6 +392,7 @@ const Notes = () => {
         onBack={goBackToList}
         onChatbot={handleChatbot}
         formatDate={formatDate}
+        categories={categories}
       />
     );
   }
@@ -266,12 +414,58 @@ const Notes = () => {
                 className="w-full pl-10 pr-4 py-2 sm:py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm sm:text-base"
               />
             </div>
-            <button className="flex items-center justify-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-white rounded-lg transition-all text-sm sm:text-base">
-              <Filter className="w-4 h-4" />
-              <span className="hidden sm:inline">Filter</span>
-            </button>
+            <div className="flex gap-2">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
+              >
+                <option value="all">All Categories</option>
+                {categories.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+              <button 
+                onClick={() => setShowCategoryModal(true)}
+                className="flex items-center justify-center gap-2 px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-white rounded-lg transition-all text-sm sm:text-base border border-slate-200"
+              >
+                <Filter className="w-4 h-4" />
+                <FolderPlus className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Category Creation Modal */}
+        {showCategoryModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">Create New Category</h3>
+              <input
+                type="text"
+                placeholder="Enter category name..."
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none mb-4"
+                onKeyPress={(e) => e.key === 'Enter' && addCategory()}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={addCategory}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex-1"
+                >
+                  Create
+                </button>
+                <button
+                  onClick={() => setShowCategoryModal(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors flex-1"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           {/* Personal Notes */}
@@ -318,72 +512,33 @@ const Notes = () => {
             )}
 
             <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
-              {filteredNotes.map((note) => (
-                <div
-                  key={note.id}
-                  className="group p-3 sm:p-4 border border-slate-200 rounded-lg sm:rounded-xl hover:border-slate-300 hover:shadow-md transition-all duration-200 bg-white cursor-pointer"
-                  onClick={() => openEditPage(note)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex-shrink-0"></div>
-                        <h3 className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors text-sm sm:text-base truncate">
-                          {note.title}
-                        </h3>
-                        <Edit3 className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                      </div>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-slate-500 mb-2">
-                        <span className="flex items-center gap-1">
-                          <FileText className="w-3 h-3 flex-shrink-0" />
-                          {note.words} words
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">{formatDate(note.createdAt)}</span>
-                        </span>
-                      </div>
-                      {note.content && (
-                        <p className="text-xs sm:text-sm text-slate-600 mt-2 line-clamp-2">
-                          {note.content.substring(0, 100)}...
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleChatbot(note.id);
-                        }}
-                        className="p-1.5 sm:p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                        title="Ask AI Assistant"
-                      >
-                        <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          shareNote(note.id);
-                        }}
-                        className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Share"
-                      >
-                        <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteNote(note.id);
-                        }}
-                        className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                    </div>
+              {/* Pinned Notes Section */}
+              {pinnedNotes.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2 px-2">
+                    <Pin className="w-4 h-4 text-yellow-600" />
+                    <span className="text-xs font-medium text-yellow-600">PINNED</span>
+                  </div>
+                  <div className="space-y-2 sm:space-y-3">
+                    {pinnedNotes.map((note) => renderNoteItem(note))}
                   </div>
                 </div>
-              ))}
+              )}
+              
+              {/* Unpinned Notes Section */}
+              {unpinnedNotes.length > 0 && (
+                <div>
+                  {pinnedNotes.length > 0 && (
+                    <div className="flex items-center gap-2 mb-2 px-2">
+                      <FileText className="w-4 h-4 text-slate-400" />
+                      <span className="text-xs font-medium text-slate-500">OTHER NOTES</span>
+                    </div>
+                  )}
+                  <div className="space-y-2 sm:space-y-3">
+                    {unpinnedNotes.map((note) => renderNoteItem(note))}
+                  </div>
+                </div>
+              )}
               
               {filteredNotes.length === 0 && (
                 <div className="text-center py-6 sm:py-8 text-slate-500 text-sm sm:text-base">
@@ -460,7 +615,7 @@ const Notes = () => {
                         <span className="truncate">{formatDate(share.created_at)}</span>
                       </div>
                     </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
                       <button
                         onClick={() => stopSharing(share.note_id)}
                         className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
