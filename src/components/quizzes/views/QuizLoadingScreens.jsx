@@ -142,9 +142,22 @@ export const BattleLobbyScreen = ({
   quizTitle, 
   onUserReady, 
   onLeave,
-  setPlayerPositions
+  setPlayerPositions,
+  gamePin,       
+  isHost,        
+  onStartBattle   
 }) => {
   const [playerPositions, setLocalPlayerPositions] = useState([]);
+  const [copySuccess, setCopySuccess] = useState(false); 
+
+  // Copy PIN function
+  const handleCopyPin = () => {
+    if (gamePin) {
+      navigator.clipboard.writeText(gamePin);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
+  };
 
   useEffect(() => {
     if (externalPositions && externalPositions.length > 0) {
@@ -336,16 +349,50 @@ export const BattleLobbyScreen = ({
           ))}
         </div>
 
-        <div className="absolute top-0 left-0 right-0 z-10 p-4 md:p-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-3xl md:text-4xl font-bold text-black mb-2 drop-shadow-lg">Quiz Battle Lobby</h1>
-            <p className="text-base md:text-lg text-black font-medium mb-3 md:mb-4">{quizTitle}</p>
-            
-            <div className="inline-flex items-center gap-3 px-4 md:px-6 py-2 md:py-3 bg-white bg-opacity-90 rounded-full shadow-lg">
-              <Users className="w-5 h-5 md:w-6 md:h-6 text-yellow-700" />
-              <span className="font-bold text-yellow-700 text-base md:text-lg">
-                {readyPlayers}/{totalPlayers} Ready
-              </span>
+        {/* Game PIN Display at Top */}
+        <div className="absolute top-4 left-0 right-0 z-10 px-4">
+          <div className="max-w-4xl mx-auto">
+            {/* Game PIN (For Host - Big Display) */}
+            {isHost && gamePin && (
+              <div className="bg-white bg-opacity-95 rounded-2xl shadow-2xl p-4 mb-4 text-center">
+                <p className="text-xs text-gray-600 mb-1 font-semibold">
+                  📍 Share this PIN:
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <div className="text-4xl md:text-5xl font-bold text-yellow-600 tracking-widest font-mono">
+                    {gamePin}
+                  </div>
+                  <button
+                    onClick={handleCopyPin}
+                    className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-all hover:scale-105 flex items-center gap-2 font-semibold shadow-lg text-sm"
+                  >
+                    {copySuccess ? '✓' : '📋'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Game PIN (For Players - Small Display) */}
+            {!isHost && gamePin && (
+              <div className="bg-white bg-opacity-90 rounded-xl shadow-lg p-2 mb-4 text-center">
+                <p className="text-xs text-gray-600">PIN:</p>
+                <div className="text-2xl font-bold text-yellow-600 tracking-widest font-mono">
+                  {gamePin}
+                </div>
+              </div>
+            )}
+
+            {/* Existing Header */}
+            <div className="text-center">
+              <h1 className="text-3xl md:text-4xl font-bold text-black mb-2 drop-shadow-lg">Quiz Battle Lobby</h1>
+              <p className="text-base md:text-lg text-black font-medium mb-3 md:mb-4">{quizTitle}</p>
+              
+              <div className="inline-flex items-center gap-3 px-4 md:px-6 py-2 md:py-3 bg-white bg-opacity-90 rounded-full shadow-lg">
+                <Users className="w-5 h-5 md:w-6 md:h-6 text-yellow-700" />
+                <span className="font-bold text-yellow-700 text-base md:text-lg">
+                  {readyPlayers}/{totalPlayers} Ready
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -393,7 +440,26 @@ export const BattleLobbyScreen = ({
 
         <div className="absolute bottom-0 left-0 right-0 z-30 p-4 md:p-6">
           <div className="max-w-4xl mx-auto text-center space-y-3 md:space-y-4">
-            {userPlayer && !userPlayer.isReady && (
+            {/* Host shows Start button */}
+            {isHost && onStartBattle && (
+              <button
+                onClick={onStartBattle}
+                disabled={totalPlayers < 2}
+                className={`px-8 md:px-12 py-4 md:py-5 rounded-2xl font-bold text-xl md:text-2xl transition-all shadow-2xl hover:scale-105 ${
+                  totalPlayers >= 2
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                }`}
+              >
+                {totalPlayers < 2 
+                  ? 'Waiting for players...' 
+                  : `🚀 Start Battle (${totalPlayers} players)`
+                }
+              </button>
+            )}
+
+            {/* Player shows Ready button */}
+            {!isHost && userPlayer && !userPlayer.isReady && (
               <button
                 onClick={onUserReady}
                 className="px-8 md:px-12 py-4 md:py-5 bg-green-500 text-white rounded-2xl font-bold text-xl md:text-2xl hover:bg-green-600 transition-all shadow-2xl hover:scale-105"

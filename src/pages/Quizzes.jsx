@@ -10,8 +10,8 @@ import { QuizModal, DeleteConfirmationModal } from '../components/quizzes/QuizMo
 import { useCountdown } from '../components/quizzes/hooks/useCountdown';
 import { useLobby } from '../components/quizzes/hooks/useLobby';
 import { createNewQuestion } from '../components/quizzes/utils/questionHelpers';
-import { initialQuizzes, initialQuestions } from '../components/quizzes/utils/mockData';
 import { VIEWS, COUNTDOWN_SECONDS } from '../components/quizzes/utils/constants';
+import { quizApi } from '../api/api'; 
 
 const styles = `
   @keyframes slideIn {
@@ -32,15 +32,23 @@ const styles = `
 `;
 
 function QuizzesPage() {
+  // ============================================
+  // STATE MANAGEMENT
+  // ============================================
+
+  // Loading and error states
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   // Grouped State
   const [quizData, setQuizData] = useState({
-    list: initialQuizzes,
+    list: [],
     selected: null,
     editing: null,
     draggedIndex: null
   });
 
-  const [questions, setQuestions] = useState(initialQuestions);
+  const [questions, setQuestions] = useState([]);
 
   const [uiState, setUiState] = useState({
     currentView: VIEWS.LIST,
@@ -77,7 +85,78 @@ function QuizzesPage() {
     setGameState(prev => ({ ...prev, ...updates }));
   };
 
-  // Countdown Complete Handler
+  // ============================================
+  // API CALLS
+  // ============================================
+
+  // Load quizzes from API on mount
+  useEffect(() => {
+    loadQuizzesFromAPI();
+  }, []);
+
+  const loadQuizzesFromAPI = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await quizApi.getAll();
+      const quizzes = response.data.quizzes;
+      
+      // Transform API data to match frontend format
+      const formattedQuizzes = quizzes.map(quiz => ({
+        id: quiz.quiz_id,
+        title: quiz.title,
+        description: quiz.description,
+        questionCount: quiz.total_questions || 0,
+        created: new Date(quiz.created_at).toLocaleDateString(),
+        isPublic: quiz.is_public,
+        creator: quiz.creator?.username || 'Unknown'
+      }));
+
+      updateQuizData({ list: formattedQuizzes });
+    } catch (err) {
+      console.error('Failed to load quizzes:', err);
+      setError(err.response?.data?.error || 'Failed to load quizzes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load quiz with questions from API
+  const loadQuizWithQuestions = async (quizId) => {
+    try {
+      setLoading(true);
+      
+      const response = await quizApi.getById(quizId);
+      const quizData = response.data;
+      
+      const formattedQuestions = quizData.questions.map(q => ({
+        id: q.question_id,
+        type: q.type,
+        question: q.question,
+        choices: q.choices,
+        correctAnswer: q.correct_answer,
+        answer: q.answer,
+        matchingPairs: q.matching_pairs
+      }));
+
+      return {
+        quiz: quizData.quiz,
+        questions: formattedQuestions
+      };
+    } catch (err) {
+      console.error('Failed to load quiz:', err);
+      setError(err.response?.data?.error || 'Failed to load quiz');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ============================================
+  // COUNTDOWN & NAVIGATION
+  // ============================================
+
   function handleCountdownComplete() {
     const targetView = uiState.currentView === VIEWS.LOADING 
       ? VIEWS.SOLO 
@@ -85,28 +164,9 @@ function QuizzesPage() {
     updateUiState({ currentView: targetView });
   }
 
-  // Quiz Selection Handlers
-  const handleQuizSelect = (quiz) => {
-    updateQuizData({ selected: quiz });
-    updateUiState({ showModal: true });
-  };
-
-  const handleCloseModal = () => {
-    updateUiState({ showModal: false });
-    updateQuizData({ selected: null });
-  };
-
-  const handleSoloQuiz = () => {
-    updateUiState({ showModal: false, currentView: VIEWS.LOADING });
-    countdown.start();
-  };
-
-  const handleQuizBattle = () => {
-    updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
-  };
-
   const handleBackToList = () => {
     updateQuizData({ selected: null, editing: null, draggedIndex: null });
+    setQuestions([]);
     updateUiState({
       currentView: VIEWS.LIST,
       showModal: false,
@@ -118,28 +178,138 @@ function QuizzesPage() {
     countdown.reset();
   };
 
-  // Quiz CRUD Handlers
-  const handleEditQuiz = (quiz) => {
-    updateQuizData({ editing: quiz });
-    updateUiState({ currentView: VIEWS.EDITING });
+  // ============================================
+  // QUIZ SELECTION HANDLERS
+  // ============================================
+
+  const handleQuizSelect = (quiz) => {
+    updateQuizData({ selected: quiz });
+    updateUiState({ showModal: true });
   };
 
-  const handleCreateQuiz = () => {
-    const newQuiz = {
-      id: quizData.list.length > 0 ? Math.max(...quizData.list.map(q => q.id)) + 1 : 1,
-      title: 'New Quiz',
-      questionCount: 0,
-      created: 'Created just now',
-      isPublic: false
-    };
+  const handleCloseModal = () => {
+    updateUiState({ showModal: false });
+    updateQuizData({ selected: null });
+  };
+
+  const handleSoloQuiz = async () => {
+    // Load questions before starting
+    const data = await loadQuizWithQuestions(quizData.selected.id);
+    if (data) {
+      setQuestions(data.questions);
+      updateUiState({ showModal: false, currentView: VIEWS.LOADING });
+      countdown.start();
+    }
+  };
+
+  const handleQuizBattle = async () => {
+  try {
+    setLoading(true);
     
-    setQuizData(prev => ({
-      ...prev,
-      list: [newQuiz, ...prev.list],
-      editing: newQuiz
-    }));
-    setQuestions([]);
-    updateUiState({ currentView: VIEWS.EDITING });
+    // Load questions
+    const data = await loadQuizWithQuestions(quizData.selected.id);
+    
+    if (data && data.questions) {
+      setQuestions(data.questions);
+      
+      // Create battle room
+      const response = await quizApi.createBattle(quizData.selected.id);
+      const { battle, gamePin } = response.data;
+      
+      console.log('✅ Battle created:', gamePin);
+      
+      // Store battle info
+      updateGameState({ 
+        gamePin,
+        battleId: battle.battle_id,
+        isHost: true
+      });
+      
+      updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
+    } else {
+      alert('Failed to load quiz questions');
+      updateUiState({ showModal: false });
+    }
+  } catch (err) {
+    console.error('Battle creation error:', err);
+    alert(err.response?.data?.error || 'Error creating battle');
+    updateUiState({ showModal: false });
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // Start battle handler
+  const handleStartBattle = async () => {
+    try {
+      setLoading(true);
+      
+      // Call API to start the battle
+      await quizApi.startBattle(gameState.gamePin);
+      
+      console.log('✅ Battle started by host!');
+      
+      // Transition to loading screen, then game starts
+      updateUiState({ currentView: VIEWS.LOADING_BATTLE });
+      countdown.start();
+      
+    } catch (err) {
+      console.error('Start battle error:', err);
+      alert(err.response?.data?.error || 'Failed to start battle');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ============================================
+  // QUIZ CRUD HANDLERS
+  // ============================================
+
+  const handleEditQuiz = async (quiz) => {
+    const data = await loadQuizWithQuestions(quiz.id);
+    if (data) {
+      updateQuizData({ editing: quiz });
+      setQuestions(data.questions);
+      updateUiState({ currentView: VIEWS.EDITING });
+    }
+  };
+
+  const handleCreateQuiz = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await quizApi.create({
+        title: 'New Quiz',
+        description: '',
+        is_public: false
+      });
+      
+      const newQuiz = response.data.quiz;
+
+      // Format for frontend
+      const formattedQuiz = {
+        id: newQuiz.quiz_id,
+        title: newQuiz.title,
+        description: newQuiz.description,
+        questionCount: 0,
+        created: 'Just now',
+        isPublic: newQuiz.is_public
+      };
+
+      // Reload quizzes to get updated list
+      await loadQuizzesFromAPI();
+      
+      // Set editing state
+      updateQuizData({ editing: formattedQuiz });
+      setQuestions([]);
+      updateUiState({ currentView: VIEWS.EDITING });
+      
+    } catch (err) {
+      console.error('Failed to create quiz:', err);
+      setError(err.response?.data?.error || 'Failed to create quiz');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteQuiz = (quiz) => {
@@ -147,30 +317,101 @@ function QuizzesPage() {
     updateUiState({ showDeleteModal: true });
   };
 
-  const handleConfirmDelete = () => {
-    updateQuizData({
-      list: quizData.list.filter(q => q.id !== deleteState.quizToDelete.id)
-    });
-    setDeleteState({ quizToDelete: null });
-    updateUiState({ showDeleteModal: false });
+  const handleConfirmDelete = async () => {
+    try {
+      setLoading(true);
+      
+      await quizApi.delete(deleteState.quizToDelete.id);
+      
+      // Reload quizzes
+      await loadQuizzesFromAPI();
+      
+      setDeleteState({ quizToDelete: null });
+      updateUiState({ showDeleteModal: false });
+      
+    } catch (err) {
+      console.error('Failed to delete quiz:', err);
+      setError(err.response?.data?.error || 'Failed to delete quiz');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpdateQuizTitle = (newTitle) => {
     if (quizData.editing) {
       const updatedQuiz = { ...quizData.editing, title: newTitle };
-      updateQuizData({ 
-        editing: updatedQuiz,
-        list: quizData.list.map(q => q.id === updatedQuiz.id ? updatedQuiz : q)
-      });
+      updateQuizData({ editing: updatedQuiz });
     }
   };
 
-  const handleSaveQuiz = () => {
-    console.log('Saving quiz:', quizData.editing.title, questions);
-    alert('Quiz saved successfully!');
+  const handleSaveQuiz = async () => {
+    try {
+      setLoading(true);
+
+      // Update quiz metadata
+      await quizApi.update(quizData.editing.id, {
+        title: quizData.editing.title,
+        description: quizData.editing.description || '',
+        is_public: quizData.editing.isPublic
+      });
+
+      // Get existing questions from server
+      const currentQuizResponse = await quizApi.getById(quizData.editing.id);
+      const existingQuestionIds = currentQuizResponse.data.questions.map(q => q.question_id);
+
+      // Process questions: add new, update existing, delete removed
+      const updatedQuestionIds = [];
+
+      for (let i = 0; i < questions.length; i++) {
+        const question = questions[i];
+        const questionData = {
+          type: question.type,
+          question: question.question,
+          question_order: i + 1,
+          choices: question.choices || null,
+          correct_answer: question.correctAnswer || null,
+          answer: question.answer || null,
+          matching_pairs: question.matchingPairs || null,
+          points: 1
+        };
+
+        if (question.id && existingQuestionIds.includes(question.id)) {
+          // Update existing question
+          await quizApi.updateQuestion(quizData.editing.id, question.id, questionData);
+          updatedQuestionIds.push(question.id);
+        } else {
+          // Add new question
+          const response = await quizApi.addQuestion(quizData.editing.id, questionData);
+          updatedQuestionIds.push(response.data.question.question_id);
+        }
+      }
+
+      // Delete removed questions
+      for (const existingId of existingQuestionIds) {
+        if (!updatedQuestionIds.includes(existingId)) {
+          await quizApi.deleteQuestion(quizData.editing.id, existingId);
+        }
+      }
+
+      // Reload quizzes
+      await loadQuizzesFromAPI();
+      
+      alert('Quiz saved successfully!');
+      handleBackToList();
+
+    } catch (err) {
+      console.error('Failed to save quiz:', err);
+      setError(err.response?.data?.error || 'Failed to save quiz');
+      alert('Failed to save quiz. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Question Handlers
+  // ============================================
+  // QUESTION HANDLERS
+  // ============================================
+
   const handleAddQuestion = () => {
     const newQuestion = createNewQuestion('Multiple Choice', questions);
     setQuestions([...questions, newQuestion]);
@@ -258,7 +499,10 @@ function QuizzesPage() {
     }));
   };
 
-  // Drag & Drop Handlers
+  // ============================================
+  // DRAG & DROP HANDLERS
+  // ============================================
+
   const handleDragStart = (e, index) => {
     updateQuizData({ draggedIndex: index });
     e.dataTransfer.effectAllowed = 'move';
@@ -284,10 +528,39 @@ function QuizzesPage() {
     }
   };
 
-  // Game Result Handlers
-  const handleShowSoloResults = (results) => {
-    updateGameState({ results });
-    updateUiState({ showResults: true });
+  // ============================================
+  // GAME RESULT HANDLERS
+  // ============================================
+
+  const handleShowSoloResults = async (results) => {
+    try {
+      // Submit attempt to backend
+      const response = await quizApi.submitAttempt(quizData.selected.id, {
+        score: results.score,
+        total_questions: results.totalQuestions,
+        time_spent: results.timeSpent,
+        answers: []
+      });
+
+      const attemptData = response.data;
+
+      // Update results with earned points/exp
+      updateGameState({
+        results: {
+          ...results,
+          points_earned: attemptData.points_earned,
+          exp_earned: attemptData.exp_earned
+        }
+      });
+
+      updateUiState({ showResults: true });
+      
+    } catch (err) {
+      console.error('Failed to submit attempt:', err);
+      // Still show results even if submission fails
+      updateGameState({ results });
+      updateUiState({ showResults: true });
+    }
   };
 
   const handleCloseSoloResults = () => {
@@ -311,6 +584,10 @@ function QuizzesPage() {
     updateGameState({ results: null });
     handleBackToList();
   };
+
+  // ============================================
+  // EFFECTS
+  // ============================================
 
   // Hide navbar for game views
   useEffect(() => {
@@ -336,7 +613,47 @@ function QuizzesPage() {
     }
   }, [lobby.allReady, uiState.currentView]);
 
+  // ============================================
+  // RENDER: Loading State
+  // ============================================
+
+  if (loading && uiState.currentView === VIEWS.LIST) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading quizzes...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================
+  // RENDER: Error State
+  // ============================================
+
+  if (error && uiState.currentView === VIEWS.LIST) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
+          <div className="text-red-600 text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={loadQuizzesFromAPI}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================
   // RENDER: Loading Screens
+  // ============================================
+
   if (uiState.currentView === VIEWS.LOADING || uiState.currentView === VIEWS.LOADING_BATTLE) {
     return <SoloLoadingScreen countdown={countdown.countdown} quizTitle={quizData.selected?.title} />;
   }
@@ -347,14 +664,20 @@ function QuizzesPage() {
         lobbyPlayers={lobby.players}
         playerPositions={lobby.playerPositions}
         quizTitle={quizData.selected?.title}
+        gamePin={gameState.gamePin} 
+        isHost={gameState.isHost}             
         onUserReady={lobby.markUserReady}
         onLeave={handleBackToList}
+        onStartBattle={handleStartBattle}     
         setPlayerPositions={lobby.setPlayerPositions}
       />
     );
   }
 
+  // ============================================
   // RENDER: Solo Game
+  // ============================================
+
   if (uiState.currentView === VIEWS.SOLO && quizData.selected) {
     return (
       <>
@@ -377,7 +700,10 @@ function QuizzesPage() {
     );
   }
 
+  // ============================================
   // RENDER: Battle Game
+  // ============================================
+
   if (uiState.currentView === VIEWS.BATTLE && quizData.selected) {
     return (
       <>
@@ -398,7 +724,10 @@ function QuizzesPage() {
     );
   }
 
+  // ============================================
   // RENDER: Editor
+  // ============================================
+
   if (uiState.currentView === VIEWS.EDITING && quizData.editing) {
     return (
       <>
@@ -422,7 +751,10 @@ function QuizzesPage() {
     );
   }
 
+  // ============================================
   // RENDER: List View (Default)
+  // ============================================
+
   return (
     <>
       <style>{styles}</style>

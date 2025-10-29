@@ -314,7 +314,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
           <p className="text-gray-600">Drag items from one column and drop them on matching items in the other column</p>
         ) : (
 <>
-            {/* UPDATED: Compact Minimalist Score Card */}
+            {/* Score Card */}
             <div className={`relative overflow-hidden rounded-xl shadow-lg mb-6 bg-gradient-to-r ${getGradientColors()}`}>
               <div className="absolute inset-0 bg-white opacity-10"></div>
               <div className="relative px-6 py-5 text-white">

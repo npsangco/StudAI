@@ -18,6 +18,11 @@ import User from "./models/User.js";
 import File from "./models/File.js";
 import sessionStore from "./sessionStore.js";
 import Plan from "./models/Plan.js";
+import Quiz from "./models/Quiz.js";
+import Question from "./models/Question.js";
+import QuizAttempt from "./models/QuizAttempt.js";
+import QuizBattle from "./models/QuizBattle.js";
+import BattleParticipant from "./models/BattleParticipant.js";
 
 // Import Note model after creating it
 let Note;
@@ -37,9 +42,10 @@ import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-//pet companion route
+// Import routes
 import petRoutes from "./routes/petRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
+import quizRoutes from "./routes/quizRoutes.js"; 
 import SharedNote from "./models/SharedNote.js";
 import planRoutes from "./routes/planRoutes.js";
 
@@ -59,6 +65,39 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
+// ============================================
+// MODEL ASSOCIATIONS (MUST BE HERE, BEFORE sequelize.authenticate)
+// ============================================
+
+Quiz.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
+User.hasMany(Quiz, { foreignKey: 'created_by', as: 'quizzes' });
+
+Quiz.hasMany(Question, { foreignKey: 'quiz_id', as: 'questions' });
+Question.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
+
+QuizAttempt.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasMany(QuizAttempt, { foreignKey: 'user_id', as: 'attempts' });
+
+QuizAttempt.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
+Quiz.hasMany(QuizAttempt, { foreignKey: 'quiz_id', as: 'attempts' });
+
+// QuizBattle associations
+QuizBattle.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
+Quiz.hasMany(QuizBattle, { foreignKey: 'quiz_id', as: 'battles' });
+
+QuizBattle.belongsTo(User, { foreignKey: 'host_id', as: 'host' });
+User.hasMany(QuizBattle, { foreignKey: 'host_id', as: 'hosted_battles' });
+
+QuizBattle.belongsTo(User, { foreignKey: 'winner_id', as: 'winner' });
+User.hasMany(QuizBattle, { foreignKey: 'winner_id', as: 'won_battles' });
+
+// BattleParticipant associations
+BattleParticipant.belongsTo(QuizBattle, { foreignKey: 'battle_id', as: 'battle' });
+QuizBattle.hasMany(BattleParticipant, { foreignKey: 'battle_id', as: 'participants' });
+
+BattleParticipant.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasMany(BattleParticipant, { foreignKey: 'user_id', as: 'battle_participations' });
+
 // ----------------- DB Connection -----------------
 sequelize.authenticate()
     .then(() => {
@@ -68,7 +107,12 @@ sequelize.authenticate()
             File.sync({ force: false }),
             Note ? Note.sync({ force: false }) : Promise.resolve(),
             SharedNote.sync({ force: false }),
-            Plan.sync({ force: false })
+            Plan.sync({ force: false }),
+            Quiz.sync({ force: false }),
+            Question.sync({ force: false }),
+            QuizAttempt.sync({ force: false }),
+            QuizBattle.sync({ force: false }),
+            BattleParticipant.sync({ force: false })
         ]);
     })
     .then(() => {
@@ -758,6 +802,8 @@ app.use("/api/pet", petRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/plans", planRoutes);
 
+// ----------------- QUIZ SYSTEM ROUTES -----------------
+app.use("/api/quizzes", quizRoutes);
 
 // ----------------- START SERVER -----------------
 const PORT = process.env.PORT || 4000;
