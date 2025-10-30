@@ -50,6 +50,18 @@ const User = sequelize.define('User', {
         type: DataTypes.DATE,
         allowNull: true,
         defaultValue: DataTypes.NOW,
+    },
+    study_streak: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    last_activity_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
+    },
+    longest_streak: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
     }
 }, {
     tableName: 'users',

@@ -137,14 +137,6 @@ export default function Navigation() {
                   </Link>
                 </MenuItem>
                 <MenuItem>
-                  <Link
-                    to="/settings"
-                    className="block px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:outline-hidden"
-                  >
-                    Settings
-                  </Link>
-                </MenuItem>
-                <MenuItem>
                   <button
                     onClick={handleLogout}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:outline-hidden"

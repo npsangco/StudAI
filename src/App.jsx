@@ -39,6 +39,7 @@ function App() {
   const noNavRoutes = ['/login', '/signup'];
   const shouldHideNav = noNavRoutes.includes(location.pathname);
 
+
   // Routes that should have landing navigation
   const landingRoutes = ['/', '/create'];
   const isLandingPage = landingRoutes.includes(location.pathname);

@@ -23,6 +23,14 @@ const Note = sequelize.define('Note', {
       key: 'user_id'
     }
   },
+  category_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'note_category',
+      key: 'category_id'
+    }
+  },
   title: {
     type: DataTypes.STRING(255),
     allowNull: false
@@ -40,7 +48,8 @@ const Note = sequelize.define('Note', {
   tableName: 'note',
   timestamps: true,
   createdAt: 'createdAt',
-  updatedAt: false  // Since you only have createdAt
+  updatedAt: false
 });
 
+// Don't define associations here!
 export default Note;

@@ -140,6 +140,9 @@ export const quizApi = {
   // Get user's attempts for a quiz
   getAttempts: (quizId) => api.get(`/quizzes/${quizId}/attempts`),
   
+  // Get ALL user's quiz attempts (for dashboard stats)
+  getAllAttempts: () => api.get('/quiz-attempts'),
+  
   // Get quiz leaderboard
   getLeaderboard: (quizId) => api.get(`/quizzes/${quizId}/leaderboard`),
 

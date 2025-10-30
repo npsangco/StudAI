@@ -1,20 +1,57 @@
-// PetBuddy.jsx
+// PetBuddy.jsx - With Auto-Dismiss Alerts
 import { useState, useEffect, useCallback } from "react";
 import { petApi } from "../api/api";
+import { X } from "lucide-react";
 import PetShop from "./PetShop";
 import PetInventory from "./PetInventory";
+
+// Alert
+const Alert = ({ message, onDismiss }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onDismiss();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onDismiss]);
+
+  return (
+    <div className="fixed top-4 right-4 z-[60] animate-slide-in">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 shadow-lg flex items-center gap-3 max-w-sm">
+        <div className="flex-1">
+          <p className="text-sm text-blue-800">{message}</p>
+        </div>
+        <button
+          onClick={onDismiss}
+          className="text-blue-600 hover:text-blue-800 transition-colors flex-shrink-0"
+        >
+          <X size={16} />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default function PetBuddy() {
   const [pet, setPet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState("pet");
   const [actionLoading, setActionLoading] = useState(null);
+  const [alerts, setAlerts] = useState([]);
   
   // Adoption states
   const [choosePet, setChoosePet] = useState(false);
   const [namingPet, setNamingPet] = useState(false);
   const [selectedPetType, setSelectedPetType] = useState(null);
   const [petName, setPetName] = useState("");
+
+  const addAlert = (message) => {
+    const id = Date.now();
+    setAlerts(prev => [...prev, { id, message }]);
+  };
+
+  const removeAlert = (id) => {
+    setAlerts(prev => prev.filter(alert => alert.id !== id));
+  };
 
   // Load user pet
   const loadPet = useCallback(async () => {
@@ -38,72 +75,17 @@ export default function PetBuddy() {
     loadPet();
   }, [loadPet]);
 
-  // Smart auto-refresh - only stats, not the whole UI
+  // Smart auto-refresh
   useEffect(() => {
     if (!pet) return;
 
-    const getNextRefreshTime = () => {
-      const now = new Date();
-      const decayIntervals = {
-        hunger: 1,      // minutes
-        happiness: 1,   // minutes  
-        cleanliness: 1, // minutes
-        energy: 10      // seconds
-      };
-
-      const nextRefreshTimes = [];
-      
-      // Check when next decay might happen for each stat
-      if (pet.last_fed) {
-        const lastFed = new Date(pet.last_fed);
-        const nextHungerDecay = new Date(lastFed.getTime() + decayIntervals.hunger * 60 * 1000);
-        if (nextHungerDecay > now) {
-          nextRefreshTimes.push(nextHungerDecay.getTime());
-        }
-      }
-
-      if (pet.last_played) {
-        const lastPlayed = new Date(pet.last_played);
-        const nextHappinessDecay = new Date(lastPlayed.getTime() + decayIntervals.happiness * 60 * 1000);
-        if (nextHappinessDecay > now) {
-          nextRefreshTimes.push(nextHappinessDecay.getTime());
-        }
-      }
-
-      if (pet.last_cleaned) {
-        const lastCleaned = new Date(pet.last_cleaned);
-        const nextCleanlinessDecay = new Date(lastCleaned.getTime() + decayIntervals.cleanliness * 60 * 1000);
-        if (nextCleanlinessDecay > now) {
-          nextRefreshTimes.push(nextCleanlinessDecay.getTime());
-        }
-      }
-
-      // Check energy replenish
-      if (pet.last_updated) {
-        const lastUpdated = new Date(pet.last_updated);
-        const nextEnergyReplenish = new Date(lastUpdated.getTime() + decayIntervals.energy * 1000);
-        if (nextEnergyReplenish > now) {
-          nextRefreshTimes.push(nextEnergyReplenish.getTime());
-        }
-      }
-
-      // Return the earliest time, or default to 30 seconds
-      return nextRefreshTimes.length > 0 
-        ? Math.min(...nextRefreshTimes) 
-        : now.getTime() + 30000;
-    };
-
-    const nextRefresh = getNextRefreshTime();
-    const timeUntilRefresh = Math.max(nextRefresh - new Date().getTime(), 5000);
-
     const timeout = setTimeout(() => {
       refreshPetStats();
-    }, timeUntilRefresh);
+    }, 30000); // Refresh every 30 seconds
 
     return () => clearTimeout(timeout);
   }, [pet]);
 
-  // Function to only refresh pet stats
   const refreshPetStats = async () => {
     try {
       const res = await petApi.getPet();
@@ -127,7 +109,6 @@ export default function PetBuddy() {
     }
   };
 
-  // Handle pet type selection
   const handlePetSelection = (type) => {
     setSelectedPetType(type);
     setPetName(type === "Dog" ? "Doggo" : "Kitty");
@@ -135,10 +116,10 @@ export default function PetBuddy() {
     setNamingPet(true);
   };
 
-  // Adopt pet with name
   const createPet = async () => {
     if (!petName.trim()) {
-      alert("Please enter a name for your pet!");
+      setAlerts([]); 
+      addAlert("Please enter a name for your pet!");
       return;
     }
 
@@ -147,14 +128,16 @@ export default function PetBuddy() {
         petType: selectedPetType,
         petName: petName.trim(),
       });
-      alert(`You have adopted ${petName.trim()}! 🐾`);
+      setAlerts([]); 
+      addAlert(`You have adopted ${petName.trim()}! 🐾`);
       setPet(res.data);
       setNamingPet(false);
       setSelectedPetType(null);
       setPetName("");
     } catch (err) {
+      setAlerts([]); 
       const message = err.response?.data?.error || "Failed to adopt pet.";
-      alert(message);
+      addAlert(message);
       if (message.includes("already")) {
         setNamingPet(false);
         setChoosePet(false);
@@ -168,22 +151,24 @@ export default function PetBuddy() {
   // Update pet name
   const updatePetName = async (newName) => {
     if (!newName.trim()) {
-      alert("Please enter a name for your pet!");
+      setAlerts([]); 
+      addAlert("Please enter a name for your pet!");
       return false;
     }
 
     try {
       const res = await petApi.updateName(newName.trim());
       setPet(res.data);
-      alert(`Pet name updated to ${newName.trim()}!`);
+      setAlerts([]); 
+      addAlert(`Pet name updated to ${newName.trim()}!`);
       return true;
     } catch (err) {
-      alert("Failed to update pet name.", err);
+      setAlerts([]); 
+      addAlert("Failed to update pet name.", err);
       return false;
     }
   };
 
-  // Pet actions
   const handleAction = async (type) => {
     const statMap = {
       feed: "hunger_level",
@@ -195,23 +180,28 @@ export default function PetBuddy() {
     const currentValue = pet?.[statKey];
 
     if (currentValue !== undefined && currentValue >= 100) {
-      console.log(`⚠️ ${type} skipped — ${statKey} is already maxed.`);
       return;
     }
 
     setActionLoading(type);
     try {
-      const res = await petApi.doAction({
-        actionType: type,
-      });
-
+      setAlerts([]); 
+      const res = await petApi.doAction({ actionType: type });
       setPet(res.data);
+      
+      // Show success message based on action type
+      const actionMessages = {
+        feed: "Fed your pet! 🍖",
+        play: "Played with your pet! 🎾",
+        clean: "Cleaned your pet! 🧼"
+      };
+      addAlert(actionMessages[type]);
+      
     } catch (err) {
+      setAlerts([]); 
       console.error("Action failed:", err);
       const errorMsg = err.response?.data?.error || "Action failed!";
-      if (errorMsg.includes("No") && errorMsg.includes("equipped")) {
-        setActiveView("shop");
-      }
+      addAlert(errorMsg);
     } finally {
       setActionLoading(null);
     }
@@ -224,38 +214,102 @@ export default function PetBuddy() {
 
   if (loading) {
     return (
-      <div className="p-6 bg-white rounded-3xl shadow-lg w-full max-w-4xl mx-auto max-h-[90vh] overflow-y-auto">
-        <p>Loading pet...</p>
+      <div className="p-4 text-center">
+        <p className="text-sm text-gray-600">Loading pet...</p>
+        <style jsx>{`
+          @keyframes slide-in {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+          .animate-slide-in {
+            animation: slide-in 0.3s ease-out;
+          }
+        `}</style>
       </div>
     );
   }
 
   if (choosePet) {
-    return <PetSelection onSelectPet={handlePetSelection} />;
+    return (
+      <>
+        {alerts.map(alert => (
+          <Alert 
+            key={alert.id} 
+            message={alert.message} 
+            onDismiss={() => removeAlert(alert.id)}
+          />
+        ))}
+        <CompactPetSelection onSelectPet={handlePetSelection} />
+        <style jsx>{`
+          @keyframes slide-in {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+          .animate-slide-in {
+            animation: slide-in 0.3s ease-out;
+          }
+        `}</style>
+      </>
+    );
   }
 
   if (namingPet) {
     return (
-      <PetNaming
-        selectedPetType={selectedPetType}
-        petName={petName}
-        onNameChange={setPetName}
-        onCreate={createPet}
-        onBack={() => {
-          setNamingPet(false);
-          setChoosePet(true);
-        }}
-      />
+      <>
+        {alerts.map(alert => (
+          <Alert 
+            key={alert.id} 
+            message={alert.message} 
+            onDismiss={() => removeAlert(alert.id)}
+          />
+        ))}
+        <CompactPetNaming
+          selectedPetType={selectedPetType}
+          petName={petName}
+          onNameChange={setPetName}
+          onCreate={createPet}
+          onBack={() => {
+            setNamingPet(false);
+            setChoosePet(true);
+          }}
+        />
+        <style jsx>{`
+          @keyframes slide-in {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+          .animate-slide-in {
+            animation: slide-in 0.3s ease-out;
+          }
+        `}</style>
+      </>
     );
   }
 
   if (!pet) return (
-    <div className="p-8 bg-white rounded-3xl shadow-lg text-center w-full max-w-md mx-auto">
-      <p>No pet data found.</p>
+    <div className="p-4 text-center">
+      <p className="text-sm text-gray-600">No pet data found.</p>
     </div>
   );
 
-  // Show different views
   if (activeView === "shop") {
     return <PetShop onClose={() => setActiveView("pet")} />;
   }
@@ -269,85 +323,103 @@ export default function PetBuddy() {
     );
   }
 
-  // Main Pet View
+  // Compact Main Pet View
   return (
-    <div className="p-6 bg-white rounded-3xl shadow-lg w-full max-w-4xl mx-auto max-h-[90vh] overflow-y-auto">
-      <PetHeader 
+    <div>
+      {alerts.map(alert => (
+        <Alert 
+          key={alert.id} 
+          message={alert.message} 
+          onDismiss={() => removeAlert(alert.id)}
+        />
+      ))}
+      
+      <CompactPetHeader 
         pet={pet} 
         onUpdateName={updatePetName}
         onShop={() => setActiveView("shop")}
         onInventory={() => setActiveView("inventory")}
       />
       
-      <PetImage pet={pet} />
+      <CompactPetImage pet={pet} />
 
-      <PetStats pet={pet} onRefresh={refreshPetStats} />
+      <CompactPetStats pet={pet} />
       
-      <PetActions 
+      <CompactPetActions 
         onAction={handleAction}
         actionLoading={actionLoading}
       />
+
+      <style jsx>{`
+        @keyframes slide-in {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
 
-// Extracted Components
-const PetSelection = ({ onSelectPet }) => (
-  <div className="p-8 bg-white rounded-3xl shadow-lg text-center w-full max-w-2xl mx-auto">
-    <h2 className="text-2xl font-bold mb-4 text-gray-800">Choose your Pet Companion 🐾</h2>
-    <p className="text-sm text-gray-500 mb-6">This choice is permanent! Choose wisely.</p>
-    <div className="flex justify-center gap-8">
+// Compact Components for Dashboard
+const CompactPetSelection = ({ onSelectPet }) => (
+  <div className="text-center">
+    <h3 className="text-lg font-bold mb-2 text-gray-800">Choose Pet 🐾</h3>
+    <p className="text-xs text-gray-500 mb-4">This choice is permanent!</p>
+    <div className="grid grid-cols-2 gap-3">
       <button
         onClick={() => onSelectPet("Dog")}
-        className="flex flex-col items-center p-6 rounded-2xl border-2 border-transparent hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 group"
+        className="flex flex-col items-center p-3 rounded-xl border-2 border-transparent hover:border-blue-400 hover:bg-blue-50 transition-all"
       >
-        <span className="text-6xl group-hover:scale-110 transition-transform mb-3">🐶</span>
-        <span className="font-semibold text-gray-700">Dog</span>
-        <p className="text-xs text-gray-500 mt-2 max-w-[120px]">Loyal, energetic, and always hungry!</p>
+        <span className="text-4xl mb-1">🐶</span>
+        <span className="text-sm font-semibold text-gray-700">Dog</span>
       </button>
       <button
         onClick={() => onSelectPet("Cat")}
-        className="flex flex-col items-center p-6 rounded-2xl border-2 border-transparent hover:border-purple-400 hover:bg-purple-50 transition-all duration-300 group"
+        className="flex flex-col items-center p-3 rounded-xl border-2 border-transparent hover:border-purple-400 hover:bg-purple-50 transition-all"
       >
-        <span className="text-6xl group-hover:scale-110 transition-transform mb-3">🐱</span>
-        <span className="font-semibold text-gray-700">Cat</span>
-        <p className="text-xs text-gray-500 mt-2 max-w-[120px]">Independent, clean, and loves to play!</p>
+        <span className="text-4xl mb-1">🐱</span>
+        <span className="text-sm font-semibold text-gray-700">Cat</span>
       </button>
     </div>
   </div>
 );
 
-const PetNaming = ({ selectedPetType, petName, onNameChange, onCreate, onBack }) => (
-  <div className="p-8 bg-white rounded-3xl shadow-lg text-center w-full max-w-md mx-auto">
-    <div className="text-6xl mb-4">
+const CompactPetNaming = ({ selectedPetType, petName, onNameChange, onCreate, onBack }) => (
+  <div className="text-center">
+    <div className="text-5xl mb-3">
       {selectedPetType === "Dog" ? "🐶" : "🐱"}
     </div>
-    <h2 className="text-2xl font-bold mb-2 text-gray-800">Name your {selectedPetType}!</h2>
-    <p className="text-sm text-gray-500 mb-6">Give your new friend a wonderful name</p>
+    <h3 className="text-lg font-bold mb-2 text-gray-800">Name your {selectedPetType}!</h3>
     
-    <div className="mb-6">
-      <input
-        type="text"
-        value={petName}
-        onChange={(e) => onNameChange(e.target.value)}
-        placeholder={`Enter ${selectedPetType} name...`}
-        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-        maxLength={20}
-        autoFocus
-      />
-      <p className="text-xs text-gray-400 mt-2 text-right">{petName.length}/20 characters</p>
-    </div>
+    <input
+      type="text"
+      value={petName}
+      onChange={(e) => onNameChange(e.target.value)}
+      placeholder={`Enter name...`}
+      className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm mb-3"
+      maxLength={20}
+      autoFocus
+    />
     
-    <div className="flex gap-3">
+    <div className="grid grid-cols-2 gap-2">
       <button
         onClick={onBack}
-        className="flex-1 py-3 px-4 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-colors"
+        className="py-2 px-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
       >
         ← Back
       </button>
       <button
         onClick={onCreate}
-        className="flex-1 py-3 px-4 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors font-semibold"
+        className="py-2 px-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-semibold text-sm"
       >
         Adopt!
       </button>
@@ -355,32 +427,7 @@ const PetNaming = ({ selectedPetType, petName, onNameChange, onCreate, onBack })
   </div>
 );
 
-const Navigation = ({ onShop, onInventory }) => (
-  <div className="flex gap-2">
-    <button
-      onClick={onShop}
-      className="bg-yellow-500 text-white p-2 rounded-lg hover:bg-yellow-600 transition-colors group relative"
-      title="Shop"
-    >
-      <span className="text-xl">🛒</span>
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-        Shop
-      </span>
-    </button>
-    <button
-      onClick={onInventory}
-      className="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors group relative"
-      title="Inventory"
-    >
-      <span className="text-xl">🎒</span>
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-        Inventory
-      </span>
-    </button>
-  </div>
-);
-
-const PetHeader = ({ pet, onUpdateName, onShop, onInventory }) => {
+const CompactPetHeader = ({ pet, onUpdateName, onShop, onInventory }) => {
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(pet.pet_name);
 
@@ -392,91 +439,79 @@ const PetHeader = ({ pet, onUpdateName, onShop, onInventory }) => {
   const handleCancel = () => {
     setTempName(pet.pet_name);
     setEditingName(false);
-};
+  };
 
-return (
-    <div className="relative flex items-center justify-center mb-4">
-      {/* Centered Name */}
-      <div className="text-center">
-        {editingName ? (
-          <div className="flex items-center justify-center gap-2">
-            <input
-              type="text"
-              value={tempName}
-              onChange={(e) => setTempName(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded-lg text-xl font-bold text-center w-32"
-              autoFocus
-              maxLength={20}
-            />
-            <button
-              onClick={handleSave}
-              className="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 text-sm"
-            >
-              ✓
-            </button>
-            <button
-              onClick={handleCancel}
-              className="bg-gray-500 text-white px-3 py-1 rounded-lg hover:bg-gray-600 text-sm"
-            >
-              ✗
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center gap-2">
-            <h2 className="font-bold text-xl">{pet.pet_name}</h2>
+  return (
+    <div className="flex items-center justify-between mb-3">
+      {editingName ? (
+        <div className="flex items-center gap-1 flex-1">
+          <input
+            type="text"
+            value={tempName}
+            onChange={(e) => setTempName(e.target.value)}
+            className="px-2 py-1 border border-gray-300 rounded text-sm font-bold flex-1 min-w-0"
+            autoFocus
+            maxLength={20}
+          />
+          <button
+            onClick={handleSave}
+            className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 text-xs"
+          >
+            ✓
+          </button>
+          <button
+            onClick={handleCancel}
+            className="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600 text-xs"
+          >
+            ✗
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            <h3 className="font-bold text-base truncate">{pet.pet_name}</h3>
             <button
               onClick={() => {
                 setTempName(pet.pet_name);
                 setEditingName(true);
               }}
-              className="text-gray-400 hover:text-blue-500 transition-colors text-sm"
-              title="Edit name"
+              className="text-gray-400 hover:text-blue-500 transition-colors text-xs flex-shrink-0"
             >
               ✏️
             </button>
           </div>
-        )}
-      </div>
-
-      {/* Shop + Inventory Buttons on the Right */}
-      <div className="absolute right-0 flex gap-2">
-        <button
-          onClick={onShop}
-          className="bg-yellow-500 text-white p-2 rounded-lg hover:bg-yellow-600 transition-colors"
-          title="Shop"
-        >
-          🛒
-        </button>
-        <button
-          onClick={onInventory}
-          className="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors"
-          title="Inventory"
-        >
-          🎒
-        </button>
-      </div>
+          <div className="flex gap-1 flex-shrink-0">
+            <button
+              onClick={onShop}
+              className="bg-yellow-500 text-white p-1.5 rounded-lg hover:bg-yellow-600 transition-colors text-sm"
+            >
+              🛒
+            </button>
+            <button
+              onClick={onInventory}
+              className="bg-green-500 text-white p-1.5 rounded-lg hover:bg-green-600 transition-colors text-sm"
+            >
+              🎒
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
-const PetImage = ({ pet }) => (
-  <img 
-    src={pet.pet_type === "Dog" ? "/dog.gif" : "/cat.gif"} 
-    alt={pet.pet_type}
-    className="w-48 h-48 mx-auto p-4"
-    loading="lazy"
-  />
+const CompactPetImage = ({ pet }) => (
+  <div className="flex justify-center mb-3">
+    <img 
+      src={pet.pet_type === "Dog" ? "/dog.gif" : "/cat.gif"} 
+      alt={pet.pet_type}
+      className="w-32 h-32 sm:w-40 sm:h-40 object-contain"
+      loading="lazy"
+    />
+  </div>
 );
 
-// Updated PetStats component with its own refresh logic
-const PetStats = ({ pet }) => {
-  const [localPet, setLocalPet] = useState(pet);
-  
-  // Update local pet when prop changes
-  useEffect(() => {
-    setLocalPet(pet);
-  }, [pet]);
-
+const CompactPetStats = ({ pet }) => {
   const getStatColor = (value) => {
     if (value >= 70) return "from-green-400 to-green-600";
     if (value >= 40) return "from-yellow-400 to-yellow-600";
@@ -484,24 +519,32 @@ const PetStats = ({ pet }) => {
     return "from-red-400 to-red-600";
   };
 
-  const expNeeded = Math.floor(100 * Math.pow(1.1, localPet.level - 1));
-  const expPercent = (localPet.experience_points / expNeeded) * 100;
+  const expNeeded = Math.floor(100 * Math.pow(1.1, pet.level - 1));
+  const expPercent = (pet.experience_points / expNeeded) * 100;
+
+  const stats = [
+    { key: "hunger", label: "Hunger", icon: "🍖" },
+    { key: "happiness", label: "Happy", icon: "😊" },
+    { key: "cleanliness", label: "Clean", icon: "🧼" },
+    { key: "energy", label: "Energy", icon: "⚡" }
+  ];
 
   return (
-    <div className="mt-4 space-y-3">
-      {["hunger", "happiness", "cleanliness", "energy"].map((stat) => {
-        const value = localPet[`${stat}_level`];
+    <div className="space-y-2 mb-4">
+      {stats.map(({ key, label, icon }) => {
+        const value = pet[`${key}_level`];
         return (
-          <div key={stat}>
-            <div className="flex justify-between text-sm">
-              <span className="capitalize">{stat}</span>
-              <span className={value < 20 ? "text-red-600 font-bold" : ""}>
-                {value}%
+          <div key={key}>
+            <div className="flex justify-between text-xs mb-1">
+              <span className="flex items-center gap-1">
+                <span>{icon}</span>
+                <span>{label}</span>
               </span>
+              <span className={value < 20 ? "text-red-600 font-bold" : ""}>{value}%</span>
             </div>
-            <div className="w-full bg-gray-200 h-3 rounded-full">
+            <div className="w-full bg-gray-200 h-2 rounded-full">
               <div
-                className={`h-3 rounded-full bg-gradient-to-r ${getStatColor(value)}`}
+                className={`h-2 rounded-full bg-gradient-to-r ${getStatColor(value)} transition-all duration-300`}
                 style={{ width: `${value}%` }}
               ></div>
             </div>
@@ -509,23 +552,26 @@ const PetStats = ({ pet }) => {
         );
       })}
 
-      {/* Exp Bar */}
-      <div>
-        <p className="text-sm">EXP: {localPet.experience_points}/{expNeeded}</p>
-        <div className="w-full bg-gray-200 h-3 rounded-full">
+      {/* Compact EXP Bar */}
+      <div className="pt-2 border-t border-gray-200">
+        <div className="flex justify-between text-xs mb-1">
+          <span>Level {pet.level}</span>
+          <span className="text-gray-600">{pet.experience_points}/{expNeeded} XP</span>
+        </div>
+        <div className="w-full bg-gray-200 h-2 rounded-full">
           <div
-            className="h-3 rounded-full bg-gradient-to-r from-green-400 to-green-600"
+            className="h-2 rounded-full bg-gradient-to-r from-purple-400 to-purple-600 transition-all duration-300"
             style={{ width: `${expPercent}%` }}
           ></div>
         </div>
       </div>
 
       {/* Low Stat Warning */}
-      {(localPet.hunger_level < 20 || localPet.happiness_level < 20 || 
-        localPet.cleanliness_level < 20 || localPet.energy_level < 20) && (
-        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-red-600 text-sm font-medium">
-            ⚠️ Your pet needs attention!
+      {(pet.hunger_level < 20 || pet.happiness_level < 20 || 
+        pet.cleanliness_level < 20 || pet.energy_level < 20) && (
+        <div className="mt-2 bg-red-50 border border-red-200 rounded-lg p-2">
+          <p className="text-red-600 text-xs font-medium">
+            ⚠️ Needs attention!
           </p>
         </div>
       )}
@@ -533,12 +579,12 @@ const PetStats = ({ pet }) => {
   );
 };
 
-const PetActions = ({ onAction, actionLoading }) => (
-  <div className="grid grid-cols-3 gap-3 mt-6">
+const CompactPetActions = ({ onAction, actionLoading }) => (
+  <div className="grid grid-cols-3 gap-2">
     <button
       onClick={() => onAction("feed")}
       disabled={actionLoading !== null}
-      className={`bg-green-500 text-white py-2 rounded-lg transition-all ${
+      className={`bg-green-500 text-white py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
         actionLoading === "feed" 
           ? "opacity-50 cursor-wait" 
           : actionLoading 
@@ -546,12 +592,12 @@ const PetActions = ({ onAction, actionLoading }) => (
             : "hover:bg-green-600"
       }`}
     >
-      {actionLoading === "feed" ? "Feeding..." : "Feed"}
+      {actionLoading === "feed" ? "..." : "Feed"}
     </button>
     <button
       onClick={() => onAction("play")}
       disabled={actionLoading !== null}
-      className={`bg-yellow-500 text-white py-2 rounded-lg transition-all ${
+      className={`bg-yellow-500 text-white py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
         actionLoading === "play" 
           ? "opacity-50 cursor-wait" 
           : actionLoading 
@@ -559,12 +605,12 @@ const PetActions = ({ onAction, actionLoading }) => (
             : "hover:bg-yellow-600"
       }`}
     >
-      {actionLoading === "play" ? "Playing..." : "Play"}
+      {actionLoading === "play" ? "..." : "Play"}
     </button>
     <button
       onClick={() => onAction("clean")}
       disabled={actionLoading !== null}
-      className={`bg-blue-500 text-white py-2 rounded-lg transition-all ${
+      className={`bg-blue-500 text-white py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
         actionLoading === "clean" 
           ? "opacity-50 cursor-wait" 
           : actionLoading 
@@ -572,7 +618,7 @@ const PetActions = ({ onAction, actionLoading }) => (
             : "hover:bg-blue-600"
       }`}
     >
-      {actionLoading === "clean" ? "Cleaning..." : "Clean"}
+      {actionLoading === "clean" ? "..." : "Clean"}
     </button>
   </div>
 );

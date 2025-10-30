@@ -1,6 +1,7 @@
 import express from 'express';
 import Note from '../models/Note.js';
 import SharedNote from '../models/SharedNote.js';
+import NoteCategory from '../models/NoteCategory.js';
 
 const router = express.Router();
 
@@ -34,19 +35,87 @@ function generateShareCode() {
   return code;
 }
 
+// CATEGORY ROUTES
+// Get all categories for current user
+router.get('/categories', requireAuth, async (req, res) => {
+  try {
+    const categories = await NoteCategory.findAll({
+      where: { user_id: req.session.userId },
+      order: [['name', 'ASC']]
+    });
+
+    res.json({ categories });
+  } catch (err) {
+    console.error('Failed to fetch categories:', err);
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+// Create a new category
+router.post('/categories', requireAuth, async (req, res) => {
+  try {
+    const { name, color } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Category name is required' });
+    }
+
+    // Check if category already exists for this user
+    const existing = await NoteCategory.findOne({
+      where: { 
+        user_id: req.session.userId,
+        name: name.trim()
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: 'Category already exists' });
+    }
+
+    const category = await NoteCategory.create({
+      user_id: req.session.userId,
+      name: name.trim(),
+      color: color || '#3B82F6'
+    });
+
+    res.status(201).json({ category });
+  } catch (err) {
+    console.error('Failed to create category:', err);
+    res.status(500).json({ error: 'Failed to create category' });
+  }
+});
+
 // NOTES ROUTES
 // Get all notes for current user
 router.get('/', requireAuth, async (req, res) => {
   try {
     const notes = await Note.findAll({
       where: { user_id: req.session.userId },
+      include: [{
+        model: NoteCategory,
+        as: 'category',
+        attributes: ['category_id', 'name', 'color'],
+        required: false
+      }],
       order: [
         ['is_pinned', 'DESC'], // pinned notes first
         ['createdAt', 'DESC']  // then by creation date
       ]
     });
 
-    const notesWithExtras = notes.map(formatNoteForFrontend);
+    const notesWithExtras = notes.map(note => {
+      const formatted = formatNoteForFrontend(note);
+      // Add category info if exists
+      if (note.category) {
+        formatted.category = {
+          category_id: note.category.category_id,
+          name: note.category.name,
+          color: note.category.color
+        };
+      }
+      return formatted;
+    });
+
     res.json({ notes: notesWithExtras });
   } catch (err) {
     console.error('Failed to fetch notes:', err);
@@ -57,17 +126,51 @@ router.get('/', requireAuth, async (req, res) => {
 // Create a new note
 router.post('/create', requireAuth, async (req, res) => {
   try {
-    const { title, content, file_id } = req.body;
+    const { title, content, file_id, category_id } = req.body;
     
+    // Validate category if provided
+    if (category_id) {
+      const category = await NoteCategory.findOne({
+        where: {
+          category_id: category_id,
+          user_id: req.session.userId
+        }
+      });
+
+      if (!category) {
+        return res.status(400).json({ error: 'Invalid category' });
+      }
+    }
+
     const newNote = await Note.create({
       user_id: req.session.userId,
       file_id: file_id || null,
+      category_id: category_id || null,
       title,
       content: content || '',
       is_pinned: false
     });
 
-    const noteWithExtras = formatNoteForFrontend(newNote);
+    // Fetch the note with category info
+    const noteWithCategory = await Note.findOne({
+      where: { note_id: newNote.note_id },
+      include: [{
+        model: NoteCategory,
+        as: 'category',
+        attributes: ['category_id', 'name', 'color'],
+        required: false
+      }]
+    });
+
+    const noteWithExtras = formatNoteForFrontend(noteWithCategory);
+    if (noteWithCategory.category) {
+      noteWithExtras.category = {
+        category_id: noteWithCategory.category.category_id,
+        name: noteWithCategory.category.name,
+        color: noteWithCategory.category.color
+      };
+    }
+
     res.status(201).json({ note: noteWithExtras });
   } catch (err) {
     console.error('Failed to create note:', err);
@@ -78,7 +181,7 @@ router.post('/create', requireAuth, async (req, res) => {
 // Update a note
 router.put('/:id', requireAuth, async (req, res) => {
   try {
-    const { title, content } = req.body;
+    const { title, content, category_id } = req.body;
     const noteId = req.params.id;
 
     const note = await Note.findOne({
@@ -92,9 +195,46 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Note not found' });
     }
 
-    await note.update({ title, content });
+    // Validate category if provided
+    if (category_id) {
+      const category = await NoteCategory.findOne({
+        where: {
+          category_id: category_id,
+          user_id: req.session.userId
+        }
+      });
 
-    const noteWithExtras = formatNoteForFrontend(note);
+      if (!category) {
+        return res.status(400).json({ error: 'Invalid category' });
+      }
+    }
+
+    await note.update({ 
+      title, 
+      content,
+      category_id: category_id !== undefined ? category_id : note.category_id
+    });
+
+    // Fetch the updated note with category info
+    const updatedNote = await Note.findOne({
+      where: { note_id: noteId },
+      include: [{
+        model: NoteCategory,
+        as: 'category',
+        attributes: ['category_id', 'name', 'color'],
+        required: false
+      }]
+    });
+
+    const noteWithExtras = formatNoteForFrontend(updatedNote);
+    if (updatedNote.category) {
+      noteWithExtras.category = {
+        category_id: updatedNote.category.category_id,
+        name: updatedNote.category.name,
+        color: updatedNote.category.color
+      };
+    }
+
     res.json({ note: noteWithExtras });
   } catch (err) {
     console.error('Failed to update note:', err);
@@ -230,10 +370,11 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
       return res.status(409).json({ error: 'You already have this shared note' });
     }
 
-    // creates copy for the current user
+    // creates copy for the current user (without category to avoid conflicts)
     const newNote = await Note.create({
       user_id: req.session.userId,
       file_id: null,
+      category_id: null, // Don't copy category
       title: `${originalNote.title} (Shared)`,
       content: originalNote.content
     });

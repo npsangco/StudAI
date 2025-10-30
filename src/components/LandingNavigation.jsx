@@ -3,11 +3,6 @@ import React, { useState } from 'react'
 export default function LandingNavigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  const handleNavClick = (path) => {
-    console.log(`Navigating to: ${path}`)
-    setIsMenuOpen(false)
-  }
-
   return (
     <nav className="bg-yellow-300">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

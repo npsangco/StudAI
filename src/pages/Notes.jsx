@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText, MessageCircle, Edit3, ExternalLink, Pin, PinOff, FolderPlus } from 'lucide-react';
+import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText, MessageCircle, Edit3, ExternalLink, Pin, PinOff, FolderPlus, Tag } from 'lucide-react';
 import NoteEditor from '../components/NoteEditor';
 import Chatbot from '../components/Chatbot';
 import { notesApi, sharedNotesApi } from '../api/api';
@@ -11,18 +11,30 @@ const Notes = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddNote, setShowAddNote] = useState(false);
   const [newNoteTitle, setNewNoteTitle] = useState('');
+  const [newNoteCategory, setNewNoteCategory] = useState('');
   const [currentView, setCurrentView] = useState('list');
   const [editingNote, setEditingNote] = useState(null);
   const [chatbotNote, setChatbotNote] = useState(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [categories, setCategories] = useState(['General']);
+  const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showCategoryPicker, setShowCategoryPicker] = useState(null);
 
   useEffect(() => {
     fetchNotesFromDatabase();
     fetchMyShares();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await notesApi.getCategories();
+      setCategories(response.data.categories);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
+  };
 
   const fetchNotesFromDatabase = async () => {
     try {
@@ -36,7 +48,8 @@ const Notes = () => {
         content: note.content || '',
         isShared: note.is_shared || false,
         isPinned: note.is_pinned || false,
-        category: note.category || 'General' // Default category
+        category: note.category || null,
+        categoryId: note.category_id || null
       }));
 
       setNotes(mappedNotes);
@@ -76,7 +89,8 @@ const Notes = () => {
       const response = await notesApi.create({
         title: newNoteTitle,
         content: '',
-        file_id: null
+        file_id: null,
+        category_id: newNoteCategory || null
       });
 
       const newNote = {
@@ -87,11 +101,13 @@ const Notes = () => {
         content: response.data.note.content || '',
         isShared: response.data.note.is_shared || false,
         isPinned: response.data.note.is_pinned || false,
-        category: 'General'
+        category: response.data.note.category || null,
+        categoryId: response.data.note.category_id || null
       };
       
       setNotes([newNote, ...notes]);
       setNewNoteTitle('');
+      setNewNoteCategory('');
       setShowAddNote(false);
       openEditPage(newNote);
     } catch (error) {
@@ -104,7 +120,8 @@ const Notes = () => {
     try {
       const response = await notesApi.update(updatedNote.id, {
         title: updatedNote.title,
-        content: updatedNote.content
+        content: updatedNote.content,
+        category_id: updatedNote.categoryId || null
       });
 
       const mappedNote = {
@@ -115,7 +132,8 @@ const Notes = () => {
         content: response.data.note.content || '',
         isShared: response.data.note.is_shared || false,
         isPinned: response.data.note.is_pinned || false,
-        category: updatedNote.category || 'General'
+        category: response.data.note.category || null,
+        categoryId: response.data.note.category_id || null
       };
       
       setNotes(notes.map(note => 
@@ -124,6 +142,40 @@ const Notes = () => {
     } catch (error) {
       console.error('Error updating note:', error);
       alert('Failed to update note. Please try again.');
+    }
+  };
+
+  const changeNoteCategory = async (noteId, categoryId) => {
+    try {
+      const note = notes.find(n => n.id === noteId);
+      if (!note) return;
+
+      const response = await notesApi.update(noteId, {
+        title: note.title,
+        content: note.content,
+        category_id: categoryId
+      });
+
+      const mappedNote = {
+        id: response.data.note.note_id,
+        title: response.data.note.title,
+        words: response.data.note.words || (response.data.note.content ? response.data.note.content.split(/\s+/).length : 0),
+        createdAt: response.data.note.created_at || response.data.note.createdAt,
+        content: response.data.note.content || '',
+        isShared: response.data.note.is_shared || false,
+        isPinned: response.data.note.is_pinned || false,
+        category: response.data.note.category || null,
+        categoryId: response.data.note.category_id || null
+      };
+      
+      setNotes(notes.map(n => 
+        n.id === mappedNote.id ? mappedNote : n
+      ));
+      
+      setShowCategoryPicker(null);
+    } catch (error) {
+      console.error('Error changing category:', error);
+      alert('Failed to change category. Please try again.');
     }
   };
 
@@ -245,17 +297,28 @@ const Notes = () => {
     fetchMyShares();
   };
 
-  const addCategory = () => {
-    if (newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
-      setCategories([...categories, newCategoryName.trim()]);
+  const addCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    
+    try {
+      const response = await notesApi.createCategory({
+        name: newCategoryName.trim(),
+        color: '#3B82F6'
+      });
+      
+      setCategories([...categories, response.data.category]);
       setNewCategoryName('');
       setShowCategoryModal(false);
+    } catch (error) {
+      console.error('Error creating category:', error);
+      alert('Failed to create category. It may already exist.');
     }
   };
 
   const filteredNotes = notes.filter(note => {
     const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || note.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'all' || 
+                            (note.category && note.category.category_id === parseInt(selectedCategory));
     return matchesSearch && matchesCategory;
   });
 
@@ -263,7 +326,6 @@ const Notes = () => {
     share.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Separate pinned and unpinned notes
   const pinnedNotes = filteredNotes.filter(note => note.isPinned);
   const unpinnedNotes = filteredNotes.filter(note => !note.isPinned);
 
@@ -301,8 +363,15 @@ const Notes = () => {
               <span className="truncate">{formatDate(note.createdAt)}</span>
             </span>
             {note.category && (
-              <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-full text-xs">
-                {note.category}
+              <span 
+                className="px-2 py-1 rounded-full text-xs"
+                style={{ 
+                  backgroundColor: `${note.category.color}20`,
+                  color: note.category.color,
+                  border: `1px solid ${note.category.color}`
+                }}
+              >
+                {note.category.name}
               </span>
             )}
           </div>
@@ -312,62 +381,206 @@ const Notes = () => {
             </p>
           )}
         </div>
-        {/* Vertically aligned action buttons */}
-        <div className="flex flex-col gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleChatbot(note.id);
-            }}
-            className="p-1.5 sm:p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-            title="Ask AI Assistant"
-          >
-            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-          </button>
-          {note.isPinned ? (
+        {/* Action buttons - 2 columns on desktop, single row on mobile */}
+        <div className="hidden sm:flex flex-col gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2 relative">
+          <div className="grid grid-cols-2 gap-1">
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                unpinNote(note.id);
+                handleChatbot(note.id);
               }}
-              className="p-1.5 sm:p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-              title="Unpin note"
+              className="p-1.5 sm:p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+              title="Ask AI Assistant"
             >
-              <PinOff className="w-3 h-3 sm:w-4 sm:h-4" />
+              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
-          ) : (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                pinNote(note.id);
+                setShowCategoryPicker(showCategoryPicker === note.id ? null : note.id);
               }}
-              className="p-1.5 sm:p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
-              title="Pin note"
+              className="p-1.5 sm:p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+              title="Change category"
             >
-              <Pin className="w-3 h-3 sm:w-4 sm:h-4" />
+              <Tag className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
+            {note.isPinned ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  unpinNote(note.id);
+                }}
+                className="p-1.5 sm:p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                title="Unpin note"
+              >
+                <PinOff className="w-3 h-3 sm:w-4 sm:h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  pinNote(note.id);
+                }}
+                className="p-1.5 sm:p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                title="Pin note"
+              >
+                <Pin className="w-3 h-3 sm:w-4 sm:h-4" />
+              </button>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                shareNote(note.id);
+              }}
+              className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Share"
+            >
+              <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteNote(note.id);
+              }}
+              className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors col-span-2"
+              title="Delete"
+            >
+              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+            </button>
+          </div>
+          {showCategoryPicker === note.id && (
+            <div 
+              className="absolute right-full mr-2 top-0 bg-white border border-slate-200 rounded-lg shadow-lg p-3 z-10 w-64"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-xs font-semibold text-slate-600 mb-2">Select Category</div>
+              <div className="grid grid-cols-2 gap-1 max-h-48 overflow-y-auto">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    changeNoteCategory(note.id, null);
+                  }}
+                  className="text-left px-2 py-1.5 text-xs hover:bg-slate-100 rounded transition-colors text-slate-600 col-span-2"
+                >
+                  None
+                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat.category_id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      changeNoteCategory(note.id, cat.category_id);
+                    }}
+                    className="text-left px-2 py-1.5 text-xs hover:bg-slate-100 rounded transition-colors flex items-center gap-1.5"
+                    style={{ color: cat.color }}
+                  >
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }}></span>
+                    <span className="truncate">{cat.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              shareNote(note.id);
-            }}
-            className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            title="Share"
-          >
-            <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteNote(note.id);
-            }}
-            className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-          </button>
         </div>
+      </div>
+      {/* Mobile action buttons - single row at bottom */}
+      <div className="sm:hidden flex items-center justify-end gap-1 mt-2 pt-2 border-t border-slate-200">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleChatbot(note.id);
+          }}
+          className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+          title="Ask AI Assistant"
+        >
+          <MessageCircle className="w-4 h-4" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowCategoryPicker(showCategoryPicker === note.id ? null : note.id);
+          }}
+          className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors relative"
+          title="Change category"
+        >
+          <Tag className="w-4 h-4" />
+          {showCategoryPicker === note.id && (
+            <div 
+              className="absolute right-0 bottom-full mb-2 bg-white border border-slate-200 rounded-lg shadow-lg p-3 z-10 w-64"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-xs font-semibold text-slate-600 mb-2">Select Category</div>
+              <div className="grid grid-cols-2 gap-1 max-h-48 overflow-y-auto">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    changeNoteCategory(note.id, null);
+                  }}
+                  className="text-left px-2 py-1.5 text-xs hover:bg-slate-100 rounded transition-colors text-slate-600 col-span-2"
+                >
+                  None
+                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat.category_id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      changeNoteCategory(note.id, cat.category_id);
+                    }}
+                    className="text-left px-2 py-1.5 text-xs hover:bg-slate-100 rounded transition-colors flex items-center gap-1.5"
+                    style={{ color: cat.color }}
+                  >
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }}></span>
+                    <span className="truncate">{cat.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </button>
+        {note.isPinned ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              unpinNote(note.id);
+            }}
+            className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+            title="Unpin note"
+          >
+            <PinOff className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              pinNote(note.id);
+            }}
+            className="p-1.5 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+            title="Pin note"
+          >
+            <Pin className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            shareNote(note.id);
+          }}
+          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          title="Share"
+        >
+          <Share2 className="w-4 h-4" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteNote(note.id);
+          }}
+          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Delete"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
@@ -400,7 +613,6 @@ const Notes = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 mb-3 sm:mb-4">Notes</h1>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
@@ -422,7 +634,9 @@ const Notes = () => {
               >
                 <option value="all">All Categories</option>
                 {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
+                  <option key={category.category_id} value={category.category_id}>
+                    {category.name}
+                  </option>
                 ))}
               </select>
               <button 
@@ -436,7 +650,6 @@ const Notes = () => {
           </div>
         </div>
 
-        {/* Category Creation Modal */}
         {showCategoryModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-6 max-w-md w-full">
@@ -468,7 +681,6 @@ const Notes = () => {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-          {/* Personal Notes */}
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h2 className="text-xl sm:text-2xl font-semibold text-slate-800">My Notes</h2>
@@ -486,6 +698,18 @@ const Notes = () => {
                   className="w-full p-2 sm:p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none mb-3 text-sm sm:text-base"
                   autoFocus
                 />
+                <select
+                  value={newNoteCategory}
+                  onChange={(e) => setNewNoteCategory(e.target.value)}
+                  className="w-full p-2 sm:p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none mb-3 text-sm sm:text-base"
+                >
+                  <option value="">No Category</option>
+                  {categories.map(category => (
+                    <option key={category.category_id} value={category.category_id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
                 <div className="flex gap-2">
                   <button
                     onClick={addNote}
@@ -494,7 +718,11 @@ const Notes = () => {
                     Create Note
                   </button>
                   <button
-                    onClick={() => setShowAddNote(false)}
+                    onClick={() => {
+                      setShowAddNote(false);
+                      setNewNoteTitle('');
+                      setNewNoteCategory('');
+                    }}
                     className="px-3 sm:px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors text-sm sm:text-base"
                   >
                     Cancel
@@ -512,7 +740,6 @@ const Notes = () => {
             )}
 
             <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
-              {/* Pinned Notes Section */}
               {pinnedNotes.length > 0 && (
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2 px-2">
@@ -525,7 +752,6 @@ const Notes = () => {
                 </div>
               )}
               
-              {/* Unpinned Notes Section */}
               {unpinnedNotes.length > 0 && (
                 <div>
                   {pinnedNotes.length > 0 && (
@@ -548,14 +774,12 @@ const Notes = () => {
             </div>
           </div>
 
-          {/* My Shared Notes */}
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h2 className="text-xl sm:text-2xl font-semibold text-slate-800">My Shares</h2>
               <span className="text-xs sm:text-sm text-slate-500">{filteredMyShares.length} shared</span>
             </div>
 
-            {/* Retrieve Shared Note Input */}
             <div className="mb-4 sm:mb-6">
               <div className="flex flex-col sm:flex-row gap-2">
                 <input

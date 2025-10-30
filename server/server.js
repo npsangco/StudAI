@@ -1,4 +1,4 @@
-// 🌍 Environment variables
+// 🌐 Environment variables
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -23,6 +23,7 @@ import Question from "./models/Question.js";
 import QuizAttempt from "./models/QuizAttempt.js";
 import QuizBattle from "./models/QuizBattle.js";
 import BattleParticipant from "./models/BattleParticipant.js";
+
 
 // Import Note model after creating it
 let Note;
@@ -66,6 +67,87 @@ app.use(cors({
 }));
 
 // ============================================
+// STREAK TRACKING SYSTEM
+// ============================================
+
+async function updateUserStreak(userId) {
+  try {
+    const user = await User.findByPk(userId);
+    if (!user) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset to midnight for date comparison
+
+    const lastActivity = user.last_activity_date 
+      ? new Date(user.last_activity_date) 
+      : null;
+
+    if (lastActivity) {
+      lastActivity.setHours(0, 0, 0, 0);
+      
+      const diffTime = today - lastActivity;
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+      if (diffDays === 0) {
+        // Same day - no update needed
+        console.log(`User ${userId}: Same day activity, streak unchanged`);
+        return user.study_streak;
+      } else if (diffDays === 1) {
+        // Consecutive day - increment streak
+        user.study_streak += 1;
+        user.last_activity_date = today;
+        
+        // Update longest streak if current is higher
+        if (user.study_streak > user.longest_streak) {
+          user.longest_streak = user.study_streak;
+        }
+        
+        console.log(`✅ User ${userId}: Streak continued! Now at ${user.study_streak} days`);
+        
+        // Check for milestone rewards
+        await checkStreakMilestones(userId, user.study_streak);
+      } else {
+        // Streak broken - reset to 1
+        console.log(`⚠️ User ${userId}: Streak broken after ${user.study_streak} days. Reset to 1 day`);
+        user.study_streak = 1;
+        user.last_activity_date = today;
+      }
+    } else {
+      // First time activity
+      user.study_streak = 1;
+      user.last_activity_date = today;
+      user.longest_streak = 1;
+      console.log(`🎉 User ${userId}: First activity! Streak started`);
+    }
+
+    await user.save();
+    return user.study_streak;
+  } catch (err) {
+    console.error('❌ Error updating user streak:', err);
+    return null;
+  }
+}
+
+// Optional: Milestone rewards
+async function checkStreakMilestones(userId, streak) {
+  const milestones = {
+    7: { points: 50, message: "7-day streak!" },
+    30: { points: 200, message: "30-day streak!" },
+    100: { points: 1000, message: "100-day streak!" },
+    365: { points: 5000, message: "1-year streak!" }
+  };
+  
+  if (milestones[streak]) {
+    await User.increment('points', { 
+      by: milestones[streak].points, 
+      where: { user_id: userId } 
+    });
+    
+    console.log(`🎉 User ${userId} reached ${streak} day streak! Awarded ${milestones[streak].points} points`);
+  }
+}
+
+// ============================================
 // MODEL ASSOCIATIONS (MUST BE HERE, BEFORE sequelize.authenticate)
 // ============================================
 
@@ -97,6 +179,21 @@ QuizBattle.hasMany(BattleParticipant, { foreignKey: 'battle_id', as: 'participan
 
 BattleParticipant.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasMany(BattleParticipant, { foreignKey: 'user_id', as: 'battle_participations' });
+
+// ADD THIS HERE - Note and NoteCategory associations
+if (Note) {
+    const NoteCategory = (await import('./models/NoteCategory.js')).default;
+    
+    Note.belongsTo(NoteCategory, {
+        foreignKey: 'category_id',
+        as: 'category'
+    });
+    
+    NoteCategory.hasMany(Note, {
+        foreignKey: 'category_id',
+        as: 'notes'
+    });
+}
 
 // ----------------- DB Connection -----------------
 sequelize.authenticate()
@@ -213,6 +310,9 @@ app.get(
             req.session.username = req.user.username;
             req.session.role = req.user.role;
 
+            // UPDATE STREAK ON GOOGLE LOGIN
+            await updateUserStreak(req.user.user_id);
+
             console.log("✅ Google login session set:", req.session);
 
             // redirect to dashboard
@@ -223,7 +323,6 @@ app.get(
         }
     }
 );
-
 
 app.get("/api/ping", (req, res) => {
     res.json({ message: "Server running fine ✅" });
@@ -283,15 +382,23 @@ app.post("/api/auth/login", async (req, res) => {
         req.session.username = user.username;
         req.session.role = user.role;
 
+        // UPDATE STREAK ON LOGIN
+        await updateUserStreak(user.user_id);
+        
+        // Fetch updated user data
+        const updatedUser = await User.findByPk(user.user_id);
+
         res.status(200).json({
             message: "Login successful",
             user: {
-                id: user.user_id,
-                email: user.email,
-                username: user.username,
-                role: user.role,
-                points: user.points,
-                profile_picture: user.profile_picture,
+                id: updatedUser.user_id,
+                email: updatedUser.email,
+                username: updatedUser.username,
+                role: updatedUser.role,
+                points: updatedUser.points,
+                profile_picture: updatedUser.profile_picture,
+                study_streak: updatedUser.study_streak,
+                longest_streak: updatedUser.longest_streak
             },
         });
     } catch (err) {
@@ -321,7 +428,7 @@ app.get("/api/user/profile", async (req, res) => {
 
     try {
         const user = await User.findByPk(req.session.userId, {
-            attributes: ["user_id", "email", "username", "birthday", "role", "points", "profile_picture"],
+            attributes: ["user_id", "email", "username", "birthday", "role", "points", "profile_picture", "study_streak", "longest_streak", "last_activity_date"],
         });
 
         if (!user) return res.status(404).json({ error: "User not found" });
@@ -368,6 +475,30 @@ app.put("/api/user/profile", async (req, res) => {
         console.error("Profile update error:", err);
         res.status(500).json({ error: "Internal server error" });
     }
+});
+
+// Get user streak info
+app.get("/api/user/streak", async (req, res) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ error: "Not logged in" });
+  }
+
+  try {
+    const user = await User.findByPk(req.session.userId, {
+      attributes: ["study_streak", "longest_streak", "last_activity_date"]
+    });
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({
+      current_streak: user.study_streak,
+      longest_streak: user.longest_streak,
+      last_activity: user.last_activity_date
+    });
+  } catch (err) {
+    console.error("Streak fetch error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 const profileStorage = multer.diskStorage({
@@ -804,6 +935,29 @@ app.use("/api/plans", planRoutes);
 
 // ----------------- QUIZ SYSTEM ROUTES -----------------
 app.use("/api/quizzes", quizRoutes);
+
+// Get quiz attempts count
+app.get('/api/quiz-attempts/count', async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    // Count total quiz attempts for this user
+    const attemptCount = await QuizAttempt.count({
+      where: { user_id: userId }
+    });
+    
+    console.log(`User ${userId} has ${attemptCount} quiz attempts`);
+    
+    res.json({ count: attemptCount });
+  } catch (err) {
+    console.error('Error fetching quiz attempts count:', err);
+    res.status(500).json({ error: 'Failed to fetch quiz attempts count' });
+  }
+});
 
 // ----------------- START SERVER -----------------
 const PORT = process.env.PORT || 4000;
