@@ -166,6 +166,8 @@ router.put('/:id', requireAuth, async (req, res) => {
 
 // Delete quiz
 router.delete('/:id', requireAuth, async (req, res) => {
+  const transaction = await sequelize.transaction(); // Add transaction
+  
   try {
     const userId = req.session.userId;
     const quizId = req.params.id;
@@ -173,23 +175,63 @@ router.delete('/:id', requireAuth, async (req, res) => {
     const quiz = await Quiz.findByPk(quizId);
 
     if (!quiz) {
+      await transaction.rollback();
       return res.status(404).json({ error: 'Quiz not found' });
     }
 
     if (quiz.created_by !== userId) {
+      await transaction.rollback();
       return res.status(403).json({ error: 'Not authorized to delete this quiz' });
     }
 
-    // Delete associated questions first (cascade)
-    await Question.destroy({ where: { quiz_id: quizId } });
+    // Delete in proper order to avoid foreign key issues
     
-    // Delete quiz
-    await quiz.destroy();
+    // 1. Delete all quiz attempts first
+    await QuizAttempt.destroy({ 
+      where: { quiz_id: quizId },
+      transaction 
+    });
+    
+    // 2. Delete battle participants
+    const battles = await QuizBattle.findAll({ 
+      where: { quiz_id: quizId },
+      transaction 
+    });
+    
+    for (const battle of battles) {
+      await BattleParticipant.destroy({ 
+        where: { battle_id: battle.battle_id },
+        transaction 
+      });
+    }
+    
+    // 3. Delete battles
+    await QuizBattle.destroy({ 
+      where: { quiz_id: quizId },
+      transaction 
+    });
+    
+    // 4. Delete questions
+    await Question.destroy({ 
+      where: { quiz_id: quizId },
+      transaction 
+    });
+    
+    // 5. Finally delete quiz
+    await quiz.destroy({ transaction });
 
+    await transaction.commit();
+    
+    console.log(`✅ Quiz ${quizId} deleted successfully`);
     res.json({ message: 'Quiz deleted successfully' });
+    
   } catch (err) {
+    await transaction.rollback();
     console.error('❌ Delete quiz error:', err);
-    res.status(500).json({ error: 'Failed to delete quiz' });
+    res.status(500).json({ 
+      error: 'Failed to delete quiz',
+      details: err.message // Include error details for debugging
+    });
   }
 });
 

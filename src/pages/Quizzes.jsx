@@ -29,6 +29,18 @@ const styles = `
     animation: slideIn 0.3s ease-out forwards;
     opacity: 0;
   }
+
+  /* Simple clean white containers matching dashboard */
+  .quiz-container {
+    background: #ffffff;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border-radius: 0.75rem;
+  }
+
+  /* Prevent page scroll */
+  body.quiz-page-active {
+    overflow: hidden;
+  }
 `;
 
 function QuizzesPage() {
@@ -61,7 +73,9 @@ function QuizzesPage() {
   const [gameState, setGameState] = useState({
     results: null,
     quizKey: 0,
-    gamePin: ''
+    gamePin: '',
+    battleId: null,
+    isHost: false
   });
 
   const [deleteState, setDeleteState] = useState({
@@ -174,8 +188,26 @@ function QuizzesPage() {
       showLeaderboard: false,
       showDeleteModal: false
     });
-    updateGameState({ results: null, gamePin: '' });
+    updateGameState({ results: null, gamePin: '', battleId: null, isHost: false });
     countdown.reset();
+  };
+
+  const handleBackFromEditor = async () => {
+    // If editing quiz has no questions, delete it automatically
+    if (quizData.editing && questions.length === 0) {
+      try {
+        console.log('🗑️ Auto-deleting empty quiz:', quizData.editing.id);
+        await quizApi.delete(quizData.editing.id);
+        
+        // Reload quizzes to update list
+        await loadQuizzesFromAPI();
+      } catch (err) {
+        console.error('Failed to auto-delete empty quiz:', err);
+      }
+    }
+    
+    // Go back to list
+    handleBackToList();
   };
 
   // ============================================
@@ -195,49 +227,95 @@ function QuizzesPage() {
   const handleSoloQuiz = async () => {
     // Load questions before starting
     const data = await loadQuizWithQuestions(quizData.selected.id);
-    if (data) {
-      setQuestions(data.questions);
-      updateUiState({ showModal: false, currentView: VIEWS.LOADING });
-      countdown.start();
+    
+    if (!data || !data.questions || data.questions.length === 0) {
+      setError('This quiz has no questions yet. Please add questions before starting.');
+      updateUiState({ showModal: false });
+      return;
     }
+    
+    setQuestions(data.questions);
+    updateUiState({ showModal: false, currentView: VIEWS.LOADING });
+    countdown.start();
   };
 
   const handleQuizBattle = async () => {
-  try {
-    setLoading(true);
-    
-    // Load questions
-    const data = await loadQuizWithQuestions(quizData.selected.id);
-    
-    if (data && data.questions) {
-      setQuestions(data.questions);
+    try {
+      setLoading(true);
       
-      // Create battle room
-      const response = await quizApi.createBattle(quizData.selected.id);
-      const { battle, gamePin } = response.data;
+      // Load questions
+      const data = await loadQuizWithQuestions(quizData.selected.id);
       
-      console.log('✅ Battle created:', gamePin);
+      if (!data || !data.questions || data.questions.length === 0) {
+        setError('This quiz has no questions yet. Please add questions before starting a battle.');
+        updateUiState({ showModal: false });
+        setLoading(false);
+        return;
+      }
       
-      // Store battle info
-      updateGameState({ 
-        gamePin,
-        battleId: battle.battle_id,
-        isHost: true
-      });
-      
-      updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
-    } else {
-      alert('Failed to load quiz questions');
+      if (data.questions) {
+        setQuestions(data.questions);
+        
+        // Create battle room
+        const response = await quizApi.createBattle(quizData.selected.id);
+        const { battle, gamePin } = response.data;
+        
+        console.log('✅ Battle created:', gamePin);
+        
+        updateGameState({ 
+          gamePin,
+          battleId: battle.battle_id,
+          isHost: true
+        });
+        
+        updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
+      }
+    } catch (err) {
+      console.error('Battle creation error:', err);
+      setError(err.response?.data?.error || 'Error creating battle');
       updateUiState({ showModal: false });
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error('Battle creation error:', err);
-    alert(err.response?.data?.error || 'Error creating battle');
-    updateUiState({ showModal: false });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
+  // Handle successful battle join (for players joining via PIN)
+  const handleJoinSuccess = async (battle, participant) => {
+    console.log('✅ Successfully joined battle:', battle);
+    console.log('✅ Participant info:', participant);
+    
+    // Set the battle data
+    updateGameState({ 
+      gamePin: battle.game_pin,
+      battleId: battle.battle_id,
+      isHost: false  // Player is not the host
+    });
+    
+    // Load the quiz questions
+    try {
+      const data = await loadQuizWithQuestions(battle.quiz_id);
+      if (data && data.questions) {
+        setQuestions(data.questions);
+        
+        // Update selected quiz info
+        updateQuizData({ 
+          selected: {
+            id: battle.quiz_id,
+            title: battle.quiz_title,
+            questionCount: battle.total_questions
+          }
+        });
+        
+        // Go to lobby
+        updateUiState({ currentView: VIEWS.LOBBY });
+      } else {
+        setError('Failed to load quiz questions');
+      }
+    } catch (err) {
+      console.error('Error loading quiz:', err);
+      setError('Failed to load quiz');
+    }
+  };
 
   // Start battle handler
   const handleStartBattle = async () => {
@@ -255,7 +333,7 @@ function QuizzesPage() {
       
     } catch (err) {
       console.error('Start battle error:', err);
-      alert(err.response?.data?.error || 'Failed to start battle');
+      setError(err.response?.data?.error || 'Failed to start battle');
     } finally {
       setLoading(false);
     }
@@ -589,6 +667,17 @@ function QuizzesPage() {
   // EFFECTS
   // ============================================
 
+  // Control page overflow for list view
+  useEffect(() => {
+    if (uiState.currentView === VIEWS.LIST) {
+      document.body.classList.add('quiz-page-active');
+    } else {
+      document.body.classList.remove('quiz-page-active');
+    }
+
+    return () => document.body.classList.remove('quiz-page-active');
+  }, [uiState.currentView]);
+
   // Hide navbar for game views
   useEffect(() => {
     const gameViews = [VIEWS.LOADING, VIEWS.LOADING_BATTLE, VIEWS.LOBBY, VIEWS.SOLO, VIEWS.BATTLE];
@@ -619,10 +708,10 @@ function QuizzesPage() {
 
   if (loading && uiState.currentView === VIEWS.LIST) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading quizzes...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading quizzes...</p>
         </div>
       </div>
     );
@@ -634,14 +723,14 @@ function QuizzesPage() {
 
   if (error && uiState.currentView === VIEWS.LIST) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-center max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
-          <div className="text-red-600 text-5xl mb-4">⚠️</div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center max-w-md mx-auto p-8 bg-white rounded-xl shadow-sm">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={loadQuizzesFromAPI}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium shadow-sm"
           >
             Try Again
           </button>
@@ -735,7 +824,7 @@ function QuizzesPage() {
         <QuizEditor
           quiz={quizData.editing}
           questions={questions}
-          onBack={handleBackToList}
+          onBack={handleBackFromEditor}
           onSave={handleSaveQuiz}
           onUpdateTitle={handleUpdateQuizTitle}
           onAddQuestion={handleAddQuestion}
@@ -758,9 +847,10 @@ function QuizzesPage() {
   return (
     <>
       <style>{styles}</style>
-      <div className="min-h-screen bg-gray-100 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+      <div className="min-h-screen bg-gray-50 flex items-start justify-center p-6 pt-6">
+        <div className="w-full max-w-7xl h-[calc(100vh-7rem)] grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Container - Quiz List */}
+          <div className="h-full overflow-hidden quiz-container">
             <QuizList
               quizzes={quizData.list}
               draggedIndex={quizData.draggedIndex}
@@ -772,14 +862,19 @@ function QuizzesPage() {
               onDeleteQuiz={handleDeleteQuiz}
               onCreateQuiz={handleCreateQuiz}
             />
+          </div>
 
+          {/* Right Container - Quiz Battles */}
+          <div className="h-full overflow-hidden quiz-container">
             <QuizBattles
               gamePin={gameState.gamePin}
               setGamePin={(pin) => updateGameState({ gamePin: pin })}
+              onJoinSuccess={handleJoinSuccess}
             />
           </div>
         </div>
 
+        {/* Modals */}
         <QuizModal
           quiz={quizData.selected}
           isOpen={uiState.showModal}
@@ -798,6 +893,31 @@ function QuizzesPage() {
           itemName={deleteState.quizToDelete?.title || ''}
           itemType="quiz"
         />
+
+        {/* Error Modal */}
+        {error && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 animate-fade-in">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-4xl">⚠️</span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">
+                  Oops!
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  {error}
+                </p>
+                <button
+                  onClick={() => setError(null)}
+                  className="w-full bg-yellow-500 text-white py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-colors shadow-sm"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
