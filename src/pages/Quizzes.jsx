@@ -6,11 +6,12 @@ import QuizGame from '../components/quizzes/views/QuizGame';
 import QuizResults from '../components/quizzes/views/QuizResults';
 import QuizLeaderboard from '../components/quizzes/views/QuizLeaderboard';
 import { SoloLoadingScreen, BattleLobbyScreen } from '../components/quizzes/views/QuizLoadingScreens';
-import { QuizModal, DeleteConfirmationModal } from '../components/quizzes/QuizModal';
+import { QuizModal, DeleteConfirmationModal, ValidationErrorModal } from '../components/quizzes/QuizModal';
 import { useCountdown } from '../components/quizzes/hooks/useCountdown';
 import { useLobby } from '../components/quizzes/hooks/useLobby';
 import { createNewQuestion } from '../components/quizzes/utils/questionHelpers';
 import { VIEWS, COUNTDOWN_SECONDS } from '../components/quizzes/utils/constants';
+import { validateAllQuestions } from '../components/quizzes/utils/validation';
 import { quizApi } from '../api/api'; 
 
 const styles = `
@@ -69,6 +70,11 @@ function QuizzesPage() {
     showLeaderboard: false,
     showDeleteModal: false
   });
+
+  // Validation State
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationStatus, setValidationStatus] = useState(null); 
 
   const [gameState, setGameState] = useState({
     results: null,
@@ -406,8 +412,40 @@ function QuizzesPage() {
     }
   };
 
+  // Real-time validation whenever questions change
+  useEffect(() => {
+    if (uiState.currentView === VIEWS.EDITING && questions.length > 0) {
+      const validation = validateAllQuestions(questions);
+      setValidationStatus({
+        isValid: validation.isValid,
+        errorCount: validation.errors.length,
+        errors: validation.errors
+      });
+      setValidationErrors(validation.errors); // Keep errors updated
+    } else {
+      setValidationStatus(null);
+      setValidationErrors([]);
+    }
+  }, [questions, uiState.currentView]);
+
+  // Handler to show validation modal
+  const handleShowValidationErrors = () => {
+    if (validationErrors.length > 0) {
+      setShowValidationModal(true);
+    }
+  };
+
   const handleSaveQuiz = async () => {
     try {
+      // VALIDATE QUESTIONS FIRST
+      const validation = validateAllQuestions(questions);
+      
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors);
+        setShowValidationModal(true);
+        return; // Stop saving if validation fails
+      }
+
       setLoading(true);
 
       let quizId = quizData.editing.id;
@@ -426,7 +464,7 @@ function QuizzesPage() {
         await quizApi.update(quizId, {
           title: quizData.editing.title,
           description: quizData.editing.description || '',
-          is_public: quizData.editing.isPublic
+          is_public: quizData.editing.isPublic  
         });
         console.log('✅ Quiz updated:', quizId);
       }
@@ -830,6 +868,7 @@ function QuizzesPage() {
         <QuizEditor
           quiz={quizData.editing}
           questions={questions}
+          validationStatus={validationStatus}
           onBack={handleBackFromEditor}
           onSave={handleSaveQuiz}
           onUpdateTitle={handleUpdateQuizTitle}
@@ -841,6 +880,7 @@ function QuizzesPage() {
           onAddMatchingPair={handleAddMatchingPair}
           onUpdateMatchingPair={handleUpdateMatchingPair}
           onRemoveMatchingPair={handleRemoveMatchingPair}
+          onShowValidationErrors={handleShowValidationErrors}
         />
       </>
     );
@@ -898,6 +938,13 @@ function QuizzesPage() {
           onConfirm={handleConfirmDelete}
           itemName={deleteState.quizToDelete?.title || ''}
           itemType="quiz"
+        />
+
+        {/* Validation Error Modal */}
+        <ValidationErrorModal
+          isOpen={showValidationModal}
+          onClose={() => setShowValidationModal(false)}
+          errors={validationErrors}
         />
 
         {/* Error Modal */}

@@ -3,6 +3,8 @@ import Quiz from '../models/Quiz.js';
 import Question from '../models/Question.js';
 import QuizAttempt from '../models/QuizAttempt.js';
 import User from '../models/User.js';
+import QuizBattle from '../models/QuizBattle.js';
+import BattleParticipant from '../models/BattleParticipant.js';
 import sequelize from '../db.js';
 
 const router = express.Router();
@@ -456,9 +458,6 @@ router.get('/:id/leaderboard', requireAuth, async (req, res) => {
 // ============================================
 // QUIZ BATTLE ROUTES
 // ============================================
-
-import QuizBattle from '../models/QuizBattle.js';
-import BattleParticipant from '../models/BattleParticipant.js';
 
 // 1. Create new battle (HOST)
 router.post('/:id/battle/create', requireAuth, async (req, res) => {
