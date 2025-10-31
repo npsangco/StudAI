@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [upcomingPlans, setUpcomingPlans] = useState([]);
   const [recentNotes, setRecentNotes] = useState([]);
   const [recentQuizzes, setRecentQuizzes] = useState([]);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [stats, setStats] = useState({
     totalNotes: 0,
     totalQuizzes: 0,
@@ -165,6 +166,79 @@ export default function Dashboard() {
     setIsExtracting(true);
   };
 
+  // AI Summarization using OpenAI
+const generateAISummary = async (content, title) => {
+  try {
+    let systemPrompt = "You are an expert educational assistant that creates comprehensive, well-structured study notes and summaries.";
+    
+    if (restriction.uploaded && !restriction.openai) {
+      systemPrompt += " You must ONLY use information from the provided content. Do not add any external knowledge or information.";
+    } else if (!restriction.uploaded && restriction.openai) {
+      systemPrompt += " You can enhance the summary with relevant additional knowledge and context from your training.";
+    } else if (restriction.uploaded && restriction.openai) {
+      systemPrompt += " Use the provided content as the primary source, but you may enhance it with relevant additional knowledge when it adds value.";
+    }
+
+    const userPrompt = `Please create a comprehensive, well-organized summary of the following educational content titled "${title}".
+
+Include:
+1. Key Topics and Main Ideas
+2. Important Concepts and Definitions
+3. Critical Points to Remember
+4. Practical Applications (if applicable)
+5. Summary Conclusion
+
+Content to summarize:
+${content}
+
+Please format the summary in a clear, organized manner with proper headings and bullet points where appropriate.`;
+
+    const APIBody = {
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: userPrompt
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+      top_p: 1.0,
+      frequency_penalty: 0.3,
+      presence_penalty: 0.3
+    };
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+      },
+      body: JSON.stringify(APIBody)
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const summary = data.choices[0]?.message?.content?.trim();
+
+    if (!summary) {
+      throw new Error("No summary generated");
+    }
+
+    return summary;
+  } catch (error) {
+    console.error("Error generating AI summary:", error);
+    throw error;
+  }
+};
+
   const removeFile = (index) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
     setExtractedContent(null);
@@ -192,65 +266,113 @@ export default function Dashboard() {
   };
 
   const handleUploadAndGenerate = async () => {
-    if (uploadedFiles.length === 0) {
-      alert("No file selected!");
-      return;
-    }
+  if (uploadedFiles.length === 0) {
+    alert("No file selected!");
+    return;
+  }
+
+  if (!extractedContent) {
+    alert("Content extraction incomplete. Please wait.");
+    return;
+  }
+
+  setIsGenerating(true);
+  setShowModal(false);
+
+  try {
+    console.log("Generating AI summary...");
+    const aiSummary = await generateAISummary(
+      extractedContent.content,
+      extractedContent.title
+    );
+
+    console.log("AI Summary generated:", aiSummary);
 
     const formData = new FormData();
     formData.append("myFile", uploadedFiles[0]);
 
-    try {
-      const res = await axios.post("http://localhost:4000/api/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true
-      });
+    const uploadRes = await axios.post("http://localhost:4000/api/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+      withCredentials: true
+    });
 
-      console.log("Upload success:", res.data.filename);
-      await generateSummary();
+    console.log("File uploaded:", uploadRes.data.filename);
 
-    } catch (err) {
-      if (err.response) {
-        if (err.response.status === 409) {
-          alert("File with the same name already exists. Please rename your file.");
-        } else if (err.response.status === 401) {
-          alert("You must be logged in to upload files.");
-        } else {
-          alert("Upload failed: " + err.response.data.error);
-        }
-      } else {
-        alert("Network error, please try again later.");
+    const payload = {
+      content: aiSummary,
+      title: extractedContent.title,
+      restrictions: restriction,
+      metadata: {
+        source: extractedContent.source,
+        wordCount: extractedContent.wordCount,
+        slideCount: extractedContent.slideCount,
+        originalContent: extractedContent.content.substring(0, 500) + "..."
       }
+    };
+
+    const summaryRes = await axios.post(
+      "http://localhost:4000/api/generate-summary",
+      payload,
+      { withCredentials: true }
+    );
+
+    console.log("Summary saved to backend:", summaryRes.data);
+
+    alert("Summary generated and saved successfully!");
+    
+    // Clear the uploaded files and reset state
+    setUploadedFiles([]);
+    setExtractedContent(null);
+    setRestriction({ uploaded: false, openai: false });
+
+    // Refresh recent notes
+    const notesRes = await axios.get("http://localhost:4000/api/notes", { withCredentials: true });
+    if (Array.isArray(notesRes.data.notes)) {
+      const sortedNotes = notesRes.data.notes
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 3);
+      setRecentNotes(sortedNotes);
+      setStats(prev => ({ ...prev, totalNotes: notesRes.data.notes.length }));
     }
-  };
 
-  const generateSummary = async () => {
-    try {
-      const payload = {
-        content: extractedContent.content,
-        title: extractedContent.title,
-        restrictions: restriction,
-        metadata: {
-          source: extractedContent.source,
-          wordCount: extractedContent.wordCount,
-          slideCount: extractedContent.slideCount
-        }
-      };
-
-      const response = await axios.post(
-        "http://localhost:4000/api/generate-summary",
-        payload,
-        { withCredentials: true }
-      );
-
-      console.log("Summary generated:", response.data);
-      alert("Summary generated successfully!");
-
-    } catch (err) {
-      console.error("Summary generation error:", err);
-      alert("Failed to generate summary");
+  } catch (err) {
+    console.error("Error in upload and generate process:", err);
+    
+    if (err.response) {
+      if (err.response.status === 409) {
+        alert("File with the same name already exists. Please rename your file.");
+      } else if (err.response.status === 401) {
+        alert("You must be logged in to upload files.");
+      } else {
+        alert(`Upload failed: ${err.response.data.error || err.message}`);
+      }
+    } else if (err.message.includes("OpenAI")) {
+      alert("AI summarization failed. Please check your API key and try again.");
+    } else {
+      alert("Network error, please try again later.");
     }
-  };
+  } finally {
+    setIsGenerating(false);
+  }
+};
+
+  {/* Loading Overlay */}
+  {isGenerating && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+        <div className="flex flex-col items-center">
+          <svg className="animate-spin h-12 w-12 text-indigo-600 mb-4" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Generating Summary</h3>
+          <p className="text-gray-600 text-center">
+            AI is analyzing your content and creating a comprehensive summary...
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
 
   const GenerateModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -306,10 +428,8 @@ export default function Dashboard() {
             Cancel
           </button>
           <button
-            onClick={() => {
-              setShowModal(false);
-              handleUploadAndGenerate();
-            }}
+            onClick={handleUploadAndGenerate}
+            disabled={isGenerating}
             className="flex-1 bg-indigo-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm"
           >
             Generate
@@ -504,7 +624,7 @@ export default function Dashboard() {
               <button
                 type='button'
                 onClick={handleGenerate}
-                disabled={uploadedFiles.length === 0 || isExtracting || !extractedContent}
+                disabled={uploadedFiles.length === 0 || isExtracting || !extractedContent || isGenerating}
                 className={`mt-6 w-full py-3.5 rounded-xl font-medium transition-all ${
                   uploadedFiles.length > 0 && !isExtracting && extractedContent
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow-md'
