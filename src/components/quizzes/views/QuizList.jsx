@@ -170,7 +170,7 @@ export const QuizList = ({
     <div className="h-full bg-white rounded-xl p-6 shadow-sm border border-gray-200 flex flex-col overflow-hidden">
       {/* Header - Fixed */}
       <div className="flex-shrink-0 p-6 pb-4">
-        <h2 className="text-2xl font-bold text-gray-800 text-center">Your Quizzes</h2>
+        <h2 className="text-2xl font-bold text-gray-800 text-center">My Quizzes</h2>
       </div>
       
       {/* Scrollable Quiz List */}

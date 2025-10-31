@@ -193,20 +193,25 @@ function QuizzesPage() {
   };
 
   const handleBackFromEditor = async () => {
-    // If editing quiz has no questions, delete it automatically
+    // If it's a temp quiz (never saved), just discard it
+    if (quizData.editing?.isTemp) {
+      console.log('🗑️ Discarding temp quiz');
+      handleBackToList();
+      return;
+    }
+    
+    // If editing quiz has no questions, delete it from DB
     if (quizData.editing && questions.length === 0) {
       try {
         console.log('🗑️ Auto-deleting empty quiz:', quizData.editing.id);
         await quizApi.delete(quizData.editing.id);
-        
-        // Reload quizzes to update list
-        await loadQuizzesFromAPI();
       } catch (err) {
         console.error('Failed to auto-delete empty quiz:', err);
       }
     }
     
-    // Go back to list
+    // Always reload quizzes to ensure consistency
+    await loadQuizzesFromAPI();
     handleBackToList();
   };
 
@@ -353,41 +358,20 @@ function QuizzesPage() {
   };
 
   const handleCreateQuiz = async () => {
-    try {
-      setLoading(true);
-      
-      const response = await quizApi.create({
-        title: 'New Quiz',
-        description: '',
-        is_public: false
-      });
-      
-      const newQuiz = response.data.quiz;
+    // Create a temporary quiz object (not saved to DB yet)
+    const tempQuiz = {
+      id: `temp-${Date.now()}`, // Temporary ID
+      title: 'New Quiz',
+      description: '',
+      questionCount: 0,
+      created: 'Just now',
+      isPublic: false,
+      isTemp: true // Flag to indicate this is not saved yet
+    };
 
-      // Format for frontend
-      const formattedQuiz = {
-        id: newQuiz.quiz_id,
-        title: newQuiz.title,
-        description: newQuiz.description,
-        questionCount: 0,
-        created: 'Just now',
-        isPublic: newQuiz.is_public
-      };
-
-      // Reload quizzes to get updated list
-      await loadQuizzesFromAPI();
-      
-      // Set editing state
-      updateQuizData({ editing: formattedQuiz });
-      setQuestions([]);
-      updateUiState({ currentView: VIEWS.EDITING });
-      
-    } catch (err) {
-      console.error('Failed to create quiz:', err);
-      setError(err.response?.data?.error || 'Failed to create quiz');
-    } finally {
-      setLoading(false);
-    }
+    updateQuizData({ editing: tempQuiz });
+    setQuestions([]);
+    updateUiState({ currentView: VIEWS.EDITING });
   };
 
   const handleDeleteQuiz = (quiz) => {
@@ -426,16 +410,33 @@ function QuizzesPage() {
     try {
       setLoading(true);
 
-      // Update quiz metadata
-      await quizApi.update(quizData.editing.id, {
-        title: quizData.editing.title,
-        description: quizData.editing.description || '',
-        is_public: quizData.editing.isPublic
-      });
+      let quizId = quizData.editing.id;
+      
+      // If it's a temp quiz, create it in DB first
+      if (quizData.editing.isTemp) {
+        const response = await quizApi.create({
+          title: quizData.editing.title,
+          description: quizData.editing.description || '',
+          is_public: quizData.editing.isPublic
+        });
+        quizId = response.data.quiz.quiz_id;
+        console.log('✅ Quiz created with ID:', quizId);
+      } else {
+        // Update existing quiz metadata
+        await quizApi.update(quizId, {
+          title: quizData.editing.title,
+          description: quizData.editing.description || '',
+          is_public: quizData.editing.isPublic
+        });
+        console.log('✅ Quiz updated:', quizId);
+      }
 
-      // Get existing questions from server
-      const currentQuizResponse = await quizApi.getById(quizData.editing.id);
-      const existingQuestionIds = currentQuizResponse.data.questions.map(q => q.question_id);
+      // Get existing questions from server (skip if temp quiz)
+      let existingQuestionIds = [];
+      if (!quizData.editing.isTemp) {
+        const currentQuizResponse = await quizApi.getById(quizId);
+        existingQuestionIds = currentQuizResponse.data.questions.map(q => q.question_id);
+      }
 
       // Process questions: add new, update existing, delete removed
       const updatedQuestionIds = [];
@@ -455,19 +456,24 @@ function QuizzesPage() {
 
         if (question.id && existingQuestionIds.includes(question.id)) {
           // Update existing question
-          await quizApi.updateQuestion(quizData.editing.id, question.id, questionData);
+          await quizApi.updateQuestion(quizId, question.id, questionData);
           updatedQuestionIds.push(question.id);
+          console.log('✅ Question updated:', question.id);
         } else {
           // Add new question
-          const response = await quizApi.addQuestion(quizData.editing.id, questionData);
+          const response = await quizApi.addQuestion(quizId, questionData);
           updatedQuestionIds.push(response.data.question.question_id);
+          console.log('✅ Question added:', response.data.question.question_id);
         }
       }
 
-      // Delete removed questions
-      for (const existingId of existingQuestionIds) {
-        if (!updatedQuestionIds.includes(existingId)) {
-          await quizApi.deleteQuestion(quizData.editing.id, existingId);
+      // Delete removed questions (only if not temp quiz)
+      if (!quizData.editing.isTemp) {
+        for (const existingId of existingQuestionIds) {
+          if (!updatedQuestionIds.includes(existingId)) {
+            await quizApi.deleteQuestion(quizId, existingId);
+            console.log('✅ Question deleted:', existingId);
+          }
         }
       }
 
