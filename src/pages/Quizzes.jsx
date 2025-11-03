@@ -692,8 +692,9 @@ function QuizzesPage() {
   };
 
   const handleRetrySoloQuiz = () => {
-    updateUiState({ showResults: false });
+    updateUiState({ showResults: false, currentView: VIEWS.LOADING });
     updateGameState(prev => ({ ...prev, quizKey: prev.quizKey + 1 }));
+    countdown.start(); // Restart countdown
   };
 
   const handleShowLeaderboard = (results) => {

@@ -12,7 +12,7 @@ export const validateQuestions = (questions) => {
   questions.forEach((question, index) => {
     const questionNumber = index + 1;
 
-    // ✅ Check for empty question text
+    // Check for empty question text
     if (!question.question || question.question.trim() === '') {
       errors.push({
         questionNumber,
@@ -44,11 +44,11 @@ export const validateQuestions = (questions) => {
   return errors;
 };
 
-// ✅ Multiple Choice Validation
+// Multiple Choice Validation
 const validateMultipleChoice = (question, questionNumber, errors) => {
   const choices = question.choices || [];
 
-  // ✅ Check if choices exist
+  // Check if choices exist
   if (!choices || choices.length === 0) {
     errors.push({
       questionNumber,
@@ -58,7 +58,7 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
     return;
   }
 
-  // ✅ Check for minimum number of choices (at least 2)
+  // Check for minimum number of choices (at least 2)
   if (choices.length < 2) {
     errors.push({
       questionNumber,
@@ -67,7 +67,7 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
     });
   }
 
-  // ✅ Check for empty choices
+  // Check for empty choices
   const emptyChoices = [];
   choices.forEach((choice, idx) => {
     if (!choice || choice.trim() === '') {
@@ -83,7 +83,7 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
     });
   }
 
-  // ✅ Check for duplicate choices
+  // Check for duplicate choices
   const nonEmptyChoices = choices.filter(c => c && c.trim() !== '');
   const duplicates = findDuplicates(nonEmptyChoices);
   
@@ -95,7 +95,7 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
     });
   }
 
-  // ✅ Check if correct answer is selected
+  // Check if correct answer is selected
   if (!question.correctAnswer || question.correctAnswer.trim() === '') {
     errors.push({
       questionNumber,
@@ -103,7 +103,7 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
       details: 'Click on a choice to mark it as the correct answer'
     });
   } else {
-    // ✅ Check if correct answer exists in choices
+    // Check if correct answer exists in choices
     const correctAnswerExists = choices.some(c => c === question.correctAnswer);
     if (!correctAnswerExists) {
       errors.push({
@@ -115,9 +115,9 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
   }
 };
 
-// ✅ Fill in the Blanks Validation
+// Fill in the Blanks Validation
 const validateFillInBlanks = (question, questionNumber, errors) => {
-  // ✅ Check for missing answer
+  // Check for missing answer
   if (!question.answer || question.answer.trim() === '') {
     errors.push({
       questionNumber,
@@ -127,9 +127,9 @@ const validateFillInBlanks = (question, questionNumber, errors) => {
   }
 };
 
-// ✅ True/False Validation
+// True/False Validation
 const validateTrueFalse = (question, questionNumber, errors) => {
-  // ✅ Check if correct answer is selected
+  // Check if correct answer is selected
   if (!question.correctAnswer) {
     errors.push({
       questionNumber,
@@ -139,7 +139,7 @@ const validateTrueFalse = (question, questionNumber, errors) => {
     return;
   }
 
-  // ✅ Check if it's a valid True/False value
+  // Check if it's a valid True/False value
   if (question.correctAnswer !== 'True' && question.correctAnswer !== 'False') {
     errors.push({
       questionNumber,
@@ -149,11 +149,11 @@ const validateTrueFalse = (question, questionNumber, errors) => {
   }
 };
 
-// ✅ Matching Validation
+// Matching Validation
 const validateMatching = (question, questionNumber, errors) => {
   const pairs = question.matchingPairs || [];
 
-  // ✅ Check if pairs exist
+  // Check if pairs exist
   if (!pairs || pairs.length === 0) {
     errors.push({
       questionNumber,
@@ -163,7 +163,7 @@ const validateMatching = (question, questionNumber, errors) => {
     return;
   }
 
-  // ✅ Check for minimum number of pairs (at least 2)
+  // Check for minimum number of pairs (at least 2)
   if (pairs.length < 2) {
     errors.push({
       questionNumber,
@@ -172,7 +172,7 @@ const validateMatching = (question, questionNumber, errors) => {
     });
   }
 
-  // ✅ Check for empty items in pairs
+  // Check for empty items in pairs
   const emptyPairs = [];
   pairs.forEach((pair, idx) => {
     const pairNum = idx + 1;
@@ -196,7 +196,7 @@ const validateMatching = (question, questionNumber, errors) => {
     });
   }
 
-  // ✅ Check for duplicates in left column
+  // Check for duplicates in left column
   const leftItems = pairs
     .map(p => p.left)
     .filter(item => item && item.trim() !== '');
@@ -211,7 +211,7 @@ const validateMatching = (question, questionNumber, errors) => {
     });
   }
 
-  // ✅ Check for duplicates in right column
+  // Check for duplicates in right column
   const rightItems = pairs
     .map(p => p.right)
     .filter(item => item && item.trim() !== '');

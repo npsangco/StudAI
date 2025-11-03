@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuizGame } from '../hooks/useQuizGame';
 import { useQuizTimer } from '../hooks/useQuizTimer';
 import { QuizGameHeader } from '../QuizGameHeader';
@@ -15,6 +15,9 @@ const QuizGame = ({
 }) => {
   const questions = quiz?.questions || [];
   const [isProcessing, setIsProcessing] = useState(false);
+  // Track all answers for summary
+  const [answersHistory, setAnswersHistory] = useState([]);
+  const timeoutHandledRef = useRef(false);
   
   const game = useQuizGame(questions, 30);
   const simulatedPlayers = useSimulatedPlayers(questions.length, game.currentQuestionIndex);
@@ -41,35 +44,58 @@ const QuizGame = ({
     game.isProcessingRef.current = isProcessing;
   }, [isProcessing, game.isProcessingRef]);
 
-  useEffect(() => {
-    const hasAnswer = game.selectedAnswer || 
-                      game.userAnswer?.includes('_submitted') || 
-                      game.isMatchingSubmitted;
-    
-    if (timeLeft === 0 && !hasAnswer && game.currentQuestionIndex === questions.length - 1 && !isProcessing) {
-      finishQuiz();
-    }
-  }, [timeLeft, game.currentQuestionIndex, questions.length, game.selectedAnswer, game.userAnswer, game.isMatchingSubmitted, isProcessing]);
-
   const handleTimeUp = () => {
+    // Prevent multiple timeout recordings
+    if (timeoutHandledRef.current) return;
+    timeoutHandledRef.current = true;
+    
+    // Record timeout as incorrect answer
+    if (currentQ) {
+      const answerRecord = {
+        question: currentQ.question,
+        userAnswer: '(No answer - time ran out)',
+        correctAnswer: getCorrectAnswerDisplay(currentQ),
+        isCorrect: false,
+        type: currentQ.type
+      };
+      setAnswersHistory(prev => [...prev, answerRecord]);
+    }
+    
     game.isProcessingRef.current = true;
     
-    if (game.currentQuestionIndex < questions.length - 1) {
-      game.nextQuestion();
-      resetTimer(30);
-      game.isProcessingRef.current = false;
-    } else {
-      game.isProcessingRef.current = false;
-    }
+    // Move to next question or finish
+    setTimeout(() => {
+      if (game.currentQuestionIndex < questions.length - 1) {
+        game.nextQuestion();
+        resetTimer(30);
+        timeoutHandledRef.current = false; // Reset for next question
+        game.isProcessingRef.current = false;
+      } else {
+        // Last question - finish quiz
+        handleNextQuestion();
+      }
+    }, 100);
   };
 
   const handleAnswerSelect = (answer) => {
     if (game.selectedAnswer || game.isPaused || isProcessing) return;
     
+    timeoutHandledRef.current = true;
     setIsProcessing(true);
     game.setSelectedAnswer(answer);
     
     const isCorrect = game.isAnswerCorrect(currentQ, answer);
+
+    // Record answer
+    const answerRecord = {
+      question: currentQ.question,
+      userAnswer: answer,
+      correctAnswer: currentQ.correctAnswer,
+      isCorrect: isCorrect,
+      type: currentQ.type
+    };
+    setAnswersHistory(prev => [...prev, answerRecord]);
+
     if (isCorrect) {
       game.updateScore(1);
       if (onPlayerScoreUpdate) {
@@ -86,9 +112,20 @@ const QuizGame = ({
   const handleFillInAnswer = () => {
     if (!game.userAnswer?.trim() || game.userAnswer.includes('_submitted') || game.isPaused || isProcessing) return;
     
+    timeoutHandledRef.current = true;
     setIsProcessing(true);
     const actualAnswer = game.userAnswer.trim();
     const isCorrect = game.isAnswerCorrect(currentQ, actualAnswer);
+
+    // Record answer
+    const answerRecord = {
+      question: currentQ.question,
+      userAnswer: actualAnswer,
+      correctAnswer: currentQ.answer,
+      isCorrect: isCorrect,
+      type: currentQ.type
+    };
+    setAnswersHistory(prev => [...prev, answerRecord]);
     
     game.setUserAnswer(actualAnswer + '_submitted');
     
@@ -107,11 +144,22 @@ const QuizGame = ({
 
   const handleMatchingSubmit = (matches) => {
     if (game.isPaused || isProcessing) return;
-    
+
+    timeoutHandledRef.current = true;
     setIsProcessing(true);
     game.setUserMatches(matches);
     game.setIsMatchingSubmitted(true);
     const isCorrect = game.isAnswerCorrect(currentQ, matches);
+
+    // Record answer
+    const answerRecord = {
+      question: currentQ.question,
+      userAnswer: matches,
+      correctAnswer: currentQ.matchingPairs,
+      isCorrect: isCorrect,
+      type: currentQ.type
+    };
+    setAnswersHistory(prev => [...prev, answerRecord]);
     
     if (isCorrect) {
       game.updateScore(1);
@@ -132,6 +180,8 @@ const QuizGame = ({
 
   const handleNextQuestion = () => {
     setIsProcessing(false);
+    timeoutHandledRef.current = false;
+
     if (game.currentQuestionIndex < questions.length - 1) {
       game.nextQuestion();
       resetTimer(30);
@@ -144,10 +194,23 @@ const QuizGame = ({
     handleNextQuestion();
   };
 
+  const getCorrectAnswerDisplay = (question) => {
+    if (question.type === 'Multiple Choice' || question.type === 'True/False') {
+      return question.correctAnswer;
+    } else if (question.type === 'Fill in the blanks') {
+      return question.answer;
+    } else if (question.type === 'Matching') {
+      return question.matchingPairs;
+    }
+    return '';
+  };
+
   const finishQuiz = () => {
+    // Normal finish with existing answers
     const results = {
       ...game.getResults(),
-      quizTitle: quiz.title
+      quizTitle: quiz.title,
+      answers: answersHistory
     };
     
     if (mode === 'battle') {
