@@ -523,10 +523,10 @@ const CompactPetStats = ({ pet }) => {
   const expPercent = (pet.experience_points / expNeeded) * 100;
 
   const stats = [
-    { key: "hunger", label: "Hunger", icon: "🍖" },
-    { key: "happiness", label: "Happy", icon: "😊" },
-    { key: "cleanliness", label: "Clean", icon: "🧼" },
-    { key: "energy", label: "Energy", icon: "⚡" }
+    { key: "hunger", label: "Hunger", icon: "" },
+    { key: "happiness", label: "Happy", icon: "" },
+    { key: "cleanliness", label: "Clean", icon: "" },
+    { key: "energy", label: "Energy", icon: "" }
   ];
 
   return (
@@ -571,7 +571,7 @@ const CompactPetStats = ({ pet }) => {
         pet.cleanliness_level < 20 || pet.energy_level < 20) && (
         <div className="mt-2 bg-red-50 border border-red-200 rounded-lg p-2">
           <p className="text-red-600 text-xs font-medium">
-            ⚠️ Needs attention!
+            ⚠️ Your companion needs attention!
           </p>
         </div>
       )}

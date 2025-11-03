@@ -219,7 +219,7 @@ export default function Planner() {
   );
 
   const renderMonthSelection = () => (
-    <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-8">
+    <div className="min-h-screen  p-4 sm:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-12">
           <button
@@ -340,7 +340,7 @@ export default function Planner() {
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-8">
+      <div className="min-h-screen  p-4 sm:p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-12">
             <button
@@ -416,7 +416,7 @@ export default function Planner() {
     const dateString = `${months[selectedMonth]} ${selectedDate}, ${selectedYear}`;
 
     return (
-      <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-8">
+      <div className="min-h-screen  p-4 sm:p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <button
