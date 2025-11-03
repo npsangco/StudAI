@@ -71,7 +71,7 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
                   onClick={() => setShowAnswerReview(true)}
                   className="w-full mb-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all shadow-md"
                 >
-                  View Answer Summary
+                  Review Answers
                 </button>
               )}
 

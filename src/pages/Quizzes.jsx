@@ -817,7 +817,7 @@ function QuizzesPage() {
       <>
         <style>{styles}</style>
         <QuizGame
-          key={`solo-${gameState.quizKey}-${Date.now()}`}
+          key={`solo-${gameState.quizKey}`}
           quiz={{ ...quizData.selected, questions }}
           mode="solo"
           onBack={handleBackToList}
