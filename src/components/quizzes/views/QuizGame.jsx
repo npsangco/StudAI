@@ -50,6 +50,7 @@ const QuizGame = ({
     timeoutHandledRef.current = true;
     
     // Record timeout as incorrect answer
+    let newAnswersHistory = answersHistory;
     if (currentQ) {
       const answerRecord = {
         question: currentQ.question,
@@ -58,7 +59,8 @@ const QuizGame = ({
         isCorrect: false,
         type: currentQ.type
       };
-      setAnswersHistory(prev => [...prev, answerRecord]);
+      newAnswersHistory = [...answersHistory, answerRecord];
+      setAnswersHistory(newAnswersHistory);
     }
     
     game.isProcessingRef.current = true;
@@ -68,11 +70,11 @@ const QuizGame = ({
       if (game.currentQuestionIndex < questions.length - 1) {
         game.nextQuestion();
         resetTimer(30);
-        timeoutHandledRef.current = false; // Reset for next question
+        timeoutHandledRef.current = false;
         game.isProcessingRef.current = false;
       } else {
-        // Last question - finish quiz
-        handleNextQuestion();
+        // Last question - finish quiz with updated answers
+        finishQuizWithAnswers(newAnswersHistory);
       }
     }, 100);
   };
@@ -94,7 +96,8 @@ const QuizGame = ({
       isCorrect: isCorrect,
       type: currentQ.type
     };
-    setAnswersHistory(prev => [...prev, answerRecord]);
+    const newAnswersHistory = [...answersHistory, answerRecord];
+    setAnswersHistory(newAnswersHistory);
 
     if (isCorrect) {
       game.updateScore(1);
@@ -105,7 +108,12 @@ const QuizGame = ({
     
     setTimeout(() => {
       setIsProcessing(false);
-      handleNextQuestion();
+      // Check if last question
+      if (game.currentQuestionIndex >= questions.length - 1) {
+        finishQuizWithAnswers(newAnswersHistory);
+      } else {
+        handleNextQuestion();
+      }
     }, ANSWER_DISPLAY_DURATION);
   };
 
@@ -125,7 +133,8 @@ const QuizGame = ({
       isCorrect: isCorrect,
       type: currentQ.type
     };
-    setAnswersHistory(prev => [...prev, answerRecord]);
+    const newAnswersHistory = [...answersHistory, answerRecord];
+    setAnswersHistory(newAnswersHistory);
     
     game.setUserAnswer(actualAnswer + '_submitted');
     
@@ -138,7 +147,12 @@ const QuizGame = ({
     
     setTimeout(() => {
       setIsProcessing(false);
-      handleNextQuestion();
+      // Check if last question
+      if (game.currentQuestionIndex >= questions.length - 1) {
+        finishQuizWithAnswers(newAnswersHistory);
+      } else {
+        handleNextQuestion();
+      }
     }, ANSWER_DISPLAY_DURATION);
   };
 
@@ -159,7 +173,8 @@ const QuizGame = ({
       isCorrect: isCorrect,
       type: currentQ.type
     };
-    setAnswersHistory(prev => [...prev, answerRecord]);
+    const newAnswersHistory = [...answersHistory, answerRecord];
+    setAnswersHistory(newAnswersHistory);
     
     if (isCorrect) {
       game.updateScore(1);
@@ -168,12 +183,19 @@ const QuizGame = ({
       }
     }
     
+    // Battle mode: auto-proceed after delay
     if (mode === 'battle') {
       setTimeout(() => {
         setIsProcessing(false);
-        handleNextQuestion();
+        // Check if last question
+        if (game.currentQuestionIndex >= questions.length - 1) {
+          finishQuizWithAnswers(newAnswersHistory);
+        } else {
+          handleNextQuestion();
+        }
       }, MATCHING_REVIEW_DURATION_BATTLE);
     } else {
+      // Solo mode: just unlock UI, wait for manual next
       setIsProcessing(false);
     }
   };
@@ -191,7 +213,17 @@ const QuizGame = ({
   };
 
   const handleManualNext = () => {
-    handleNextQuestion();
+    // For solo matching, capture current answers before proceeding
+    if (currentQ.type === 'Matching' && game.isMatchingSubmitted) {
+      // Check if last question
+      if (game.currentQuestionIndex >= questions.length - 1) {
+        finishQuizWithAnswers(answersHistory);
+      } else {
+        handleNextQuestion();
+      }
+    } else {
+      handleNextQuestion();
+    }
   };
 
   const getCorrectAnswerDisplay = (question) => {
@@ -205,12 +237,12 @@ const QuizGame = ({
     return '';
   };
 
-  const finishQuiz = () => {
-    // Normal finish with existing answers
+  const finishQuizWithAnswers = (finalAnswers) => {
+    console.log('🏁 Finishing quiz with answers:', finalAnswers); // Debug log
     const results = {
       ...game.getResults(),
       quizTitle: quiz.title,
-      answers: answersHistory
+      answers: finalAnswers
     };
     
     if (mode === 'battle') {
@@ -225,6 +257,10 @@ const QuizGame = ({
     }
     
     onComplete(results);
+  };
+
+  const finishQuiz = () => {
+    finishQuizWithAnswers(answersHistory);
   };
 
   if (!currentQ) {
