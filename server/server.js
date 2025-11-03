@@ -1,6 +1,25 @@
 // 🌐 Environment variables
 import dotenv from "dotenv";
-dotenv.config();
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env from root directory explicitly
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+// DEBUG: Check if Zoom environment variables are loaded
+console.log('🔍 Environment Variables Check:');
+console.log('📁 Current directory:', __dirname);
+console.log('📁 Looking for .env in:', path.join(__dirname, '.env'));
+console.log('ZOOM_CLIENT_ID:', process.env.ZOOM_CLIENT_ID ? '✓ Loaded' : '✗ Missing');
+console.log('ZOOM_CLIENT_SECRET:', process.env.ZOOM_CLIENT_SECRET ? '✓ Loaded' : '✗ Missing');
+console.log('ZOOM_REDIRECT_URL:', process.env.ZOOM_REDIRECT_URL ? '✓ Loaded' : '✗ Missing');
+
+if (!process.env.ZOOM_CLIENT_ID || !process.env.ZOOM_CLIENT_SECRET) {
+    console.error('❌ CRITICAL: Zoom OAuth environment variables are missing!');
+    console.error('   Using direct credentials as fallback...');
+}
 
 // 📦 Core modules
 import fs from "fs";
@@ -23,7 +42,8 @@ import Question from "./models/Question.js";
 import QuizAttempt from "./models/QuizAttempt.js";
 import QuizBattle from "./models/QuizBattle.js";
 import BattleParticipant from "./models/BattleParticipant.js";
-
+import Session from "./models/Session.js";
+import ZoomToken from "./models/ZoomToken.js"; // ← ADDED
 
 // Import Note model after creating it
 let Note;
@@ -49,10 +69,9 @@ import noteRoutes from "./routes/noteRoutes.js";
 import quizRoutes from "./routes/quizRoutes.js"; 
 import SharedNote from "./models/SharedNote.js";
 import planRoutes from "./routes/planRoutes.js";
+import sessionRoutes from "./routes/sessionRoutes.js";
 
 const app = express();
-app.use(express.json());
-app.use("/uploads", express.static("uploads"));
 
 // ----------------- CORS -----------------
 app.use(cors({
@@ -66,6 +85,10 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
+// ----------------- EXPRESS MIDDLEWARE -----------------
+app.use(express.json());
+app.use("/uploads", express.static("uploads"));
+
 // ============================================
 // STREAK TRACKING SYSTEM
 // ============================================
@@ -76,7 +99,7 @@ async function updateUserStreak(userId) {
     if (!user) return;
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset to midnight for date comparison
+    today.setHours(0, 0, 0, 0);
 
     const lastActivity = user.last_activity_date 
       ? new Date(user.last_activity_date) 
@@ -89,31 +112,25 @@ async function updateUserStreak(userId) {
       const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
       if (diffDays === 0) {
-        // Same day - no update needed
         console.log(`User ${userId}: Same day activity, streak unchanged`);
         return user.study_streak;
       } else if (diffDays === 1) {
-        // Consecutive day - increment streak
         user.study_streak += 1;
         user.last_activity_date = today;
         
-        // Update longest streak if current is higher
         if (user.study_streak > user.longest_streak) {
           user.longest_streak = user.study_streak;
         }
         
         console.log(`✅ User ${userId}: Streak continued! Now at ${user.study_streak} days`);
         
-        // Check for milestone rewards
         await checkStreakMilestones(userId, user.study_streak);
       } else {
-        // Streak broken - reset to 1
         console.log(`⚠️ User ${userId}: Streak broken after ${user.study_streak} days. Reset to 1 day`);
         user.study_streak = 1;
         user.last_activity_date = today;
       }
     } else {
-      // First time activity
       user.study_streak = 1;
       user.last_activity_date = today;
       user.longest_streak = 1;
@@ -128,7 +145,6 @@ async function updateUserStreak(userId) {
   }
 }
 
-// Optional: Milestone rewards
 async function checkStreakMilestones(userId, streak) {
   const milestones = {
     7: { points: 50, message: "7-day streak!" },
@@ -148,9 +164,14 @@ async function checkStreakMilestones(userId, streak) {
 }
 
 // ============================================
-// MODEL ASSOCIATIONS (MUST BE HERE, BEFORE sequelize.authenticate)
+// MODEL ASSOCIATIONS
 // ============================================
 
+// Add Session associations
+Session.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasMany(Session, { foreignKey: 'user_id', as: 'sessions' });
+
+// Your existing associations
 Quiz.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
 User.hasMany(Quiz, { foreignKey: 'created_by', as: 'quizzes' });
 
@@ -163,7 +184,6 @@ User.hasMany(QuizAttempt, { foreignKey: 'user_id', as: 'attempts' });
 QuizAttempt.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
 Quiz.hasMany(QuizAttempt, { foreignKey: 'quiz_id', as: 'attempts' });
 
-// QuizBattle associations
 QuizBattle.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
 Quiz.hasMany(QuizBattle, { foreignKey: 'quiz_id', as: 'battles' });
 
@@ -173,14 +193,16 @@ User.hasMany(QuizBattle, { foreignKey: 'host_id', as: 'hosted_battles' });
 QuizBattle.belongsTo(User, { foreignKey: 'winner_id', as: 'winner' });
 User.hasMany(QuizBattle, { foreignKey: 'winner_id', as: 'won_battles' });
 
-// BattleParticipant associations
 BattleParticipant.belongsTo(QuizBattle, { foreignKey: 'battle_id', as: 'battle' });
 QuizBattle.hasMany(BattleParticipant, { foreignKey: 'battle_id', as: 'participants' });
 
 BattleParticipant.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasMany(BattleParticipant, { foreignKey: 'user_id', as: 'battle_participations' });
 
-// ADD THIS HERE - Note and NoteCategory associations
+// Add ZoomToken association
+ZoomToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasOne(ZoomToken, { foreignKey: 'user_id', as: 'zoomToken' });
+
 if (Note) {
     const NoteCategory = (await import('./models/NoteCategory.js')).default;
     
@@ -209,11 +231,13 @@ sequelize.authenticate()
             Question.sync({ force: false }),
             QuizAttempt.sync({ force: false }),
             QuizBattle.sync({ force: false }),
-            BattleParticipant.sync({ force: false })
+            BattleParticipant.sync({ force: false }),
+            Session.sync({ force: false }),
+            ZoomToken.sync({ force: false }) // ← ADDED TO SYNC
         ]);
     })
     .then(() => {
-        console.log("✅ Models synced");
+        console.log("✅ All models synced");
     })
     .catch((err) => {
         console.error("❌ Database error:", err);
@@ -282,7 +306,6 @@ passport.use(new GoogleStrategy({
     }
 }));
 
-
 passport.serializeUser((user, done) => {
     done(null, user.user_id);
 }); 
@@ -296,6 +319,13 @@ passport.deserializeUser(async (id, done) => {
     }
 });
 
+// ----------------- ROUTE REGISTRATION -----------------
+app.use("/api/pet", petRoutes);
+app.use("/api/notes", noteRoutes);
+app.use("/api/plans", planRoutes);
+app.use("/api/quizzes", quizRoutes);
+app.use("/api/sessions", sessionRoutes);
+
 // ----------------- AUTH ROUTES -----------------
 app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
@@ -304,18 +334,14 @@ app.get(
     passport.authenticate("google", { failureRedirect: "http://localhost:5173/" }),
     async (req, res) => {
         try {
-            // Save user details into session
             req.session.userId = req.user.user_id;
             req.session.email = req.user.email;
             req.session.username = req.user.username;
             req.session.role = req.user.role;
 
-            // UPDATE STREAK ON GOOGLE LOGIN
             await updateUserStreak(req.user.user_id);
 
             console.log("✅ Google login session set:", req.session);
-
-            // redirect to dashboard
             res.redirect("http://localhost:5173/dashboard");
         } catch (err) {
             console.error("Google login session error:", err);
@@ -382,10 +408,8 @@ app.post("/api/auth/login", async (req, res) => {
         req.session.username = user.username;
         req.session.role = user.role;
 
-        // UPDATE STREAK ON LOGIN
         await updateUserStreak(user.user_id);
         
-        // Fetch updated user data
         const updatedUser = await User.findByPk(user.user_id);
 
         res.status(200).json({
@@ -526,12 +550,17 @@ app.post('/api/upload/profile', profileUpload.single('profilePic'), async (req, 
     }
 });
 
-
 app.use('/uploads/profile_pictures', express.static('uploads/profile_pictures'));
 
 // ----------------- PASSWORD UPDATE WITH EMAIL VERIFICATION -----------------
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
 
-// Request password update (send verification email)
 app.post("/api/user/request-password-update", async (req, res) => {
     if (!req.session || !req.session.userId) {
         return res.status(401).json({ error: "Not logged in" });
@@ -540,7 +569,6 @@ app.post("/api/user/request-password-update", async (req, res) => {
     const { newPassword } = req.body;
     if (!newPassword) return res.status(400).json({ error: "Password required" });
 
-    // Validate password
     if (!passwordRegex.test(newPassword)) {
         return res.status(400).json({
             error: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
@@ -551,11 +579,9 @@ app.post("/api/user/request-password-update", async (req, res) => {
         const user = await User.findByPk(req.session.userId);
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        // Prevent reusing the old password
         const isSame = await bcrypt.compare(newPassword, user.password);
         if (isSame) return res.status(400).json({ error: "Password cannot be the same as the old one" });
 
-        // Create token with userId and newPassword (hashed inside token for security)
         const token = jwt.sign(
             { userId: user.user_id, newPassword: await bcrypt.hash(newPassword, 10) },
             process.env.JWT_SECRET,
@@ -582,7 +608,6 @@ app.post("/api/user/request-password-update", async (req, res) => {
     }
 });
 
-// Confirm password update (when user clicks email link)
 app.get("/api/user/confirm-password-update", async (req, res) => {
     const { token } = req.query;
     if (!token) return res.status(400).send("Invalid request");
@@ -602,17 +627,7 @@ app.get("/api/user/confirm-password-update", async (req, res) => {
     }
 });
 
-
-
 // ----------------- RESET PASSWORD ROUTES -----------------
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
-
 app.post("/api/auth/reset-request", async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Email required" });
@@ -682,8 +697,6 @@ var storage = multer.diskStorage({
 
 var upload = multer({ storage: storage })
 
-
-
 app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
     try {
         console.log("Incoming file upload...");
@@ -734,7 +747,7 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
     }
 });
 
-// ----------------- PPTX EXTRACTION ENDPOINT (ONLY) -----------------
+// ----------------- PPTX EXTRACTION ENDPOINT -----------------
 app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
     try {
         const filePath = req.file.path;
@@ -773,11 +786,8 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
         function cleanPPTXText(text) {
             if (!text) return '';
             
-            // Remove XML namespaces and schemas
             text = text.replace(/http:\/\/schemas\.[^\s]+/g, '');
             text = text.replace(/urn:schemas-[^\s]+/g, '');
-            
-            // Remove common PPTX metadata patterns
             text = text.replace(/\brId\d+\b/g, '');
             text = text.replace(/\bShape\s+\d+\b/g, '');
             text = text.replace(/\bGoogle\s+Shape;[^\s]+/g, '');
@@ -785,55 +795,34 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
             text = text.replace(/\b(title|body|ctr|ctrTitle)\b/g, '');
             text = text.replace(/\b(solid|flat|sng|none|noStrike|square|arabicPeriod)\b/g, '');
             text = text.replace(/\b(dk1|lt1|sm)\b/g, '');
-            
-            // Remove font names
             text = text.replace(/\b(Arial|Proxima Nova|Twentieth Century|Corsiva|Times New Roman|Architects Daughter)\b/g, '');
-            
-            // Remove language codes
             text = text.replace(/\ben-US\b/g, '');
-            
-            // Remove hex color codes (6 digit)
             text = text.replace(/\b[0-9A-Fa-f]{6}\b/g, '');
-            
-            // Remove large numbers (coordinates, dimensions)
             text = text.replace(/\b\d{4,}\b/g, '');
-            
-            // Remove small isolated numbers and formatting codes
             text = text.replace(/\bl\s+\d+\b/g, '');
             text = text.replace(/\bt\s+\d+\b/g, '');
             text = text.replace(/\b\d+\s+l\b/g, '');
             text = text.replace(/\b\d+\s+t\b/g, '');
-            
-            // Remove image references
             text = text.replace(/\b(Related image|Image result for[^\n]*)\b/gi, '');
             text = text.replace(/\b[\w-]+\.(jpg|jpeg|png|gif|JPG|PNG)\b/g, '');
-            
-            // Remove standalone single letters and numbers
             text = text.replace(/\b[a-z]\s+\d+\b/gi, '');
             text = text.replace(/\b\d+\s+[a-z]\b/gi, '');
-            
-            // Remove excessive whitespace
             text = text.replace(/\s+/g, ' ');
             
-            // Split by common delimiters
             const sentences = text.split(/[•\-–—\n]/);
             
             const cleanedSentences = sentences
                 .map(s => s.trim())
                 .filter(s => {
-                    // Must be at least 10 characters
                     if (s.length < 10) return false;
                     
-                    // Must not be mostly numbers
                     const letterCount = (s.match(/[a-zA-Z]/g) || []).length;
                     const digitCount = (s.match(/\d/g) || []).length;
                     if (digitCount > letterCount) return false;
                     
-                    // Must have at least 3 words
                     const words = s.split(/\s+/).filter(w => w.length > 0);
                     if (words.length < 3) return false;
                     
-                    // Check if it's mostly real words (alphabetic content)
                     const alphaRatio = letterCount / s.replace(/\s/g, '').length;
                     if (alphaRatio < 0.6) return false;
                     
@@ -908,11 +897,9 @@ app.post("/api/generate-summary", async (req, res) => {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
-        // Here you would implement your AI summary generation logic
-        // For now, just create a note with the content
         const newNote = await Note.create({
             user_id: userId,
-            file_id: null, // Can be linked to uploaded file if needed
+            file_id: null,
             title: title,
             content: content
         });
@@ -928,14 +915,6 @@ app.post("/api/generate-summary", async (req, res) => {
     }
 });
 
-// ----------------- PET SYSTEM ROUTES -----------------
-app.use("/api/pet", petRoutes);
-app.use("/api/notes", noteRoutes);
-app.use("/api/plans", planRoutes);
-
-// ----------------- QUIZ SYSTEM ROUTES -----------------
-app.use("/api/quizzes", quizRoutes);
-
 // Get quiz attempts count
 app.get('/api/quiz-attempts/count', async (req, res) => {
   try {
@@ -945,7 +924,6 @@ app.get('/api/quiz-attempts/count', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
     
-    // Count total quiz attempts for this user
     const attemptCount = await QuizAttempt.count({
       where: { user_id: userId }
     });

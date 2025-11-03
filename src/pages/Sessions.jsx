@@ -1,433 +1,478 @@
-import { useState, useEffect } from "react";
-import { AlertCircle, Video, Calendar, Clock, Trash2, ExternalLink, Copy, Play, Square, Users } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Calendar, Video, LogOut, User, Clock, Copy, Check, RefreshCw } from 'lucide-react';
 
-export default function Sessions() {
-  const [loading, setLoading] = useState(false);
-  const [zoomStatus, setZoomStatus] = useState({ authorized: false, expiresAt: null });
+const Sessions = () => {
+  const [user, setUser] = useState(null);
   const [sessions, setSessions] = useState([]);
-  const [newSession, setNewSession] = useState({
-    title: "",
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [copiedUrl, setCopiedUrl] = useState('');
+  const [zoomConnected, setZoomConnected] = useState(false);
+  
+  const [sessionForm, setSessionForm] = useState({
+    topic: '',
     duration: 60,
-    scheduled_start: ""
+    start_time: '',
+    agenda: ''
   });
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+
+  const API_BASE_URL = 'http://localhost:4000/api';
 
   useEffect(() => {
-    checkZoomStatus();
+    // Check for OAuth callback parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const zoomConnected = urlParams.get('zoom_connected');
+    const error = urlParams.get('error');
     
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("zoom_connected") === "true") {
-      setSuccess("Successfully connected to Zoom! You can now create sessions.");
-      checkZoomStatus();
-      loadSessions();
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (params.get("error")) {
-      setError(`Connection failed: ${params.get("error")}`);
+    if (zoomConnected) {
+      setSuccess('Successfully connected to Zoom!');
+      setTimeout(() => setSuccess(''), 3000);
+      // Clean URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+    
+    if (error) {
+      setError(`Zoom connection failed: ${error}`);
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Load user from session and check Zoom status
+    checkUserAndZoomStatus();
+    loadSessions();
   }, []);
 
-  const checkZoomStatus = async () => {
+  const checkUserAndZoomStatus = async () => {
     try {
-      const resp = await fetch("/api/zoom/status", { credentials: "include" });
-      if (resp.ok) {
-        const data = await resp.json();
-        setZoomStatus(data);
-        if (data.authorized) {
-          loadSessions();
+      // Check if user is logged in (you might need to adjust this based on your auth)
+      const userResponse = await fetch(`${API_BASE_URL}/user/profile`, {
+        credentials: 'include'
+      });
+      
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        setUser({
+          id: userData.user_id,
+          email: userData.email,
+          first_name: userData.username, // Using username as first name
+          last_name: '' // Adjust based on your user model
+        });
+        
+        // Check Zoom connection status
+        const zoomStatusResponse = await fetch(`${API_BASE_URL}/sessions/zoom/status`, {
+          credentials: 'include'
+        });
+        
+        if (zoomStatusResponse.ok) {
+          const zoomStatus = await zoomStatusResponse.json();
+          setZoomConnected(zoomStatus.connected);
         }
       }
-    } catch (e) {
-      console.error("Failed to check Zoom status:", e);
+    } catch (err) {
+      console.log('User status check failed:', err);
     }
   };
 
   const loadSessions = async () => {
     try {
-      const resp = await fetch("/api/sessions", { credentials: "include" });
-      if (resp.ok) {
-        const data = await resp.json();
-        setSessions(data.sessions);
-      } else if (resp.status === 401) {
-        setZoomStatus({ authorized: false, expiresAt: null });
-        setError("Your Zoom authorization has expired. Please reconnect.");
+      const response = await fetch(`${API_BASE_URL}/sessions`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSessions(data.sessions || []);
       }
-    } catch (e) {
-      console.error("Failed to load sessions:", e);
+    } catch (err) {
+      console.log('Failed to load sessions:', err);
     }
   };
 
-  const connectZoom = async () => {
-    try {
-      const resp = await fetch("/api/zoom/authorize", { credentials: "include" });
-      if (resp.ok) {
-        const data = await resp.json();
-        window.location.href = data.authUrl;
-      } else {
-        setError("Failed to initiate Zoom connection");
-      }
-    } catch (e) {
-      setError("Error connecting to Zoom");
-    }
-  };
-
-  const disconnectZoom = async () => {
-    if (!confirm("Are you sure you want to disconnect your Zoom account?")) return;
+  const handleZoomConnect = async () => {
+    setLoading(true);
+    setError('');
     
     try {
-      const resp = await fetch("/api/zoom/revoke", {
-        method: "POST",
-        credentials: "include"
+      const response = await fetch(`${API_BASE_URL}/sessions/zoom/connect`, {
+        credentials: 'include'
       });
-      if (resp.ok) {
-        setZoomStatus({ authorized: false, expiresAt: null });
-        setSessions([]);
-        setSuccess("Zoom account disconnected successfully");
+      
+      if (!response.ok) {
+        throw new Error('Failed to initiate Zoom connection');
       }
-    } catch (e) {
-      setError("Failed to disconnect Zoom");
+      
+      const data = await response.json();
+      // Redirect to Zoom OAuth
+      window.location.href = data.authUrl;
+    } catch (err) {
+      setError('Failed to connect to Zoom. Please try again.');
+      setLoading(false);
     }
+  };
+
+  const handleDisconnectZoom = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/sessions/zoom/disconnect`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        setZoomConnected(false);
+        setSuccess('Zoom disconnected successfully');
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err) {
+      setError('Failed to disconnect Zoom');
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setSessionForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const createSession = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setSuccess("");
+    setError('');
 
     try {
-      const resp = await fetch("/api/sessions/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(newSession)
+      const response = await fetch(`${API_BASE_URL}/sessions/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: sessionForm.topic,
+          duration: sessionForm.duration,
+          scheduled_start: sessionForm.start_time,
+          agenda: sessionForm.agenda
+        })
       });
 
-      if (!resp.ok) {
-        const data = await resp.json();
-        throw new Error(data.error || "Failed to create session");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create session');
       }
 
-      const data = await resp.json();
-      setSuccess(`Session "${data.session.title}" created successfully!`);
-      setNewSession({ title: "", duration: 60, scheduled_start: "" });
-      loadSessions();
-    } catch (e) {
-      setError(e.message || "Error creating session");
+      const data = await response.json();
+      
+      // Add the new session to the list
+      setSessions(prev => [data.session, ...prev]);
+      
+      setSuccess(data.message);
+      
+      // Reset form
+      setSessionForm({
+        topic: '',
+        duration: 60,
+        start_time: '',
+        agenda: ''
+      });
+      
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const startSession = async (sessionId) => {
-    try {
-      const resp = await fetch(`/api/sessions/${sessionId}/start`, {
-        method: "POST",
-        credentials: "include"
-      });
-
-      if (resp.ok) {
-        setSuccess("Session started!");
-        loadSessions();
-      } else {
-        const data = await resp.json();
-        throw new Error(data.error || "Failed to start session");
-      }
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  const endSession = async (sessionId) => {
-    if (!confirm("Are you sure you want to end this session?")) return;
-
-    try {
-      const resp = await fetch(`/api/sessions/${sessionId}/end`, {
-        method: "POST",
-        credentials: "include"
-      });
-
-      if (resp.ok) {
-        setSuccess("Session ended successfully");
-        loadSessions();
-      } else {
-        const data = await resp.json();
-        throw new Error(data.error || "Failed to end session");
-      }
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  const deleteSession = async (sessionId) => {
-    if (!confirm("Are you sure you want to delete this session?")) return;
-
-    try {
-      const resp = await fetch(`/api/sessions/${sessionId}`, {
-        method: "DELETE",
-        credentials: "include"
-      });
-
-      if (resp.ok) {
-        setSuccess("Session deleted successfully");
-        loadSessions();
-      } else {
-        const data = await resp.json();
-        throw new Error(data.error || "Failed to delete session");
-      }
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  const copyToClipboard = (text, label) => {
+  const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
-    setSuccess(`${label} copied to clipboard!`);
-    setTimeout(() => setSuccess(""), 3000);
+    setCopiedUrl(id);
+    setTimeout(() => setCopiedUrl(''), 2000);
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'scheduled': return 'bg-blue-100 text-blue-800';
-      case 'ended': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const refreshSessions = async () => {
+    await loadSessions();
+    setSuccess('Sessions refreshed!');
+    setTimeout(() => setSuccess(''), 2000);
   };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full mb-4">
+              <Video className="w-10 h-10 text-blue-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Study Sessions
+            </h1>
+            <p className="text-gray-600">
+              Please log in to create and manage study sessions
+            </p>
+          </div>
+
+          <div className="text-center">
+            <a
+              href="/login"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            >
+              Go to Login
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Study Sessions</h1>
-
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-red-800">{error}</p>
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-green-800">{success}</p>
-          </div>
-        )}
-
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Video className="w-6 h-6 text-blue-600" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <User className="w-6 h-6 text-blue-600" />
+              </div>
               <div>
-                <h2 className="text-lg font-semibold">Zoom Integration</h2>
-                <p className="text-sm text-gray-600">
-                  {zoomStatus.authorized 
-                    ? "Your Zoom account is connected" 
-                    : "Connect your Zoom account to create sessions"}
-                </p>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {user.first_name} {user.last_name}
+                </h2>
+                <p className="text-gray-600 text-sm">{user.email}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className={`w-2 h-2 rounded-full ${zoomConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className="text-xs text-gray-500">
+                    Zoom {zoomConnected ? 'Connected' : 'Not Connected'}
+                  </span>
+                </div>
               </div>
             </div>
-            
-            {zoomStatus.authorized ? (
-              <button
-                onClick={disconnectZoom}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
-              >
-                Disconnect
-              </button>
-            ) : (
-              <button
-                onClick={connectZoom}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              >
-                Connect Zoom
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {zoomConnected ? (
+                <button
+                  onClick={handleDisconnectZoom}
+                  className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Disconnect Zoom
+                </button>
+              ) : (
+                <button
+                  onClick={handleZoomConnect}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Video className="w-4 h-4" />
+                  )}
+                  Connect Zoom
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {!zoomStatus.authorized ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-1" />
-              <div>
-                <h3 className="font-semibold text-yellow-900 mb-2">Authorization Required</h3>
-                <p className="text-yellow-800 mb-4">
-                  To create and manage study sessions with Zoom, you need to authorize StudAI to access your Zoom account. 
-                  This allows us to create meetings on your behalf.
+        {/* Success/Error Messages */}
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            {success}
+          </div>
+        )}
+        
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Create Session Form */}
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <Calendar className="w-6 h-6 text-blue-600" />
+              Create New Study Session
+            </h3>
+
+            {!zoomConnected && (
+              <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> You need to connect Zoom first to create sessions.
                 </p>
-                <button
-                  onClick={connectZoom}
-                  className="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition"
-                >
-                  Authorize Now
-                </button>
               </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Session Topic *
+                </label>
+                <input
+                  type="text"
+                  name="topic"
+                  value={sessionForm.topic}
+                  onChange={handleInputChange}
+                  placeholder="Study Group Session"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  disabled={!zoomConnected}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Start Time *
+                </label>
+                <input
+                  type="datetime-local"
+                  name="start_time"
+                  value={sessionForm.start_time}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  disabled={!zoomConnected}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  name="duration"
+                  value={sessionForm.duration}
+                  onChange={handleInputChange}
+                  min="15"
+                  max="480"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  disabled={!zoomConnected}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Agenda
+                </label>
+                <textarea
+                  name="agenda"
+                  value={sessionForm.agenda}
+                  onChange={handleInputChange}
+                  rows="3"
+                  placeholder="What will you study in this session..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+                  disabled={!zoomConnected}
+                />
+              </div>
+
+              <button
+                onClick={createSession}
+                disabled={loading || !zoomConnected || !sessionForm.topic || !sessionForm.start_time}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Video className="w-5 h-5" />
+                    Create Session
+                  </>
+                )}
+              </button>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">Create New Session</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Session Title
-                  </label>
-                  <input
-                    type="text"
-                    value={newSession.title}
-                    onChange={(e) => setNewSession({...newSession, title: e.target.value})}
-                    placeholder="e.g., Math Study Group"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Duration (minutes)
-                    </label>
-                    <input
-                      type="number"
-                      value={newSession.duration}
-                      onChange={(e) => setNewSession({...newSession, duration: parseInt(e.target.value)})}
-                      min="15"
-                      max="480"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Scheduled Start (Optional)
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={newSession.scheduled_start}
-                      onChange={(e) => setNewSession({...newSession, scheduled_start: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  onClick={createSession}
-                  disabled={loading || !newSession.title}
-                  className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  {loading ? "Creating..." : "Create Session"}
-                </button>
-              </div>
+          {/* Sessions List */}
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">
+                Your Study Sessions ({sessions.length})
+              </h3>
+              <button
+                onClick={refreshSessions}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Refresh sessions"
+              >
+                <RefreshCw className="w-5 h-5 text-gray-600" />
+              </button>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-semibold mb-4">Your Sessions</h2>
-              
-              {sessions.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No sessions created yet</p>
-              ) : (
-                <div className="space-y-4">
-                  {sessions.map((session) => (
-                    <div key={session.session_id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-lg">{session.title}</h3>
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(session.status)}`}>
-                              {session.status}
-                            </span>
-                          </div>
-                          
-                          <div className="space-y-1 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <Users className="w-4 h-4" />
-                              <span>Session Code: <strong>{session.session_code}</strong></span>
-                            </div>
-                            {session.scheduled_start && (
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4" />
-                                <span>{new Date(session.scheduled_start).toLocaleString()}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              <span>{session.duration} minutes</span>
-                            </div>
-                          </div>
-                        </div>
+            {sessions.length === 0 ? (
+              <div className="text-center py-12">
+                <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 mb-4">No study sessions yet.</p>
+                {!zoomConnected && (
+                  <p className="text-sm text-gray-400">Connect Zoom to create your first session!</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                {sessions.map((session) => (
+                  <div
+                    key={session.session_id}
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <h4 className="font-bold text-gray-900 mb-2">{session.title}</h4>
+                    
+                    <div className="space-y-2 text-sm text-gray-600 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        {session.scheduled_start 
+                          ? new Date(session.scheduled_start).toLocaleString() 
+                          : 'No start time set'
+                        } 
+                        ({session.duration} min)
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          session.status === 'scheduled' ? 'bg-green-500' : 
+                          session.status === 'completed' ? 'bg-blue-500' : 
+                          'bg-gray-500'
+                        }`} />
+                        <span className="capitalize">{session.status}</span>
+                      </div>
+                    </div>
 
-                        <div className="flex gap-2">
-                          {session.status === 'scheduled' && (
-                            <button
-                              onClick={() => startSession(session.session_id)}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded transition"
-                              title="Start session"
-                            >
-                              <Play className="w-5 h-5" />
-                            </button>
-                          )}
-                          {session.status === 'active' && (
-                            <button
-                              onClick={() => endSession(session.session_id)}
-                              className="p-2 text-orange-600 hover:bg-orange-50 rounded transition"
-                              title="End session"
-                            >
-                              <Square className="w-5 h-5" />
-                            </button>
-                          )}
+                    {session.zoom_join_url && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={session.zoom_join_url}
+                            readOnly
+                            className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded text-xs"
+                          />
                           <button
-                            onClick={() => deleteSession(session.session_id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded transition"
-                            title="Delete session"
+                            onClick={() => copyToClipboard(session.zoom_join_url, session.session_id)}
+                            className="p-2 hover:bg-gray-100 rounded transition-colors"
                           >
-                            <Trash2 className="w-5 h-5" />
+                            {copiedUrl === session.session_id ? (
+                              <Check className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Copy className="w-4 h-4 text-gray-600" />
+                            )}
                           </button>
                         </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
-                        <button
-                          onClick={() => copyToClipboard(session.session_code, "Session code")}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition text-sm"
-                        >
-                          <Copy className="w-4 h-4" />
-                          Copy Code
-                        </button>
-                        <button
-                          onClick={() => copyToClipboard(session.zoom_join_url, "Join link")}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition text-sm"
-                        >
-                          <Copy className="w-4 h-4" />
-                          Copy Join Link
-                        </button>
+                        
                         <a
                           href={session.zoom_join_url}
                           target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded hover:bg-green-100 transition text-sm"
+                          rel="noopener noreferrer"
+                          className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-colors text-sm"
                         >
-                          <ExternalLink className="w-4 h-4" />
-                          Join as Participant
-                        </a>
-                        <a
-                          href={session.zoom_start_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100 transition text-sm"
-                        >
-                          <Video className="w-4 h-4" />
-                          Start as Host
+                          Join Session
                         </a>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default Sessions;
