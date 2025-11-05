@@ -1,13 +1,13 @@
 // utils/zoomOAuth.js
 import axios from 'axios';
-import ZoomToken from '../models/ZoomToken.js';
+import ZoomToken from './models/ZoomToken.js';
 
 class ZoomOAuth {
   constructor() {
     // Use direct credentials - environment variables aren't loading
-    this.clientId = 'xzvy_YKpRaiwMw6gCMkrVA';
-    this.clientSecret = 'Kb1xIqzpOqUOUg1H2otjXSF4Gom5QGUw';
-    this.redirectUri = 'http://localhost:4000/api/sessions/zoom/callback';
+    this.clientId = process.env.ZOOM_CLIENT_ID;
+    this.clientSecret = process.env.ZOOM_CLIENT_SECRET;
+    this.redirectUri = process.env.ZOOM_REDIRECT_URL;
     this.authUrl = 'https://zoom.us/oauth/authorize';
     this.tokenUrl = 'https://zoom.us/oauth/token';
     this.apiBaseUrl = 'https://api.zoom.us/v2';

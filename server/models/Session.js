@@ -40,9 +40,25 @@ const Session = sequelize.define("Session", {
         type: DataTypes.DATE,
         allowNull: true,
     },
+    scheduled_end: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
     status: {
         type: DataTypes.STRING,
         defaultValue: "scheduled",
+    },
+    is_private: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
+    session_password: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    host_name: {
+        type: DataTypes.STRING,
+        allowNull: true,
     }
 }, {
     tableName: "sessions",
@@ -50,5 +66,18 @@ const Session = sequelize.define("Session", {
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
 });
+
+// Method to check if session is expired
+Session.prototype.isExpired = function() {
+    if (!this.scheduled_end) return false;
+    return new Date() > new Date(this.scheduled_end);
+};
+
+// Method to check if session is active
+Session.prototype.isActive = function() {
+    if (!this.scheduled_start || !this.scheduled_end) return false;
+    const now = new Date();
+    return now >= new Date(this.scheduled_start) && now <= new Date(this.scheduled_end);
+};
 
 export default Session;

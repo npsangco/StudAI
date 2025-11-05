@@ -1,7 +1,9 @@
-// routes/sessionRoutes.js - Updated for multi-user
+// routes/sessionRoutes.js
 import express from 'express';
-import { zoomOAuth } from '../utils/zoomOAuth.js';
+import bcrypt from 'bcrypt';
+import { zoomOAuth } from '../zoomOAuth.js';
 import Session from '../models/Session.js';
+import { Op } from 'sequelize';
 
 const router = express.Router();
 
@@ -79,10 +81,14 @@ router.post('/create', async (req, res) => {
   }
 
   try {
-    const { title, duration, scheduled_start } = req.body;
+    const { title, duration, scheduled_start, is_private, session_password } = req.body;
     
     if (!title) {
       return res.status(400).json({ error: 'Session title is required' });
+    }
+
+    if (is_private && !session_password) {
+      return res.status(400).json({ error: 'Password required for private sessions' });
     }
 
     // Create Zoom meeting using user's tokens
@@ -100,6 +106,16 @@ router.post('/create', async (req, res) => {
       });
     }
 
+    // Calculate scheduled_end
+    const startTime = scheduled_start ? new Date(scheduled_start) : new Date();
+    const endTime = new Date(startTime.getTime() + (duration || 60) * 60000);
+
+    // Hash password if private
+    let hashedPassword = null;
+    if (is_private && session_password) {
+      hashedPassword = await bcrypt.hash(session_password, 10);
+    }
+
     // Save to database
     console.log('💾 Saving session to database...');
     const session = await Session.create({
@@ -110,8 +126,12 @@ router.post('/create', async (req, res) => {
       zoom_start_url: meetingResult.meeting.start_url,
       zoom_password: meetingResult.meeting.password,
       duration: duration || 60,
-      scheduled_start: scheduled_start || null,
-      status: 'scheduled'
+      scheduled_start: startTime,
+      scheduled_end: endTime,
+      status: 'scheduled',
+      is_private: is_private || false,
+      session_password: hashedPassword,
+      host_name: req.session.username
     });
 
     console.log('✅ Session created successfully for user:', req.session.userId);
@@ -125,7 +145,11 @@ router.post('/create', async (req, res) => {
         zoom_start_url: session.zoom_start_url,
         zoom_password: session.zoom_password,
         duration: session.duration,
-        scheduled_start: session.scheduled_start
+        scheduled_start: session.scheduled_start,
+        scheduled_end: session.scheduled_end,
+        is_private: session.is_private,
+        host_name: session.host_name,
+        status: session.status
       }
     });
 
@@ -137,38 +161,154 @@ router.post('/create', async (req, res) => {
   }
 });
 
-// Add this to your sessionRoutes.js
-router.get('/zoom/test-auth', async (req, res) => {
+// Get user's own sessions (both public and private)
+router.get('/my-sessions', async (req, res) => {
+  console.log('📋 Fetching my sessions for user:', req.session.userId);
+  
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Not logged in' });
+  }
+
   try {
-    const zoomOAuth = new ZoomOAuth();
-    
-    // Test the exact credentials being used
-    const credentials = `${zoomOAuth.clientId}:${zoomOAuth.clientSecret}`;
-    const authHeader = Buffer.from(credentials).toString('base64');
-    
-    // Test a simple request to verify credentials
-    const testResponse = await axios.post('https://zoom.us/oauth/token', 
-      'grant_type=client_credentials',
-      {
-        headers: {
-          'Authorization': `Basic ${authHeader}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      }
-    ).catch(error => {
-      return { error: error.response?.data || error.message };
+    const sessions = await Session.findAll({
+      where: { user_id: req.session.userId },
+      order: [['scheduled_start', 'DESC']]
     });
 
-    res.json({
-      clientId: zoomOAuth.clientId,
-      clientSecretLength: zoomOAuth.clientSecret ? zoomOAuth.clientSecret.length : 'Missing',
-      redirectUri: zoomOAuth.redirectUri,
-      authHeader: authHeader,
-      authHeaderLength: authHeader.length,
-      testResult: testResponse
-    });
+    console.log(`✅ Found ${sessions.length} sessions for user ${req.session.userId}`);
+
+    // Update status for each session
+    for (let session of sessions) {
+      let newStatus = session.status;
+      
+      if (session.isExpired()) {
+        newStatus = 'expired';
+      } else if (session.isActive()) {
+        newStatus = 'active';
+      }
+      
+      if (newStatus !== session.status) {
+        await session.update({ status: newStatus });
+      }
+    }
+
+    res.json({ sessions });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Get my sessions error:', error);
+    res.status(500).json({ error: 'Failed to fetch sessions' });
+  }
+});
+
+// Get all sessions for browsing (both public and private, but hide URLs for private)
+router.get('/public', async (req, res) => {
+  console.log('🌍 Fetching all browsable sessions');
+  
+  try {
+    const now = new Date();
+    
+    const sessions = await Session.findAll({
+      where: {
+        scheduled_end: {
+          [Op.gt]: now // Only show sessions that haven't ended
+        }
+      },
+      order: [['scheduled_start', 'ASC']],
+      attributes: {
+        exclude: ['session_password', 'zoom_start_url'] // Don't expose sensitive data
+      }
+    });
+
+    console.log(`✅ Found ${sessions.length} browsable sessions`);
+
+    // Update status and hide join URLs for private sessions
+    const processedSessions = [];
+    for (let session of sessions) {
+      let newStatus = session.status;
+      
+      if (session.isExpired()) {
+        newStatus = 'expired';
+      } else if (session.isActive()) {
+        newStatus = 'active';
+      }
+      
+      if (newStatus !== session.status) {
+        await session.update({ status: newStatus });
+      }
+
+      // Create a plain object from the session
+      const sessionData = session.toJSON();
+      
+      // Hide zoom_join_url for private sessions (only show after password verification)
+      if (sessionData.is_private) {
+        sessionData.zoom_join_url = null;
+        sessionData.zoom_password = null;
+      }
+      
+      processedSessions.push(sessionData);
+    }
+
+    res.json({ sessions: processedSessions });
+  } catch (error) {
+    console.error('❌ Get public sessions error:', error);
+    res.status(500).json({ error: 'Failed to fetch public sessions' });
+  }
+});
+
+// Verify password for private session
+router.post('/verify-password', async (req, res) => {
+  console.log('🔐 Verifying password for session');
+  
+  try {
+    const { session_id, password } = req.body;
+
+    if (!session_id || !password) {
+      return res.status(400).json({ error: 'Session ID and password required' });
+    }
+
+    const session = await Session.findByPk(session_id);
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    if (!session.is_private) {
+      return res.status(400).json({ error: 'Session is not private' });
+    }
+
+    // Check if session expired
+    if (session.isExpired()) {
+      return res.status(410).json({ error: 'Session has expired' });
+    }
+
+    // Verify password
+    const isValid = await bcrypt.compare(password, session.session_password);
+
+    if (!isValid) {
+      console.log('❌ Invalid password attempt');
+      return res.status(401).json({ error: 'Incorrect password' });
+    }
+
+    console.log('✅ Password verified successfully');
+
+    // Return session details
+    res.json({
+      success: true,
+      session: {
+        session_id: session.session_id,
+        title: session.title,
+        zoom_join_url: session.zoom_join_url,
+        zoom_password: session.zoom_password,
+        duration: session.duration,
+        scheduled_start: session.scheduled_start,
+        scheduled_end: session.scheduled_end,
+        host_name: session.host_name,
+        status: session.status
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Verify password error:', error);
+    res.status(500).json({ error: 'Failed to verify password' });
   }
 });
 
@@ -196,22 +336,32 @@ router.delete('/zoom/disconnect', async (req, res) => {
   }
 });
 
-// Get user's sessions
-router.get('/', async (req, res) => {
+// Delete a session
+router.delete('/:session_id', async (req, res) => {
+  console.log('🗑️ Deleting session:', req.params.session_id);
+  
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Not logged in' });
   }
 
   try {
-    const sessions = await Session.findAll({
-      where: { user_id: req.session.userId },
-      order: [['createdAt', 'DESC']]
+    const session = await Session.findOne({
+      where: {
+        session_id: req.params.session_id,
+        user_id: req.session.userId
+      }
     });
 
-    res.json({ sessions });
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found or unauthorized' });
+    }
+
+    await session.destroy();
+    console.log('✅ Session deleted successfully');
+    res.json({ message: 'Session deleted successfully' });
   } catch (error) {
-    console.error('Get sessions error:', error);
-    res.status(500).json({ error: 'Failed to fetch sessions' });
+    console.error('❌ Delete session error:', error);
+    res.status(500).json({ error: 'Failed to delete session' });
   }
 });
 
