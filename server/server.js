@@ -55,7 +55,7 @@ try {
 }
 
 // 🖼️ PPTX Parser (for text extraction)
-import pptxParser from "node-pptx-parser"; 
+import pptxParser from "node-pptx-parser";
 
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
@@ -66,7 +66,7 @@ import jwt from "jsonwebtoken";
 // Import routes
 import petRoutes from "./routes/petRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
-import quizRoutes from "./routes/quizRoutes.js"; 
+import quizRoutes from "./routes/quizRoutes.js";
 import SharedNote from "./models/SharedNote.js";
 import planRoutes from "./routes/planRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
@@ -94,73 +94,79 @@ app.use("/uploads", express.static("uploads"));
 // ============================================
 
 async function updateUserStreak(userId) {
-  try {
-    const user = await User.findByPk(userId);
-    if (!user) return;
+    try {
+        const user = await User.findByPk(userId);
+        if (!user) return;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset to midnight for date comparison
 
-    const lastActivity = user.last_activity_date 
-      ? new Date(user.last_activity_date) 
-      : null;
+        const lastActivity = user.last_activity_date
+            ? new Date(user.last_activity_date)
+            : null;
 
-    if (lastActivity) {
-      lastActivity.setHours(0, 0, 0, 0);
-      
-      const diffTime = today - lastActivity;
-      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+        if (lastActivity) {
+            lastActivity.setHours(0, 0, 0, 0);
 
-      if (diffDays === 0) {
-        console.log(`User ${userId}: Same day activity, streak unchanged`);
-        return user.study_streak;
-      } else if (diffDays === 1) {
-        user.study_streak += 1;
-        user.last_activity_date = today;
-        
-        if (user.study_streak > user.longest_streak) {
-          user.longest_streak = user.study_streak;
+            const diffTime = today - lastActivity;
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+            if (diffDays === 0) {
+                // Same day - no update needed
+                console.log(`User ${userId}: Same day activity, streak unchanged`);
+                return user.study_streak;
+            } else if (diffDays === 1) {
+                // Consecutive day - increment streak
+                user.study_streak += 1;
+                user.last_activity_date = today;
+
+                // Update longest streak if current is higher
+                if (user.study_streak > user.longest_streak) {
+                    user.longest_streak = user.study_streak;
+                }
+
+                console.log(`✅ User ${userId}: Streak continued! Now at ${user.study_streak} days`);
+
+                // Check for milestone rewards
+                await checkStreakMilestones(userId, user.study_streak);
+            } else {
+                // Streak broken - reset to 1
+                console.log(`⚠️ User ${userId}: Streak broken after ${user.study_streak} days. Reset to 1 day`);
+                user.study_streak = 1;
+                user.last_activity_date = today;
+            }
+        } else {
+            // First time activity
+            user.study_streak = 1;
+            user.last_activity_date = today;
+            user.longest_streak = 1;
+            console.log(`🎉 User ${userId}: First activity! Streak started`);
         }
-        
-        console.log(`✅ User ${userId}: Streak continued! Now at ${user.study_streak} days`);
-        
-        await checkStreakMilestones(userId, user.study_streak);
-      } else {
-        console.log(`⚠️ User ${userId}: Streak broken after ${user.study_streak} days. Reset to 1 day`);
-        user.study_streak = 1;
-        user.last_activity_date = today;
-      }
-    } else {
-      user.study_streak = 1;
-      user.last_activity_date = today;
-      user.longest_streak = 1;
-      console.log(`🎉 User ${userId}: First activity! Streak started`);
-    }
 
-    await user.save();
-    return user.study_streak;
-  } catch (err) {
-    console.error('❌ Error updating user streak:', err);
-    return null;
-  }
+        await user.save();
+        return user.study_streak;
+    } catch (err) {
+        console.error('❌ Error updating user streak:', err);
+        return null;
+    }
 }
 
 async function checkStreakMilestones(userId, streak) {
-  const milestones = {
-    7: { points: 50, message: "7-day streak!" },
-    30: { points: 200, message: "30-day streak!" },
-    100: { points: 1000, message: "100-day streak!" },
-    365: { points: 5000, message: "1-year streak!" }
-  };
-  
-  if (milestones[streak]) {
-    await User.increment('points', { 
-      by: milestones[streak].points, 
-      where: { user_id: userId } 
-    });
-    
-    console.log(`🎉 User ${userId} reached ${streak} day streak! Awarded ${milestones[streak].points} points`);
-  }
+    const milestones = {
+        7: { points: 50, message: "7-day streak!" },
+        30: { points: 200, message: "30-day streak!" },
+        100: { points: 1000, message: "100-day streak!" },
+        365: { points: 5000, message: "1-year streak!" }
+    };
+
+    if (milestones[streak]) {
+        await User.increment('points', {
+            by: milestones[streak].points,
+            where: { user_id: userId }
+        });
+
+        console.log(`🎉 User ${userId} reached ${streak} day streak! Awarded ${milestones[streak].points} points`);
+    }
 }
 
 // ============================================
@@ -205,12 +211,12 @@ User.hasOne(ZoomToken, { foreignKey: 'user_id', as: 'zoomToken' });
 
 if (Note) {
     const NoteCategory = (await import('./models/NoteCategory.js')).default;
-    
+
     Note.belongsTo(NoteCategory, {
         foreignKey: 'category_id',
         as: 'category'
     });
-    
+
     NoteCategory.hasMany(Note, {
         foreignKey: 'category_id',
         as: 'notes'
@@ -308,7 +314,7 @@ passport.use(new GoogleStrategy({
 
 passport.serializeUser((user, done) => {
     done(null, user.user_id);
-}); 
+});
 
 passport.deserializeUser(async (id, done) => {
     try {
@@ -370,26 +376,79 @@ app.post("/api/auth/signup", async (req, res) => {
     }
 
     try {
+        // Duplicate check
         if (await User.findOne({ where: { email } }))
             return res.status(400).json({ error: "Email already exists" });
-
         if (await User.findOne({ where: { username } }))
             return res.status(400).json({ error: "Username already exists" });
 
+        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create user with status "pending"
         const newUser = await User.create({
             email,
             username,
             password: hashedPassword,
             birthday,
+            status: "pending", // 👈 mark as unverified
         });
 
-        res.status(201).json({ message: "Signup successful", userId: newUser.user_id });
+        // Generate verification token
+        const token = jwt.sign(
+            { userId: newUser.user_id },
+            process.env.JWT_SECRET,
+            { expiresIn: "30m" }
+        );
+
+        const verifyLink = `http://localhost:4000/api/auth/verify-email?token=${token}`;
+
+        // Send verification email
+        await transporter.sendMail({
+            from: `"StudAI" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: "Verify Your Email - StudAI",
+            html: `
+        <h2>Welcome to StudAI, ${username}!</h2>
+        <p>Please verify your email by clicking the link below:</p>
+        <a href="${verifyLink}" style="background:#2563eb;color:white;padding:10px 20px;text-decoration:none;border-radius:6px;">Verify Email</a>
+        <p>This link will expire in 30 minutes.</p>
+      `,
+        });
+
+        res.status(201).json({
+            message: "Signup successful. Please check your email to verify your account.",
+        });
     } catch (err) {
         console.error("Signup error:", err.message);
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+app.get("/api/auth/verify-email", async (req, res) => {
+    const { token } = req.query;
+    if (!token) return res.redirect("http://localhost:5173/verify-status?type=error");
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findByPk(decoded.userId);
+
+        if (!user) return res.redirect("http://localhost:5173/verify-status?type=error");
+
+        if (user.status === "active") {
+            return res.redirect("http://localhost:5173/verify-status?type=already");
+        }
+
+        user.status = "active";
+        await user.save();
+
+        res.redirect("http://localhost:5173/verify-status?type=verified");
+    } catch (err) {
+        console.error("Verification error:", err.message);
+        res.redirect("http://localhost:5173/verify-status?type=error");
+    }
+});
+
 
 // Login
 app.post("/api/auth/login", async (req, res) => {
@@ -398,18 +457,23 @@ app.post("/api/auth/login", async (req, res) => {
 
     try {
         const user = await User.findOne({ where: { email } });
-        if (!user || user.status !== "active") return res.status(401).json({ error: "Invalid credentials" });
+        if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+        // 🚫 Block unverified accounts
+        if (user.status !== "active") {
+            return res.status(403).json({ error: "Please verify your email before logging in." });
+        }
 
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return res.status(401).json({ error: "Invalid credentials" });
-        
+
         req.session.userId = user.user_id;
         req.session.email = user.email;
         req.session.username = user.username;
         req.session.role = user.role;
 
         await updateUserStreak(user.user_id);
-        
+
         const updatedUser = await User.findByPk(user.user_id);
 
         res.status(200).json({
@@ -422,7 +486,7 @@ app.post("/api/auth/login", async (req, res) => {
                 points: updatedUser.points,
                 profile_picture: updatedUser.profile_picture,
                 study_streak: updatedUser.study_streak,
-                longest_streak: updatedUser.longest_streak
+                longest_streak: updatedUser.longest_streak,
             },
         });
     } catch (err) {
@@ -430,6 +494,7 @@ app.post("/api/auth/login", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
 
 // Logout
 app.post("/api/auth/logout", (req, res) => {
@@ -503,26 +568,26 @@ app.put("/api/user/profile", async (req, res) => {
 
 // Get user streak info
 app.get("/api/user/streak", async (req, res) => {
-  if (!req.session || !req.session.userId) {
-    return res.status(401).json({ error: "Not logged in" });
-  }
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Not logged in" });
+    }
 
-  try {
-    const user = await User.findByPk(req.session.userId, {
-      attributes: ["study_streak", "longest_streak", "last_activity_date"]
-    });
+    try {
+        const user = await User.findByPk(req.session.userId, {
+            attributes: ["study_streak", "longest_streak", "last_activity_date"]
+        });
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+        if (!user) return res.status(404).json({ error: "User not found" });
 
-    res.json({
-      current_streak: user.study_streak,
-      longest_streak: user.longest_streak,
-      last_activity: user.last_activity_date
-    });
-  } catch (err) {
-    console.error("Streak fetch error:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
+        res.json({
+            current_streak: user.study_streak,
+            longest_streak: user.longest_streak,
+            last_activity: user.last_activity_date
+        });
+    } catch (err) {
+        console.error("Streak fetch error:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
 
 const profileStorage = multer.diskStorage({
@@ -585,7 +650,7 @@ app.post("/api/user/request-password-update", async (req, res) => {
         const token = jwt.sign(
             { userId: user.user_id, newPassword: await bcrypt.hash(newPassword, 10) },
             process.env.JWT_SECRET,
-            { expiresIn: "15m" }
+            { expiresIn: "10m" }
         );
 
         const confirmLink = `http://localhost:4000/api/user/confirm-password-update?token=${token}`;
@@ -597,7 +662,7 @@ app.post("/api/user/request-password-update", async (req, res) => {
             html: `
                 <p>You requested to update your password. Click below to confirm:</p>
                 <a href="${confirmLink}">${confirmLink}</a>
-                <p>This link will expire in 15 minutes.</p>
+                <p>This link will expire in 10 minutes.</p>
             `,
         });
 
@@ -610,7 +675,7 @@ app.post("/api/user/request-password-update", async (req, res) => {
 
 app.get("/api/user/confirm-password-update", async (req, res) => {
     const { token } = req.query;
-    if (!token) return res.status(400).send("Invalid request");
+    if (!token) return res.redirect("http://localhost:5173/password-link-expired");
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -620,12 +685,16 @@ app.get("/api/user/confirm-password-update", async (req, res) => {
             { where: { user_id: decoded.userId } }
         );
 
-        res.send("<h2>Password updated successfully ✅</h2>");
+        res.redirect("http://localhost:5173/password-updated");
     } catch (err) {
         console.error("Password confirm error:", err);
-        res.status(400).send("Invalid or expired token");
+        res.redirect("http://localhost:5173/password-link-expired");
     }
 });
+
+
+
+
 
 // ----------------- RESET PASSWORD ROUTES -----------------
 app.post("/api/auth/reset-request", async (req, res) => {
@@ -645,7 +714,7 @@ app.post("/api/auth/reset-request", async (req, res) => {
             to: email,
             subject: "Password Reset Request",
             text: `Click here to reset your password: ${resetLink}`,
-            html: `<p>Click here to reset your password:</p><a href="${resetLink}">${resetLink}</a>`,
+            html: `<p>Click here to reset your password:</p><a href="${resetLink}">${resetLink}</a><p>This link will expire in 10 minutes.</p>`,
         });
 
         res.json({ message: "Password reset link sent" });
@@ -761,7 +830,7 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
 
         if (parsedContent.slides && Array.isArray(parsedContent.slides)) {
             slideCount = parsedContent.slides.length;
-            
+
             extractedText = parsedContent.slides
                 .map((slide, index) => {
                     const slideNum = slide.id || index + 1;
@@ -776,7 +845,7 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
                     }
 
                     slideText = cleanPPTXText(slideText);
-                    
+
                     return slideText ? `Slide ${slideNum}:\n${slideText}\n` : '';
                 })
                 .filter(text => text.length > 0)
@@ -785,9 +854,12 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
 
         function cleanPPTXText(text) {
             if (!text) return '';
-            
+
+            // Remove XML namespaces and schemas
             text = text.replace(/http:\/\/schemas\.[^\s]+/g, '');
             text = text.replace(/urn:schemas-[^\s]+/g, '');
+
+            // Remove common PPTX metadata patterns
             text = text.replace(/\brId\d+\b/g, '');
             text = text.replace(/\bShape\s+\d+\b/g, '');
             text = text.replace(/\bGoogle\s+Shape;[^\s]+/g, '');
@@ -795,40 +867,60 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
             text = text.replace(/\b(title|body|ctr|ctrTitle)\b/g, '');
             text = text.replace(/\b(solid|flat|sng|none|noStrike|square|arabicPeriod)\b/g, '');
             text = text.replace(/\b(dk1|lt1|sm)\b/g, '');
+
+            // Remove font names
             text = text.replace(/\b(Arial|Proxima Nova|Twentieth Century|Corsiva|Times New Roman|Architects Daughter)\b/g, '');
+
+            // Remove language codes
             text = text.replace(/\ben-US\b/g, '');
+
+            // Remove hex color codes (6 digit)
             text = text.replace(/\b[0-9A-Fa-f]{6}\b/g, '');
+
+            // Remove large numbers (coordinates, dimensions)
             text = text.replace(/\b\d{4,}\b/g, '');
+
+            // Remove small isolated numbers and formatting codes
             text = text.replace(/\bl\s+\d+\b/g, '');
             text = text.replace(/\bt\s+\d+\b/g, '');
             text = text.replace(/\b\d+\s+l\b/g, '');
             text = text.replace(/\b\d+\s+t\b/g, '');
+
+            // Remove image references
             text = text.replace(/\b(Related image|Image result for[^\n]*)\b/gi, '');
             text = text.replace(/\b[\w-]+\.(jpg|jpeg|png|gif|JPG|PNG)\b/g, '');
+
+            // Remove standalone single letters and numbers
             text = text.replace(/\b[a-z]\s+\d+\b/gi, '');
             text = text.replace(/\b\d+\s+[a-z]\b/gi, '');
+
+            // Remove excessive whitespace
             text = text.replace(/\s+/g, ' ');
-            
+
+            // Split by common delimiters
             const sentences = text.split(/[•\-–—\n]/);
-            
+
             const cleanedSentences = sentences
                 .map(s => s.trim())
                 .filter(s => {
                     if (s.length < 10) return false;
-                    
+
+                    // Must not be mostly numbers
                     const letterCount = (s.match(/[a-zA-Z]/g) || []).length;
                     const digitCount = (s.match(/\d/g) || []).length;
                     if (digitCount > letterCount) return false;
-                    
+
+                    // Must have at least 3 words
                     const words = s.split(/\s+/).filter(w => w.length > 0);
                     if (words.length < 3) return false;
-                    
+
+                    // Check if it's mostly real words (alphabetic content)
                     const alphaRatio = letterCount / s.replace(/\s/g, '').length;
                     if (alphaRatio < 0.6) return false;
-                    
+
                     return true;
                 });
-            
+
             return cleanedSentences.join('\n• ');
         }
 
@@ -836,22 +928,22 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
             if (typeof obj === 'string') {
                 return obj;
             }
-            
+
             if (Array.isArray(obj)) {
                 return obj.map(item => extractTextFromObject(item)).join(' ');
             }
-            
+
             if (typeof obj === 'object' && obj !== null) {
                 if (obj.text) return extractTextFromObject(obj.text);
                 if (obj.content) return extractTextFromObject(obj.content);
                 if (obj.value) return extractTextFromObject(obj.value);
-                
+
                 return Object.values(obj)
                     .map(value => extractTextFromObject(value))
                     .filter(text => text && text.trim().length > 0)
                     .join(' ');
             }
-            
+
             return '';
         }
 
@@ -859,14 +951,14 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
 
         console.log(`✅ Extracted ${extractedText.length} characters from ${slideCount} slides`);
 
-        res.json({ 
-            text: extractedText, 
+        res.json({
+            text: extractedText,
             slideCount,
             wordCount: extractedText.trim().split(/\s+/).filter(w => w.length > 0).length
         });
     } catch (err) {
         console.error("❌ PPTX extraction error:", err);
-        
+
         if (req.file && req.file.path) {
             try {
                 fs.unlinkSync(req.file.path);
@@ -874,7 +966,7 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
                 console.error("Failed to clean up file:", e);
             }
         }
-        
+
         res.status(500).json({ error: "Failed to extract text from PPTX" });
     }
 });
@@ -917,24 +1009,25 @@ app.post("/api/generate-summary", async (req, res) => {
 
 // Get quiz attempts count
 app.get('/api/quiz-attempts/count', async (req, res) => {
-  try {
-    const userId = req.session.userId;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'Not authenticated' });
+    try {
+        const userId = req.session.userId;
+
+        if (!userId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        // Count total quiz attempts for this user
+        const attemptCount = await QuizAttempt.count({
+            where: { user_id: userId }
+        });
+
+        console.log(`User ${userId} has ${attemptCount} quiz attempts`);
+
+        res.json({ count: attemptCount });
+    } catch (err) {
+        console.error('Error fetching quiz attempts count:', err);
+        res.status(500).json({ error: 'Failed to fetch quiz attempts count' });
     }
-    
-    const attemptCount = await QuizAttempt.count({
-      where: { user_id: userId }
-    });
-    
-    console.log(`User ${userId} has ${attemptCount} quiz attempts`);
-    
-    res.json({ count: attemptCount });
-  } catch (err) {
-    console.error('Error fetching quiz attempts count:', err);
-    res.status(500).json({ error: 'Failed to fetch quiz attempts count' });
-  }
 });
 
 // ----------------- START SERVER -----------------

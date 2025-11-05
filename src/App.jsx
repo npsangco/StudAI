@@ -13,6 +13,8 @@ import Quizzes from "./pages/Quizzes";
 import Sessions from "./pages/Sessions";
 import Planner from "./pages/Planner";
 import Profile from "./pages/Profile";
+import EmailStatus from "./components/confirmations/EmailStatus";
+import PasswordStatus from "./components/confirmations/PasswordStatus";
 import 'primereact/resources/themes/lara-light-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
@@ -20,7 +22,7 @@ import 'primeicons/primeicons.css';
 function App() {
   const location = useLocation();
   const [hideNavbar, setHideNavbar] = useState(false);
-  
+
   // Check if body has hide-navbar class
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -43,7 +45,7 @@ function App() {
   // Routes that should have landing navigation
   const landingRoutes = ['/', '/create'];
   const isLandingPage = landingRoutes.includes(location.pathname);
-  
+
   // Routes that should have authenticated navigation
   const authenticatedRoutes = ['/dashboard', '/notes', '/quizzes', '/sessions', '/planner', '/profile'];
   const requiresAuth = authenticatedRoutes.includes(location.pathname);
@@ -53,7 +55,7 @@ function App() {
       {/* Only show navigation if not on login/signup pages and not hidden by quiz game */}
       {!shouldHideNav && !hideNavbar && isLandingPage && <LandingNavigation />}
       {!shouldHideNav && !hideNavbar && requiresAuth && <Navigation />}
-      
+
       <div className={requiresAuth ? "bg-gray-100" : ""}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -61,13 +63,17 @@ function App() {
           <Route path="/signup" element={<SignUp />} />
           <Route path="/resetpassword" element={<ResetPassword />} />
           <Route path="/passwordrecovery" element={<PassRecovery />} />
-          
+
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/quizzes" element={<Quizzes />} />
           <Route path="/sessions" element={<Sessions />} />
           <Route path="/planner" element={<Planner />} />
           <Route path="/profile" element={<Profile />} />
+
+          <Route path="/verify-status" element={<EmailStatus />} />
+          <Route path="/password-updated" element={<PasswordStatus type="success" />} />
+          <Route path="/password-link-expired" element={<PasswordStatus type="error" />} />
         </Routes>
       </div>
     </div>

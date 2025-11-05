@@ -39,7 +39,7 @@ const User = sequelize.define('User', {
     status: {
         type: DataTypes.STRING,
         allowNull: false,
-        defaultValue: 'active', 
+        defaultValue: 'pending', 
     },
     points: {
         type: DataTypes.INTEGER,
