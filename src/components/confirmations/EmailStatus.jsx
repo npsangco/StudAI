@@ -30,7 +30,7 @@ export default function EmailStatus() {
             break;
         case "error":
             title = "Invalid or expired link.";
-            message = "Please request a new verification email.";
+            message = "Please sign up again to receive a new verification email.";
             break;
         default:
             title = "Unknown Status";

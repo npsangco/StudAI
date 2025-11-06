@@ -76,15 +76,18 @@ function Signup() {
                 headers: { "Content-Type": "application/json" }
             });
 
-            alert("Registered successfully! You can now log in.");
+            const successMessage =
+                response.data?.message ||
+                "Signup successful. Please check your email to verify your account.";
+
+            alert(successMessage);
             resetForm();
             navigate("/login");
-            response;
-
         } catch (err) {
             const errorMessage = err.response?.data?.error || "Signup failed";
             alert(errorMessage);
         }
+
     };
 
     const handleGoogleSignUp = () => {
@@ -145,10 +148,9 @@ function Signup() {
                                 <NavLink
                                     to="/signup"
                                     className={({ isActive }) =>
-                                        `mr-8 pb-3 text-lg font-semibold transition-all relative ${
-                                            isActive
-                                                ? "text-black"
-                                                : "text-gray-400 hover:text-gray-600"
+                                        `mr-8 pb-3 text-lg font-semibold transition-all relative ${isActive
+                                            ? "text-black"
+                                            : "text-gray-400 hover:text-gray-600"
                                         }`
                                     }
                                 >
@@ -164,10 +166,9 @@ function Signup() {
                                 <NavLink
                                     to="/login"
                                     className={({ isActive }) =>
-                                        `pb-3 text-lg font-semibold transition-all relative ${
-                                            isActive
-                                                ? "text-black"
-                                                : "text-gray-400 hover:text-gray-600"
+                                        `pb-3 text-lg font-semibold transition-all relative ${isActive
+                                            ? "text-black"
+                                            : "text-gray-400 hover:text-gray-600"
                                         }`
                                     }
                                 >

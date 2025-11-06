@@ -44,6 +44,8 @@ import QuizBattle from "./models/QuizBattle.js";
 import BattleParticipant from "./models/BattleParticipant.js";
 import Session from "./models/Session.js";
 import ZoomToken from "./models/ZoomToken.js"; // ← ADDED
+import { Op } from "sequelize";
+
 
 // Import Note model after creating it
 let Note;
@@ -369,41 +371,51 @@ app.post("/api/auth/signup", async (req, res) => {
         return res.status(400).json({ error: "Missing required fields" });
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Invalid email format." });
+    }
+
+    // Check email domain exists
+    try {
+        const domain = email.split("@")[1];
+        const mxRecords = await resolveMx(domain);
+        if (!mxRecords || mxRecords.length === 0) {
+            return res.status(400).json({ error: "Email domain does not exist." });
+        }
+    } catch {
+        return res.status(400).json({ error: "Email domain does not exist." });
+    }
+
     if (!passwordRegex.test(password)) {
         return res.status(400).json({
-            error: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
+            error:
+                "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
         });
     }
 
     try {
-        // Duplicate check
         if (await User.findOne({ where: { email } }))
             return res.status(400).json({ error: "Email already exists" });
         if (await User.findOne({ where: { username } }))
             return res.status(400).json({ error: "Username already exists" });
 
-        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create user with status "pending"
         const newUser = await User.create({
             email,
             username,
             password: hashedPassword,
             birthday,
-            status: "pending", // 👈 mark as unverified
+            status: "pending",
         });
 
-        // Generate verification token
-        const token = jwt.sign(
-            { userId: newUser.user_id },
-            process.env.JWT_SECRET,
-            { expiresIn: "30m" }
-        );
+        const token = jwt.sign({ userId: newUser.user_id }, process.env.JWT_SECRET, {
+            expiresIn: "30m",
+        });
 
         const verifyLink = `http://localhost:4000/api/auth/verify-email?token=${token}`;
 
-        // Send verification email
         await transporter.sendMail({
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: email,
@@ -417,13 +429,37 @@ app.post("/api/auth/signup", async (req, res) => {
         });
 
         res.status(201).json({
-            message: "Signup successful. Please check your email to verify your account.",
+            message:
+                "Signup successful. Please check your email to verify your account.",
         });
     } catch (err) {
         console.error("Signup error:", err.message);
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+
+// ----------------- AUTO-DELETE UNVERIFIED USERS AFTER 30 MIN -----------------
+setInterval(async () => {
+    try {
+        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+        const unverifiedUsers = await User.findAll({
+            where: {
+                status: "pending",
+                createdAt: { [Op.lt]: thirtyMinutesAgo }
+            }
+        });
+
+        if (unverifiedUsers.length > 0) {
+            const ids = unverifiedUsers.map(u => u.user_id);
+            await User.destroy({ where: { user_id: ids } });
+            console.log(`🧹 Removed ${ids.length} unverified user(s):`, ids);
+        }
+    } catch (err) {
+        console.error("❌ Auto-delete unverified users failed:", err);
+    }
+}, 5 * 60 * 1000);
+
 
 app.get("/api/auth/verify-email", async (req, res) => {
     const { token } = req.query;
