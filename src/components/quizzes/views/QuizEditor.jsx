@@ -48,7 +48,6 @@ export const validateQuestions = (questions) => {
 const validateMultipleChoice = (question, questionNumber, errors) => {
   const choices = question.choices || [];
 
-  // Check if choices exist
   if (!choices || choices.length === 0) {
     errors.push({
       questionNumber,
@@ -58,7 +57,6 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
     return;
   }
 
-  // Check for minimum number of choices (at least 2)
   if (choices.length < 2) {
     errors.push({
       questionNumber,
@@ -67,7 +65,6 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
     });
   }
 
-  // Check for empty choices
   const emptyChoices = [];
   choices.forEach((choice, idx) => {
     if (!choice || choice.trim() === '') {
@@ -83,7 +80,6 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
     });
   }
 
-  // Check for duplicate choices
   const nonEmptyChoices = choices.filter(c => c && c.trim() !== '');
   const duplicates = findDuplicates(nonEmptyChoices);
   
@@ -95,7 +91,6 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
     });
   }
 
-  // Check if correct answer is selected
   if (!question.correctAnswer || question.correctAnswer.trim() === '') {
     errors.push({
       questionNumber,
@@ -103,7 +98,6 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
       details: 'Click on a choice to mark it as the correct answer'
     });
   } else {
-    // Check if correct answer exists in choices
     const correctAnswerExists = choices.some(c => c === question.correctAnswer);
     if (!correctAnswerExists) {
       errors.push({
@@ -117,7 +111,6 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
 
 // Fill in the Blanks Validation
 const validateFillInBlanks = (question, questionNumber, errors) => {
-  // Check for missing answer
   if (!question.answer || question.answer.trim() === '') {
     errors.push({
       questionNumber,
@@ -129,7 +122,6 @@ const validateFillInBlanks = (question, questionNumber, errors) => {
 
 // True/False Validation
 const validateTrueFalse = (question, questionNumber, errors) => {
-  // Check if correct answer is selected
   if (!question.correctAnswer) {
     errors.push({
       questionNumber,
@@ -139,7 +131,6 @@ const validateTrueFalse = (question, questionNumber, errors) => {
     return;
   }
 
-  // Check if it's a valid True/False value
   if (question.correctAnswer !== 'True' && question.correctAnswer !== 'False') {
     errors.push({
       questionNumber,
@@ -153,7 +144,6 @@ const validateTrueFalse = (question, questionNumber, errors) => {
 const validateMatching = (question, questionNumber, errors) => {
   const pairs = question.matchingPairs || [];
 
-  // Check if pairs exist
   if (!pairs || pairs.length === 0) {
     errors.push({
       questionNumber,
@@ -163,7 +153,6 @@ const validateMatching = (question, questionNumber, errors) => {
     return;
   }
 
-  // Check for minimum number of pairs (at least 2)
   if (pairs.length < 2) {
     errors.push({
       questionNumber,
@@ -172,7 +161,6 @@ const validateMatching = (question, questionNumber, errors) => {
     });
   }
 
-  // Check for empty items in pairs
   const emptyPairs = [];
   pairs.forEach((pair, idx) => {
     const pairNum = idx + 1;
@@ -196,7 +184,6 @@ const validateMatching = (question, questionNumber, errors) => {
     });
   }
 
-  // Check for duplicates in left column
   const leftItems = pairs
     .map(p => p.left)
     .filter(item => item && item.trim() !== '');
@@ -211,7 +198,6 @@ const validateMatching = (question, questionNumber, errors) => {
     });
   }
 
-  // Check for duplicates in right column
   const rightItems = pairs
     .map(p => p.right)
     .filter(item => item && item.trim() !== '');
@@ -244,7 +230,7 @@ const findDuplicates = (arr) => {
 };
 
 // ============================================
-// QUIZ CONTROLS COMPONENT
+// QUIZ CONTROLS COMPONENT - RESPONSIVE
 // ============================================
 
 const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions }) => {
@@ -257,7 +243,6 @@ const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, ques
   const getAllErrors = () => {
     const errors = [];
     
-    // Check if title is empty
     if (!quiz.title || quiz.title.trim() === '') {
       errors.push({
         questionNumber: 0,
@@ -266,7 +251,6 @@ const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, ques
       });
     }
     
-    // Check if there are no questions
     if (questions.length === 0) {
       errors.push({
         questionNumber: 0,
@@ -275,7 +259,6 @@ const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, ques
       });
     }
     
-    // Validate all questions
     const questionErrors = validateQuestions(questions);
     errors.push(...questionErrors);
     
@@ -322,99 +305,176 @@ const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, ques
 
   return (
     <>
-      <div className="sticky top-0 z-50 bg-white px-6 py-4 shadow-md">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {isEditing ? (
-              <input
-                type="text"
-                value={tempTitle}
-                onChange={(e) => setTempTitle(e.target.value)}
-                onBlur={handleTitleBlur}
-                onKeyDown={handleTitleKeyDown}
-                autoFocus
-                className="text-xl font-bold text-black border-2 border-blue-500 rounded px-2 py-1 focus:outline-none"
-                placeholder="Enter quiz title..."
-              />
-            ) : (
-              <h1 
-                onClick={handleTitleClick}
-                className="text-xl font-bold text-black cursor-pointer hover:text-blue-600 transition-colors px-2 py-1 hover:bg-gray-100 rounded"
-                title="Click to edit title"
-              >
-                {quiz.title}
-              </h1>
-            )}
-            <div className="flex gap-2">
-              <span className="px-3 py-1 bg-blue-500 text-white text-xs rounded-full font-medium">
-                Public
-              </span>
-              <span className="px-3 py-1 bg-gray-400 text-white text-xs rounded-full font-medium">
-                Private
-              </span>
-            </div>
-            {/* Question Count Badge */}
-            <span className={`px-3 py-1 text-xs rounded-full font-medium ${
-              questionCount === 0 
-                ? 'bg-red-100 text-red-700' 
-                : 'bg-green-100 text-green-700'
-            }`}>
-              {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
-            </span>
-            {/* ERROR BADGE - CLICKABLE */}
-            {hasErrors && (
-              <button
-                onClick={() => setShowErrorModal(true)}
-                className="px-3 py-1 bg-red-500 text-white text-xs rounded-full font-medium hover:bg-red-600 transition-colors animate-pulse cursor-pointer shadow-lg"
-                title="Click to view all errors"
-              >
-                ⚠️ {errors.length} {errors.length === 1 ? 'Error' : 'Errors'}
-              </button>
-            )}
-          </div>
-          
-          <div className="flex gap-3 items-center relative">
-            {/* Warning Message */}
-            {showEmptyWarning && (
-              <div className="absolute right-0 top-full mt-2 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium animate-shake whitespace-nowrap z-50">
-                ⚠️ Fix all errors before saving!
+      <div className="sticky top-0 z-50 bg-white shadow-md">
+        <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+          <div className="max-w-4xl mx-auto">
+            {/* Mobile Layout - Stacked */}
+            <div className="flex flex-col gap-3 sm:hidden">
+              {/* Title Row */}
+              <div className="flex items-center justify-between">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={tempTitle}
+                    onChange={(e) => setTempTitle(e.target.value)}
+                    onBlur={handleTitleBlur}
+                    onKeyDown={handleTitleKeyDown}
+                    autoFocus
+                    className="flex-1 text-lg font-bold text-black border-2 border-blue-500 rounded px-2 py-1 focus:outline-none"
+                    placeholder="Enter quiz title..."
+                  />
+                ) : (
+                  <h1 
+                    onClick={handleTitleClick}
+                    className="flex-1 text-lg font-bold text-black cursor-pointer hover:text-blue-600 transition-colors px-2 py-1 hover:bg-gray-100 rounded truncate"
+                    title="Click to edit title"
+                  >
+                    {quiz.title}
+                  </h1>
+                )}
               </div>
-            )}
-            
-            <button 
-              onClick={onBack}
-              className="text-sm text-gray-600 hover:text-gray-800 font-medium"
-            >
-              Back
-            </button>
-            <button 
-              onClick={onAddQuestion}
-              disabled={questions.length >= 30}
-              className={`px-4 py-2 text-sm rounded-md font-medium ${
-                questions.length >= 30 
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Add a question {questions.length >= 30 && '(Max 30)'}
-            </button>
-            <button 
-              onClick={handleSaveClick}
-              disabled={hasErrors}
-              className={`px-4 py-2 text-sm rounded-md font-medium transition-all ${
-                hasErrors
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-black text-white hover:bg-gray-800'
-              }`}
-              title={hasErrors ? 'Fix errors before saving' : 'Save quiz'}
-            >
-              Save
-            </button>
+
+              {/* Badges Row */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                  questionCount === 0 
+                    ? 'bg-red-100 text-red-700' 
+                    : 'bg-green-100 text-green-700'
+                }`}>
+                  {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
+                </span>
+                
+                {hasErrors && (
+                  <button
+                    onClick={() => setShowErrorModal(true)}
+                    className="px-2 py-1 bg-red-500 text-white text-xs rounded-full font-medium hover:bg-red-600 transition-colors animate-pulse cursor-pointer shadow-lg"
+                    title="Click to view all errors"
+                  >
+                    ⚠️ {errors.length} {errors.length === 1 ? 'Error' : 'Errors'}
+                  </button>
+                )}
+              </div>
+
+              {/* Actions Row */}
+              <div className="flex gap-2">
+                <button 
+                  onClick={onBack}
+                  className="px-3 py-2 text-xs text-gray-600 hover:text-gray-800 font-medium border border-gray-300 rounded-md hover:bg-gray-50 flex-1"
+                >
+                  Back
+                </button>
+                <button 
+                  onClick={onAddQuestion}
+                  disabled={questions.length >= 30}
+                  className={`px-3 py-2 text-xs rounded-md font-medium flex-1 ${
+                    questions.length >= 30 
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Add Question {questions.length >= 30 && '(Max)'}
+                </button>
+                <button 
+                  onClick={handleSaveClick}
+                  disabled={hasErrors}
+                  className={`px-3 py-2 text-xs rounded-md font-medium transition-all flex-1 ${
+                    hasErrors
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-black text-white hover:bg-gray-800'
+                  }`}
+                  title={hasErrors ? 'Fix errors before saving' : 'Save quiz'}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+
+            {/* Tablet/Desktop Layout - Single Row */}
+            <div className="hidden sm:flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={tempTitle}
+                    onChange={(e) => setTempTitle(e.target.value)}
+                    onBlur={handleTitleBlur}
+                    onKeyDown={handleTitleKeyDown}
+                    autoFocus
+                    className="text-lg md:text-xl font-bold text-black border-2 border-blue-500 rounded px-2 py-1 focus:outline-none flex-1 min-w-0"
+                    placeholder="Enter quiz title..."
+                  />
+                ) : (
+                  <h1 
+                    onClick={handleTitleClick}
+                    className="text-lg md:text-xl font-bold text-black cursor-pointer hover:text-blue-600 transition-colors px-2 py-1 hover:bg-gray-100 rounded truncate"
+                    title="Click to edit title"
+                  >
+                    {quiz.title}
+                  </h1>
+                )}
+                
+                <span className={`px-2 md:px-3 py-1 text-xs rounded-full font-medium flex-shrink-0 ${
+                  questionCount === 0 
+                    ? 'bg-red-100 text-red-700' 
+                    : 'bg-green-100 text-green-700'
+                }`}>
+                  {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
+                </span>
+                
+                {hasErrors && (
+                  <button
+                    onClick={() => setShowErrorModal(true)}
+                    className="px-2 md:px-3 py-1 bg-red-500 text-white text-xs rounded-full font-medium hover:bg-red-600 transition-colors animate-pulse cursor-pointer shadow-lg flex-shrink-0"
+                    title="Click to view all errors"
+                  >
+                    ⚠️ {errors.length} {errors.length === 1 ? 'Error' : 'Errors'}
+                  </button>
+                )}
+              </div>
+              
+              <div className="flex gap-2 md:gap-3 items-center relative flex-shrink-0">
+                {showEmptyWarning && (
+                  <div className="absolute right-0 top-full mt-2 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium animate-shake whitespace-nowrap z-50">
+                    ⚠️ Fix all errors before saving!
+                  </div>
+                )}
+                
+                <button 
+                  onClick={onBack}
+                  className="text-xs md:text-sm text-gray-600 hover:text-gray-800 font-medium px-2"
+                >
+                  Back
+                </button>
+                <button 
+                  onClick={onAddQuestion}
+                  disabled={questions.length >= 30}
+                  className={`px-3 md:px-4 py-2 text-xs md:text-sm rounded-md font-medium ${
+                    questions.length >= 30 
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Add Question {questions.length >= 30 && '(Max 30)'}
+                </button>
+                <button 
+                  onClick={handleSaveClick}
+                  disabled={hasErrors}
+                  className={`px-3 md:px-4 py-2 text-xs md:text-sm rounded-md font-medium transition-all ${
+                    hasErrors
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-black text-white hover:bg-gray-800'
+                  }`}
+                  title={hasErrors ? 'Fix errors before saving' : 'Save quiz'}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Error Modal - Imported from QuizModal.jsx */}
+      {/* Error Modal */}
       <ValidationErrorModal
         isOpen={showErrorModal}
         onClose={() => setShowErrorModal(false)}
@@ -465,28 +525,28 @@ export const QuizEditor = ({
         onUpdateTitle={onUpdateTitle}
       />
       
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-3 sm:p-4 md:p-6">
         {/* Empty State inside Editor */}
         {questions.length === 0 ? (
-          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-12 text-center border-2 border-dashed border-yellow-300">
-            <div className="w-20 h-20 bg-yellow-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl">📝</span>
+          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-6 sm:p-8 md:p-12 text-center border-2 border-dashed border-yellow-300">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-yellow-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl sm:text-4xl">📝</span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
               No Questions Yet
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               Start building your quiz by adding your first question
             </p>
             <button
               onClick={onAddQuestion}
-              className="bg-yellow-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-all transform hover:scale-105 shadow-md"
+              className="bg-yellow-500 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-all transform hover:scale-105 shadow-md text-sm sm:text-base"
             >
               ✨ Add First Question
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {questions.map((question, index) => (
               <QuestionCard
                 key={question.id}

@@ -4,6 +4,8 @@ import { createNewQuestion } from '../utils/questionHelpers';
 /**
  * Custom hook for all quiz-related event handlers
  * Centralizes all user interaction logic
+ * 
+ * FIX: Corrected handleStartBattle to properly use gamePin from gameState
  */
 export function useQuizHandlers(quizDataHook, quizAPI, countdown) {
   const {
@@ -15,7 +17,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown) {
     setError,
     setQuestions,
     quizData,
-    questions
+    questions,
+    gameState  // ← Make sure we have access to gameState
   } = quizDataHook;
 
   // ============================================
@@ -125,7 +128,18 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown) {
   };
 
   const handleStartBattle = async () => {
-    const success = await quizAPI.startBattle(quizData.gamePin);
+    // FIX: Get gamePin from gameState instead of quizData
+    const currentGamePin = gameState.gamePin;
+    
+    console.log('🎮 Starting battle with PIN:', currentGamePin); // Debug log
+    
+    if (!currentGamePin) {
+      console.error('❌ No game PIN found!');
+      setError('Game PIN not found. Please try creating the battle again.');
+      return;
+    }
+    
+    const success = await quizAPI.startBattle(currentGamePin);
     
     if (success) {
       updateUiState({ currentView: VIEWS.LOADING_BATTLE });
@@ -364,7 +378,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown) {
   };
 
   const handleCountdownComplete = () => {
-    const targetView = quizData.uiState?.currentView === VIEWS.LOADING 
+    const targetView = quizDataHook.uiState?.currentView === VIEWS.LOADING 
       ? VIEWS.SOLO 
       : VIEWS.BATTLE;
     updateUiState({ currentView: targetView });

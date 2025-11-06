@@ -4,7 +4,7 @@ import { Plus, X, Check } from 'lucide-react';
 // Multiple Choice Question Component
 export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateChoice, onAddChoice }) => (
   <div className="space-y-2">
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {question.choices?.map((choice, choiceIndex) => (
         <div
           key={choiceIndex}
@@ -13,7 +13,7 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
               onUpdateQuestion(question.id, 'correctAnswer', choice);
             }
           }}
-          className={`p-3 rounded border transition-colors cursor-pointer ${
+          className={`p-2 sm:p-3 rounded border transition-colors cursor-pointer ${
             question.correctAnswer === choice
               ? 'bg-green-500 text-white border-green-500'
               : 'bg-white border-gray-200 hover:border-gray-300'
@@ -34,7 +34,7 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
             onClick={(e) => {
               e.stopPropagation();
             }}
-            className={`w-full bg-transparent border-0 text-sm focus:outline-none ${
+            className={`w-full bg-transparent border-0 text-xs sm:text-sm focus:outline-none ${
               question.correctAnswer === choice ? 'text-white placeholder-green-200' : 'text-gray-800 placeholder-gray-400'
             }`}
             placeholder={`Option ${choiceIndex + 1}`}
@@ -44,10 +44,10 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
     </div>
     <button
       onClick={() => onAddChoice(question.id)}
-      className="flex items-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+      className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-blue-500 hover:bg-blue-50 rounded text-xs sm:text-sm font-medium transition-colors"
       type="button"
     >
-      <Plus className="w-4 h-4" />
+      <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
       Add more choices 
     </button>
   </div>
@@ -60,7 +60,7 @@ export const FillInBlanksQuestion = ({ question, onUpdateQuestion }) => (
       type="text"
       value={question.answer || ''}
       onChange={(e) => onUpdateQuestion(question.id, 'answer', e.target.value)}
-      className="px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+      className="w-full px-2 sm:px-3 py-2 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
       placeholder="Correct answer"
     />
   </div>
@@ -72,23 +72,23 @@ export const TrueFalseQuestion = ({ question, onUpdateQuestion }) => (
     <div className="grid grid-cols-2 gap-2">
       <div
         onClick={() => onUpdateQuestion(question.id, 'correctAnswer', 'True')}
-        className={`p-3 rounded border transition-colors cursor-pointer ${
+        className={`p-2 sm:p-3 rounded border transition-colors cursor-pointer ${
           question.correctAnswer === 'True'
             ? 'bg-green-500 text-white border-green-500'
             : 'bg-white border-gray-200 hover:border-gray-300'
         }`}
       >
-        <div className="text-sm text-center font-medium">True</div>
+        <div className="text-xs sm:text-sm text-center font-medium">True</div>
       </div>
       <div
         onClick={() => onUpdateQuestion(question.id, 'correctAnswer', 'False')}
-        className={`p-3 rounded border transition-colors cursor-pointer ${
+        className={`p-2 sm:p-3 rounded border transition-colors cursor-pointer ${
           question.correctAnswer === 'False'
             ? 'bg-green-500 text-white border-green-500'
             : 'bg-white border-gray-200 hover:border-gray-300'
         }`}
       >
-        <div className="text-sm text-center font-medium">False</div>
+        <div className="text-xs sm:text-sm text-center font-medium">False</div>
       </div>
     </div>
   </div>
@@ -99,17 +99,17 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
   const pairs = question.matchingPairs || [];
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-6">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-gray-700">Left Column</h4>
+          <h4 className="text-xs sm:text-sm font-medium text-gray-700">Left Column</h4>
           {pairs.map((pair, index) => (
             <div key={index} className="relative">
               <input
                 type="text"
                 value={pair.left || ''}
                 onChange={(e) => onUpdateMatchingPair(question.id, index, 'left', e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-2 sm:p-3 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder={`Left item ${index + 1}`}
               />
             </div>
@@ -117,23 +117,23 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
         </div>
         
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-gray-700">Right Column</h4>
+          <h4 className="text-xs sm:text-sm font-medium text-gray-700">Right Column</h4>
           {pairs.map((pair, index) => (
             <div key={index} className="relative flex gap-2">
               <input
                 type="text"
                 value={pair.right || ''}
                 onChange={(e) => onUpdateMatchingPair(question.id, index, 'right', e.target.value)}
-                className="flex-1 p-3 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 p-2 sm:p-3 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder={`Right item ${index + 1}`}
               />
               {pairs.length > 1 && (
                 <button
                   onClick={() => onRemoveMatchingPair(question.id, index)}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded"
+                  className="p-1.5 sm:p-2 text-red-500 hover:bg-red-50 rounded flex-shrink-0"
                   type="button"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
               )}
             </div>
@@ -143,10 +143,10 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
       
       <button
         onClick={() => onAddMatchingPair(question.id)}
-        className="flex items-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+        className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-blue-500 hover:bg-blue-50 rounded text-xs sm:text-sm font-medium transition-colors"
         type="button"
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
         Add matching pair 
       </button>
     </div>

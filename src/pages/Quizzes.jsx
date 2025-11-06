@@ -44,7 +44,7 @@ const styles = `
     animation: fadeIn 0.3s ease-out;
   }
 
-  /* Clean minimalistic containers */
+  /* Clean minimalistic containers - Responsive */
   .quiz-container {
     background: #ffffff;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
@@ -53,8 +53,10 @@ const styles = `
     transition: all 0.2s ease;
   }
 
-  .quiz-container:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  @media (min-width: 1024px) {
+    .quiz-container:hover {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
   }
 
   /* Prevent page scroll */
@@ -102,6 +104,31 @@ const styles = `
 
   .bottom-tab:not(.active):hover {
     color: #fbbf24;
+  }
+
+  /* Safe area for iOS devices */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Custom scrollbar for webkit browsers */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #fef3c7;
+    border-radius: 10px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #fbbf24;
+    border-radius: 10px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #f59e0b;
   }
 `;
 
@@ -189,8 +216,8 @@ function QuizzesPage() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading quizzes...</p>
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+          <p className="text-sm sm:text-base text-gray-600 font-medium">Loading quizzes...</p>
         </div>
       </div>
     );
@@ -202,14 +229,14 @@ function QuizzesPage() {
 
   if (quizDataHook.error && quizDataHook.uiState.currentView === VIEWS.LIST) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center max-w-md mx-auto p-8 bg-white rounded-xl shadow-sm">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Error</h2>
-          <p className="text-gray-600 mb-6">{quizDataHook.error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div className="text-center max-w-md mx-auto p-6 sm:p-8 bg-white rounded-xl shadow-sm">
+          <div className="text-red-500 text-4xl sm:text-5xl mb-4">⚠️</div>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">Error</h2>
+          <p className="text-sm sm:text-base text-gray-600 mb-6">{quizDataHook.error}</p>
           <button
             onClick={quizAPI.loadQuizzesFromAPI}
-            className="px-6 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium shadow-sm"
+            className="px-5 sm:px-6 py-2 sm:py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium shadow-sm text-sm sm:text-base"
           >
             Try Again
           </button>
@@ -368,20 +395,20 @@ function QuizzesPage() {
       {/* Error Modal */}
       {quizDataHook.error && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 animate-fade-in">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-5 sm:p-6 animate-fade-in">
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-4xl">⚠️</span>
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl sm:text-4xl">⚠️</span>
               </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">
                 Oops!
               </h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-sm sm:text-base text-gray-600 mb-6">
                 {quizDataHook.error}
               </p>
               <button
                 onClick={() => quizDataHook.setError(null)}
-                className="w-full bg-yellow-500 text-white py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-colors shadow-sm"
+                className="w-full bg-yellow-500 text-white py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-colors shadow-sm text-sm sm:text-base"
               >
                 Got it
               </button>

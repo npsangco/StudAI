@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Edit, Play, GripVertical, Trash2 } from 'lucide-react';
 import EmptyQuizState from './EmptyState';
 
-// Quiz Item Component with Drag & Drop - RESPONSIVE
+// Quiz Item Component with Drag & Drop
 const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const isBeingDragged = draggedIndex === index;
@@ -179,12 +179,12 @@ export const QuizList = ({
   return (
     <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
       {/* Header - Fixed */}
-      <div className="flex-shrink-0 p-4 sm:p-6 pb-3 sm:pb-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 text-center">My Quizzes</h2>
+      <div className="flex-shrink-0 p-3 sm:p-4 md:p-6 pb-2 sm:pb-3 md:pb-4 border-b border-gray-100">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 text-center">My Quizzes</h2>
       </div>
       
       {/* Scrollable Quiz List */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-3 sm:pb-4 scrollbar-thin scrollbar-thumb-yellow-400 scrollbar-track-yellow-100">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 scrollbar-thin scrollbar-thumb-yellow-400 scrollbar-track-yellow-100">
         <div className="space-y-2 sm:space-y-3">
           {quizzes.map((quiz, index) => (
             <QuizItem
@@ -201,13 +201,15 @@ export const QuizList = ({
             />
           ))}
         </div>
+        {/* Extra padding at bottom to ensure button is never cut off */}
+        <div className="h-3 sm:h-4"></div>
       </div>
       
-      {/* Create Button - Fixed at Bottom */}
-      <div className="flex-shrink-0 p-4 sm:p-6 pt-3 sm:pt-4 border-t border-gray-100">
+      {/* Create Button */}
+      <div className="flex-shrink-0 p-3 sm:p-4 md:p-6 pt-2 sm:pt-3 md:pt-4 border-t border-gray-100 bg-white">
         <button 
           onClick={onCreateQuiz}
-          className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 sm:py-3 px-4 rounded-lg font-semibold text-sm sm:text-base hover:from-yellow-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-md hover:shadow-lg"
+          className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 sm:py-3 px-4 rounded-lg font-semibold text-sm sm:text-base hover:from-yellow-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-md hover:shadow-lg active:scale-95"
         >
           Create Quiz
         </button>
