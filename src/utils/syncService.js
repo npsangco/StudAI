@@ -263,7 +263,7 @@ class SyncService {
               break;
             }
             
-            case 'UPDATE_TEMP':
+            case 'UPDATE_TEMP': {
               // Check if this temp note was just created in this sync
               const realId = tempIdMap.get(op.data.tempId);
               if (realId) {
@@ -276,6 +276,7 @@ class SyncService {
                 continue; // Don't remove from queue
               }
               break;
+            }
               
             case 'UPDATE':
               // SAFETY CHECK: Skip if trying to update a temp note that hasn't been synced yet

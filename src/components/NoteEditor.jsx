@@ -1,5 +1,5 @@
 // NoteEditor.jsx - Offline-capable editor with auto-save
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Save, Share2, Trash2, MessageCircle, Wifi, WifiOff, Cloud, CloudOff } from 'lucide-react';
 import { syncService } from '../utils/syncService';
 
@@ -20,49 +20,7 @@ const NoteEditor = ({
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const autoSaveTimeoutRef = useRef(null);
 
-  useEffect(() => {
-    setEditTitle(note.title);
-    setEditContent(note.content);
-    setHasUnsavedChanges(false);
-  }, [note]);
-
-  useEffect(() => {
-    const hasChanges = editTitle !== note.title || editContent !== note.content;
-    setHasUnsavedChanges(hasChanges);
-
-    // Auto-save after 2 seconds of no typing
-    if (hasChanges) {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-      
-      autoSaveTimeoutRef.current = setTimeout(() => {
-        saveNote(true); // true = auto-save
-      }, 2000);
-    }
-
-    return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
-  }, [editTitle, editContent, note.title, note.content]);
-
-  // Listen for online/offline events
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  const saveNote = async (isAutoSave = false) => {
+  const saveNote = useCallback(async (isAutoSave = false) => {
     if (isSaving) return;
     
     setIsSaving(true);
@@ -102,8 +60,49 @@ const NoteEditor = ({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [editContent, editTitle, isSaving, note.id, onSave]);
 
+  useEffect(() => {
+    setEditTitle(note.title);
+    setEditContent(note.content);
+    setHasUnsavedChanges(false);
+  }, [note]);
+
+  useEffect(() => {
+    const hasChanges = editTitle !== note.title || editContent !== note.content;
+    setHasUnsavedChanges(hasChanges);
+
+    // Auto-save after 2 seconds of no typing
+    if (hasChanges) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        saveNote(true); // true = auto-save
+      }, 2000);
+    }
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [editTitle, editContent, note.title, note.content, saveNote]);
+
+  // Listen for online/offline events
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const showNotification = (message, type = 'success') => {
     const notification = document.createElement('div');
     notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 ${

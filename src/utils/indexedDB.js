@@ -72,7 +72,7 @@ export const getCachedNote = async (noteId) => {
     const tx = db.transaction('notes', 'readonly');
     const store = tx.objectStore('notes');
     
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const request = store.get(noteId);
       request.onsuccess = () => resolve(request.result || null);
       request.onerror = () => {
@@ -94,7 +94,7 @@ export const getCachedNotes = async () => {
     const store = tx.objectStore('notes');
     
     // Wrap getAll() in a Promise
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const request = store.getAll();
       request.onsuccess = () => {
         const notes = request.result;
@@ -140,7 +140,7 @@ export const getPendingOperations = async () => {
     const store = tx.objectStore('syncQueue');
     
     // Wrap getAll() in a Promise
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const request = store.getAll();
       request.onsuccess = () => {
         const operations = request.result;

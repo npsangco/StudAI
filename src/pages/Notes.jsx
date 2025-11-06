@@ -28,8 +28,6 @@ const Notes = () => {
     isSyncing: false,
     pendingOperations: 0
   });
-  const [error, setError] = useState(null);
-
   useEffect(() => {
     fetchNotesFromDatabase();
     fetchMyShares();
@@ -611,6 +609,19 @@ const Notes = () => {
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800">Notes</h1>
+            <div className="flex items-center gap-2">
+              {syncStatus.isOnline ? (
+                <Wifi className="w-4 h-4 text-green-600" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-red-600" />
+              )}
+              {syncStatus.isSyncing && (
+                <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+              )}
+              {syncStatus.pendingOperations > 0 && (
+                <span className="text-xs text-slate-600">{syncStatus.pendingOperations} pending</span>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
