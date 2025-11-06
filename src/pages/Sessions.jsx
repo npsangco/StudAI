@@ -10,7 +10,7 @@ const Sessions = () => {
   const [success, setSuccess] = useState('');
   const [copiedUrl, setCopiedUrl] = useState('');
   const [zoomConnected, setZoomConnected] = useState(false);
-  const [activeTab, setActiveTab] = useState('my-sessions'); // 'my-sessions' or 'browse'
+  const [activeTab, setActiveTab] = useState('my-sessions');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [passwordInput, setPasswordInput] = useState('');
@@ -123,7 +123,7 @@ const Sessions = () => {
       const data = await response.json();
       window.location.href = data.authUrl;
     } catch (err) {
-      setError('Failed to connect to Zoom. Please try again.');
+      setError('Failed to connect to Zoom. Please try again.', err);
       setLoading(false);
     }
   };
@@ -141,7 +141,7 @@ const Sessions = () => {
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
-      setError('Failed to disconnect Zoom');
+      setError('Failed to disconnect Zoom', err);
     }
   };
 
@@ -251,7 +251,7 @@ const Sessions = () => {
         setTimeout(() => setSuccess(''), 2000);
       }
     } catch (err) {
-      setError('Failed to delete session');
+      setError('Failed to delete session', err);
     }
   };
 

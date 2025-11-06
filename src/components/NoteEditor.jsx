@@ -1,6 +1,7 @@
-// NoteEditor.js - Separate Editor Component
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Share2, Trash2, MessageCircle } from 'lucide-react';
+// NoteEditor.jsx - Offline-capable editor with auto-save
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Save, Share2, Trash2, MessageCircle, Wifi, WifiOff, Cloud, CloudOff } from 'lucide-react';
+import { syncService } from '../utils/syncService';
 
 const NoteEditor = ({ 
   note, 
@@ -14,6 +15,10 @@ const NoteEditor = ({
   const [editTitle, setEditTitle] = useState(note.title);
   const [editContent, setEditContent] = useState(note.content);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const autoSaveTimeoutRef = useRef(null);
 
   useEffect(() => {
     setEditTitle(note.title);
@@ -24,25 +29,97 @@ const NoteEditor = ({
   useEffect(() => {
     const hasChanges = editTitle !== note.title || editContent !== note.content;
     setHasUnsavedChanges(hasChanges);
+
+    // Auto-save after 2 seconds of no typing
+    if (hasChanges) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        saveNote(true); // true = auto-save
+      }, 2000);
+    }
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
   }, [editTitle, editContent, note.title, note.content]);
 
-  const saveNote = () => {
-    const wordCount = editContent.trim() ? editContent.trim().split(/\s+/).length : 0;
-    
-    const updatedNote = {
-      ...note,
-      title: editTitle || 'Untitled Note',
-      content: editContent,
-      words: wordCount
+  // Listen for online/offline events
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
+  }, []);
+
+  const saveNote = async (isAutoSave = false) => {
+    if (isSaving) return;
     
-    onSave(updatedNote);
-    setHasUnsavedChanges(false);
+    setIsSaving(true);
+    
+    try {
+      const wordCount = editContent.trim() ? editContent.trim().split(/\s+/).length : 0;
+      
+      const updatedNote = {
+        id: note.id, // Ensure ID is included
+        title: editTitle || 'Untitled Note',
+        content: editContent,
+        words: wordCount
+      };
+      
+      // Use syncService for offline-capable saving
+      const result = await syncService.updateNote(updatedNote.id, {
+        title: updatedNote.title,
+        content: updatedNote.content,
+        words: updatedNote.words
+      });
+      
+      if (result.queued) {
+        console.log('📱 Note saved offline, will sync when online');
+      }
+      
+      onSave(updatedNote);
+      setHasUnsavedChanges(false);
+      setLastSaved(new Date());
+      
+      if (!isAutoSave) {
+        // Show notification for manual saves
+        showNotification(result.queued ? 'Saved offline ✓' : 'Saved ✓', 'success');
+      }
+    } catch (error) {
+      console.error('Error saving note:', error);
+      showNotification('Failed to save', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const showNotification = (message, type = 'success') => {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 ${
+      type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    } text-white`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => document.body.removeChild(notification), 3000);
   };
 
   const handleBack = () => {
     if (hasUnsavedChanges) {
-      if (window.confirm('You have unsaved changes. Are you sure you want to go back?')) {
+      if (window.confirm('You have unsaved changes. Save before leaving?')) {
+        saveNote(false);
+        setTimeout(() => onBack(), 500);
+      } else if (window.confirm('Discard changes and go back?')) {
         onBack();
       }
     } else {
@@ -59,15 +136,21 @@ const NoteEditor = ({
 
   const handleShare = () => {
     onShare(note.id);
-    // Show a temporary notification
-    const notification = document.createElement('div');
-    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-    notification.textContent = 'Note shared successfully!';
-    document.body.appendChild(notification);
-    setTimeout(() => document.body.removeChild(notification), 3000);
+    showNotification('Note shared successfully!', 'success');
   };
 
   const currentWordCount = editContent.trim() ? editContent.trim().split(/\s+/).length : 0;
+
+  const formatLastSaved = () => {
+    if (!lastSaved) return 'Never saved';
+    const now = new Date();
+    const diff = Math.floor((now - lastSaved) / 1000); // seconds
+    
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return lastSaved.toLocaleDateString();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -88,11 +171,28 @@ const NoteEditor = ({
                   <span className="hidden sm:inline">Editing Note</span>
                   <span className="sm:hidden">Edit</span>
                   {hasUnsavedChanges && (
-                    <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0" title="Unsaved changes"></span>
+                    <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 animate-pulse" title="Unsaved changes"></span>
+                  )}
+                  {isSaving && (
+                    <span className="text-xs text-blue-600 flex items-center gap-1">
+                      <Cloud className="w-3 h-3 animate-pulse" />
+                      Saving...
+                    </span>
                   )}
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-500 truncate">
-                  {currentWordCount} words • {formatDate(note.createdAt)}
+                <p className="text-xs sm:text-sm text-slate-500 truncate flex items-center gap-2">
+                  <span>{currentWordCount} words • {formatDate(note.createdAt)}</span>
+                  {isOnline ? (
+                    <span className="flex items-center gap-1 text-green-600">
+                      <Wifi className="w-3 h-3" />
+                      <span className="hidden sm:inline">Online</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-orange-600">
+                      <WifiOff className="w-3 h-3" />
+                      <span className="hidden sm:inline">Offline</span>
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -108,23 +208,33 @@ const NoteEditor = ({
                 <span className="hidden sm:inline text-sm">Ask AI</span>
               </button>
               <button
-                onClick={saveNote}
-                disabled={!hasUnsavedChanges}
+                onClick={() => saveNote(false)}
+                disabled={!hasUnsavedChanges || isSaving}
                 className={`p-2 sm:px-4 sm:py-2 rounded-lg transition-all shadow-sm hover:shadow-md flex items-center gap-2 text-sm ${
-                  hasUnsavedChanges 
+                  hasUnsavedChanges && !isSaving
                     ? 'bg-blue-600 text-white hover:bg-blue-700' 
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
                 <Save className="w-4 h-4" />
                 <span className="hidden sm:inline">
-                  {hasUnsavedChanges ? 'Save' : 'Saved'}
+                  {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save' : 'Saved'}
                 </span>
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Offline Warning Banner */}
+      {!isOnline && (
+        <div className="bg-orange-100 border-b border-orange-200 px-4 py-2">
+          <div className="max-w-6xl mx-auto flex items-center gap-2 text-sm text-orange-800">
+            <CloudOff className="w-4 h-4" />
+            <span>You're offline. Changes will sync when connection is restored.</span>
+          </div>
+        </div>
+      )}
 
       {/* Edit Content */}
       <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
@@ -158,16 +268,22 @@ const NoteEditor = ({
               <span>Words: {currentWordCount}</span>
               <span className="hidden sm:inline">Lines: {editContent.split('\n').length}</span>
             </div>
-            <div>
-              {hasUnsavedChanges ? (
+            <div className="flex items-center gap-2">
+              {isSaving ? (
+                <span className="text-blue-600 flex items-center gap-1 text-xs sm:text-sm">
+                  <Cloud className="w-3 h-3 animate-pulse" />
+                  <span>Saving...</span>
+                </span>
+              ) : hasUnsavedChanges ? (
                 <span className="text-orange-600 flex items-center gap-1 text-xs sm:text-sm">
                   <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></span>
                   <span className="hidden sm:inline">Unsaved changes</span>
                   <span className="sm:hidden">Unsaved</span>
                 </span>
               ) : (
-                <span className="text-green-600 text-xs sm:text-sm">
-                  <span className="hidden sm:inline">All changes saved</span>
+                <span className="text-green-600 text-xs sm:text-sm flex items-center gap-1">
+                  <Cloud className="w-3 h-3" />
+                  <span className="hidden sm:inline">Saved • {formatLastSaved()}</span>
                   <span className="sm:hidden">Saved</span>
                 </span>
               )}

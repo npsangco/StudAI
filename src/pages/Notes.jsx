@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText, MessageCircle, Edit3, ExternalLink, Pin, PinOff, FolderPlus, Tag } from 'lucide-react';
+import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText, 
+         MessageCircle, Edit3, ExternalLink, Pin, PinOff, FolderPlus, 
+         Tag, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { syncService } from '../utils/syncService';
 import NoteEditor from '../components/NoteEditor';
 import Chatbot from '../components/Chatbot';
 import { notesApi, sharedNotesApi } from '../api/api';
@@ -20,11 +23,29 @@ const Notes = () => {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showCategoryPicker, setShowCategoryPicker] = useState(null);
+  const [syncStatus, setSyncStatus] = useState({
+    isOnline: navigator.onLine,
+    isSyncing: false,
+    pendingOperations: 0
+  });
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchNotesFromDatabase();
     fetchMyShares();
     fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const updateSyncStatus = async () => {
+      const status = await syncService.getSyncStatus();
+      setSyncStatus(status);
+    };
+
+    updateSyncStatus();
+    const interval = setInterval(updateSyncStatus, 3000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchCategories = async () => {
@@ -38,10 +59,10 @@ const Notes = () => {
 
   const fetchNotesFromDatabase = async () => {
     try {
-      const response = await notesApi.getAll();
+      const notes = await syncService.refreshCache();
       
-      const mappedNotes = response.data.notes.map(note => ({
-        id: note.note_id,
+      const mappedNotes = notes.map(note => ({
+        id: note.note_id || note.id,
         title: note.title,
         words: note.words || (note.content ? note.content.split(/\s+/).length : 0),
         createdAt: note.created_at || note.createdAt,
@@ -54,11 +75,7 @@ const Notes = () => {
 
       setNotes(mappedNotes);
     } catch (error) {
-      if (error.response?.status === 401) {
-        console.error('Not logged in');
-      } else {
-        console.error('Failed to fetch notes:', error);
-      }
+      console.error('Failed to fetch notes:', error);
     }
   };
 
@@ -86,30 +103,22 @@ const Notes = () => {
     if (!newNoteTitle.trim()) return;
     
     try {
-      const response = await notesApi.create({
+      const result = await syncService.addNote({
         title: newNoteTitle,
         content: '',
         file_id: null,
         category_id: newNoteCategory || null
       });
 
-      const newNote = {
-        id: response.data.note.note_id,
-        title: response.data.note.title,
-        words: response.data.note.words || 0,
-        createdAt: response.data.note.created_at || response.data.note.createdAt,
-        content: response.data.note.content || '',
-        isShared: response.data.note.is_shared || false,
-        isPinned: response.data.note.is_pinned || false,
-        category: response.data.note.category || null,
-        categoryId: response.data.note.category_id || null
-      };
+      if (result.queued) {
+        alert('📱 Offline: Note will sync when back online');
+      }
       
-      setNotes([newNote, ...notes]);
       setNewNoteTitle('');
       setNewNoteCategory('');
       setShowAddNote(false);
-      openEditPage(newNote);
+      
+      await fetchNotesFromDatabase();
     } catch (error) {
       console.error('Error creating note:', error);
       alert('Failed to create note. Please try again.');
@@ -118,27 +127,13 @@ const Notes = () => {
 
   const updateNote = async (updatedNote) => {
     try {
-      const response = await notesApi.update(updatedNote.id, {
+      await syncService.updateNote(updatedNote.id, {
         title: updatedNote.title,
         content: updatedNote.content,
         category_id: updatedNote.categoryId || null
       });
-
-      const mappedNote = {
-        id: response.data.note.note_id,
-        title: response.data.note.title,
-        words: response.data.note.words || (response.data.note.content ? response.data.note.content.split(/\s+/).length : 0),
-        createdAt: response.data.note.created_at || response.data.note.createdAt,
-        content: response.data.note.content || '',
-        isShared: response.data.note.is_shared || false,
-        isPinned: response.data.note.is_pinned || false,
-        category: response.data.note.category || null,
-        categoryId: response.data.note.category_id || null
-      };
       
-      setNotes(notes.map(note => 
-        note.id === mappedNote.id ? mappedNote : note
-      ));
+      await fetchNotesFromDatabase();
     } catch (error) {
       console.error('Error updating note:', error);
       alert('Failed to update note. Please try again.');
@@ -181,8 +176,8 @@ const Notes = () => {
 
   const deleteNote = async (id) => {
     try {
-      await notesApi.delete(id);
-      setNotes(notes.filter(note => note.id !== id));
+      await syncService.deleteNote(id);
+      await fetchNotesFromDatabase();
     } catch (error) {
       console.error('Error deleting note:', error);
       alert('Failed to delete note. Please try again.');
@@ -614,7 +609,10 @@ const Notes = () => {
     <div className="min-h-screen p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 mb-3 sm:mb-4">Notes</h1>
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800">Notes</h1>
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
             <div className="relative flex-1 max-w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
