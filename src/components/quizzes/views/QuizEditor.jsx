@@ -389,9 +389,14 @@ const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, ques
             </button>
             <button 
               onClick={onAddQuestion}
-              className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 font-medium"
+              disabled={questions.length >= 30}
+              className={`px-4 py-2 text-sm rounded-md font-medium ${
+                questions.length >= 30 
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
             >
-              Add a question
+              Add a question {questions.length >= 30 && '(Max 30)'}
             </button>
             <button 
               onClick={handleSaveClick}

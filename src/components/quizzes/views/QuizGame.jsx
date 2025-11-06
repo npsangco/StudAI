@@ -3,7 +3,8 @@ import { useQuizGame } from '../hooks/useQuizGame';
 import { useQuizTimer } from '../hooks/useQuizTimer';
 import { QuizGameHeader } from '../QuizGameHeader';
 import { QuizQuestion } from '../QuizCore';
-import { LiveLeaderboard, useSimulatedPlayers } from '../QuizSimulation';
+import { useSimulatedPlayers } from '../QuizSimulation';
+import { LiveLeaderboard } from './QuizLiveLeaderboard';
 import { ANSWER_DISPLAY_DURATION, MATCHING_REVIEW_DURATION_BATTLE } from '../utils/constants';
 
 const QuizGame = ({ 
@@ -263,6 +264,25 @@ const QuizGame = ({
     finishQuizWithAnswers(answersHistory);
   };
 
+  const [leaderboardMode, setLeaderboardMode] = useState('desktop');
+
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setLeaderboardMode('mobile');
+      } else if (width < 1024) {
+        setLeaderboardMode('tablet');
+      } else {
+        setLeaderboardMode('desktop');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   if (!currentQ) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -277,7 +297,17 @@ const QuizGame = ({
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Yellow Background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 -z-10" />
+      
+      {/* Animated background shapes*/}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div className="absolute top-10 left-5 w-20 h-20 sm:w-32 sm:h-32 bg-white/10 rounded-full blur-2xl sm:blur-3xl animate-pulse" />
+        <div className="absolute bottom-10 right-5 w-24 h-24 sm:w-48 sm:h-48 bg-black/10 rounded-full blur-2xl sm:blur-3xl animate-pulse" style={{ animationDelay: '700ms' }} />
+      </div>
+
+      {/* Header stays the same */}
       <QuizGameHeader
         quiz={quiz}
         currentQuestion={game.currentQuestionIndex}
@@ -289,55 +319,139 @@ const QuizGame = ({
         onBack={onBack}
       />
 
-      <div className="max-w-7xl mx-auto p-6">
-        <div className={`${mode === 'battle' ? 'grid grid-cols-1 lg:grid-cols-4 gap-6' : ''}`}>
-          <div className={mode === 'battle' ? 'lg:col-span-3' : ''}>
-            <QuizQuestion
-              question={currentQ}
-              selectedAnswer={game.selectedAnswer}
-              userAnswer={game.userAnswer}
-              userMatches={game.userMatches}
-              isMatchingSubmitted={game.isMatchingSubmitted}
-              mode={mode}
-              onAnswerSelect={handleAnswerSelect}
-              onFillInAnswer={handleFillInAnswer}
-              onMatchingSubmit={handleMatchingSubmit}
-              onUserAnswerChange={game.setUserAnswer}
-              onNextQuestion={handleManualNext}
-              timeLeft={timeLeft}
-              isPaused={game.isPaused || isProcessing}
-              isAnswerCorrect={game.isAnswerCorrect}
-            />
-
-            {currentQ.type === 'Matching' && game.isMatchingSubmitted && mode === 'solo' && (
-              <div className="text-center mt-6">
-                <button
-                  onClick={handleManualNext}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
-                >
-                  Next Question →
-                </button>
+      {/* MAIN CONTENT - Responsive Layout */}
+      {mode === 'battle' ? (
+        // BATTLE MODE - Responsive leaderboard
+        <>
+          {leaderboardMode === 'desktop' ? (
+            // Desktop: Side-by-side
+            <div className="flex gap-4 max-w-[1800px] mx-auto p-4">
+              <div className="flex-1 overflow-y-auto px-2 sm:px-4">
+                <QuizQuestion
+                  question={currentQ}
+                  selectedAnswer={game.selectedAnswer}
+                  userAnswer={game.userAnswer}
+                  userMatches={game.userMatches}
+                  isMatchingSubmitted={game.isMatchingSubmitted}
+                  mode={mode}
+                  onAnswerSelect={handleAnswerSelect}
+                  onFillInAnswer={handleFillInAnswer}
+                  onMatchingSubmit={handleMatchingSubmit}
+                  onUserAnswerChange={game.setUserAnswer}
+                  onNextQuestion={handleManualNext}
+                  timeLeft={timeLeft}
+                  isPaused={game.isPaused || isProcessing}
+                  isAnswerCorrect={game.isAnswerCorrect}
+                />
               </div>
-            )}
-            
-            {currentQ.type === 'Matching' && game.isMatchingSubmitted && mode === 'battle' && (
-              <div className="text-center mt-6">
-                <p className="text-sm text-gray-600 animate-pulse">
-                  Next question in a moment...
-                </p>
+              
+              <div className="w-80 h-screen sticky top-20">
+                <LiveLeaderboard 
+                  players={allPlayers} 
+                  currentPlayerName="You"
+                  mode="desktop"
+                />
               </div>
-            )}
-          </div>
+            </div>
+          ) : leaderboardMode === 'tablet' ? (
+            // Tablet: Bottom slide panel
+            <div className="relative pb-24 px-4">
+              <QuizQuestion
+                question={currentQ}
+                selectedAnswer={game.selectedAnswer}
+                userAnswer={game.userAnswer}
+                userMatches={game.userMatches}
+                isMatchingSubmitted={game.isMatchingSubmitted}
+                mode={mode}
+                onAnswerSelect={handleAnswerSelect}
+                onFillInAnswer={handleFillInAnswer}
+                onMatchingSubmit={handleMatchingSubmit}
+                onUserAnswerChange={game.setUserAnswer}
+                onNextQuestion={handleManualNext}
+                timeLeft={timeLeft}
+                isPaused={game.isPaused || isProcessing}
+                isAnswerCorrect={game.isAnswerCorrect}
+              />
+              
+              <div className="fixed bottom-0 left-0 right-0 z-30">
+                <LiveLeaderboard 
+                  players={allPlayers} 
+                  currentPlayerName="You"
+                  mode="tablet"
+                />
+              </div>
+            </div>
+          ) : (
+            // Mobile: Floating mini
+            <>
+              <QuizQuestion
+                question={currentQ}
+                selectedAnswer={game.selectedAnswer}
+                userAnswer={game.userAnswer}
+                userMatches={game.userMatches}
+                isMatchingSubmitted={game.isMatchingSubmitted}
+                mode={mode}
+                onAnswerSelect={handleAnswerSelect}
+                onFillInAnswer={handleFillInAnswer}
+                onMatchingSubmit={handleMatchingSubmit}
+                onUserAnswerChange={game.setUserAnswer}
+                onNextQuestion={handleManualNext}
+                timeLeft={timeLeft}
+                isPaused={game.isPaused || isProcessing}
+                isAnswerCorrect={game.isAnswerCorrect}
+              />
+              
+              <LiveLeaderboard 
+                players={allPlayers} 
+                currentPlayerName="You"
+                mode="mobile"
+              />
+            </>
+          )}
           
-          {mode === 'battle' && (
-            <div className="lg:col-span-1">
-              <LiveLeaderboard players={allPlayers} currentPlayerName="You" />
+          {/* Battle mode next buttons */}
+          {currentQ.type === 'Matching' && game.isMatchingSubmitted && (
+            <div className="text-center mt-6 pb-6">
+              <p className="text-sm text-white/80 animate-pulse">
+                Next question in a moment...
+              </p>
+            </div>
+          )}
+        </>
+      ) : (
+        // SOLO MODE - No leaderboard
+        <div className="max-w-4xl mx-auto p-4">
+          <QuizQuestion
+            question={currentQ}
+            selectedAnswer={game.selectedAnswer}
+            userAnswer={game.userAnswer}
+            userMatches={game.userMatches}
+            isMatchingSubmitted={game.isMatchingSubmitted}
+            mode={mode}
+            onAnswerSelect={handleAnswerSelect}
+            onFillInAnswer={handleFillInAnswer}
+            onMatchingSubmit={handleMatchingSubmit}
+            onUserAnswerChange={game.setUserAnswer}
+            onNextQuestion={handleManualNext}
+            timeLeft={timeLeft}
+            isPaused={game.isPaused || isProcessing}
+            isAnswerCorrect={game.isAnswerCorrect}
+          />
+          
+          {/* Solo mode next button for matching */}
+          {currentQ.type === 'Matching' && game.isMatchingSubmitted && (
+            <div className="text-center mt-6">
+              <button
+                onClick={handleManualNext}
+                className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+              >
+                Next Question →
+              </button>
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
-};
-
+}
 export default QuizGame;

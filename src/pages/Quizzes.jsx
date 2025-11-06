@@ -535,6 +535,11 @@ function QuizzesPage() {
   // ============================================
 
   const handleAddQuestion = () => {
+    if (questions.length >= 30) {
+      alert('Maximum 30 questions per quiz!');
+      return;
+    }
+
     const newQuestion = createNewQuestion('Multiple Choice', questions);
     setQuestions([...questions, newQuestion]);
   };
