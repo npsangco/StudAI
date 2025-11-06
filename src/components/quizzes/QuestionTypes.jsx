@@ -4,7 +4,7 @@ import { Plus, X, Check } from 'lucide-react';
 // Multiple Choice Question Component
 export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateChoice, onAddChoice }) => (
   <div className="space-y-2">
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {question.choices?.map((choice, choiceIndex) => (
         <div
           key={choiceIndex}
@@ -13,7 +13,7 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
               onUpdateQuestion(question.id, 'correctAnswer', choice);
             }
           }}
-          className={`p-3 rounded border transition-colors cursor-pointer ${
+          className={`p-2 sm:p-3 rounded border transition-colors cursor-pointer ${
             question.correctAnswer === choice
               ? 'bg-green-500 text-white border-green-500'
               : 'bg-white border-gray-200 hover:border-gray-300'
@@ -34,7 +34,7 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
             onClick={(e) => {
               e.stopPropagation();
             }}
-            className={`w-full bg-transparent border-0 text-sm focus:outline-none ${
+            className={`w-full bg-transparent border-0 text-xs sm:text-sm focus:outline-none ${
               question.correctAnswer === choice ? 'text-white placeholder-green-200' : 'text-gray-800 placeholder-gray-400'
             }`}
             placeholder={`Option ${choiceIndex + 1}`}
@@ -44,10 +44,10 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
     </div>
     <button
       onClick={() => onAddChoice(question.id)}
-      className="flex items-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+      className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-blue-500 hover:bg-blue-50 rounded text-xs sm:text-sm font-medium transition-colors"
       type="button"
     >
-      <Plus className="w-4 h-4" />
+      <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
       Add more choices 
     </button>
   </div>
@@ -60,7 +60,7 @@ export const FillInBlanksQuestion = ({ question, onUpdateQuestion }) => (
       type="text"
       value={question.answer || ''}
       onChange={(e) => onUpdateQuestion(question.id, 'answer', e.target.value)}
-      className="px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+      className="w-full px-2 sm:px-3 py-2 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
       placeholder="Correct answer"
     />
   </div>
@@ -72,23 +72,23 @@ export const TrueFalseQuestion = ({ question, onUpdateQuestion }) => (
     <div className="grid grid-cols-2 gap-2">
       <div
         onClick={() => onUpdateQuestion(question.id, 'correctAnswer', 'True')}
-        className={`p-3 rounded border transition-colors cursor-pointer ${
+        className={`p-2 sm:p-3 rounded border transition-colors cursor-pointer ${
           question.correctAnswer === 'True'
             ? 'bg-green-500 text-white border-green-500'
             : 'bg-white border-gray-200 hover:border-gray-300'
         }`}
       >
-        <div className="text-sm text-center font-medium">True</div>
+        <div className="text-xs sm:text-sm text-center font-medium">True</div>
       </div>
       <div
         onClick={() => onUpdateQuestion(question.id, 'correctAnswer', 'False')}
-        className={`p-3 rounded border transition-colors cursor-pointer ${
+        className={`p-2 sm:p-3 rounded border transition-colors cursor-pointer ${
           question.correctAnswer === 'False'
             ? 'bg-green-500 text-white border-green-500'
             : 'bg-white border-gray-200 hover:border-gray-300'
         }`}
       >
-        <div className="text-sm text-center font-medium">False</div>
+        <div className="text-xs sm:text-sm text-center font-medium">False</div>
       </div>
     </div>
   </div>
@@ -99,17 +99,17 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
   const pairs = question.matchingPairs || [];
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-6">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-gray-700">Left Column</h4>
+          <h4 className="text-xs sm:text-sm font-medium text-gray-700">Left Column</h4>
           {pairs.map((pair, index) => (
             <div key={index} className="relative">
               <input
                 type="text"
                 value={pair.left || ''}
                 onChange={(e) => onUpdateMatchingPair(question.id, index, 'left', e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-2 sm:p-3 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder={`Left item ${index + 1}`}
               />
             </div>
@@ -117,23 +117,23 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
         </div>
         
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-gray-700">Right Column</h4>
+          <h4 className="text-xs sm:text-sm font-medium text-gray-700">Right Column</h4>
           {pairs.map((pair, index) => (
             <div key={index} className="relative flex gap-2">
               <input
                 type="text"
                 value={pair.right || ''}
                 onChange={(e) => onUpdateMatchingPair(question.id, index, 'right', e.target.value)}
-                className="flex-1 p-3 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 p-2 sm:p-3 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder={`Right item ${index + 1}`}
               />
               {pairs.length > 1 && (
                 <button
                   onClick={() => onRemoveMatchingPair(question.id, index)}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded"
+                  className="p-1.5 sm:p-2 text-red-500 hover:bg-red-50 rounded flex-shrink-0"
                   type="button"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
               )}
             </div>
@@ -143,10 +143,10 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
       
       <button
         onClick={() => onAddMatchingPair(question.id)}
-        className="flex items-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+        className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-blue-500 hover:bg-blue-50 rounded text-xs sm:text-sm font-medium transition-colors"
         type="button"
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
         Add matching pair 
       </button>
     </div>
@@ -166,28 +166,26 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
   const [colorPalette] = useState(() => {
     const colors = [];
+    const baseColors = [
+      { bg: '#dbeafe', border: '#60a5fa', text: '#1e40af' },
+      { bg: '#e9d5ff', border: '#a78bfa', text: '#6b21a8' },
+      { bg: '#d1fae5', border: '#34d399', text: '#065f46' },
+      { bg: '#fed7aa', border: '#fb923c', text: '#9a3412' },
+      { bg: '#fecaca', border: '#f87171', text: '#991b1b' },
+      { bg: '#fef3c7', border: '#fbbf24', text: '#92400e' },
+      { bg: '#ddd6fe', border: '#a78bfa', text: '#5b21b6' },
+      { bg: '#fce7f3', border: '#f472b6', text: '#9f1239' }
+    ];
+    
     for (let i = 0; i < question.matchingPairs.length; i++) {
-      if (i < 8) {
-        const baseColors = [
-          { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700' },
-          { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-700' },
-          { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-700' },
-          { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-700' },
-          { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-700' },
-          { bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-yellow-700' },
-          { bg: 'bg-red-100', border: 'border-red-400', text: 'text-red-700' },
-          { bg: 'bg-indigo-100', border: 'border-indigo-400', text: 'text-indigo-700' }
-        ];
+      if (i < baseColors.length) {
         colors.push(baseColors[i]);
       } else {
         const hue = Math.floor(Math.random() * 360);
-        const saturation = Math.floor(Math.random() * 20) + 50;
-        const lightness = Math.floor(Math.random() * 15) + 70;
-        
         colors.push({
-          bg: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
-          border: `hsl(${hue}, ${saturation}%, ${lightness - 20}%)`,
-          text: `hsl(${hue}, ${saturation}%, ${lightness - 50}%)`
+          bg: `hsl(${hue}, 85%, 85%)`,
+          border: `hsl(${hue}, 70%, 60%)`,
+          text: `hsl(${hue}, 70%, 30%)`
         });
       }
     }
@@ -275,7 +273,6 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     return matches.some(m => m[side] === item);
   };
 
-  const isDragging = draggedItem !== null;
   const canSubmit = matches.length > 0 && matches.length === question.matchingPairs.length;
 
   // Calculate results
@@ -284,7 +281,6 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   const correctCount = correctMatches.length;
   const totalCount = question.matchingPairs.length;
   const percentage = Math.round((correctCount / totalCount) * 100);
-  const allCorrect = correctCount === totalCount;
 
   // Get gradient colors based on score
   const getGradientColors = () => {
@@ -305,27 +301,154 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      {/* Header */}
-      <div className="mb-8 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">{question.question}</h2>
+    <div className="min-h-screen px-3 sm:px-4 py-4 sm:py-6 relative overflow-hidden">
+      {/* Background gradient */}
+      <div className="fixed inset-0 bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 -z-10" />
+      
+      {/* Animated background shapes */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div className="absolute top-10 left-5 w-20 h-20 sm:w-32 sm:h-32 bg-white/10 rounded-full blur-2xl sm:blur-3xl animate-pulse" />
+        <div className="absolute bottom-10 right-5 w-24 h-24 sm:w-48 sm:h-48 bg-black/10 rounded-full blur-2xl sm:blur-3xl animate-pulse" style={{ animationDelay: '700ms' }} />
+      </div>
+
+      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-5">
+        {/* Question */}
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight px-2 drop-shadow-lg">
+          {question.question}
+        </h2>
         
         {!isSubmitted ? (
-          <p className="text-gray-600">Drag items from one column and drop them on matching items in the other column</p>
+          <>
+            {/* Instructions */}
+            <p className="text-base sm:text-lg text-gray-900 px-2 font-medium">
+              Drag items from one column and drop them on matching items in the other column
+            </p>
+
+            {/* Matching Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              {/* Left Column */}
+              <div className="space-y-3">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 text-center px-2">
+                  Column A
+                </h3>
+                {leftItems.map((item, index) => {
+                  const match = getItemMatch(item, 'left');
+                  const matched = isMatched(item, 'left');
+                  const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'left';
+                  const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'left' && draggedItem?.side !== 'left';
+                  
+                  return (
+                    <div
+                      key={index}
+                      draggable={!isPaused}
+                      onDragStart={(e) => handleDragStart(e, item, 'left')}
+                      onDragOver={(e) => handleDragOver(e, item, 'left')}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, item, 'left')}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => matched && handleUnmatch(item, 'left')}
+                      className={`
+                        bg-white/90 backdrop-blur-xl border-2 rounded-2xl p-4 sm:p-5
+                        font-semibold text-base sm:text-lg
+                        transition-all duration-300 transform cursor-grab active:cursor-grabbing
+                        hover:scale-102 hover:-translate-y-1 hover:shadow-xl
+                        ${matched ? 'border-2' : 'border-white/50 hover:border-white'}
+                        ${isDraggedItem ? 'opacity-50 scale-95' : ''}
+                        ${isDropZone ? 'border-yellow-400 bg-yellow-50/90 scale-105' : ''}
+                        ${matched ? 'shadow-lg' : 'shadow-md'}
+                      `}
+                      style={matched ? {
+                        backgroundColor: match.color.bg,
+                        borderColor: match.color.border,
+                        color: match.color.text
+                      } : {}}
+                    >
+                      {item}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-3">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 text-center px-2">
+                  Column B
+                </h3>
+                {rightItems.map((item, index) => {
+                  const match = getItemMatch(item, 'right');
+                  const matched = isMatched(item, 'right');
+                  const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'right';
+                  const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'right' && draggedItem?.side !== 'right';
+                  
+                  return (
+                    <div
+                      key={index}
+                      draggable={!isPaused}
+                      onDragStart={(e) => handleDragStart(e, item, 'right')}
+                      onDragOver={(e) => handleDragOver(e, item, 'right')}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, item, 'right')}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => matched && handleUnmatch(item, 'right')}
+                      className={`
+                        bg-white/90 backdrop-blur-xl border-2 rounded-2xl p-4 sm:p-5
+                        font-semibold text-base sm:text-lg
+                        transition-all duration-300 transform cursor-grab active:cursor-grabbing
+                        hover:scale-102 hover:-translate-y-1 hover:shadow-xl
+                        ${matched ? 'border-2' : 'border-white/50 hover:border-white'}
+                        ${isDraggedItem ? 'opacity-50 scale-95' : ''}
+                        ${isDropZone ? 'border-yellow-400 bg-yellow-50/90 scale-105' : ''}
+                        ${matched ? 'shadow-lg' : 'shadow-md'}
+                      `}
+                      style={matched ? {
+                        backgroundColor: match.color.bg,
+                        borderColor: match.color.border,
+                        color: match.color.text
+                      } : {}}
+                    >
+                      {item}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={handleSubmit}
+                disabled={!canSubmit || isPaused}
+                className="
+                  bg-gradient-to-r from-yellow-400 to-amber-500
+                  hover:from-yellow-500 hover:to-amber-600
+                  disabled:from-gray-300 disabled:to-gray-400
+                  text-black font-bold text-lg sm:text-xl px-10 sm:px-12 py-4 sm:py-5
+                  rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-yellow-500/30
+                  transition-all duration-300 transform hover:scale-105
+                  disabled:cursor-not-allowed disabled:hover:scale-100
+                  border-2 border-yellow-600/30
+                "
+              >
+                {canSubmit ? 'Submit Answers' : 'Match All Pairs to Submit'}
+              </button>
+            </div>
+          </>
         ) : (
-<>
+          <>
             {/* Score Card */}
-            <div className={`relative overflow-hidden rounded-xl shadow-lg mb-6 bg-gradient-to-r ${getGradientColors()}`}>
-              <div className="absolute inset-0 bg-white opacity-10"></div>
-              <div className="relative px-6 py-5 text-white">
-                <div className="flex items-center justify-between">
+            <div className={`relative overflow-hidden rounded-2xl shadow-2xl bg-gradient-to-r ${getGradientColors()}`}>
+              <div className="absolute inset-0 bg-white/10"></div>
+              <div className="relative px-5 sm:px-6 py-5 sm:py-6 text-white">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div>
-                    <div className="text-3xl font-bold mb-1">
+                    <div className="text-2xl sm:text-3xl font-bold mb-1">
                       {correctCount}/{totalCount} CORRECT
                     </div>
-                    <div className="text-sm font-medium opacity-90">{getMessage()}</div>
+                    <div className="text-sm sm:text-base font-medium opacity-90">
+                      {getMessage()}
+                    </div>
                   </div>
-                  <div className="text-5xl font-bold">
+                  <div className="text-4xl sm:text-5xl font-bold">
                     {percentage}%
                   </div>
                 </div>
@@ -334,32 +457,32 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
             {/* Correct Answers Section */}
             {correctMatches.length > 0 && (
-              <div className="mb-4 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/50 overflow-hidden">
                 <button
                   onClick={() => setShowCorrectMatches(!showCorrectMatches)}
-                  className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
                       <Check className="w-5 h-5 text-white" />
                     </div>
-                    <span className="text-base font-semibold text-gray-900">
+                    <span className="text-base sm:text-lg font-bold text-gray-900">
                       Correct Answers ({correctMatches.length})
                     </span>
                   </div>
-                  <span className="text-gray-600 text-xl">
+                  <span className="text-gray-700 text-xl font-bold">
                     {showCorrectMatches ? '▴' : '▾'}
                   </span>
                 </button>
                 
                 {showCorrectMatches && (
-                  <div className="px-5 pb-4 space-y-2 border-t border-gray-200 pt-3">
+                  <div className="px-5 pb-4 space-y-2 border-t-2 border-white/50 pt-3">
                     {correctMatches.map((match, index) => (
-                      <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-2 text-sm text-gray-900">
-                          <span className="font-medium">{match.left}</span>
+                      <div key={index} className="p-3 bg-green-50 rounded-xl border-2 border-green-200">
+                        <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900">
+                          <span>{match.left}</span>
                           <span className="text-green-600 font-bold">→</span>
-                          <span className="font-medium">{match.right}</span>
+                          <span>{match.right}</span>
                         </div>
                       </div>
                     ))}
@@ -370,49 +493,49 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
             {/* Mistakes Section */}
             {incorrectMatches.length > 0 && (
-              <div className="mb-4 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/50 overflow-hidden">
                 <button
                   onClick={() => setShowMistakes(!showMistakes)}
-                  className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
                       <X className="w-5 h-5 text-white" />
                     </div>
-                    <span className="text-base font-semibold text-gray-900">
+                    <span className="text-base sm:text-lg font-bold text-gray-900">
                       Mistakes to Review ({incorrectMatches.length})
                     </span>
                   </div>
-                  <span className="text-gray-600 text-xl">
+                  <span className="text-gray-700 text-xl font-bold">
                     {showMistakes ? '▴' : '▾'}
                   </span>
                 </button>
                 
                 {showMistakes && (
-                  <div className="px-5 pb-4 space-y-3 border-t border-gray-200 pt-3">
+                  <div className="px-5 pb-4 space-y-3 border-t-2 border-white/50 pt-3">
                     {incorrectMatches.map((match, index) => {
                       const correctLeft = getCorrectMatch(match.left, 'left');
                       return (
-                        <div key={index} className="p-3 bg-gray-50 rounded-lg space-y-2">
+                        <div key={index} className="p-3 bg-red-50 rounded-xl border-2 border-red-200 space-y-2">
                           <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                            <div className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1">
                               Your Answer:
                             </div>
-                            <div className="flex items-center gap-2 text-sm">
-                              <span className="font-medium text-gray-900">{match.left}</span>
+                            <div className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+                              <span className="text-gray-900">{match.left}</span>
                               <span className="text-red-600 font-bold">→</span>
-                              <span className="font-medium line-through text-red-600">{match.right}</span>
+                              <span className="line-through text-red-600">{match.right}</span>
                             </div>
                           </div>
                           
                           <div>
-                            <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">
+                            <div className="text-xs font-bold text-green-700 uppercase tracking-wide mb-1">
                               Correct Answer:
                             </div>
-                            <div className="flex items-center gap-2 text-sm">
-                              <span className="font-medium text-gray-900">{match.left}</span>
+                            <div className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+                              <span className="text-gray-900">{match.left}</span>
                               <span className="text-green-600 font-bold">→</span>
-                              <span className="font-medium text-green-600">{correctLeft.right}</span>
+                              <span className="text-green-700">{correctLeft.right}</span>
                             </div>
                           </div>
                         </div>
@@ -425,148 +548,6 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
           </>
         )}
       </div>
-
-      {/* Only show matching grid if NOT submitted */}
-      {!isSubmitted && (
-        <>
-          {/* Matching Grid */}
-          <div className="grid grid-cols-2 gap-8 mb-8">
-            {/* Left Column */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-center text-gray-700 mb-4 pb-2 border-b-2 border-gray-200">
-                Column A
-              </h3>
-              {leftItems.map((item, index) => {
-                const match = getItemMatch(item, 'left');
-                const matched = isMatched(item, 'left');
-                const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'left';
-                const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'left' && draggedItem?.side !== 'left';
-
-                return (
-                  <div key={index} className="relative">
-                    <div
-                      draggable={!isPaused}
-                      onDragStart={(e) => handleDragStart(e, item, 'left')}
-                      onDragOver={(e) => handleDragOver(e, item, 'left')}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, item, 'left')}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => matched && handleUnmatch(item, 'left')}
-                      className={`
-                        relative p-4 rounded-xl border-2 font-medium text-center
-                        transition-all duration-300 transform
-                        ${matched 
-                          ? `${match.color.border} ${match.color.text} cursor-pointer hover:scale-105` 
-                          : 'bg-white border-gray-300 text-gray-800 hover:border-gray-400 cursor-grab active:cursor-grabbing'
-                        }
-                        ${isDraggedItem ? 'opacity-40 scale-95' : ''}
-                        ${isDropZone ? 'ring-4 ring-blue-300 scale-105 border-blue-500' : ''}
-                        ${isDragging && !matched && !isDraggedItem ? 'hover:ring-2 hover:ring-blue-200' : ''}
-                        shadow-sm hover:shadow-md
-                      `}
-                      style={matched ? {
-                        backgroundColor: match.color.bg,
-                        borderColor: match.color.border,
-                        color: match.color.text
-                      } : {}}
-                    >
-                      <span className="block">{item}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-center text-gray-700 mb-4 pb-2 border-b-2 border-gray-200">
-                Column B
-              </h3>
-              {rightItems.map((item, index) => {
-                const match = getItemMatch(item, 'right');
-                const matched = isMatched(item, 'right');
-                const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'right';
-                const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'right' && draggedItem?.side !== 'right';
-
-                return (
-                  <div key={index} className="relative">
-                    <div
-                      draggable={!isPaused}
-                      onDragStart={(e) => handleDragStart(e, item, 'right')}
-                      onDragOver={(e) => handleDragOver(e, item, 'right')}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, item, 'right')}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => matched && handleUnmatch(item, 'right')}
-                      className={`
-                        relative p-4 rounded-xl border-2 font-medium text-center
-                        transition-all duration-300 transform
-                        ${matched 
-                          ? `${match.color.border} ${match.color.text} cursor-pointer hover:scale-105` 
-                          : 'bg-white border-gray-300 text-gray-800 hover:border-gray-400 cursor-grab active:cursor-grabbing'
-                        }
-                        ${isDraggedItem ? 'opacity-40 scale-95' : ''}
-                        ${isDropZone ? 'ring-4 ring-blue-300 scale-105 border-blue-500' : ''}
-                        ${isDragging && !matched && !isDraggedItem ? 'hover:ring-2 hover:ring-blue-200' : ''}
-                        shadow-sm hover:shadow-md
-                      `}
-                      style={matched ? {
-                        backgroundColor: match.color.bg,
-                        borderColor: match.color.border,
-                        color: match.color.text
-                      } : {}}
-                    >
-                      <span className="block">{item}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="text-center">
-            <button
-              onClick={handleSubmit}
-              disabled={!canSubmit || isPaused}
-              className={`
-                px-8 py-4 rounded-xl font-bold text-lg text-white 
-                transition-all duration-300 transform
-                ${canSubmit && !isPaused
-                  ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:scale-105 shadow-lg hover:shadow-xl'
-                  : 'bg-gray-400 cursor-not-allowed'
-                }
-              `}
-            >
-              {canSubmit ? 'Submit Answers ✓' : 'Match All Pairs to Submit'}
-            </button>
-          </div>
-        </>
-      )}
-
-      <style>{`
-        @keyframes scale-in {
-          from {
-            transform: scale(0);
-            opacity: 0;
-          }
-          to {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-
-        .animate-scale-in {
-          animation: scale-in 0.3s ease-out;
-        }
-
-        [draggable="true"] {
-          user-select: none;
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-        }
-      `}</style>
     </div>
   );
 };
