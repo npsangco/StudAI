@@ -219,7 +219,7 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', mode = 'de
 
     return (
       <>
-        {/* Mini Floating Card - DRAGGABLE */}
+        {/* Mini Floating Card */}
         <div
           ref={draggableRef}
           onMouseDown={handleMouseDown}

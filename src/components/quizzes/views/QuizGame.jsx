@@ -307,7 +307,7 @@ const QuizGame = ({
         <div className="absolute bottom-10 right-5 w-24 h-24 sm:w-48 sm:h-48 bg-black/10 rounded-full blur-2xl sm:blur-3xl animate-pulse" style={{ animationDelay: '700ms' }} />
       </div>
 
-      {/* Header stays the same */}
+      {/* Header */}
       <QuizGameHeader
         quiz={quiz}
         currentQuestion={game.currentQuestionIndex}

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Edit, Play, GripVertical, Trash2 } from 'lucide-react';
 import EmptyQuizState from './EmptyState';
 
-// Quiz Item Component with Drag & Drop
+// Quiz Item Component with Drag & Drop - RESPONSIVE
 const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const isBeingDragged = draggedIndex === index;
@@ -63,7 +63,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`flex flex-col sm:flex-row sm:items-center p-3 bg-gray-50 rounded-lg transition-all duration-200 gap-3 sm:gap-0 ${
+        className={`flex flex-col p-2.5 sm:p-3 bg-gray-50 rounded-lg transition-all duration-200 gap-2 sm:gap-3 ${
           isEmpty ? 'opacity-60' : ''
         } ${
           isBeingDragged 
@@ -76,68 +76,78 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
           touchAction: 'none'
         }}
       >
-        <div className="hidden sm:flex items-center justify-center gap-2 mr-3">
-          <GripVertical className={`w-4 h-4 transition-colors ${isBeingDragged ? 'text-blue-500' : 'text-gray-400'}`} />
-        </div>
-        
-        <div 
-          onClick={() => !isEmpty && onSelect(quiz)}
-          className={`flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-6 flex-1 ${
-            isEmpty ? 'cursor-not-allowed' : 'cursor-pointer'
-          }`}
-        >
-          <h3 className={`font-semibold text-black text-left sm:text-left min-w-0 flex-1 transition-colors ${
-            isEmpty ? 'text-gray-400' : 'hover:text-blue-600'
-          }`}>
-            {quiz.title}
-            {isEmpty && (
-              <span className="ml-2 text-xs text-red-500 font-normal">(Empty)</span>
-            )}
-          </h3>
-          <div className="flex flex-col sm:flex-row gap-1 sm:gap-6 text-sm">
-            <span className={`whitespace-nowrap ${isEmpty ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-              {quiz.questionCount || 0} Questions
-            </span>
-            <span className="text-gray-500 whitespace-nowrap">{quiz.created}</span>
+        {/* Mobile Layout - Stacked */}
+        <div className="flex items-start justify-between gap-2">
+          {/* Left: Drag Handle + Title */}
+          <div className="flex items-start gap-2 flex-1 min-w-0">
+            <div className="hidden sm:flex items-center justify-center flex-shrink-0 pt-1">
+              <GripVertical className={`w-4 h-4 transition-colors ${isBeingDragged ? 'text-blue-500' : 'text-gray-400'}`} />
+            </div>
+            
+            <div 
+              onClick={() => !isEmpty && onSelect(quiz)}
+              className={`flex-1 min-w-0 ${
+                isEmpty ? 'cursor-not-allowed' : 'cursor-pointer'
+              }`}
+            >
+              <h3 className={`font-semibold text-sm sm:text-base text-black transition-colors truncate ${
+                isEmpty ? 'text-gray-400' : 'hover:text-blue-600'
+              }`}>
+                {quiz.title}
+                {isEmpty && (
+                  <span className="ml-2 text-xs text-red-500 font-normal">(Empty)</span>
+                )}
+              </h3>
+            </div>
+          </div>
+
+          {/* Right: Action Buttons */}
+          <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isEmpty) onSelect(quiz);
+              }}
+              disabled={isEmpty}
+              className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
+                isEmpty 
+                  ? 'text-gray-300 cursor-not-allowed' 
+                  : 'text-green-600 hover:bg-green-100'
+              }`}
+              title={isEmpty ? "Add questions first" : "Start Quiz"}
+            >
+              <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(quiz);
+              }}
+              className="p-1.5 sm:p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              title="Edit Quiz"
+            >
+              <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600" />
+            </button>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(quiz);
+              }}
+              className="p-1.5 sm:p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
+              title="Delete Quiz"
+            >
+              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
           </div>
         </div>
-        
-        <div className="flex gap-2 ml-0 sm:ml-3 self-end sm:self-center">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isEmpty) onSelect(quiz);
-            }}
-            disabled={isEmpty}
-            className={`p-2 rounded-lg transition-colors ${
-              isEmpty 
-                ? 'text-gray-300 cursor-not-allowed' 
-                : 'text-green-600 hover:bg-green-100'
-            }`}
-            title={isEmpty ? "Add questions first" : "Start Quiz"}
-          >
-            <Play className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(quiz);
-            }}
-            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-            title="Edit Quiz"
-          >
-            <Edit className="w-4 h-4 text-gray-600" />
-          </button>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(quiz);
-            }}
-            className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
-            title="Delete Quiz"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+
+        {/* Metadata Row - Compact on Mobile */}
+        <div className="flex flex-wrap gap-2 text-xs sm:text-sm ml-0 sm:ml-6">
+          <span className={`whitespace-nowrap ${isEmpty ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+            {quiz.questionCount || 0} Questions
+          </span>
+          <span className="text-gray-400 hidden sm:inline">•</span>
+          <span className="text-gray-500 whitespace-nowrap">{quiz.created}</span>
         </div>
       </div>
     </div>
@@ -159,7 +169,7 @@ export const QuizList = ({
   // If no quizzes, show empty state (no scroll needed)
   if (quizzes.length === 0) {
     return (
-      <div className="h-full bg-white rounded-xl p-6 shadow-sm border border-gray-200 flex items-center justify-center overflow-hidden">
+      <div className="h-full bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 flex items-center justify-center overflow-hidden">
         <EmptyQuizState onCreateQuiz={onCreateQuiz} />
       </div>
     );
@@ -167,15 +177,15 @@ export const QuizList = ({
 
   // Quiz list with internal scroll
   return (
-    <div className="h-full bg-white rounded-xl p-6 shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+    <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
       {/* Header - Fixed */}
-      <div className="flex-shrink-0 p-6 pb-4">
-        <h2 className="text-2xl font-bold text-gray-800 text-center">My Quizzes</h2>
+      <div className="flex-shrink-0 p-4 sm:p-6 pb-3 sm:pb-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 text-center">My Quizzes</h2>
       </div>
       
       {/* Scrollable Quiz List */}
-      <div className="flex-1 overflow-y-auto px-6 pb-4 scrollbar-thin scrollbar-thumb-yellow-400 scrollbar-track-yellow-100">
-        <div className="space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-3 sm:pb-4 scrollbar-thin scrollbar-thumb-yellow-400 scrollbar-track-yellow-100">
+        <div className="space-y-2 sm:space-y-3">
           {quizzes.map((quiz, index) => (
             <QuizItem
               key={quiz.id}
@@ -194,10 +204,10 @@ export const QuizList = ({
       </div>
       
       {/* Create Button - Fixed at Bottom */}
-      <div className="flex-shrink-0 p-6 pt-4">
+      <div className="flex-shrink-0 p-4 sm:p-6 pt-3 sm:pt-4 border-t border-gray-100">
         <button 
           onClick={onCreateQuiz}
-          className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-md hover:shadow-lg"
+          className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 sm:py-3 px-4 rounded-lg font-semibold text-sm sm:text-base hover:from-yellow-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-md hover:shadow-lg"
         >
           Create Quiz
         </button>

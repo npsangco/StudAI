@@ -382,7 +382,7 @@ export const BattleLobbyScreen = ({
               </div>
             )}
 
-            {/* Existing Header */}
+            {/* Header */}
             <div className="text-center">
               <h1 className="text-3xl md:text-4xl font-bold text-black mb-2 drop-shadow-lg">Quiz Battle Lobby</h1>
               <p className="text-base md:text-lg text-black font-medium mb-3 md:mb-4">{quizTitle}</p>
