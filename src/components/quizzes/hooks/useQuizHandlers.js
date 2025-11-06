@@ -1,5 +1,6 @@
 import { VIEWS } from '../utils/constants';
 import { createNewQuestion } from '../utils/questionHelpers';
+import { createBattleRoom, addPlayerToBattle } from '../../../firebase/battleOperations';
 
 /**
  * Custom hook for all quiz-related event handlers
@@ -7,7 +8,7 @@ import { createNewQuestion } from '../utils/questionHelpers';
  * 
  * FIX: Corrected handleStartBattle to properly use gamePin from gameState
  */
-export function useQuizHandlers(quizDataHook, quizAPI, countdown) {
+export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
   const {
     updateQuizData,
     updateUiState,
@@ -87,11 +88,36 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown) {
     
     setQuestions(data.questions);
     
-    // Create battle room
+    // 1️⃣ Create battle in MySQL (existing API call)
     const battleData = await quizAPI.createBattle(quizData.selected.id);
     
     if (battleData) {
-      updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
+      const { battle, gamePin } = battleData;
+      
+      // 2️⃣ Create battle room in Firebase
+      try {
+        await createBattleRoom(gamePin, {
+          battleId: battle.battle_id,
+          quizId: quizData.selected.id,
+          quizTitle: quizData.selected.title,
+          hostId: currentUser.id, 
+          totalQuestions: data.questions.length
+        });
+        
+        // 3️⃣ Add host as first player
+        await addPlayerToBattle(gamePin, {
+          userId: currentUser.id, 
+          name: currentUser.username,
+          initial: currentUser.initial
+        });
+        
+        // Continue...
+        updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
+        
+      } catch (firebaseError) {
+        console.error('Firebase error:', firebaseError);
+        setError('Failed to create battle room. Please try again.');
+      }
     }
   };
 

@@ -1,22 +1,63 @@
+// src/components/quizzes/hooks/useLobby.js
+
 import { useState, useEffect } from 'react';
-import { simulatedPlayerNames } from '../utils/mockData';
+import { 
+  listenToPlayers, 
+  markPlayerReady, 
+  removePlayerFromBattle 
+} from '../../../firebase/battleOperations';
 import { PLAYER_RADIUS } from '../utils/constants';
 
-export function useLobby(isActive) {
-  const [players, setPlayers] = useState([
-    { id: 'user', name: 'You', initial: 'Y', isReady: false }
-  ]);
+export function useLobby(isActive, gamePin, currentUserId) {
+  const [players, setPlayers] = useState([]);
   const [playerPositions, setPlayerPositions] = useState([]);
 
-  const markUserReady = () => {
-    setPlayers(prev =>
-      prev.map(p => (p.id === 'user' ? { ...p, isReady: true } : p))
-    );
+  // 🔥 REAL-TIME LISTENER: Subscribe to players in Firebase
+  useEffect(() => {
+    if (!isActive || !gamePin) return;
+    
+    console.log('🔥 Subscribing to players for PIN:', gamePin);
+    
+    // Listen to Firebase players
+    const unsubscribe = listenToPlayers(gamePin, (firebasePlayers) => {
+      console.log('📡 Players updated:', firebasePlayers);
+      
+      // Transform Firebase data to match your existing format
+      const transformedPlayers = firebasePlayers.map(p => ({
+        id: `user_${p.userId}`,
+        name: p.name,
+        initial: p.initial,
+        isReady: p.isReady,
+        score: p.score || 0,
+        isOnline: p.isOnline
+      }));
+      
+      setPlayers(transformedPlayers);
+    });
+    
+    // Cleanup: Unsubscribe when component unmounts
+    return () => {
+      console.log('🔥 Unsubscribing from players');
+      unsubscribe();
+    };
+  }, [isActive, gamePin]);
+
+  // Mark current user as ready
+  const markUserReady = async () => {
+    if (!gamePin || !currentUserId) return;
+    
+    try {
+      await markPlayerReady(gamePin, currentUserId);
+      console.log('✅ Marked self as ready');
+    } catch (error) {
+      console.error('❌ Error marking ready:', error);
+    }
   };
 
+  // Check if all players are ready
   const allReady = players.length > 1 && players.every(p => p.isReady);
 
-  // Generate initial positions for new players
+  // Generate initial positions for new players (keep your existing logic)
   useEffect(() => {
     if (isActive && players.length > 0) {
       setPlayerPositions(prev => {
@@ -58,33 +99,6 @@ export function useLobby(isActive) {
       });
     }
   }, [players.length, isActive]);
-
-  // Simulate other players joining
-  useEffect(() => {
-    if (!isActive) return;
-
-    const joinTimers = [];
-    const readyTimers = [];
-
-    simulatedPlayerNames.forEach((player, index) => {
-      const joinTimer = setTimeout(() => {
-        setPlayers(prev => [...prev, { ...player, id: index + 1, isReady: false }]);
-      }, (index + 1) * 1500);
-      joinTimers.push(joinTimer);
-
-      const readyTimer = setTimeout(() => {
-        setPlayers(prev =>
-          prev.map(p => (p.id === index + 1 ? { ...p, isReady: true } : p))
-        );
-      }, (index + 1) * 1500 + Math.random() * 3000 + 2000);
-      readyTimers.push(readyTimer);
-    });
-
-    return () => {
-      joinTimers.forEach(timer => clearTimeout(timer));
-      readyTimers.forEach(timer => clearTimeout(timer));
-    };
-  }, [isActive]);
 
   return {
     players,

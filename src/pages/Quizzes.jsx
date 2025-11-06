@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { QuizLandingView } from '../components/quizzes/views/QuizLandingView';
 import { QuizEditor } from '../components/quizzes/views/QuizEditor';
 import QuizGame from '../components/quizzes/views/QuizGame';
@@ -136,7 +136,7 @@ function QuizzesPage() {
   // ============================================
   // INITIALIZE HOOKS
   // ============================================
-
+  const [currentUser, setCurrentUser] = useState(null);
   const quizDataHook = useQuizData();
   const quizAPI = useQuizAPI(quizDataHook);
   const countdown = useCountdown(COUNTDOWN_SECONDS, () => {
@@ -145,8 +145,40 @@ function QuizzesPage() {
       : VIEWS.BATTLE;
     quizDataHook.updateUiState({ currentView: targetView });
   });
-  const handlers = useQuizHandlers(quizDataHook, quizAPI, countdown);
-  const lobby = useLobby(quizDataHook.uiState.currentView === VIEWS.LOBBY);
+
+  // Fetch current user on mount
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch('http://localhost:4000/api/user/profile', {
+          credentials: 'include'
+        });
+        const userData = await response.json();
+        
+        setCurrentUser({
+          id: userData.user_id,
+          username: userData.username,
+          email: userData.email,
+          initial: userData.username[0].toUpperCase()
+        });
+        
+        console.log('✅ Current user loaded:', userData.username);
+      } catch (error) {
+        console.error('❌ Failed to fetch user:', error);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
+
+  // Pass currentUser to handlers
+  const handlers = useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser);
+
+  const lobby = useLobby(
+    quizDataHook.uiState.currentView === VIEWS.LOBBY,
+    quizDataHook.gameState.gamePin,
+    quizDataHook.gameState.currentUserId 
+  );
 
   // ============================================
   // EFFECTS

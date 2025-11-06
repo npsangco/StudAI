@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { quizApi } from '../../../api/api';
+import { addPlayerToBattle } from '../../../firebase/battleOperations';
 
 export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -15,11 +16,36 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
       setLoading(true);
       setError('');
       
+      // 0️⃣ GET CURRENT USER INFO FIRST
+      let currentUser;
+      try {
+        const userResponse = await fetch('http://localhost:4000/api/user/profile', {
+          credentials: 'include'
+        });
+        currentUser = await userResponse.json();
+        console.log('✅ Current user fetched:', currentUser.username);
+      } catch (userError) {
+        console.error('❌ Failed to get user info:', userError);
+        setError('Please log in first');
+        return;
+      }
+      
+      // 1️⃣ Join battle in MySQL (existing API)
       const response = await quizApi.joinBattle({ gamePin });
       const { battle, participant } = response.data;
       
-      console.log('✅ Joined battle:', battle);
+      console.log('✅ Joined MySQL battle:', battle);
       
+      // 2️⃣ Add player to Firebase room 
+      await addPlayerToBattle(gamePin, {
+        userId: currentUser.user_id, 
+        name: currentUser.username,  
+        initial: currentUser.username[0].toUpperCase() 
+      });
+      
+      console.log('✅ Added to Firebase room');
+      
+      // 3️⃣ Continue with existing flow
       if (onJoinSuccess) {
         onJoinSuccess(battle, participant);
       }
