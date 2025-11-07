@@ -1,13 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import AnswerReviewModal from './AnswerReviewModal';
+import { listenToPlayers } from '../../../firebase/battleOperations';
 
 const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   const [showAnswerReview, setShowAnswerReview] = useState(false);
+  const [finalPlayers, setFinalPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // FETCH FINAL SCORES FROM FIREBASE
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    // If we have a gamePin, fetch real-time results from Firebase
+    if (results?.gamePin) {
+      console.log('📊 Fetching final results from Firebase for PIN:', results.gamePin);
+      
+      const unsubscribe = listenToPlayers(results.gamePin, (firebasePlayers) => {
+        console.log('🔥 Firebase final results:', firebasePlayers);
+        
+        // Transform Firebase players to leaderboard format
+        const formattedResults = firebasePlayers.map(player => ({
+          id: `user_${player.userId}`,
+          userId: player.userId,
+          name: player.name,
+          score: player.score || 0,
+          initial: player.initial || player.name[0]
+        }));
+        
+        setFinalPlayers(formattedResults);
+        setLoading(false);
+      });
+
+      return () => {
+        console.log('🔇 Unsubscribing from final leaderboard');
+        unsubscribe();
+      };
+    } else {
+      // Fallback: use prop results if no gamePin
+      console.log('⚠️ No gamePin, using prop results');
+      setFinalPlayers(results?.players || []);
+      setLoading(false);
+    }
+  }, [isOpen, results?.gamePin, results?.players]);
 
   if (!isOpen) return null;
 
-  const validPlayers = results?.players || [];
+  // Show loading spinner while fetching
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-[rgba(107,114,128,0.6)] flex items-center justify-center z-50 p-3 sm:p-4">
+        <div className="bg-white rounded-lg p-8 text-center shadow-2xl">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+          <span className="text-gray-600 font-medium">Loading final results...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const validPlayers = finalPlayers || [];
   const answers = results?.answers || [];
   const quizTitle = results?.quizTitle || 'Quiz';
   
@@ -181,13 +232,13 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
           {/* Leaderboard Card */}
           <div className="bg-white rounded-lg p-4 sm:p-5 md:p-6 shadow-xl flex-1">
             <h2 className="text-xl sm:text-2xl font-bold text-black mb-4 sm:mb-6 text-center">
-              Leaderboard
+              Final Leaderboard
             </h2>
             
             <div className="space-y-2 sm:space-y-3 max-h-[50vh] lg:max-h-none overflow-y-auto scrollbar-thin">
               {sortedPlayers.map((player, index) => {
                 const rank = getPlayerRank(player);
-                const isWinner = winners.some(w => w.id === player.id);
+                const isWinner = winners.some(w => w.userId === player.userId);
                 const playersWithSameScore = sortedPlayers.filter(p => p.score === player.score);
                 const isTiedAtThisRank = playersWithSameScore.length > 1;
                 const rankEmoji = getRankEmoji(player);

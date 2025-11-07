@@ -5,7 +5,7 @@ import { QuizGameHeader } from '../QuizGameHeader';
 import { QuizQuestion } from '../QuizCore';
 import { LiveLeaderboard } from './QuizLiveLeaderboard';
 import { ANSWER_DISPLAY_DURATION, MATCHING_REVIEW_DURATION_BATTLE } from '../utils/constants';
-import { listenToPlayers, updatePlayerScore } from '../../../firebase/battleOperations';
+import { listenToPlayers, updatePlayerScore, updatePlayerProgress } from '../../../firebase/battleOperations';
 
 const QuizGame = ({ 
   quiz, 
@@ -25,6 +25,50 @@ const QuizGame = ({
   
   // 🔥 GET REAL PLAYERS from props
   const [realPlayers, setRealPlayers] = useState([]);
+
+  // Track if waiting for other players
+  const [isWaitingForPlayers, setIsWaitingForPlayers] = useState(false);
+  const [playersWhoAnswered, setPlayersWhoAnswered] = useState(new Set());
+
+  // 🔥 Listen to players who have answered (battle mode only)
+  useEffect(() => {
+    if (mode !== 'battle' || !quiz?.gamePin || !isWaitingForPlayers) return;
+    
+    const unsubscribe = listenToPlayers(quiz.gamePin, (firebasePlayers) => {
+      // Count how many players have progressed past current question
+      const playersOnNextQuestion = firebasePlayers.filter(
+        player => (player.currentQuestion || 0) >= game.currentQuestionIndex + 1
+      ).length;
+      
+      const totalPlayers = firebasePlayers.length;
+      
+      console.log(`📊 Progress: ${playersOnNextQuestion}/${totalPlayers} players answered Q${game.currentQuestionIndex + 1}`);
+      
+      // Update the count for UI
+      setPlayersWhoAnswered(new Set(
+        firebasePlayers
+          .filter(p => (p.currentQuestion || 0) >= game.currentQuestionIndex + 1)
+          .map(p => p.userId)
+      ));
+      
+      // If all players answered, proceed automatically
+      if (playersOnNextQuestion === totalPlayers && totalPlayers > 0) {
+        console.log('✅ All players answered! Proceeding to next question in 2s...');
+        
+        setTimeout(() => {
+          setIsWaitingForPlayers(false);
+          
+          if (game.currentQuestionIndex >= questions.length - 1) {
+            finishQuizWithAnswers(answersHistory);
+          } else {
+            handleNextQuestion();
+          }
+        }, 2000); // 2 second delay before advancing together
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [mode, quiz?.gamePin, game.currentQuestionIndex, isWaitingForPlayers]);
 
   // Listen to real players in battle mode
   useEffect(() => {
@@ -87,20 +131,32 @@ const QuizGame = ({
       setAnswersHistory(newAnswersHistory);
     }
     
+    // 🔥 UPDATE: Mark progress in Firebase even on timeout (battle mode)
+    if (mode === 'battle' && quiz?.gamePin) {
+      updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
+        .then(() => {
+          console.log('✅ Timeout: Progress marked in Firebase');
+          setIsWaitingForPlayers(true); // Show waiting message
+        })
+        .catch(err => console.error('Failed to update progress on timeout:', err));
+    }
+    
     game.isProcessingRef.current = true;
     
-    // Move to next question or finish
-    setTimeout(() => {
-      if (game.currentQuestionIndex < questions.length - 1) {
-        game.nextQuestion();
-        resetTimer(30);
-        timeoutHandledRef.current = false;
-        game.isProcessingRef.current = false;
-      } else {
-        // Last question - finish quiz with updated answers
-        finishQuizWithAnswers(newAnswersHistory);
-      }
-    }, 100);
+    // Solo mode: Move immediately
+    if (mode === 'solo') {
+      setTimeout(() => {
+        if (game.currentQuestionIndex < questions.length - 1) {
+          game.nextQuestion();
+          resetTimer(30);
+          timeoutHandledRef.current = false;
+          game.isProcessingRef.current = false;
+        } else {
+          finishQuizWithAnswers(newAnswersHistory);
+        }
+      }, 100);
+    }
+    // Battle mode: Wait for all players (handled by useEffect)
   };
 
   const handleAnswerSelect = (answer) => {
@@ -138,14 +194,27 @@ const QuizGame = ({
       }
     }
     
+    // 🔥 Update progress in Firebase (battle mode)
+    if (mode === 'battle' && quiz?.gamePin) {
+      updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
+        .catch(err => console.error('Failed to update progress:', err));
+      
+      // Show waiting message
+      setIsWaitingForPlayers(true);
+    }
+    
     setTimeout(() => {
       setIsProcessing(false);
-      // Check if last question
-      if (game.currentQuestionIndex >= questions.length - 1) {
-        finishQuizWithAnswers(newAnswersHistory);
-      } else {
-        handleNextQuestion();
+      
+      // Solo mode: advance immediately after showing answer
+      if (mode === 'solo') {
+        if (game.currentQuestionIndex >= questions.length - 1) {
+          finishQuizWithAnswers(newAnswersHistory);
+        } else {
+          handleNextQuestion();
+        }
       }
+      // Battle mode: wait for all players (handled by useEffect)
     }, ANSWER_DISPLAY_DURATION);
   };
 
@@ -185,14 +254,27 @@ const QuizGame = ({
       }
     }
     
+    // 🔥 Update progress in Firebase (battle mode)
+    if (mode === 'battle' && quiz?.gamePin) {
+      updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
+        .catch(err => console.error('Failed to update progress:', err));
+      
+      // Show waiting message
+      setIsWaitingForPlayers(true);
+    }
+    
     setTimeout(() => {
       setIsProcessing(false);
-      // Check if last question
-      if (game.currentQuestionIndex >= questions.length - 1) {
-        finishQuizWithAnswers(newAnswersHistory);
-      } else {
-        handleNextQuestion();
+      
+      // Solo mode: advance immediately after showing answer
+      if (mode === 'solo') {
+        if (game.currentQuestionIndex >= questions.length - 1) {
+          finishQuizWithAnswers(newAnswersHistory);
+        } else {
+          handleNextQuestion();
+        }
       }
+      // Battle mode: wait for all players (handled by useEffect)
     }, ANSWER_DISPLAY_DURATION);
   };
 
@@ -231,19 +313,23 @@ const QuizGame = ({
       }
     }
     
-    // Battle mode: auto-proceed after delay
+    // 🔥 Update progress in Firebase (battle mode)
+    if (mode === 'battle' && quiz?.gamePin) {
+      updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
+        .catch(err => console.error('Failed to update progress:', err));
+    }
+    
+    // Battle mode: Use longer review time, then wait for players
     if (mode === 'battle') {
       setTimeout(() => {
         setIsProcessing(false);
-        // Check if last question
-        if (game.currentQuestionIndex >= questions.length - 1) {
-          finishQuizWithAnswers(newAnswersHistory);
-        } else {
-          handleNextQuestion();
-        }
+        // Show waiting message after review period
+        setIsWaitingForPlayers(true);
+        
+        // Wait for all players (handled by useEffect)
       }, MATCHING_REVIEW_DURATION_BATTLE);
     } else {
-      // Solo mode: just unlock UI, wait for manual next
+      // Solo mode: just unlock UI, manual next button appears
       setIsProcessing(false);
     }
   };
@@ -286,11 +372,12 @@ const QuizGame = ({
   };
 
   const finishQuizWithAnswers = (finalAnswers) => {
-    console.log('🏁 Finishing quiz with answers:', finalAnswers); // Debug log
+    console.log('🏁 Finishing quiz with answers:', finalAnswers);
     const results = {
       ...game.getResults(),
       quizTitle: quiz.title,
-      answers: finalAnswers
+      answers: finalAnswers,
+      gamePin: quiz?.gamePin, 
     };
     
     if (mode === 'battle') {
@@ -366,6 +453,21 @@ const QuizGame = ({
         onBack={onBack}
       />
 
+      {/* Waiting Overlay */}
+      {isWaitingForPlayers && mode === 'battle' && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 text-center shadow-2xl max-w-md mx-4">
+            <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              Waiting for other players...
+            </h3>
+            <p className="text-gray-600">
+              {playersWhoAnswered.size}/{allPlayers.length} players answered
+            </p>
+          </div>
+        </div>
+      )}
+    
       {/* MAIN CONTENT - Responsive Layout */}
       {mode === 'battle' ? (
         // BATTLE MODE - Responsive leaderboard
@@ -456,14 +558,6 @@ const QuizGame = ({
             </>
           )}
           
-          {/* Battle mode next buttons */}
-          {currentQ.type === 'Matching' && game.isMatchingSubmitted && (
-            <div className="text-center mt-6 pb-6">
-              <p className="text-sm text-white/80 animate-pulse">
-                Next question in a moment...
-              </p>
-            </div>
-          )}
         </>
       ) : (
         // SOLO MODE - No leaderboard

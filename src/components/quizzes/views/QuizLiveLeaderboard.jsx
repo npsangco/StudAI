@@ -147,7 +147,12 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', mode = 'de
 
   // Tablet - Light Mode Yellow/Black Bottom Panel
   if (mode === 'tablet') {
-    const currentUserRank = sortedPlayers.findIndex(p => p.name === currentPlayerName) + 1;
+    // Calculate current user rank
+    const currentUserPlayer = sortedPlayers.find(p => p.name === currentPlayerName);
+    const currentUserRank = currentUserPlayer 
+      ? sortedPlayers.findIndex(p => p.userId === currentUserPlayer.userId) + 1 
+      : 0;
+    const currentUserScore = currentUserPlayer?.score || 0;
     
     return (
       <>
@@ -164,7 +169,7 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', mode = 'de
                   {players.length} Players
                 </p>
                 <p className="text-sm text-gray-600">
-                  You: {currentUserRank}{getRankSuffix(currentUserRank)} {getRankEmoji(currentUserRank)}
+                  You: {currentUserRank}{getRankSuffix(currentUserRank)} {getRankEmoji(currentUserRank)} • {currentUserScore}pts
                 </p>
               </div>
             </div>

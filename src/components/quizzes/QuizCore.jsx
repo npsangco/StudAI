@@ -15,7 +15,7 @@ export const QuizQuestion = ({
   onNextQuestion,
   timeLeft,
   isPaused = false,
-  isAnswerCorrect
+  isAnswerCorrect,
 }) => {
   const currentQ = question;
 
@@ -253,15 +253,6 @@ export const QuizQuestion = ({
             )}
           </div>
         )}
-
-        {/* Next question hint - battle mode only */}
-        {mode === 'battle' && (selectedAnswer || userAnswer?.includes('_submitted')) && (
-          <div className="text-center pt-2">
-            <p className="text-white/80 text-base sm:text-lg animate-pulse">
-              Next question in a moment...
-            </p>
-          </div>
-        )}
-      </div>
+    </div>
   );
 };

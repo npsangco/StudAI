@@ -91,6 +91,21 @@ export const updateBattleStatus = async (gamePin, status) => {
   }
 };
 
+
+/**
+ * Update player's current question progress
+ */
+export const updatePlayerProgress = async (gamePin, userId, questionIndex) => {
+  try {
+    const progressRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}/currentQuestion`);
+    await set(progressRef, questionIndex);
+    console.log('✅ Progress updated for user:', userId, '→ Q', questionIndex);
+  } catch (error) {
+    console.error('❌ Error updating progress:', error);
+    throw error;
+  }
+};
+
 /**
  * Advance to next question (HOST only)
  */
