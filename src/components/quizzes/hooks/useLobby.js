@@ -1,5 +1,3 @@
-// src/components/quizzes/hooks/useLobby.js
-
 import { useState, useEffect } from 'react';
 import { 
   listenToPlayers, 
@@ -8,7 +6,7 @@ import {
 } from '../../../firebase/battleOperations';
 import { PLAYER_RADIUS } from '../utils/constants';
 
-export function useLobby(isActive, gamePin, currentUserId) {
+export function useLobby(isActive, gamePin, currentUserId, isHost) {
   const [players, setPlayers] = useState([]);
   const [playerPositions, setPlayerPositions] = useState([]);
 
@@ -29,7 +27,8 @@ export function useLobby(isActive, gamePin, currentUserId) {
         initial: p.initial,
         isReady: p.isReady,
         score: p.score || 0,
-        isOnline: p.isOnline
+        isOnline: p.isOnline,
+        userId: p.userId // Keep original userId for comparison
       }));
       
       setPlayers(transformedPlayers);
@@ -54,10 +53,14 @@ export function useLobby(isActive, gamePin, currentUserId) {
     }
   };
 
+  // Get current user player object
+  const userPlayer = players.find(p => p.userId === currentUserId);
+  
   // Check if all players are ready
+  const readyCount = players.filter(p => p.isReady).length;
   const allReady = players.length > 1 && players.every(p => p.isReady);
 
-  // Generate initial positions for new players (keep your existing logic)
+  // Generate initial positions for new players
   useEffect(() => {
     if (isActive && players.length > 0) {
       setPlayerPositions(prev => {
@@ -105,6 +108,8 @@ export function useLobby(isActive, gamePin, currentUserId) {
     playerPositions,
     setPlayerPositions,
     markUserReady,
-    allReady
+    allReady,
+    userPlayer,
+    readyCount
   };
 }

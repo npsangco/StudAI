@@ -1,6 +1,6 @@
 import { VIEWS } from '../utils/constants';
 import { createNewQuestion } from '../utils/questionHelpers';
-import { createBattleRoom, addPlayerToBattle } from '../../../firebase/battleOperations';
+import { createBattleRoom, addPlayerToBattle, markPlayerReady, storeQuizQuestions, updateBattleStatus } from '../../../firebase/battleOperations';
 
 /**
  * Custom hook for all quiz-related event handlers
@@ -110,7 +110,10 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
           name: currentUser.username,
           initial: currentUser.initial
         });
-        
+        // 🔥 Auto-mark host as ready!
+        await markPlayerReady(gamePin, currentUser.id);
+        console.log('✅ Host auto-marked as ready');
+
         // Continue...
         updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
         
@@ -129,35 +132,31 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
     updateGameState({ 
       gamePin: battle.game_pin,
       battleId: battle.battle_id,
-      isHost: false
+      isHost: false,
+      currentUserId: participant.user_id // Store current user ID
     });
     
-    // Load the quiz questions
-    const data = await quizAPI.loadQuizWithQuestions(battle.quiz_id);
-    if (data && data.questions) {
-      setQuestions(data.questions);
-      
-      // Update selected quiz info
-      updateQuizData({ 
-        selected: {
-          id: battle.quiz_id,
-          title: battle.quiz_title,
-          questionCount: battle.total_questions
-        }
-      });
-      
-      // Go to lobby
-      updateUiState({ currentView: VIEWS.LOBBY });
-    } else {
-      setError('Failed to load quiz questions');
-    }
+    // Don't try to load questions from MySQL!
+    // Just set basic quiz info - questions will come from Firebase
+    updateQuizData({ 
+      selected: {
+        id: battle.quiz_id,
+        title: battle.quiz_title,
+        questionCount: battle.total_questions
+      }
+    });
+    
+    // ✅ Go directly to lobby WITHOUT loading questions
+    updateUiState({ currentView: VIEWS.LOBBY });
+    
+    console.log('🎮 Joined lobby successfully!');
   };
 
   const handleStartBattle = async () => {
     // FIX: Get gamePin from gameState instead of quizData
     const currentGamePin = gameState.gamePin;
     
-    console.log('🎮 Starting battle with PIN:', currentGamePin); // Debug log
+    console.log('🎮 Starting battle with PIN:', currentGamePin);
     
     if (!currentGamePin) {
       console.error('❌ No game PIN found!');
@@ -165,11 +164,25 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
       return;
     }
     
-    const success = await quizAPI.startBattle(currentGamePin);
-    
-    if (success) {
+    try {
+      // 1️⃣ Store questions in Firebase (so players can access them)
+      await storeQuizQuestions(currentGamePin, questions);
+      console.log('✅ Questions stored in Firebase');
+      
+      // 2️⃣ Update battle status in Firebase to "in_progress"
+      await updateBattleStatus(currentGamePin, 'in_progress');
+      console.log('✅ Battle status set to in_progress');
+      
+      // 3️⃣ Update battle status in MySQL
+      await quizAPI.startBattle(currentGamePin);
+      
+      // 4️⃣ Transition to loading screen
       updateUiState({ currentView: VIEWS.LOADING_BATTLE });
       countdown.start();
+      
+    } catch (error) {
+      console.error('❌ Error starting battle:', error);
+      setError('Failed to start battle. Please try again.');
     }
   };
 

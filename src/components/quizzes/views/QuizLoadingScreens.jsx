@@ -145,6 +145,7 @@ export const BattleLobbyScreen = ({
   setPlayerPositions,
   gamePin,       
   isHost,        
+  currentUserId,
   onStartBattle   
 }) => {
   const [playerPositions, setLocalPlayerPositions] = useState([]);
@@ -440,55 +441,94 @@ export const BattleLobbyScreen = ({
 
         <div className="absolute bottom-0 left-0 right-0 z-30 p-4 md:p-6">
           <div className="max-w-4xl mx-auto text-center space-y-3 md:space-y-4">
-            {/* Host shows Start button */}
-            {isHost && onStartBattle && (
-              <button
-                onClick={onStartBattle}
-                disabled={totalPlayers < 2}
-                className={`px-8 md:px-12 py-4 md:py-5 rounded-2xl font-bold text-xl md:text-2xl transition-all shadow-2xl hover:scale-105 ${
-                  totalPlayers >= 2
-                    ? 'bg-green-500 text-white hover:bg-green-600'
-                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                }`}
-              >
-                {totalPlayers < 2 
-                  ? 'Waiting for players...' 
-                  : `🚀 Start Battle (${totalPlayers} players)`
-                }
-              </button>
-            )}
-
-            {/* Player shows Ready button */}
-            {!isHost && userPlayer && !userPlayer.isReady && (
-              <button
-                onClick={onUserReady}
-                className="px-8 md:px-12 py-4 md:py-5 bg-green-500 text-white rounded-2xl font-bold text-xl md:text-2xl hover:bg-green-600 transition-all shadow-2xl hover:scale-105"
-              >
-                I'm Ready!
-              </button>
-            )}
-
-            {allReady && (
-              <div className="inline-flex items-center gap-3 px-6 md:px-8 py-3 md:py-4 bg-white bg-opacity-95 text-black rounded-2xl font-bold text-lg md:text-xl shadow-2xl">
-                <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin" />
-                All players ready! Starting quiz...
-              </div>
-            )}
-
-            {userPlayer && userPlayer.isReady && !allReady && totalPlayers === 1 && (
-              <div className="inline-flex items-center gap-3 px-6 md:px-8 py-3 md:py-4 bg-white bg-opacity-90 text-blue-700 rounded-2xl font-semibold text-base md:text-lg shadow-xl">
-                <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
-                Waiting for other players to join...
-              </div>
-            )}
-
-            {userPlayer && userPlayer.isReady && !allReady && totalPlayers > 1 && (
-              <div className="inline-flex items-center gap-3 px-6 md:px-8 py-3 md:py-4 bg-white bg-opacity-90 text-blue-700 rounded-2xl font-semibold text-base md:text-lg shadow-xl">
-                <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
-                Waiting for {totalPlayers - readyPlayers} more player{totalPlayers - readyPlayers !== 1 ? 's' : ''} to ready up...
-              </div>
-            )}
             
+            {/* HOST VIEW */}
+            {isHost && onStartBattle && (
+              <>
+                <button
+                  onClick={onStartBattle}
+                  disabled={totalPlayers < 2 || !allReady}
+                  className={`px-8 md:px-12 py-4 md:py-5 rounded-2xl font-bold text-xl md:text-2xl transition-all shadow-2xl ${
+                    totalPlayers >= 2 && allReady
+                      ? 'bg-green-500 text-white hover:bg-green-600 scale-110 animate-pulse'
+                      : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  }`}
+                >
+                  {totalPlayers < 2 
+                    ? '⏳ Waiting for players...' 
+                    : !allReady
+                    ? `⏳ Waiting for ${totalPlayers - readyPlayers} player${totalPlayers - readyPlayers !== 1 ? 's' : ''} to ready up...`
+                    : `🚀 All Ready! Starting...`
+                  }
+                </button>
+                
+                {/* Player ready status for host */}
+                {totalPlayers > 1 && (
+                  <div className="bg-white/90 rounded-xl px-4 py-3 inline-block">
+                    <p className="text-sm font-semibold text-gray-700">
+                      {readyPlayers}/{totalPlayers} players ready
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* PLAYER VIEW (Not Host) */}
+            {!isHost && (
+              <>
+                {(() => {
+                  // Find current user's player object using their userId
+                  const currentUserPlayer = lobbyPlayers.find(p => p.userId === currentUserId);
+                  const isUserReady = currentUserPlayer?.isReady || false;
+                  
+                  return !isUserReady ? (
+                    <button
+                      onClick={onUserReady}
+                      className="px-8 md:px-12 py-4 md:py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl font-bold text-xl md:text-2xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-2xl hover:scale-105 border-4 border-blue-300 active:scale-95"
+                    >
+                      ✋ I'm Ready!
+                    </button>
+                  ) : (
+                    <>
+                      <div className="inline-flex items-center gap-3 px-8 md:px-10 py-4 md:py-5 bg-green-500 text-white rounded-2xl font-bold text-xl md:text-2xl shadow-2xl border-4 border-green-300 scale-105">
+                        <span className="text-2xl md:text-3xl animate-bounce">✓</span>
+                        <span>You're Ready!</span>
+                      </div>
+                      
+                      {/* Waiting message */}
+                      {totalPlayers > 1 && readyPlayers < totalPlayers && (
+                        <div className="inline-flex items-center gap-3 px-6 md:px-8 py-3 md:py-4 bg-white/90 text-blue-700 rounded-2xl font-semibold text-base md:text-lg shadow-xl">
+                          <div className="w-4 h-4 md:w-5 md:h-5 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                          Waiting for {totalPlayers - readyPlayers} more player{totalPlayers - readyPlayers !== 1 ? 's' : ''}...
+                        </div>
+                      )}
+                      
+                      {/* All ready */}
+                      {readyPlayers === totalPlayers && totalPlayers > 1 && (
+                        <div className="inline-flex items-center gap-3 px-6 md:px-8 py-3 md:py-4 bg-green-500 text-white rounded-2xl font-bold text-lg md:text-xl shadow-2xl animate-pulse">
+                          <span className="text-2xl">🚀</span>
+                          Battle starting soon...
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </>
+            )}
+
+                {/* 🔍 TEMPORARY DEBUG - Remove this later */}
+    <div className="bg-white/90 p-2 rounded text-xs text-left max-w-md mx-auto">
+      <div>Current User ID: {currentUserId}</div>
+      <div>Is Host: {isHost ? 'Yes' : 'No'}</div>
+      <div>Players ({lobbyPlayers.length}):</div>
+      {lobbyPlayers.map((p, i) => (
+        <div key={i} className="ml-2">
+          • {p.name} (ID: {p.userId}) - {p.isReady ? '✓ Ready' : '⏳ Waiting'}
+        </div>
+      ))}
+    </div>
+    
+            {/* Leave Lobby Button (for everyone) */}
             <div>
               <button 
                 onClick={onLeave}

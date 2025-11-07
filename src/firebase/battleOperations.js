@@ -213,3 +213,32 @@ export const getBattleMetadata = async (gamePin) => {
     throw error;
   }
 };
+
+/**
+ * Store quiz questions in Firebase (called by HOST when starting)
+ */
+export const storeQuizQuestions = async (gamePin, questions) => {
+  try {
+    const questionsRef = ref(realtimeDb, `battles/${gamePin}/questions`);
+    await set(questionsRef, questions);
+    console.log('✅ Questions stored in Firebase:', questions.length);
+  } catch (error) {
+    console.error('❌ Error storing questions:', error);
+    throw error;
+  }
+};
+
+/**
+ * Listen to quiz questions (for non-host players)
+ */
+export const listenToQuizQuestions = (gamePin, callback) => {
+  const questionsRef = ref(realtimeDb, `battles/${gamePin}/questions`);
+  
+  return onValue(questionsRef, (snapshot) => {
+    const questions = snapshot.val();
+    if (questions) {
+      console.log('📚 Questions received from Firebase!');
+      callback(questions);
+    }
+  });
+};

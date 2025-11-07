@@ -13,6 +13,7 @@ import { useQuizAPI } from '../components/quizzes/hooks/useQuizAPI';
 import { useQuizHandlers } from '../components/quizzes/hooks/useQuizHandlers';
 import { VIEWS, COUNTDOWN_SECONDS } from '../components/quizzes/utils/constants';
 import { validateAllQuestions } from '../components/quizzes/utils/validation';
+import { listenToQuizQuestions, storeQuizQuestions, listenToBattleStatus } from '../firebase/battleOperations';
 
 const styles = `
   @keyframes slideIn {
@@ -177,7 +178,8 @@ function QuizzesPage() {
   const lobby = useLobby(
     quizDataHook.uiState.currentView === VIEWS.LOBBY,
     quizDataHook.gameState.gamePin,
-    quizDataHook.gameState.currentUserId 
+    currentUser?.id,
+    quizDataHook.gameState.isHost
   );
 
   // ============================================
@@ -230,15 +232,66 @@ function QuizzesPage() {
     return () => document.body.classList.remove('hide-navbar');
   }, [quizDataHook.uiState.currentView]);
 
-  // Auto-start battle when all ready
+  // 📚 SYNC QUESTIONS: Listen for questions from Firebase (NON-HOST players)
   useEffect(() => {
-    if (lobby.allReady && quizDataHook.uiState.currentView === VIEWS.LOBBY) {
-      setTimeout(() => {
-        quizDataHook.updateUiState({ currentView: VIEWS.LOADING_BATTLE });
-        countdown.start();
-      }, 1000);
+    if (
+      quizDataHook.uiState.currentView === VIEWS.LOBBY && 
+      !quizDataHook.gameState.isHost &&
+      quizDataHook.gameState.gamePin
+    ) {
+      console.log('👂 Listening for quiz questions from Firebase...');
+      
+      const unsubscribe = listenToQuizQuestions(
+        quizDataHook.gameState.gamePin,
+        (firebaseQuestions) => {
+          console.log('📚 Questions received from Firebase!', firebaseQuestions.length);
+          quizDataHook.setQuestions(firebaseQuestions);
+        }
+      );
+      
+      return () => {
+        console.log('🔇 Stopped listening for questions');
+        unsubscribe();
+      };
     }
-  }, [lobby.allReady, quizDataHook.uiState.currentView]);
+  }, [
+    quizDataHook.uiState.currentView, 
+    quizDataHook.gameState.isHost, 
+    quizDataHook.gameState.gamePin
+  ]);
+
+  // 🚀 LISTEN TO BATTLE STATUS: When host starts, all players transition
+  useEffect(() => {
+    if (
+      quizDataHook.uiState.currentView === VIEWS.LOBBY && 
+      quizDataHook.gameState.gamePin
+    ) {
+      console.log('👂 Listening for battle status changes...');
+      
+      const unsubscribe = listenToBattleStatus(
+        quizDataHook.gameState.gamePin,
+        (newStatus) => {
+          console.log('📡 Battle status changed to:', newStatus);
+          
+          if (newStatus === 'in_progress') {
+            console.log('🚀 Battle started! Moving to loading screen...');
+            
+            // Transition to loading screen, then countdown will start the game
+            quizDataHook.updateUiState({ currentView: VIEWS.LOADING_BATTLE });
+            countdown.start();
+          }
+        }
+      );
+      
+      return () => {
+        console.log('🔇 Stopped listening for battle status');
+        unsubscribe();
+      };
+    }
+  }, [
+    quizDataHook.uiState.currentView, 
+    quizDataHook.gameState.gamePin
+  ]);
 
   // ============================================
   // RENDER: Loading State
@@ -292,7 +345,8 @@ function QuizzesPage() {
         playerPositions={lobby.playerPositions}
         quizTitle={quizDataHook.quizData.selected?.title}
         gamePin={quizDataHook.gameState.gamePin} 
-        isHost={quizDataHook.gameState.isHost}             
+        isHost={quizDataHook.gameState.isHost}  
+        currentUserId={currentUser?.id}           
         onUserReady={lobby.markUserReady}
         onLeave={handlers.handleBackToList}
         onStartBattle={handlers.handleStartBattle}     
@@ -337,7 +391,12 @@ function QuizzesPage() {
         <style>{styles}</style>
         <QuizGame
           key={`battle-${quizDataHook.gameState.quizKey}`}
-          quiz={{ ...quizDataHook.quizData.selected, questions: quizDataHook.questions }}
+          quiz={{ 
+          ...quizDataHook.quizData.selected, 
+          questions: quizDataHook.questions,
+          gamePin: quizDataHook.gameState.gamePin,
+          currentUserId: currentUser?.id
+        }}
           mode="battle"
           onBack={handlers.handleBackToList}
           onComplete={handlers.handleShowLeaderboard}

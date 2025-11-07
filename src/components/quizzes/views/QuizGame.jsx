@@ -3,9 +3,9 @@ import { useQuizGame } from '../hooks/useQuizGame';
 import { useQuizTimer } from '../hooks/useQuizTimer';
 import { QuizGameHeader } from '../QuizGameHeader';
 import { QuizQuestion } from '../QuizCore';
-import { useSimulatedPlayers } from '../QuizSimulation';
 import { LiveLeaderboard } from './QuizLiveLeaderboard';
 import { ANSWER_DISPLAY_DURATION, MATCHING_REVIEW_DURATION_BATTLE } from '../utils/constants';
+import { listenToPlayers, updatePlayerScore } from '../../../firebase/battleOperations';
 
 const QuizGame = ({ 
   quiz, 
@@ -21,13 +21,36 @@ const QuizGame = ({
   const timeoutHandledRef = useRef(false);
   
   const game = useQuizGame(questions, 30);
-  const simulatedPlayers = useSimulatedPlayers(questions.length, game.currentQuestionIndex);
   const [userPlayer] = useState({ id: 'user', name: 'You', initial: 'Y', score: 0 });
   
-  const allPlayers = mode === 'battle' ? [
-    { ...userPlayer, score: game.displayScore },
-    ...simulatedPlayers
-  ] : [];
+  // 🔥 GET REAL PLAYERS from props
+  const [realPlayers, setRealPlayers] = useState([]);
+
+  // Listen to real players in battle mode
+  useEffect(() => {
+    if (mode === 'battle' && quiz?.gamePin) {
+      console.log('👂 QuizGame: Listening to players for leaderboard...');
+      
+      const unsubscribe = listenToPlayers(quiz.gamePin, (firebasePlayers) => {
+        // Transform and sort by score
+        const players = firebasePlayers
+          .map(p => ({
+            id: p.userId,
+            name: p.name,
+            initial: p.initial,
+            score: p.score || 0
+          }))
+          .sort((a, b) => b.score - a.score);
+        
+        console.log('📊 Leaderboard updated:', players);
+        setRealPlayers(players);
+      });
+      
+      return () => unsubscribe();
+    }
+  }, [mode, quiz?.gamePin]);
+
+  const allPlayers = mode === 'battle' ? realPlayers : [];
 
   const currentQ = game.currentQuestion;
 
@@ -102,6 +125,14 @@ const QuizGame = ({
 
     if (isCorrect) {
       game.updateScore(1);
+      
+      // 🔥 Update score in Firebase for real-time leaderboard
+      if (mode === 'battle' && quiz?.gamePin) {
+        const newScore = game.scoreRef.current + 1;
+        updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
+          .catch(err => console.error('Failed to update score:', err));
+      }
+      
       if (onPlayerScoreUpdate) {
         onPlayerScoreUpdate(1, 1);
       }
@@ -141,6 +172,14 @@ const QuizGame = ({
     
     if (isCorrect) {
       game.updateScore(1);
+      
+      // 🔥 Update score in Firebase
+      if (mode === 'battle' && quiz?.gamePin) {
+        const newScore = game.scoreRef.current + 1;
+        updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
+          .catch(err => console.error('Failed to update score:', err));
+      }
+      
       if (onPlayerScoreUpdate) {
         onPlayerScoreUpdate(1, 1);
       }
@@ -179,6 +218,14 @@ const QuizGame = ({
     
     if (isCorrect) {
       game.updateScore(1);
+      
+      // 🔥 Update score in Firebase
+      if (mode === 'battle' && quiz?.gamePin) {
+        const newScore = game.scoreRef.current + 1;
+        updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
+          .catch(err => console.error('Failed to update score:', err));
+      }
+      
       if (onPlayerScoreUpdate) {
         onPlayerScoreUpdate(1, 1);
       }
