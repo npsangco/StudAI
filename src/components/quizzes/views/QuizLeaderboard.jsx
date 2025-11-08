@@ -1,25 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import AnswerReviewModal from './AnswerReviewModal';
-import { listenToPlayers, syncBattleResultsToMySQL  } from '../../../firebase/battleOperations';
+import { 
+  listenToPlayers, 
+  syncBattleResultsToMySQL,
+  deleteBattleRoom 
+} from '../../../firebase/battleOperations';
+import { ref, get, set } from 'firebase/database';
+import { realtimeDb } from '../../../firebase/config';
 
 const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   const [showAnswerReview, setShowAnswerReview] = useState(false);
   const [finalPlayers, setFinalPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const viewerRegistered = useRef(false); // Track if this user is registered as viewer
 
+  // ========================================
   // FETCH FINAL SCORES FROM FIREBASE
+  // ========================================
   useEffect(() => {
     if (!isOpen) return;
     
-    // If we have a gamePin, fetch real-time results from Firebase
     if (results?.gamePin) {
       console.log('📊 Fetching final results from Firebase for PIN:', results.gamePin);
       
       const unsubscribe = listenToPlayers(results.gamePin, (firebasePlayers) => {
         console.log('🔥 Firebase final results:', firebasePlayers);
         
-        // Transform Firebase players to leaderboard format
         const formattedResults = firebasePlayers.map(player => ({
           id: `user_${player.userId}`,
           userId: player.userId,
@@ -37,73 +44,119 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
         unsubscribe();
       };
     } else {
-      // Fallback: use prop results if no gamePin
       console.log('⚠️ No gamePin, using prop results');
       setFinalPlayers(results?.players || []);
       setLoading(false);
     }
   }, [isOpen, results?.gamePin, results?.players]);
   
-    // ========================================
-    // SYNC RESULTS TO MYSQL
-    // ========================================
-    useEffect(() => {
-      if (!isOpen || !results?.gamePin) return;
-      
-      const hasBeenSynced = sessionStorage.getItem(`synced_${results.gamePin}`);
-      if (hasBeenSynced) {
-        console.log('⏭️ Battle already synced, skipping...');
-        return;
-      }
-      
-      console.log('🔄 Triggering MySQL sync for:', results.gamePin);
-      
-      const syncTimeout = setTimeout(async () => {
-        const success = await syncBattleResultsToMySQL(results.gamePin);
-        
-        if (success) {
-          console.log('✅ Battle results saved to database');
-          sessionStorage.setItem(`synced_${results.gamePin}`, 'true');
-        } else {
-          console.error('❌ Failed to save battle results');
-        }
-      }, 2000);
-      
-      return () => clearTimeout(syncTimeout);
-    }, [isOpen, results?.gamePin]);
-
-    // ========================================
-    // NEW: CLEANUP ON UNMOUNT
-    // ========================================
-    // Add a ref to track previous state
-    const prevOpenRef = useRef(isOpen);
-
-    useEffect(() => {
-      // Detect when modal CLOSES (was open, now closed)
-      if (prevOpenRef.current === true && isOpen === false && results?.gamePin) {
-        const hasBeenCleaned = sessionStorage.getItem(`cleaned_${results.gamePin}`);
-        
-        if (!hasBeenCleaned) {
-          console.log('🧹 Modal just closed! Cleaning up Firebase...');
-          
-          import('../../../firebase/battleOperations').then(({ deleteBattleRoom }) => {
-            deleteBattleRoom(results.gamePin)
-              .then(() => {
-                console.log('✅ Firebase cleanup complete');
-                sessionStorage.setItem(`cleaned_${results.gamePin}`, 'true');
-              })
-              .catch(err => console.error('❌ Cleanup failed:', err));
-          });
-        }
-      }
-      
-      // Update previous state
-      prevOpenRef.current = isOpen;
-    }, [isOpen, results?.gamePin]);
+  // ========================================
+  // SYNC RESULTS TO MYSQL (HOST ONLY)
+  // ========================================
+  useEffect(() => {
+    if (!isOpen || !results?.gamePin) return;
     
+    if (!results?.isHost) {
+      console.log('⏭️ Not host, skipping MySQL sync');
+      return;
+    }
+    
+    const hasBeenSynced = sessionStorage.getItem(`synced_${results.gamePin}`);
+    if (hasBeenSynced) {
+      console.log('⏭️ Battle already synced, skipping...');
+      return;
+    }
+    
+    console.log('🔄 HOST triggering MySQL sync for:', results.gamePin);
+    
+    const syncTimeout = setTimeout(async () => {
+      const success = await syncBattleResultsToMySQL(results.gamePin);
+      
+      if (success) {
+        console.log('✅ Battle results saved to database');
+        sessionStorage.setItem(`synced_${results.gamePin}`, 'true');
+      } else {
+        console.error('❌ Failed to save battle results');
+      }
+    }, 2000);
+    
+    return () => clearTimeout(syncTimeout);
+  }, [isOpen, results?.gamePin, results?.isHost]);
+
+  // ========================================
+  // FIREBASE VIEWER TRACKING & CLEANUP
+  // ========================================
+  useEffect(() => {
+    if (!isOpen || !results?.gamePin || viewerRegistered.current) return;
+
+    const gamePin = results.gamePin;
+    const viewersRef = ref(realtimeDb, `battles/${gamePin}/metadata/viewers`);
+    
+    console.log('👀 Registering viewer for battle:', gamePin);
+    
+    // Register this viewer
+    const registerViewer = async () => {
+      try {
+        const snapshot = await get(viewersRef);
+        const currentViewers = snapshot.val() || 0;
+        const newCount = currentViewers + 1;
+        await set(viewersRef, newCount);
+        viewerRegistered.current = true;
+        console.log(`✅ Viewer registered. Total viewers: ${newCount}`);
+      } catch (error) {
+        console.error('❌ Failed to register viewer:', error);
+      }
+    };
+
+    registerViewer();
+
+    // Cleanup when component unmounts OR modal closes
+    return () => {
+      if (viewerRegistered.current) {
+        console.log('🚪 Unregistering viewer from battle:', gamePin);
+        
+        const unregisterViewer = async () => {
+          try {
+            const snapshot = await get(viewersRef);
+            const currentViewers = snapshot.val() || 1;
+            const newCount = Math.max(0, currentViewers - 1);
+            
+            console.log(`📊 Viewers before: ${currentViewers}, after: ${newCount}`);
+            
+            if (newCount === 0) {
+              // Last viewer left - cleanup Firebase
+              console.log('🧹 Last viewer left! Deleting battle from Firebase...');
+              
+              const hasBeenCleaned = sessionStorage.getItem(`cleaned_${gamePin}`);
+              if (!hasBeenCleaned) {
+                await deleteBattleRoom(gamePin);
+                sessionStorage.setItem(`cleaned_${gamePin}`, 'true');
+                console.log('✅ Firebase battle data deleted');
+              } else {
+                console.log('⏭️ Already cleaned by another process');
+              }
+            } else {
+              // Still have viewers, just decrement
+              await set(viewersRef, newCount);
+              console.log(`✅ Viewer count updated to: ${newCount}`);
+            }
+            
+            viewerRegistered.current = false;
+          } catch (error) {
+            console.error('❌ Failed to unregister viewer:', error);
+          }
+        };
+
+        unregisterViewer();
+      }
+    };
+  }, [isOpen, results?.gamePin]);
+
+  // ========================================
+  // RENDER: LOADING STATE
+  // ========================================
   if (!isOpen) return null;
 
-  // Show loading spinner while fetching
   if (loading) {
     return (
       <div className="fixed inset-0 bg-[rgba(107,114,128,0.6)] flex items-center justify-center z-50 p-3 sm:p-4">
@@ -115,6 +168,9 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
     );
   }
 
+  // ========================================
+  // COMPUTE RESULTS DATA
+  // ========================================
   const validPlayers = finalPlayers || [];
   const answers = results?.answers || [];
   const quizTitle = results?.quizTitle || 'Quiz';
@@ -184,6 +240,9 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   const pointsEarned = highestScore * 10;
   const expEarned = highestScore * 5;
 
+  // ========================================
+  // RENDER: MAIN LEADERBOARD
+  // ========================================
   return (
     <>
       <div className="fixed inset-0 bg-[rgba(107,114,128,0.6)] flex items-center justify-center z-50 p-3 sm:p-4">

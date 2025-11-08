@@ -373,12 +373,19 @@ const QuizGame = ({
 
   const finishQuizWithAnswers = (finalAnswers) => {
     console.log('🏁 Finishing quiz with answers:', finalAnswers);
+    
+    console.log('🔍 DEBUG - quiz.isHost:', quiz?.isHost);
+    console.log('🔍 DEBUG - mode:', mode);
+    
     const results = {
       ...game.getResults(),
       quizTitle: quiz.title,
       answers: finalAnswers,
-      gamePin: quiz?.gamePin, 
+      gamePin: quiz?.gamePin,
+      isHost: mode === 'battle' ? (quiz?.isHost || false) : false, 
     };
+    
+    console.log('🔍 DEBUG - results.isHost:', results.isHost);
     
     if (mode === 'battle') {
       results.players = allPlayers.map(player => 

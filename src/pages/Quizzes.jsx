@@ -395,7 +395,8 @@ function QuizzesPage() {
           ...quizDataHook.quizData.selected, 
           questions: quizDataHook.questions,
           gamePin: quizDataHook.gameState.gamePin,
-          currentUserId: currentUser?.id
+          currentUserId: currentUser?.id,
+          isHost: quizDataHook.gameState.isHost,
         }}
           mode="battle"
           onBack={handlers.handleBackToList}

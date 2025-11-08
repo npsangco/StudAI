@@ -883,8 +883,12 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
   try {
     const { gamePin } = req.params;
     const { players, winnerId, completedAt } = req.body;
+    const userId = req.session.userId;
     
     console.log('🔄 Syncing battle results for PIN:', gamePin);
+    console.log('📊 Players data:', players);
+    console.log('🏆 Winner ID:', winnerId);
+    console.log('👤 Requester ID:', userId);
     
     // 1. Find battle in MySQL
     const battle = await QuizBattle.findOne({ 
@@ -898,7 +902,18 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Battle not found' });
     }
     
-    // Prevent duplicate syncing
+    console.log('✅ Battle found:', battle.battle_id);
+    console.log('📌 Battle host_id:', battle.host_id);
+    console.log('📌 Battle status:', battle.status);
+    
+    // SECURITY: Verify requester is the host
+    if (battle.host_id !== userId) {
+      await transaction.rollback();
+      console.error('❌ Non-host tried to sync. Host:', battle.host_id, 'Requester:', userId);
+      return res.status(403).json({ error: 'Only host can sync results' });
+    }
+    
+    // IDEMPOTENCY: Prevent duplicate syncing
     if (battle.status === 'completed') {
       await transaction.rollback();
       console.log('⚠️ Battle already synced:', gamePin);
@@ -908,7 +923,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
       });
     }
     
-    // 2. Update battle status to completed
+    // ✅ 2. Update battle status to completed
     await battle.update({
       status: 'completed',
       winner_id: winnerId,
@@ -917,11 +932,13 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     
     console.log('✅ Battle marked as completed');
     
-    // 3. Update all participants with final scores and rewards
+    // ✅ 3. Update all participants with final scores and rewards
     for (const player of players) {
-      const pointsEarned = player.score * 10; // 10 points per correct answer
-      const expEarned = player.score * 5;     // 5 EXP per correct answer
+      const pointsEarned = player.score * 10;
+      const expEarned = player.score * 5;
       const isWinner = player.userId === winnerId;
+      
+      console.log(`📝 Updating player ${player.userId}: score=${player.score}, points=${pointsEarned}`);
       
       // Update participant record
       const [updateCount] = await BattleParticipant.update(
@@ -952,7 +969,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         transaction
       });
       
-      console.log(`✅ Updated player ${player.userId}: ${player.score} score, ${pointsEarned} points`);
+      console.log(`✅ Updated player ${player.userId}`);
     }
     
     await transaction.commit();

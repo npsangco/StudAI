@@ -23,6 +23,7 @@ export const createBattleRoom = async (gamePin, battleData) => {
         status: 'waiting',
         currentQuestion: 0,
         totalQuestions: battleData.totalQuestions,
+        viewers: 0,
         createdAt: Date.now()
       },
       players: {}, // Empty at start
