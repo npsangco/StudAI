@@ -874,6 +874,107 @@ router.post('/battle/:gamePin/end', requireAuth, async (req, res) => {
   }
 });
 
-
+// ============================================
+// SYNC BATTLE RESULTS FROM FIREBASE TO MYSQL
+// ============================================
+router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { gamePin } = req.params;
+    const { players, winnerId, completedAt } = req.body;
+    
+    console.log('🔄 Syncing battle results for PIN:', gamePin);
+    
+    // 1. Find battle in MySQL
+    const battle = await QuizBattle.findOne({ 
+      where: { game_pin: gamePin },
+      transaction 
+    });
+    
+    if (!battle) {
+      await transaction.rollback();
+      console.error('❌ Battle not found in MySQL:', gamePin);
+      return res.status(404).json({ error: 'Battle not found' });
+    }
+    
+    // Prevent duplicate syncing
+    if (battle.status === 'completed') {
+      await transaction.rollback();
+      console.log('⚠️ Battle already synced:', gamePin);
+      return res.status(200).json({ 
+        message: 'Battle already synced',
+        alreadySynced: true 
+      });
+    }
+    
+    // 2. Update battle status to completed
+    await battle.update({
+      status: 'completed',
+      winner_id: winnerId,
+      completed_at: completedAt || new Date()
+    }, { transaction });
+    
+    console.log('✅ Battle marked as completed');
+    
+    // 3. Update all participants with final scores and rewards
+    for (const player of players) {
+      const pointsEarned = player.score * 10; // 10 points per correct answer
+      const expEarned = player.score * 5;     // 5 EXP per correct answer
+      const isWinner = player.userId === winnerId;
+      
+      // Update participant record
+      const [updateCount] = await BattleParticipant.update(
+        { 
+          score: player.score,
+          points_earned: pointsEarned,
+          exp_earned: expEarned,
+          is_winner: isWinner
+        },
+        { 
+          where: { 
+            battle_id: battle.battle_id, 
+            user_id: player.userId 
+          },
+          transaction 
+        }
+      );
+      
+      if (updateCount === 0) {
+        console.warn('⚠️ Participant not found for user:', player.userId);
+        continue;
+      }
+      
+      // Award points to user account
+      await User.increment('points', {
+        by: pointsEarned,
+        where: { user_id: player.userId },
+        transaction
+      });
+      
+      console.log(`✅ Updated player ${player.userId}: ${player.score} score, ${pointsEarned} points`);
+    }
+    
+    await transaction.commit();
+    
+    console.log('✅ Battle results synced successfully for PIN:', gamePin);
+    
+    res.json({ 
+      success: true,
+      message: 'Battle results synced successfully',
+      battleId: battle.battle_id,
+      winnerId,
+      totalPlayers: players.length
+    });
+    
+  } catch (error) {
+    await transaction.rollback();
+    console.error('❌ Sync error:', error);
+    res.status(500).json({ 
+      error: 'Failed to sync battle results',
+      details: error.message 
+    });
+  }
+});
 
 export default router;

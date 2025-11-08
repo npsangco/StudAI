@@ -257,3 +257,77 @@ export const listenToQuizQuestions = (gamePin, callback) => {
     }
   });
 };
+
+// ============================================
+// 💾 SYNC BATTLE RESULTS TO MYSQL
+// ============================================
+
+/**
+ * Sync final battle results from Firebase to MySQL
+ * Called after battle completes and leaderboard is shown
+ * 
+ * @param {string} gamePin - The battle game PIN
+ * @returns {Promise<boolean>} - Success status
+ */
+export const syncBattleResultsToMySQL = async (gamePin) => {
+  try {
+    console.log('🔄 Starting sync for battle:', gamePin);
+    
+    // 1. Get final battle data from Firebase
+    const battleRef = ref(realtimeDb, `battles/${gamePin}`);
+    const snapshot = await get(battleRef);
+    
+    if (!snapshot.exists()) {
+      console.error('❌ Battle not found in Firebase:', gamePin);
+      return false;
+    }
+    
+    const battleData = snapshot.val();
+    const players = battleData.players ? Object.values(battleData.players) : [];
+    
+    if (players.length === 0) {
+      console.error('❌ No players found in battle:', gamePin);
+      return false;
+    }
+    
+    // 2. Determine winner (highest score)
+    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+    const winner = sortedPlayers[0];
+    const winnerId = winner.userId;
+    
+    console.log('🏆 Winner:', winner.name, 'with score:', winner.score);
+    
+    // 3. Send to MySQL API
+    const response = await fetch(`http://localhost:4000/api/quizzes/battle/${gamePin}/sync-results`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        players: players.map(p => ({
+          userId: p.userId,
+          score: p.score || 0,
+          name: p.name
+        })),
+        winnerId: winnerId,
+        completedAt: new Date().toISOString()
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('❌ MySQL sync failed:', errorData);
+      return false;
+    }
+    
+    const result = await response.json();
+    console.log('✅ MySQL sync successful:', result);
+    
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Fatal sync error:', error);
+    return false;
+  }
+};
