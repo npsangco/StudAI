@@ -877,6 +877,8 @@ router.post('/battle/:gamePin/end', requireAuth, async (req, res) => {
 // ============================================
 // SYNC BATTLE RESULTS FROM FIREBASE TO MYSQL
 // ============================================
+// server/routes/quizRoutes.js
+
 router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
   const transaction = await sequelize.transaction();
   
@@ -890,6 +892,23 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     console.log('🏆 Winner ID:', winnerId);
     console.log('👤 Requester ID:', userId);
     
+    // Validation
+    if (!players || !Array.isArray(players) || players.length === 0) {
+      await transaction.rollback();
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid players data' 
+      });
+    }
+    
+    if (!winnerId) {
+      await transaction.rollback();
+      return res.status(400).json({ 
+        success: false,
+        error: 'Winner ID is required' 
+      });
+    }
+    
     // 1. Find battle in MySQL
     const battle = await QuizBattle.findOne({ 
       where: { game_pin: gamePin },
@@ -899,7 +918,10 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     if (!battle) {
       await transaction.rollback();
       console.error('❌ Battle not found in MySQL:', gamePin);
-      return res.status(404).json({ error: 'Battle not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Battle not found in database' 
+      });
     }
     
     console.log('✅ Battle found:', battle.battle_id);
@@ -910,7 +932,10 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     if (battle.host_id !== userId) {
       await transaction.rollback();
       console.error('❌ Non-host tried to sync. Host:', battle.host_id, 'Requester:', userId);
-      return res.status(403).json({ error: 'Only host can sync results' });
+      return res.status(403).json({ 
+        success: false,
+        error: 'Only host can sync results' 
+      });
     }
     
     // IDEMPOTENCY: Prevent duplicate syncing
@@ -918,8 +943,12 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
       await transaction.rollback();
       console.log('⚠️ Battle already synced:', gamePin);
       return res.status(200).json({ 
+        success: true,
         message: 'Battle already synced',
-        alreadySynced: true 
+        alreadySynced: true,
+        battleId: battle.battle_id,
+        winnerId: battle.winner_id,
+        totalPlayers: battle.current_players
       });
     }
     
@@ -933,6 +962,8 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     console.log('✅ Battle marked as completed');
     
     // ✅ 3. Update all participants with final scores and rewards
+    let updatedCount = 0;
+    
     for (const player of players) {
       const pointsEarned = player.score * 10;
       const expEarned = player.score * 5;
@@ -962,6 +993,8 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         continue;
       }
       
+      updatedCount++;
+      
       // Award points to user account
       await User.increment('points', {
         by: pointsEarned,
@@ -976,18 +1009,22 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     
     console.log('✅ Battle results synced successfully for PIN:', gamePin);
     
+    // ✅ Return success with verification data
     res.json({ 
       success: true,
       message: 'Battle results synced successfully',
       battleId: battle.battle_id,
       winnerId,
-      totalPlayers: players.length
+      totalPlayers: players.length,
+      updatedPlayers: updatedCount,
+      timestamp: new Date().toISOString()
     });
     
   } catch (error) {
     await transaction.rollback();
     console.error('❌ Sync error:', error);
     res.status(500).json({ 
+      success: false,
       error: 'Failed to sync battle results',
       details: error.message 
     });
