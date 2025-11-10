@@ -1,10 +1,14 @@
+// src/components/quizzes/views/QuizLeaderboard.jsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import AnswerReviewModal from './AnswerReviewModal';
 import { 
   listenToPlayers, 
   syncBattleResultsToMySQL,
-  deleteBattleRoom 
+  deleteBattleRoom, 
+  incrementViewers,
+  decrementViewersAndCleanup
 } from '../../../firebase/battleOperations';
 import { ref, get, set } from 'firebase/database';
 import { realtimeDb } from '../../../firebase/config';
@@ -14,6 +18,14 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   const [finalPlayers, setFinalPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const viewerRegistered = useRef(false); // Track if this user is registered as viewer
+
+  // 🆕 Add sync state tracking
+  const [syncState, setSyncState] = useState({
+    status: 'idle', // 'idle' | 'syncing' | 'success' | 'failed'
+    error: null,
+    attempt: 0
+  });
+  const syncAttempted = useRef(false); // Prevent double sync
 
   // ========================================
   // FETCH FINAL SCORES FROM FIREBASE
@@ -51,60 +63,88 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   }, [isOpen, results?.gamePin, results?.players]);
   
   // ========================================
-  // SYNC RESULTS TO MYSQL (HOST ONLY)
+  // 🆕 IMPROVED: SYNC RESULTS TO MYSQL (HOST ONLY)
   // ========================================
   useEffect(() => {
     if (!isOpen || !results?.gamePin) return;
     
+    // Only host syncs
     if (!results?.isHost) {
       console.log('⏭️ Not host, skipping MySQL sync');
+      setSyncState({ status: 'idle', error: null, attempt: 0 });
       return;
     }
     
-    const hasBeenSynced = sessionStorage.getItem(`synced_${results.gamePin}`);
-    if (hasBeenSynced) {
-      console.log('⏭️ Battle already synced, skipping...');
+    // Prevent double sync
+    if (syncAttempted.current) {
+      console.log('⏭️ Sync already attempted');
       return;
     }
+    
+    syncAttempted.current = true;
     
     console.log('🔄 HOST triggering MySQL sync for:', results.gamePin);
+    setSyncState({ status: 'syncing', error: null, attempt: 0 });
     
+    // Start sync after 2 second delay (let players see leaderboard first)
     const syncTimeout = setTimeout(async () => {
-      const success = await syncBattleResultsToMySQL(results.gamePin);
-      
-      if (success) {
-        console.log('✅ Battle results saved to database');
-        sessionStorage.setItem(`synced_${results.gamePin}`, 'true');
-      } else {
-        console.error('❌ Failed to save battle results');
+      try {
+        const result = await syncBattleResultsToMySQL(results.gamePin);
+        
+        if (result.success) {
+          console.log('✅ Battle results saved to database');
+          setSyncState({ 
+            status: 'success', 
+            error: null, 
+            attempt: result.attempt || 1 
+          });
+        } else {
+          console.error('❌ Failed to save battle results:', result.error);
+          setSyncState({ 
+            status: 'failed', 
+            error: result.error || 'Unknown error', 
+            attempt: result.attempt || 0 
+          });
+        }
+      } catch (error) {
+        console.error('❌ Fatal sync error:', error);
+        setSyncState({ 
+          status: 'failed', 
+          error: error.message, 
+          attempt: 0 
+        });
       }
     }, 2000);
     
-    return () => clearTimeout(syncTimeout);
+    return () => {
+      clearTimeout(syncTimeout);
+    };
   }, [isOpen, results?.gamePin, results?.isHost]);
 
   // ========================================
-  // FIREBASE VIEWER TRACKING & CLEANUP
+  // 🆕 IMPROVED: ATOMIC VIEWER TRACKING & CLEANUP
   // ========================================
   useEffect(() => {
-    if (!isOpen || !results?.gamePin || viewerRegistered.current) return;
+    if (!isOpen || !results?.gamePin) return;
 
     const gamePin = results.gamePin;
-    const viewersRef = ref(realtimeDb, `battles/${gamePin}/metadata/viewers`);
+    let isRegistered = false;
     
     console.log('👀 Registering viewer for battle:', gamePin);
     
-    // Register this viewer
+    // Register this viewer atomically
     const registerViewer = async () => {
       try {
-        const snapshot = await get(viewersRef);
-        const currentViewers = snapshot.val() || 0;
-        const newCount = currentViewers + 1;
-        await set(viewersRef, newCount);
-        viewerRegistered.current = true;
-        console.log(`✅ Viewer registered. Total viewers: ${newCount}`);
+        const result = await incrementViewers(gamePin);
+        
+        if (result.success) {
+          isRegistered = true;
+          console.log(`✅ Viewer registered. Total viewers: ${result.viewerCount}`);
+        } else {
+          console.error('❌ Failed to register viewer:', result.error);
+        }
       } catch (error) {
-        console.error('❌ Failed to register viewer:', error);
+        console.error('❌ Error registering viewer:', error);
       }
     };
 
@@ -112,38 +152,26 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
 
     // Cleanup when component unmounts OR modal closes
     return () => {
-      if (viewerRegistered.current) {
+      if (isRegistered) {
         console.log('🚪 Unregistering viewer from battle:', gamePin);
         
         const unregisterViewer = async () => {
           try {
-            const snapshot = await get(viewersRef);
-            const currentViewers = snapshot.val() || 1;
-            const newCount = Math.max(0, currentViewers - 1);
+            const result = await decrementViewersAndCleanup(gamePin);
             
-            console.log(`📊 Viewers before: ${currentViewers}, after: ${newCount}`);
-            
-            if (newCount === 0) {
-              // Last viewer left - cleanup Firebase
-              console.log('🧹 Last viewer left! Deleting battle from Firebase...');
+            if (result.success) {
+              console.log(`✅ Viewer unregistered. Remaining: ${result.viewerCount}`);
               
-              const hasBeenCleaned = sessionStorage.getItem(`cleaned_${gamePin}`);
-              if (!hasBeenCleaned) {
-                await deleteBattleRoom(gamePin);
-                sessionStorage.setItem(`cleaned_${gamePin}`, 'true');
-                console.log('✅ Firebase battle data deleted');
-              } else {
-                console.log('⏭️ Already cleaned by another process');
+              if (result.cleanedUp) {
+                console.log('🗑️ Battle data cleaned up from Firebase');
+              } else if (result.viewerCount === 0) {
+                console.log('⏳ Cleanup pending MySQL sync confirmation');
               }
             } else {
-              // Still have viewers, just decrement
-              await set(viewersRef, newCount);
-              console.log(`✅ Viewer count updated to: ${newCount}`);
+              console.error('❌ Failed to unregister viewer:', result.error);
             }
-            
-            viewerRegistered.current = false;
           } catch (error) {
-            console.error('❌ Failed to unregister viewer:', error);
+            console.error('❌ Error unregistering viewer:', error);
           }
         };
 
@@ -151,6 +179,59 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
       }
     };
   }, [isOpen, results?.gamePin]);
+
+  // ========================================
+  // 🆕 RENDER: SYNC STATUS INDICATOR
+  // ========================================
+  const renderSyncStatus = () => {
+    if (!results?.isHost) return null;
+    
+    if (syncState.status === 'syncing') {
+      return (
+        <div className="absolute top-4 right-4 bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm z-10 animate-fade-in">
+          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          <span>Saving results...</span>
+        </div>
+      );
+    }
+    
+    if (syncState.status === 'success') {
+      return (
+        <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm z-10 animate-fade-in">
+          <span className="text-lg">✓</span>
+          <span>Results saved!</span>
+        </div>
+      );
+    }
+    
+    if (syncState.status === 'failed') {
+      return (
+        <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-2 rounded-lg shadow-lg text-sm max-w-xs z-10 animate-fade-in">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lg">⚠️</span>
+            <span className="font-bold">Save Failed</span>
+          </div>
+          <p className="text-xs opacity-90 mb-2">{syncState.error}</p>
+          <button
+            onClick={async () => {
+              syncAttempted.current = false; // Reset
+              setSyncState({ status: 'syncing', error: null, attempt: 0 });
+              const result = await syncBattleResultsToMySQL(results.gamePin);
+              setSyncState(result.success 
+                ? { status: 'success', error: null, attempt: result.attempt }
+                : { status: 'failed', error: result.error, attempt: result.attempt }
+              );
+            }}
+            className="w-full bg-white text-red-600 px-2 py-1 rounded text-xs font-semibold hover:bg-red-50 transition-colors"
+          >
+            Retry Save
+          </button>
+        </div>
+      );
+    }
+    
+    return null;
+  };
 
   // ========================================
   // RENDER: LOADING STATE
@@ -246,6 +327,10 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   return (
     <>
       <div className="fixed inset-0 bg-[rgba(107,114,128,0.6)] flex items-center justify-center z-50 p-3 sm:p-4">
+        
+        {/* 🆕 Sync Status Indicator */}
+        {renderSyncStatus()}
+        
         <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 max-w-4xl w-full">
           
           {/* Congratulations Card */}
@@ -329,7 +414,7 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
                 </div>
               </div>
 
-              {/* Action Buttons - Responsive */}
+              {/* Action Buttons */}
               <div className="space-y-2 sm:space-y-3">
                 {/* View Answer Summary Button */}
                 {answers.length > 0 && (
@@ -420,6 +505,37 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
         answers={answers}
         quizTitle={quizTitle}
       />
+
+      {/* Animation Styles */}
+      <style>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: #f3f4f6;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 3px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: #9ca3af;
+        }
+      `}</style>
     </>
   );
 };

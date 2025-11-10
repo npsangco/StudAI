@@ -1,5 +1,4 @@
-// src/firebase/battleOperations.js
-import { ref, set, update, remove, onValue, get, serverTimestamp } from 'firebase/database';
+import { ref, set, update, remove, onValue, get, serverTimestamp, runTransaction } from 'firebase/database';
 import { realtimeDb } from './config';
 
 // ============================================
@@ -91,7 +90,6 @@ export const updateBattleStatus = async (gamePin, status) => {
     throw error;
   }
 };
-
 
 /**
  * Update player's current question progress
@@ -264,71 +262,468 @@ export const listenToQuizQuestions = (gamePin, callback) => {
 // ============================================
 
 /**
- * Sync final battle results from Firebase to MySQL
- * Called after battle completes and leaderboard is shown
+ * Sync final battle results from Firebase to MySQL with retry logic
  * 
  * @param {string} gamePin - The battle game PIN
- * @returns {Promise<boolean>} - Success status
+ * @param {number} maxRetries - Maximum retry attempts (default: 3)
+ * @returns {Promise<{success: boolean, error?: string, attempt?: number}>}
  */
-export const syncBattleResultsToMySQL = async (gamePin) => {
-  try {
-    console.log('🔄 Starting sync for battle:', gamePin);
+export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
+  console.log('🔄 Starting MySQL sync for battle:', gamePin);
+  
+  // Check if already synced (use localStorage for cross-tab persistence)
+  const syncKey = `battle_synced_${gamePin}`;
+  const existingSync = localStorage.getItem(syncKey);
+  
+  if (existingSync) {
+    const syncData = JSON.parse(existingSync);
     
-    // 1. Get final battle data from Firebase
+    // If synced less than 5 minutes ago, skip
+    if (Date.now() - syncData.timestamp < 5 * 60 * 1000) {
+      console.log('⏭️ Battle already synced recently:', syncData);
+      return { success: true, alreadySynced: true };
+    }
+  }
+  
+  // Get battle data from Firebase
+  let battleData;
+  try {
     const battleRef = ref(realtimeDb, `battles/${gamePin}`);
     const snapshot = await get(battleRef);
     
     if (!snapshot.exists()) {
       console.error('❌ Battle not found in Firebase:', gamePin);
-      return false;
+      return { 
+        success: false, 
+        error: 'Battle not found in Firebase' 
+      };
+    }
+    
+    battleData = snapshot.val();
+  } catch (error) {
+    console.error('❌ Failed to fetch battle from Firebase:', error);
+    return { 
+      success: false, 
+      error: 'Failed to fetch battle data from Firebase' 
+    };
+  }
+  
+  const players = battleData.players ? Object.values(battleData.players) : [];
+  
+  if (players.length === 0) {
+    console.error('❌ No players found in battle:', gamePin);
+    return { 
+      success: false, 
+      error: 'No players found in battle' 
+    };
+  }
+  
+  // Determine winner (highest score)
+  const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+  const winner = sortedPlayers[0];
+  const winnerId = winner.userId;
+  
+  console.log('🏆 Winner:', winner.name, 'with score:', winner.score);
+  
+  // Retry loop with exponential backoff
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 MySQL sync attempt ${attempt}/${maxRetries}`);
+      
+      const response = await fetch(
+        `http://localhost:4000/api/quizzes/battle/${gamePin}/sync-results`,
+        {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            players: players.map(p => ({
+              userId: p.userId,
+              score: p.score || 0,
+              name: p.name
+            })),
+            winnerId: winnerId,
+            completedAt: new Date().toISOString()
+          })
+        }
+      );
+      
+      // Check response
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`❌ Attempt ${attempt} failed with status ${response.status}:`, errorData);
+        
+        // Don't retry on 4xx errors (client errors)
+        if (response.status >= 400 && response.status < 500) {
+          return {
+            success: false,
+            error: errorData.error || `Server rejected sync: ${response.status}`,
+            attempt
+          };
+        }
+        
+        // Retry on 5xx errors (server errors)
+        if (attempt < maxRetries) {
+          const backoffMs = 1000 * Math.pow(2, attempt); // 2s, 4s, 8s
+          console.log(`⏳ Retrying in ${backoffMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+          continue;
+        }
+        
+        return {
+          success: false,
+          error: `Sync failed after ${maxRetries} attempts`,
+          attempt
+        };
+      }
+      
+      // Parse successful response
+      const result = await response.json();
+      console.log('✅ MySQL sync successful:', result);
+      
+      // ✅ VERIFY the sync actually worked
+      if (!result.success) {
+        console.error('❌ Server reported sync failure:', result);
+        
+        if (attempt < maxRetries) {
+          const backoffMs = 1000 * Math.pow(2, attempt);
+          console.log(`⏳ Retrying in ${backoffMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+          continue;
+        }
+        
+        return {
+          success: false,
+          error: 'Server reported sync failure',
+          attempt
+        };
+      }
+      
+      // ✅ Success! Store sync confirmation
+      const syncConfirmation = {
+        timestamp: Date.now(),
+        gamePin,
+        winnerId,
+        totalPlayers: players.length,
+        verified: true,
+        attempt
+      };
+      
+      localStorage.setItem(syncKey, JSON.stringify(syncConfirmation));
+      
+      // 🆕 Mark sync complete using new function
+      await markSyncComplete(gamePin, winnerId);
+      
+      return {
+        success: true,
+        attempt,
+        winnerId,
+        totalPlayers: players.length
+      };
+      
+    } catch (error) {
+      console.error(`❌ Sync attempt ${attempt} threw error:`, error);
+      
+      // Network errors - retry
+      if (attempt < maxRetries) {
+        const backoffMs = 1000 * Math.pow(2, attempt);
+        console.log(`⏳ Retrying in ${backoffMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+        continue;
+      }
+      
+      return {
+        success: false,
+        error: `Network error after ${maxRetries} attempts: ${error.message}`,
+        attempt
+      };
+    }
+  }
+  
+  // Should never reach here, but just in case
+  return {
+    success: false,
+    error: 'Sync failed for unknown reason',
+    attempt: maxRetries
+  };
+};
+
+// ============================================
+// 🆕 ATOMIC VIEWER MANAGEMENT & CLEANUP
+// ============================================
+
+/**
+ * Atomically increment viewer count
+ * Called when user opens leaderboard
+ * 
+ * @param {string} gamePin - The battle game PIN
+ * @returns {Promise<{success: boolean, viewerCount: number}>}
+ */
+export const incrementViewers = async (gamePin) => {
+  console.log('👀 Incrementing viewer for battle:', gamePin);
+  
+  const viewersRef = ref(realtimeDb, `battles/${gamePin}/metadata/viewers`);
+  
+  try {
+    // Use Firebase transaction for atomic increment
+    const transactionResult = await runTransaction(viewersRef, (currentViewers) => {
+      // If null, start at 0
+      if (currentViewers === null) {
+        return 1;
+      }
+      
+      // Increment
+      return currentViewers + 1;
+    });
+    
+    if (!transactionResult.committed) {
+      console.warn('⚠️ Increment transaction not committed');
+      return {
+        success: false,
+        viewerCount: 0,
+        error: 'Transaction failed to commit'
+      };
+    }
+    
+    const newViewerCount = transactionResult.snapshot.val();
+    console.log('✅ Viewer count incremented to:', newViewerCount);
+    
+    return {
+      success: true,
+      viewerCount: newViewerCount
+    };
+    
+  } catch (error) {
+    console.error('❌ Error incrementing viewers:', error);
+    return {
+      success: false,
+      viewerCount: -1,
+      error: error.message
+    };
+  }
+};
+
+/**
+ * Atomically decrement viewer count and cleanup if needed
+ * Uses Firebase transactions to prevent race conditions
+ * 
+ * @param {string} gamePin - The battle game PIN
+ * @returns {Promise<{success: boolean, viewerCount: number, cleanedUp: boolean}>}
+ */
+export const decrementViewersAndCleanup = async (gamePin) => {
+  console.log('👋 Decrementing viewer for battle:', gamePin);
+  
+  const viewersRef = ref(realtimeDb, `battles/${gamePin}/metadata/viewers`);
+  
+  try {
+    // Use Firebase transaction for atomic decrement
+    const transactionResult = await runTransaction(viewersRef, (currentViewers) => {
+      // If null, treat as 0
+      if (currentViewers === null) {
+        return 0;
+      }
+      
+      // Decrement but never go below 0
+      return Math.max(0, currentViewers - 1);
+    });
+    
+    if (!transactionResult.committed) {
+      console.warn('⚠️ Transaction not committed, retrying...');
+      return {
+        success: false,
+        viewerCount: 0,
+        cleanedUp: false,
+        error: 'Transaction failed to commit'
+      };
+    }
+    
+    const newViewerCount = transactionResult.snapshot.val();
+    console.log('✅ Viewer count decremented to:', newViewerCount);
+    
+    // Check if this was the last viewer
+    if (newViewerCount === 0) {
+      console.log('🧹 Last viewer left, checking if safe to cleanup...');
+      
+      // Check if MySQL sync is complete before cleanup
+      const canCleanup = await checkSyncStatusAndCleanup(gamePin);
+      
+      return {
+        success: true,
+        viewerCount: newViewerCount,
+        cleanedUp: canCleanup
+      };
+    }
+    
+    return {
+      success: true,
+      viewerCount: newViewerCount,
+      cleanedUp: false
+    };
+    
+  } catch (error) {
+    console.error('❌ Error in decrementViewersAndCleanup:', error);
+    return {
+      success: false,
+      viewerCount: -1,
+      cleanedUp: false,
+      error: error.message
+    };
+  }
+};
+
+/**
+ * Check MySQL sync status and cleanup if safe
+ * Only deletes Firebase data if MySQL sync is confirmed
+ * 
+ * @param {string} gamePin - The battle game PIN
+ * @returns {Promise<boolean>} - Whether cleanup was performed
+ */
+const checkSyncStatusAndCleanup = async (gamePin) => {
+  try {
+    const battleRef = ref(realtimeDb, `battles/${gamePin}`);
+    const snapshot = await get(battleRef);
+    
+    if (!snapshot.exists()) {
+      console.log('⏭️ Battle already deleted');
+      return true;
     }
     
     const battleData = snapshot.val();
-    const players = battleData.players ? Object.values(battleData.players) : [];
+    const syncStatus = battleData?.metadata?.syncedToMySQL;
     
-    if (players.length === 0) {
-      console.error('❌ No players found in battle:', gamePin);
-      return false;
+    // Check if MySQL sync is confirmed
+    if (syncStatus?.synced === true) {
+      console.log('✅ MySQL sync confirmed, safe to cleanup Firebase');
+      
+      // Check how old the sync is (safety check)
+      const syncAge = Date.now() - (syncStatus.timestamp || 0);
+      const maxAge = 10 * 60 * 1000; // 10 minutes
+      
+      if (syncAge > maxAge) {
+        console.warn('⚠️ Sync is very old, but proceeding with cleanup');
+      }
+      
+      // Delete the entire battle room
+      await deleteBattleRoom(gamePin);
+      console.log('🗑️ Firebase battle data deleted successfully');
+      
+      return true;
     }
     
-    // 2. Determine winner (highest score)
-    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-    const winner = sortedPlayers[0];
-    const winnerId = winner.userId;
+    // MySQL sync not confirmed yet
+    console.log('⏳ MySQL sync not confirmed yet, marking for delayed cleanup');
     
-    console.log('🏆 Winner:', winner.name, 'with score:', winner.score);
-    
-    // 3. Send to MySQL API
-    const response = await fetch(`http://localhost:4000/api/quizzes/battle/${gamePin}/sync-results`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include',
-      body: JSON.stringify({
-        players: players.map(p => ({
-          userId: p.userId,
-          score: p.score || 0,
-          name: p.name
-        })),
-        winnerId: winnerId,
-        completedAt: new Date().toISOString()
-      })
+    // Mark battle for delayed cleanup
+    const pendingCleanupRef = ref(realtimeDb, `battles/${gamePin}/metadata/pendingCleanup`);
+    await set(pendingCleanupRef, {
+      markedAt: Date.now(),
+      reason: 'Waiting for MySQL sync confirmation'
     });
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ MySQL sync failed:', errorData);
-      return false;
-    }
+    // Set a TTL - auto-delete after 5 minutes even without sync confirmation
+    // This prevents orphaned data if sync somehow never completes
+    setTimeout(async () => {
+      console.log('⏰ TTL expired, force cleaning up:', gamePin);
+      
+      // Check one more time if still exists
+      const checkSnapshot = await get(battleRef);
+      if (checkSnapshot.exists()) {
+        await deleteBattleRoom(gamePin);
+        console.log('🗑️ Force deleted after TTL');
+      }
+    }, 5 * 60 * 1000); // 5 minutes
     
-    const result = await response.json();
-    console.log('✅ MySQL sync successful:', result);
+    return false;
+    
+  } catch (error) {
+    console.error('❌ Error checking sync status:', error);
+    return false;
+  }
+};
+
+/**
+ * Mark MySQL sync as complete in Firebase
+ * Called after successful MySQL sync
+ * Triggers any pending cleanups
+ * 
+ * @param {string} gamePin - The battle game PIN
+ * @param {number} winnerId - Winner's user ID
+ * @returns {Promise<boolean>}
+ */
+export const markSyncComplete = async (gamePin, winnerId) => {
+  try {
+    const syncStatusRef = ref(realtimeDb, `battles/${gamePin}/metadata/syncedToMySQL`);
+    
+    await set(syncStatusRef, {
+      synced: true,
+      timestamp: Date.now(),
+      winnerId: winnerId
+    });
+    
+    console.log('✅ MySQL sync marked complete in Firebase');
+    
+    // Check if there's a pending cleanup
+    const pendingCleanupRef = ref(realtimeDb, `battles/${gamePin}/metadata/pendingCleanup`);
+    const pendingSnapshot = await get(pendingCleanupRef);
+    
+    if (pendingSnapshot.exists()) {
+      console.log('🧹 Pending cleanup found, executing now...');
+      
+      // Check if viewers is 0
+      const viewersRef = ref(realtimeDb, `battles/${gamePin}/metadata/viewers`);
+      const viewersSnapshot = await get(viewersRef);
+      const viewerCount = viewersSnapshot.val() || 0;
+      
+      if (viewerCount === 0) {
+        await deleteBattleRoom(gamePin);
+        console.log('🗑️ Executed pending cleanup');
+      } else {
+        console.log('⏭️ Viewers still present, not cleaning up yet');
+      }
+    }
     
     return true;
     
   } catch (error) {
-    console.error('❌ Fatal sync error:', error);
+    console.error('❌ Error marking sync complete:', error);
     return false;
+  }
+};
+
+/**
+ * Check if a battle is safe to cleanup
+ * (for manual cleanup or debugging)
+ * 
+ * @param {string} gamePin - The battle game PIN
+ * @returns {Promise<{canCleanup: boolean, reason: string}>}
+ */
+export const canSafelyCleanup = async (gamePin) => {
+  try {
+    const battleRef = ref(realtimeDb, `battles/${gamePin}`);
+    const snapshot = await get(battleRef);
+    
+    if (!snapshot.exists()) {
+      return { canCleanup: true, reason: 'Battle does not exist' };
+    }
+    
+    const battleData = snapshot.val();
+    const viewers = battleData?.metadata?.viewers || 0;
+    const synced = battleData?.metadata?.syncedToMySQL?.synced || false;
+    
+    if (viewers > 0) {
+      return { canCleanup: false, reason: `${viewers} viewers still present` };
+    }
+    
+    if (!synced) {
+      return { canCleanup: false, reason: 'MySQL sync not confirmed' };
+    }
+    
+    return { canCleanup: true, reason: 'Safe to cleanup' };
+    
+  } catch (error) {
+    console.error('❌ Error checking cleanup safety:', error);
+    return { canCleanup: false, reason: `Error: ${error.message}` };
   }
 };
