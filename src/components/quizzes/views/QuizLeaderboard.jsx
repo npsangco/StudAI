@@ -17,14 +17,6 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   const [showAnswerReview, setShowAnswerReview] = useState(false);
   const [finalPlayers, setFinalPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const viewerRegistered = useRef(false); // Track if this user is registered as viewer
-
-  // 🆕 Add sync state tracking
-  const [syncState, setSyncState] = useState({
-    status: 'idle', // 'idle' | 'syncing' | 'success' | 'failed'
-    error: null,
-    attempt: 0
-  });
   const syncAttempted = useRef(false); // Prevent double sync
 
   // ========================================
@@ -63,15 +55,20 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   }, [isOpen, results?.gamePin, results?.players]);
   
   // ========================================
-  // 🆕 IMPROVED: SYNC RESULTS TO MYSQL (HOST ONLY)
+  // 🔇 SILENT SYNC: NO UI, LOGS ONLY
   // ========================================
   useEffect(() => {
     if (!isOpen || !results?.gamePin) return;
     
+    // 🔍 Debug logging
+    console.log('🎮 Leaderboard opened - Sync check:');
+    console.log('   isHost:', results?.isHost);
+    console.log('   gamePin:', results?.gamePin);
+    console.log('   finalPlayers:', finalPlayers.length);
+    
     // Only host syncs
     if (!results?.isHost) {
       console.log('⏭️ Not host, skipping MySQL sync');
-      setSyncState({ status: 'idle', error: null, attempt: 0 });
       return;
     }
     
@@ -84,42 +81,38 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
     syncAttempted.current = true;
     
     console.log('🔄 HOST triggering MySQL sync for:', results.gamePin);
-    setSyncState({ status: 'syncing', error: null, attempt: 0 });
     
     // Start sync after 2 second delay (let players see leaderboard first)
     const syncTimeout = setTimeout(async () => {
       try {
+        console.log('📡 Starting sync with finalPlayers:', finalPlayers);
         const result = await syncBattleResultsToMySQL(results.gamePin);
         
+        console.log('📋 Sync result:', result);
+        
         if (result.success) {
-          console.log('✅ Battle results saved to database');
-          setSyncState({ 
-            status: 'success', 
-            error: null, 
-            attempt: result.attempt || 1 
-          });
+          console.log('✅ Battle results saved to MySQL database successfully!');
+          console.log('   Battle ID:', result.battleId);
+          console.log('   Winner ID:', result.winnerId);
+          console.log('   Total Players:', result.totalPlayers);
+          console.log('   Attempt:', result.attempt || 1);
         } else {
-          console.error('❌ Failed to save battle results:', result.error);
-          setSyncState({ 
-            status: 'failed', 
-            error: result.error || 'Unknown error', 
-            attempt: result.attempt || 0 
-          });
+          console.error('❌ Failed to save battle results to MySQL');
+          console.error('   Error:', result.error);
+          console.error('   Attempt:', result.attempt || 0);
+          console.error('   Full result:', result);
         }
       } catch (error) {
         console.error('❌ Fatal sync error:', error);
-        setSyncState({ 
-          status: 'failed', 
-          error: error.message, 
-          attempt: 0 
-        });
+        console.error('   Message:', error.message);
+        console.error('   Stack:', error.stack);
       }
     }, 2000);
     
     return () => {
       clearTimeout(syncTimeout);
     };
-  }, [isOpen, results?.gamePin, results?.isHost]);
+  }, [isOpen, results?.gamePin, results?.isHost, finalPlayers]);
 
   // ========================================
   // 🆕 IMPROVED: ATOMIC VIEWER TRACKING & CLEANUP
@@ -179,59 +172,6 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
       }
     };
   }, [isOpen, results?.gamePin]);
-
-  // ========================================
-  // 🆕 RENDER: SYNC STATUS INDICATOR
-  // ========================================
-  const renderSyncStatus = () => {
-    if (!results?.isHost) return null;
-    
-    if (syncState.status === 'syncing') {
-      return (
-        <div className="absolute top-4 right-4 bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm z-10 animate-fade-in">
-          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-          <span>Saving results...</span>
-        </div>
-      );
-    }
-    
-    if (syncState.status === 'success') {
-      return (
-        <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm z-10 animate-fade-in">
-          <span className="text-lg">✓</span>
-          <span>Results saved!</span>
-        </div>
-      );
-    }
-    
-    if (syncState.status === 'failed') {
-      return (
-        <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-2 rounded-lg shadow-lg text-sm max-w-xs z-10 animate-fade-in">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">⚠️</span>
-            <span className="font-bold">Save Failed</span>
-          </div>
-          <p className="text-xs opacity-90 mb-2">{syncState.error}</p>
-          <button
-            onClick={async () => {
-              syncAttempted.current = false; // Reset
-              setSyncState({ status: 'syncing', error: null, attempt: 0 });
-              const result = await syncBattleResultsToMySQL(results.gamePin);
-              setSyncState(result.success 
-                ? { status: 'success', error: null, attempt: result.attempt }
-                : { status: 'failed', error: result.error, attempt: result.attempt }
-              );
-            }}
-            className="w-full bg-white text-red-600 px-2 py-1 rounded text-xs font-semibold hover:bg-red-50 transition-colors"
-          >
-            Retry Save
-          </button>
-        </div>
-      );
-    }
-    
-    return null;
-  };
 
   // ========================================
   // RENDER: LOADING STATE
@@ -327,9 +267,6 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   return (
     <>
       <div className="fixed inset-0 bg-[rgba(107,114,128,0.6)] flex items-center justify-center z-50 p-3 sm:p-4">
-        
-        {/* 🆕 Sync Status Indicator */}
-        {renderSyncStatus()}
         
         <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 max-w-4xl w-full">
           
@@ -508,20 +445,6 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
 
       {/* Animation Styles */}
       <style>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
-        
         .scrollbar-thin::-webkit-scrollbar {
           width: 6px;
         }

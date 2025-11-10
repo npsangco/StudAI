@@ -258,135 +258,248 @@ export const listenToQuizQuestions = (gamePin, callback) => {
 };
 
 // ============================================
-// 💾 SYNC BATTLE RESULTS TO MYSQL
+// SYNC LOCK FUNCTIONS
+// ============================================
+
+/**
+ * Acquire sync lock to prevent duplicate syncs
+ * Uses Firebase transaction for atomic lock acquisition
+ */
+const acquireSyncLock = async (gamePin) => {
+  try {
+    const lockRef = ref(realtimeDb, `battles/${gamePin}/metadata/syncLock`);
+    
+    const transactionResult = await runTransaction(lockRef, (currentLock) => {
+      // If lock exists and is recent (< 60 seconds), abort
+      if (currentLock && currentLock.lockedAt > Date.now() - 60000) {
+        return; // Abort transaction
+      }
+      
+      // Acquire lock
+      return {
+        locked: true,
+        lockedAt: Date.now(),
+        lockedBy: 'host'
+      };
+    });
+    
+    if (!transactionResult.committed) {
+      console.log('⏭️ Sync already in progress by another instance');
+      return { acquired: false, reason: 'Lock already held' };
+    }
+    
+    console.log('🔒 Sync lock acquired');
+    return { acquired: true };
+    
+  } catch (error) {
+    console.error('❌ Error acquiring sync lock:', error);
+    return { acquired: false, reason: error.message };
+  }
+};
+
+/**
+ * Release sync lock
+ */
+const releaseSyncLock = async (gamePin) => {
+  try {
+    const lockRef = ref(realtimeDb, `battles/${gamePin}/metadata/syncLock`);
+    await remove(lockRef);
+    console.log('🔓 Sync lock released');
+  } catch (error) {
+    console.error('❌ Error releasing sync lock:', error);
+  }
+};
+
+// ============================================
+// SYNC BATTLE RESULTS TO MYSQL
 // ============================================
 
 /**
  * Sync final battle results from Firebase to MySQL with retry logic
- * 
- * @param {string} gamePin - The battle game PIN
- * @param {number} maxRetries - Maximum retry attempts (default: 3)
- * @returns {Promise<{success: boolean, error?: string, attempt?: number}>}
+ * NOW WITH ATOMIC LOCK TO PREVENT DUPLICATE SYNCS
  */
 export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
   console.log('🔄 Starting MySQL sync for battle:', gamePin);
   
-  // Check if already synced (use localStorage for cross-tab persistence)
-  const syncKey = `battle_synced_${gamePin}`;
-  const existingSync = localStorage.getItem(syncKey);
+  // 🔒 STEP 1: ACQUIRE LOCK
+  const lockResult = await acquireSyncLock(gamePin);
   
-  if (existingSync) {
-    const syncData = JSON.parse(existingSync);
-    
-    // If synced less than 5 minutes ago, skip
-    if (Date.now() - syncData.timestamp < 5 * 60 * 1000) {
-      console.log('⏭️ Battle already synced recently:', syncData);
-      return { success: true, alreadySynced: true };
-    }
+  if (!lockResult.acquired) {
+    console.log('⏭️ Sync skipped:', lockResult.reason);
+    return { 
+      success: false, 
+      error: lockResult.reason,
+      alreadySyncing: true 
+    };
   }
   
-  // Get battle data from Firebase
-  let battleData;
   try {
-    const battleRef = ref(realtimeDb, `battles/${gamePin}`);
-    const snapshot = await get(battleRef);
+    // Check if already synced (localStorage check)
+    const syncKey = `battle_synced_${gamePin}`;
+    const existingSync = localStorage.getItem(syncKey);
     
-    if (!snapshot.exists()) {
-      console.error('❌ Battle not found in Firebase:', gamePin);
+    if (existingSync) {
+      const syncData = JSON.parse(existingSync);
+      
+      // If synced less than 5 minutes ago, skip
+      if (Date.now() - syncData.timestamp < 5 * 60 * 1000) {
+        console.log('⏭️ Battle already synced recently:', syncData);
+        await releaseSyncLock(gamePin);
+        return { success: true, alreadySynced: true };
+      }
+    }
+    
+    // Get battle data from Firebase
+    let battleData;
+    try {
+      const battleRef = ref(realtimeDb, `battles/${gamePin}`);
+      const snapshot = await get(battleRef);
+      
+      if (!snapshot.exists()) {
+        console.error('❌ Battle not found in Firebase:', gamePin);
+        await releaseSyncLock(gamePin);
+        return { 
+          success: false, 
+          error: 'Battle not found in Firebase' 
+        };
+      }
+      
+      battleData = snapshot.val();
+    } catch (error) {
+      console.error('❌ Failed to fetch battle from Firebase:', error);
+      await releaseSyncLock(gamePin);
       return { 
         success: false, 
-        error: 'Battle not found in Firebase' 
+        error: 'Failed to fetch battle data from Firebase' 
       };
     }
     
-    battleData = snapshot.val();
-  } catch (error) {
-    console.error('❌ Failed to fetch battle from Firebase:', error);
-    return { 
-      success: false, 
-      error: 'Failed to fetch battle data from Firebase' 
-    };
-  }
-  
-  const players = battleData.players ? Object.values(battleData.players) : [];
-  
-  if (players.length === 0) {
-    console.error('❌ No players found in battle:', gamePin);
-    return { 
-      success: false, 
-      error: 'No players found in battle' 
-    };
-  }
-  
-  // Determine winner (highest score)
-  const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-  const winner = sortedPlayers[0];
-  const winnerId = winner.userId;
-  
-  console.log('🏆 Winner:', winner.name, 'with score:', winner.score);
-  
-  // Retry loop with exponential backoff
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`🔄 MySQL sync attempt ${attempt}/${maxRetries}`);
-      
-      const response = await fetch(
-        `http://localhost:4000/api/quizzes/battle/${gamePin}/sync-results`,
-        {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            players: players.map(p => ({
-              userId: p.userId,
-              score: p.score || 0,
-              name: p.name
-            })),
-            winnerId: winnerId,
-            completedAt: new Date().toISOString()
-          })
-        }
-      );
-      
-      // Check response
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error(`❌ Attempt ${attempt} failed with status ${response.status}:`, errorData);
+    const players = battleData.players ? Object.values(battleData.players) : [];
+    
+    if (players.length === 0) {
+      console.error('❌ No players found in battle:', gamePin);
+      await releaseSyncLock(gamePin);
+      return { 
+        success: false, 
+        error: 'No players found in battle' 
+      };
+    }
+    
+    // Determine winner (highest score)
+    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+    const winner = sortedPlayers[0];
+    const winnerId = winner.userId;
+    
+    console.log('🏆 Winner:', winner.name, 'with score:', winner.score);
+    
+    // Retry loop with exponential backoff
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 MySQL sync attempt ${attempt}/${maxRetries}`);
         
-        // Don't retry on 4xx errors (client errors)
-        if (response.status >= 400 && response.status < 500) {
+        const response = await fetch(
+          `http://localhost:4000/api/quizzes/battle/${gamePin}/sync-results`,
+          {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              players: players.map(p => ({
+                userId: p.userId,
+                score: p.score || 0,
+                name: p.name
+              })),
+              winnerId: winnerId,
+              completedAt: new Date().toISOString()
+            })
+          }
+        );
+        
+        // Check response
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error(`❌ Attempt ${attempt} failed with status ${response.status}:`, errorData);
+          
+          // Don't retry on 4xx errors (client errors)
+          if (response.status >= 400 && response.status < 500) {
+            await releaseSyncLock(gamePin);
+            return {
+              success: false,
+              error: errorData.error || `Server rejected sync: ${response.status}`,
+              attempt
+            };
+          }
+          
+          // Retry on 5xx errors (server errors)
+          if (attempt < maxRetries) {
+            const backoffMs = 1000 * Math.pow(2, attempt); // 2s, 4s, 8s
+            console.log(`⏳ Retrying in ${backoffMs}ms...`);
+            await new Promise(resolve => setTimeout(resolve, backoffMs));
+            continue;
+          }
+          
+          await releaseSyncLock(gamePin);
           return {
             success: false,
-            error: errorData.error || `Server rejected sync: ${response.status}`,
+            error: `Sync failed after ${maxRetries} attempts`,
             attempt
           };
         }
         
-        // Retry on 5xx errors (server errors)
-        if (attempt < maxRetries) {
-          const backoffMs = 1000 * Math.pow(2, attempt); // 2s, 4s, 8s
-          console.log(`⏳ Retrying in ${backoffMs}ms...`);
-          await new Promise(resolve => setTimeout(resolve, backoffMs));
-          continue;
+        // Parse successful response
+        const result = await response.json();
+        console.log('✅ MySQL sync successful:', result);
+        
+        // ✅ VERIFY the sync actually worked
+        if (!result.success) {
+          console.error('❌ Server reported sync failure:', result);
+          
+          if (attempt < maxRetries) {
+            const backoffMs = 1000 * Math.pow(2, attempt);
+            console.log(`⏳ Retrying in ${backoffMs}ms...`);
+            await new Promise(resolve => setTimeout(resolve, backoffMs));
+            continue;
+          }
+          
+          await releaseSyncLock(gamePin);
+          return {
+            success: false,
+            error: 'Server reported sync failure',
+            attempt
+          };
         }
         
-        return {
-          success: false,
-          error: `Sync failed after ${maxRetries} attempts`,
+        // ✅ Success! Store sync confirmation
+        const syncConfirmation = {
+          timestamp: Date.now(),
+          gamePin,
+          winnerId,
+          totalPlayers: players.length,
+          verified: true,
           attempt
         };
-      }
-      
-      // Parse successful response
-      const result = await response.json();
-      console.log('✅ MySQL sync successful:', result);
-      
-      // ✅ VERIFY the sync actually worked
-      if (!result.success) {
-        console.error('❌ Server reported sync failure:', result);
         
+        localStorage.setItem(syncKey, JSON.stringify(syncConfirmation));
+        
+        // Mark sync complete in Firebase
+        await markSyncComplete(gamePin, winnerId);
+        
+        // Release lock
+        await releaseSyncLock(gamePin);
+        
+        return {
+          success: true,
+          attempt,
+          winnerId,
+          totalPlayers: players.length
+        };
+        
+      } catch (error) {
+        console.error(`❌ Sync attempt ${attempt} threw error:`, error);
+        
+        // Network errors - retry
         if (attempt < maxRetries) {
           const backoffMs = 1000 * Math.pow(2, attempt);
           console.log(`⏳ Retrying in ${backoffMs}ms...`);
@@ -394,60 +507,31 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
           continue;
         }
         
+        await releaseSyncLock(gamePin);
         return {
           success: false,
-          error: 'Server reported sync failure',
+          error: `Network error after ${maxRetries} attempts: ${error.message}`,
           attempt
         };
       }
-      
-      // ✅ Success! Store sync confirmation
-      const syncConfirmation = {
-        timestamp: Date.now(),
-        gamePin,
-        winnerId,
-        totalPlayers: players.length,
-        verified: true,
-        attempt
-      };
-      
-      localStorage.setItem(syncKey, JSON.stringify(syncConfirmation));
-      
-      // 🆕 Mark sync complete using new function
-      await markSyncComplete(gamePin, winnerId);
-      
-      return {
-        success: true,
-        attempt,
-        winnerId,
-        totalPlayers: players.length
-      };
-      
-    } catch (error) {
-      console.error(`❌ Sync attempt ${attempt} threw error:`, error);
-      
-      // Network errors - retry
-      if (attempt < maxRetries) {
-        const backoffMs = 1000 * Math.pow(2, attempt);
-        console.log(`⏳ Retrying in ${backoffMs}ms...`);
-        await new Promise(resolve => setTimeout(resolve, backoffMs));
-        continue;
-      }
-      
-      return {
-        success: false,
-        error: `Network error after ${maxRetries} attempts: ${error.message}`,
-        attempt
-      };
     }
+    
+    // Should never reach here, but just in case
+    await releaseSyncLock(gamePin);
+    return {
+      success: false,
+      error: 'Sync failed for unknown reason',
+      attempt: maxRetries
+    };
+    
+  } catch (error) {
+    console.error('❌ Fatal sync error:', error);
+    await releaseSyncLock(gamePin);
+    return {
+      success: false,
+      error: `Fatal error: ${error.message}`
+    };
   }
-  
-  // Should never reach here, but just in case
-  return {
-    success: false,
-    error: 'Sync failed for unknown reason',
-    attempt: maxRetries
-  };
 };
 
 // ============================================
@@ -727,3 +811,5 @@ export const canSafelyCleanup = async (gamePin) => {
     return { canCleanup: false, reason: `Error: ${error.message}` };
   }
 };
+
+export { acquireSyncLock, releaseSyncLock };

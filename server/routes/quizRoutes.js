@@ -63,8 +63,28 @@ router.get('/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Quiz not found' });
     }
 
-    // Check if user has access (public or owner)
-    if (!quiz.is_public && quiz.created_by !== req.session.userId) {
+    // 🔥 IMPROVED ACCESS CHECK
+    const userId = req.session.userId;
+    const isOwner = quiz.created_by === userId;
+    const isPublic = quiz.is_public;
+    
+    // Check if user is in an active battle with this quiz
+    const activeBattle = await BattleParticipant.findOne({
+      include: [{
+        model: QuizBattle,
+        as: 'battle',
+        where: {
+          quiz_id: quizId,
+          status: ['waiting', 'in_progress'] // Active battles only
+        }
+      }],
+      where: { user_id: userId }
+    });
+    
+    const isInBattle = !!activeBattle;
+    
+    // Allow access if: owner OR public OR in active battle
+    if (!isOwner && !isPublic && !isInBattle) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -877,24 +897,26 @@ router.post('/battle/:gamePin/end', requireAuth, async (req, res) => {
 // ============================================
 // SYNC BATTLE RESULTS FROM FIREBASE TO MYSQL
 // ============================================
-// server/routes/quizRoutes.js
 
 router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
-  const transaction = await sequelize.transaction();
+  // ⚠️ CRITICAL: Use transaction with explicit rollback
+  let transaction;
   
   try {
     const { gamePin } = req.params;
     const { players, winnerId, completedAt } = req.body;
     const userId = req.session.userId;
     
-    console.log('🔄 Syncing battle results for PIN:', gamePin);
-    console.log('📊 Players data:', players);
-    console.log('🏆 Winner ID:', winnerId);
-    console.log('👤 Requester ID:', userId);
+    console.log('🔄 MySQL Sync Request - PIN:', gamePin);
+    console.log('📊 Players:', players.length);
+    console.log('🏆 Winner:', winnerId);
+    console.log('👤 Requester:', userId);
     
-    // Validation
+    // ============================================
+    // VALIDATION
+    // ============================================
+    
     if (!players || !Array.isArray(players) || players.length === 0) {
-      await transaction.rollback();
       return res.status(400).json({ 
         success: false,
         error: 'Invalid players data' 
@@ -902,46 +924,63 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     }
     
     if (!winnerId) {
-      await transaction.rollback();
       return res.status(400).json({ 
         success: false,
         error: 'Winner ID is required' 
       });
     }
     
-    // 1. Find battle in MySQL
+    // ============================================
+    // START TRANSACTION
+    // ============================================
+    
+    transaction = await sequelize.transaction({
+      isolationLevel: sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+    });
+    
+    console.log('🔒 Transaction started');
+    
+    // ============================================
+    // 1. FIND & LOCK BATTLE ROW
+    // ============================================
+    
     const battle = await QuizBattle.findOne({ 
       where: { game_pin: gamePin },
+      lock: transaction.LOCK.UPDATE, // Row-level lock
       transaction 
     });
     
     if (!battle) {
       await transaction.rollback();
-      console.error('❌ Battle not found in MySQL:', gamePin);
+      console.error('❌ Battle not found:', gamePin);
       return res.status(404).json({ 
         success: false,
         error: 'Battle not found in database' 
       });
     }
     
-    console.log('✅ Battle found:', battle.battle_id);
-    console.log('📌 Battle host_id:', battle.host_id);
-    console.log('📌 Battle status:', battle.status);
+    console.log('✅ Battle found and locked:', battle.battle_id);
     
-    // SECURITY: Verify requester is the host
+    // ============================================
+    // 2. SECURITY: VERIFY REQUESTER IS HOST
+    // ============================================
+    
     if (battle.host_id !== userId) {
       await transaction.rollback();
-      console.error('❌ Non-host tried to sync. Host:', battle.host_id, 'Requester:', userId);
+      console.error('❌ Non-host sync attempt. Host:', battle.host_id, 'Requester:', userId);
       return res.status(403).json({ 
         success: false,
         error: 'Only host can sync results' 
       });
     }
     
-    // IDEMPOTENCY: Prevent duplicate syncing
-    if (battle.status === 'completed') {
+    // ============================================
+    // 3. IDEMPOTENCY: CHECK IF ALREADY SYNCED
+    // ============================================
+    
+    if (battle.status === 'completed' && battle.winner_id) {
       await transaction.rollback();
-      console.log('⚠️ Battle already synced:', gamePin);
+      console.log('⏭️ Battle already synced:', gamePin);
       return res.status(200).json({ 
         success: true,
         message: 'Battle already synced',
@@ -952,7 +991,10 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
       });
     }
     
-    // ✅ 2. Update battle status to completed
+    // ============================================
+    // 4. UPDATE BATTLE STATUS
+    // ============================================
+    
     await battle.update({
       status: 'completed',
       winner_id: winnerId,
@@ -961,56 +1003,90 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     
     console.log('✅ Battle marked as completed');
     
-    // ✅ 3. Update all participants with final scores and rewards
+    // ============================================
+    // 5. UPDATE PARTICIPANTS & AWARD POINTS
+    // ============================================
+    
     let updatedCount = 0;
+    const updateErrors = [];
     
     for (const player of players) {
-      const pointsEarned = player.score * 10;
-      const expEarned = player.score * 5;
-      const isWinner = player.userId === winnerId;
-      
-      console.log(`📝 Updating player ${player.userId}: score=${player.score}, points=${pointsEarned}`);
-      
-      // Update participant record
-      const [updateCount] = await BattleParticipant.update(
-        { 
-          score: player.score,
-          points_earned: pointsEarned,
-          exp_earned: expEarned,
-          is_winner: isWinner
-        },
-        { 
-          where: { 
-            battle_id: battle.battle_id, 
-            user_id: player.userId 
+      try {
+        const pointsEarned = player.score * 10;
+        const expEarned = player.score * 5;
+        const isWinner = player.userId === winnerId;
+        
+        console.log(`📝 Updating player ${player.userId}: score=${player.score}, points=${pointsEarned}`);
+        
+        // Update participant record
+        const [updateCount] = await BattleParticipant.update(
+          { 
+            score: player.score,
+            points_earned: pointsEarned,
+            exp_earned: expEarned,
+            is_winner: isWinner
           },
-          transaction 
+          { 
+            where: { 
+              battle_id: battle.battle_id, 
+              user_id: player.userId 
+            },
+            transaction 
+          }
+        );
+        
+        if (updateCount === 0) {
+          console.warn('⚠️ Participant not found for user:', player.userId);
+          updateErrors.push(`Player ${player.userId} not found in battle`);
+          continue;
         }
-      );
-      
-      if (updateCount === 0) {
-        console.warn('⚠️ Participant not found for user:', player.userId);
-        continue;
+        
+        updatedCount++;
+        
+        // Award points to user account
+        await User.increment('points', {
+          by: pointsEarned,
+          where: { user_id: player.userId },
+          transaction
+        });
+        
+        console.log(`✅ Updated player ${player.userId}`);
+        
+      } catch (playerError) {
+        console.error(`❌ Error updating player ${player.userId}:`, playerError);
+        updateErrors.push(`Failed to update player ${player.userId}: ${playerError.message}`);
+        
+        // CRITICAL: If any player fails, rollback entire transaction
+        throw playerError;
       }
-      
-      updatedCount++;
-      
-      // Award points to user account
-      await User.increment('points', {
-        by: pointsEarned,
-        where: { user_id: player.userId },
-        transaction
-      });
-      
-      console.log(`✅ Updated player ${player.userId}`);
     }
     
+    // ============================================
+    // 6. VERIFY ALL PLAYERS UPDATED
+    // ============================================
+    
+    if (updatedCount !== players.length) {
+      await transaction.rollback();
+      console.error(`❌ Player update mismatch: ${updatedCount}/${players.length}`);
+      return res.status(500).json({
+        success: false,
+        error: `Only ${updatedCount}/${players.length} players updated`,
+        details: updateErrors
+      });
+    }
+    
+    // ============================================
+    // 7. COMMIT TRANSACTION
+    // ============================================
+    
     await transaction.commit();
+    console.log('✅ Transaction committed successfully');
     
-    console.log('✅ Battle results synced successfully for PIN:', gamePin);
+    // ============================================
+    // 8. SUCCESS RESPONSE
+    // ============================================
     
-    // ✅ Return success with verification data
-    res.json({ 
+    return res.json({ 
       success: true,
       message: 'Battle results synced successfully',
       battleId: battle.battle_id,
@@ -1021,9 +1097,22 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     });
     
   } catch (error) {
-    await transaction.rollback();
+    // ============================================
+    // ROLLBACK ON ANY ERROR
+    // ============================================
+    
+    if (transaction) {
+      try {
+        await transaction.rollback();
+        console.log('🔙 Transaction rolled back');
+      } catch (rollbackError) {
+        console.error('❌ Rollback failed:', rollbackError);
+      }
+    }
+    
     console.error('❌ Sync error:', error);
-    res.status(500).json({ 
+    
+    return res.status(500).json({ 
       success: false,
       error: 'Failed to sync battle results',
       details: error.message 

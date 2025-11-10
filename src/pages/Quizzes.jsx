@@ -14,6 +14,9 @@ import { useQuizHandlers } from '../components/quizzes/hooks/useQuizHandlers';
 import { VIEWS, COUNTDOWN_SECONDS } from '../components/quizzes/utils/constants';
 import { validateAllQuestions } from '../components/quizzes/utils/validation';
 import { listenToQuizQuestions, storeQuizQuestions, listenToBattleStatus } from '../firebase/battleOperations';
+import { ReconnectionBanner } from '../components/quizzes/views/ReconnectionModal';
+import { checkForReconnectionOpportunity } from '../firebase/reconnectionTokens';
+import { rejoinBattle } from '../firebase/connectionManager';
 
 const styles = `
   @keyframes slideIn {
@@ -147,6 +150,9 @@ function QuizzesPage() {
     quizDataHook.updateUiState({ currentView: targetView });
   });
 
+  // 🔄 RECONNECTION STATE
+  const [reconnectionOpportunity, setReconnectionOpportunity] = useState(null);
+
   // Fetch current user on mount
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -181,6 +187,94 @@ function QuizzesPage() {
     currentUser?.id,
     quizDataHook.gameState.isHost
   );
+  
+  // ============================================
+  // CHECK FOR RECONNECTION ON PAGE LOAD
+  // ============================================
+  
+  useEffect(() => {
+    const opportunity = checkForReconnectionOpportunity();
+    
+    if (opportunity) {
+      console.log('🔄 Found reconnection opportunity:', opportunity);
+      setReconnectionOpportunity(opportunity);
+    }
+  }, []);
+  
+  // ============================================
+  // HANDLE RECONNECTION FROM BANNER
+  // ============================================
+  
+  const handleBannerReconnect = async () => {
+    if (!reconnectionOpportunity) return;
+    
+    console.log('🔄 Banner reconnect clicked');
+    
+    try {
+      const result = await rejoinBattle(
+        reconnectionOpportunity.gamePin,
+        reconnectionOpportunity.userId
+      );
+      
+      if (result.success) {
+        console.log('✅ Rejoined battle via banner:', result.playerData);
+        
+        // ✅ SIMPLIFIED: All data is now in result.playerData
+        const { quizId, battleId, quizTitle, gamePin } = result.playerData;
+        
+        if (!quizId) {
+          alert('Failed to load quiz data - quiz ID missing');
+          setReconnectionOpportunity(null);
+          return;
+        }
+        
+        // Load quiz questions from API
+        const data = await quizAPI.loadQuizWithQuestions(quizId);
+        
+        if (data) {
+          quizDataHook.setQuestions(data.questions);
+          quizDataHook.updateQuizData({ 
+            selected: {
+              id: quizId,
+              title: quizTitle || data.quiz.title || 'Quiz Battle',
+              questionCount: data.questions.length
+            }
+          });
+          
+          // Set game state
+          quizDataHook.updateGameState({
+            gamePin: gamePin,
+            battleId: battleId,
+            isHost: false,
+            currentUserId: reconnectionOpportunity.userId
+          });
+          
+          // Go to battle view
+          quizDataHook.updateUiState({ currentView: VIEWS.BATTLE });
+          
+          // Clear opportunity
+          setReconnectionOpportunity(null);
+          
+          console.log('✅ Reconnection complete!');
+        } else {
+          alert('Failed to load quiz questions');
+          setReconnectionOpportunity(null);
+        }
+      } else {
+        alert('Failed to rejoin: ' + (result.error || 'Unknown error'));
+        setReconnectionOpportunity(null);
+      }
+    } catch (error) {
+      console.error('❌ Reconnection failed:', error);
+      alert('Failed to rejoin battle: ' + error.message);
+      setReconnectionOpportunity(null);
+    }
+  };
+  
+  const handleDismissBanner = () => {
+    console.log('🚫 Reconnection banner dismissed');
+    setReconnectionOpportunity(null);
+  };
 
   // ============================================
   // EFFECTS
@@ -389,15 +483,21 @@ function QuizzesPage() {
     return (
       <>
         <style>{styles}</style>
+        {/* 🔄 RECONNECTION BANNER - Only show when not in active game */}
+        <ReconnectionBanner
+          opportunity={reconnectionOpportunity}
+          onReconnect={handleBannerReconnect}
+          onDismiss={handleDismissBanner}
+        />
         <QuizGame
           key={`battle-${quizDataHook.gameState.quizKey}`}
           quiz={{ 
-          ...quizDataHook.quizData.selected, 
-          questions: quizDataHook.questions,
-          gamePin: quizDataHook.gameState.gamePin,
-          currentUserId: currentUser?.id,
-          isHost: quizDataHook.gameState.isHost,
-        }}
+            ...quizDataHook.quizData.selected, 
+            questions: quizDataHook.questions,
+            gamePin: quizDataHook.gameState.gamePin,
+            currentUserId: currentUser?.id,
+            isHost: quizDataHook.gameState.isHost,
+          }}
           mode="battle"
           onBack={handlers.handleBackToList}
           onComplete={handlers.handleShowLeaderboard}
@@ -447,6 +547,13 @@ function QuizzesPage() {
   return (
     <>
       <style>{styles}</style>
+      
+      {/* 🔄 RECONNECTION BANNER - Show on landing page too */}
+      <ReconnectionBanner
+        opportunity={reconnectionOpportunity}
+        onReconnect={handleBannerReconnect}
+        onDismiss={handleDismissBanner}
+      />
       
       <QuizLandingView
         quizData={quizDataHook.quizData}

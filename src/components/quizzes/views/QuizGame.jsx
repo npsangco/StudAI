@@ -6,6 +6,8 @@ import { QuizQuestion } from '../QuizCore';
 import { LiveLeaderboard } from './QuizLiveLeaderboard';
 import { ANSWER_DISPLAY_DURATION, MATCHING_REVIEW_DURATION_BATTLE } from '../utils/constants';
 import { listenToPlayers, updatePlayerScore, updatePlayerProgress } from '../../../firebase/battleOperations';
+import { useReconnection } from '../hooks/useReconnection';
+import { ReconnectionModal } from './ReconnectionModal';
 
 const QuizGame = ({ 
   quiz, 
@@ -22,15 +24,15 @@ const QuizGame = ({
   
   const game = useQuizGame(questions, 30);
   const [userPlayer] = useState({ id: 'user', name: 'You', initial: 'Y', score: 0 });
-  
-  // 🔥 GET REAL PLAYERS from props
+
+  // GET REAL PLAYERS from props
   const [realPlayers, setRealPlayers] = useState([]);
 
   // Track if waiting for other players
   const [isWaitingForPlayers, setIsWaitingForPlayers] = useState(false);
   const [playersWhoAnswered, setPlayersWhoAnswered] = useState(new Set());
 
-  // 🔥 Listen to players who have answered (battle mode only)
+  // Listen to players who have answered (battle mode only)
   useEffect(() => {
     if (mode !== 'battle' || !quiz?.gamePin || !isWaitingForPlayers) return;
     
@@ -112,6 +114,99 @@ const QuizGame = ({
     game.isProcessingRef.current = isProcessing;
   }, [isProcessing, game.isProcessingRef]);
 
+  // ============================================
+  // RECONNECTION HOOK
+  // ============================================
+  
+  const reconnection = useReconnection(
+    quiz?.gamePin,
+    quiz?.currentUserId,
+    { name: 'You', userId: quiz?.currentUserId },
+    mode === 'battle' // Only active in battle mode
+  );
+  
+  // ENSURE GAME STARTS UNPAUSED
+  useEffect(() => {
+    if (mode === 'battle') {
+      // On initial mount, ensure game is NOT paused
+      game.setIsPaused(false);
+      console.log('✅ Battle game initialized - starting unpaused');
+    }
+  }, []); // Empty dependency array = runs once on mount
+
+  // ============================================
+  // RECONNECTION HANDLERS 
+  // ============================================
+  
+  const handleReconnection = async () => {
+    console.log('🔄 Handling reconnection...');
+    const result = await reconnection.attemptReconnection();
+    
+    if (result.success) {
+      console.log('✅ Reconnected! Restoring state:', result.playerData);
+      
+      // Use proper game state setters
+      if (result.playerData.score !== undefined) {
+        game.scoreRef.current = result.playerData.score;
+        // Force re-render by updating a dummy state if needed
+      }
+      
+      // Jump to correct question if provided
+      if (result.playerData.currentQuestion !== undefined) {
+        // The game hook should handle this, or we manually set it
+        const targetIndex = result.playerData.currentQuestion;
+        if (targetIndex < questions.length) {
+          game.currentQuestionIndex = targetIndex;
+        }
+      }
+      
+      // Resume game
+      game.setIsPaused(false);
+      
+      return result;
+    } else {
+      console.error('❌ Reconnection failed:', result.error);
+      return result;
+    }
+  };
+  
+  const handleGiveUpReconnection = () => {
+    console.log('👋 User gave up on reconnection');
+    reconnection.disconnect();
+    onBack();
+  };
+  
+  // ============================================
+  // HANDLE DISCONNECTION DURING GAME
+  // ============================================
+  
+  useEffect(() => {
+    if (mode === 'battle') {
+      // Only pause if explicitly disconnected (reconnectionAvailable = true)
+      if (reconnection.connectionState.reconnectionAvailable) {
+        game.setIsPaused(true);
+        console.log('⚠️ Connection lost - game paused');
+      } else if (!reconnection.connectionState.reconnectionAvailable && !reconnection.connectionState.isReconnecting) {
+        // Unpause when connection is stable (not reconnecting, no reconnection needed)
+        game.setIsPaused(false);
+        console.log('✅ Connection stable - game running');
+      }
+    }
+  }, [reconnection.connectionState.reconnectionAvailable, reconnection.connectionState.isReconnecting, mode]);
+
+  // ============================================
+  // CLEANUP ON UNMOUNT
+  // ============================================
+
+  useEffect(() => {
+    return () => {
+      if (mode === 'battle') {
+        console.log('🧹 QuizGame unmounting - cleaning up connection');
+        reconnection.disconnect();
+      }
+    };
+  }, [mode]);
+
   const handleTimeUp = () => {
     // Prevent multiple timeout recordings
     if (timeoutHandledRef.current) return;
@@ -131,7 +226,7 @@ const QuizGame = ({
       setAnswersHistory(newAnswersHistory);
     }
     
-    // 🔥 UPDATE: Mark progress in Firebase even on timeout (battle mode)
+    // Mark progress in Firebase even on timeout (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
         .then(() => {
@@ -182,7 +277,7 @@ const QuizGame = ({
     if (isCorrect) {
       game.updateScore(1);
       
-      // 🔥 Update score in Firebase for real-time leaderboard
+      // Update score in Firebase for real-time leaderboard
       if (mode === 'battle' && quiz?.gamePin) {
         const newScore = game.scoreRef.current + 1;
         updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
@@ -194,7 +289,7 @@ const QuizGame = ({
       }
     }
     
-    // 🔥 Update progress in Firebase (battle mode)
+    // Update progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
         .catch(err => console.error('Failed to update progress:', err));
@@ -242,7 +337,7 @@ const QuizGame = ({
     if (isCorrect) {
       game.updateScore(1);
       
-      // 🔥 Update score in Firebase
+      // Update score in Firebase
       if (mode === 'battle' && quiz?.gamePin) {
         const newScore = game.scoreRef.current + 1;
         updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
@@ -254,7 +349,7 @@ const QuizGame = ({
       }
     }
     
-    // 🔥 Update progress in Firebase (battle mode)
+    // Update progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
         .catch(err => console.error('Failed to update progress:', err));
@@ -313,7 +408,7 @@ const QuizGame = ({
       }
     }
     
-    // 🔥 Update progress in Firebase (battle mode)
+    // Update progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
         .catch(err => console.error('Failed to update progress:', err));
@@ -436,7 +531,7 @@ const QuizGame = ({
       </div>
     );
   }
-
+  
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Yellow Background */}
@@ -475,7 +570,7 @@ const QuizGame = ({
         </div>
       )}
     
-      {/* MAIN CONTENT - Responsive Layout */}
+      {/* MAIN CONTENT */}
       {mode === 'battle' ? (
         // BATTLE MODE - Responsive leaderboard
         <>
@@ -598,6 +693,18 @@ const QuizGame = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* RECONNECTION MODAL */}
+      {mode === 'battle' && (
+        <ReconnectionModal
+          isOpen={reconnection.connectionState.reconnectionAvailable}
+          onReconnect={handleReconnection}
+          onGiveUp={handleGiveUpReconnection}
+          isReconnecting={reconnection.connectionState.isReconnecting}
+          gamePin={quiz?.gamePin}
+          playerName="You"
+        />
       )}
     </div>
   );
