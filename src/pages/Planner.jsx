@@ -1,24 +1,10 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { ChevronLeft, Plus, Trash2, Info, X, Calendar } from "lucide-react";
-
-const API_BASE = "http://localhost:4000";
+import { plannerService } from "../utils/syncService";
 
 export default function Planner() {
   const [currentYear] = useState(new Date().getFullYear());
-  const [selectedYear, setSelectedYear] = useState(() => {
-    const saved = localStorage.getItem('plannerSelectedYear');
-    if (saved) {
-      const savedYear = parseInt(saved);
-      // Check if saved year has ended
-      if (savedYear < new Date().getFullYear()) {
-        localStorage.removeItem('plannerSelectedYear');
-        return null;
-      }
-      return savedYear;
-    }
-    return null;
-  });
+  const [selectedYear, setSelectedYear] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [plans, setPlans] = useState([]);
@@ -26,7 +12,6 @@ export default function Planner() {
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [showIndicatorsInfo, setShowIndicatorsInfo] = useState(false);
 
   const months = [
@@ -50,13 +35,12 @@ export default function Planner() {
 
   const fetchPlans = async () => {
     setLoading(true);
-    setError(null);
     try {
-      const res = await axios.get(`${API_BASE}/api/plans`, { withCredentials: true });
-      setPlans(Array.isArray(res.data.plans) ? res.data.plans : []);
+      const fetchedPlans = await plannerService.getAllPlans();
+      setPlans(Array.isArray(fetchedPlans) ? fetchedPlans : []);
     } catch (err) {
       console.error("Failed to fetch plans:", err);
-      setError("Failed to load plans");
+      setPlans([]);
     } finally {
       setLoading(false);
     }
@@ -72,14 +56,12 @@ export default function Planner() {
 
   const handleYearSelect = (year) => {
     setSelectedYear(year);
-    localStorage.setItem('plannerSelectedYear', year.toString());
   };
 
   const handleYearChange = () => {
     setSelectedYear(null);
     setSelectedMonth(null);
     setSelectedDate(null);
-    localStorage.removeItem('plannerSelectedYear');
   };
 
   const getDaysInMonth = (year, month) => {
@@ -127,25 +109,22 @@ export default function Planner() {
 
   const addPlan = async () => {
     if (!title.trim() || !selectedDate) return;
-    setError(null);
 
     const dueDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
 
     try {
-      const res = await axios.post(
-        `${API_BASE}/api/plans`,
-        { 
-          title: title.trim(), 
-          description: desc.trim(), 
-          due_date: dueDate 
-        },
-        { withCredentials: true }
-      );
+      const result = await plannerService.addPlan({
+        title: title.trim(),
+        description: desc.trim(),
+        due_date: dueDate
+      });
 
-      if (res.data.plan) {
-        setPlans(prev => [...prev, res.data.plan]);
-      } else {
-        await fetchPlans();
+      if (result.success) {
+        setPlans(prev => [...prev, result.plan]);
+        
+        if (result.queued) {
+          alert('📱 Offline: Plan will sync when back online');
+        }
       }
 
       setTitle("");
@@ -153,7 +132,7 @@ export default function Planner() {
       setShowForm(false);
     } catch (err) {
       console.error("Failed to create plan:", err);
-      setError("Failed to create plan");
+      alert('Failed to create plan. Please try again.');
     }
   };
 
@@ -161,13 +140,19 @@ export default function Planner() {
     if (!planner_id) return;
     if (!window.confirm("Are you sure you want to delete this plan?")) return;
 
-    setError(null);
     try {
-      await axios.delete(`${API_BASE}/api/plans/${planner_id}`, { withCredentials: true });
-      setPlans(prev => prev.filter(p => p.planner_id !== planner_id));
+      const result = await plannerService.deletePlan(planner_id);
+      
+      if (result.success) {
+        setPlans(prev => prev.filter(p => p.planner_id !== planner_id && p.id !== planner_id));
+        
+        if (result.queued) {
+          alert('📱 Offline: Delete will sync when back online');
+        }
+      }
     } catch (err) {
       console.error("Failed to delete plan:", err);
-      setError("Failed to delete plan");
+      alert('Failed to delete plan. Please try again.');
     }
   };
 
@@ -183,22 +168,21 @@ export default function Planner() {
   };
 
   const renderYearSelection = () => (
-    <div className="min-h-screen p-4 sm:p-8">
+    <div className="min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-gray-900 mb-6">Planner</h1>
-        <div className="text-center mb-12">
-          <Calendar className="w-16 h-16 mx-auto mb-4 text-indigo-600" />
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-800 mb-2">Select Year</h1>
-          <p className="text-lg text-gray-600">Choose a year to start planning</p>
+        <div className="text-center mb-8 sm:mb-12">
+          <Calendar className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-indigo-600" />
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-2">Select Year</h1>
+          <p className="text-base sm:text-lg text-gray-600">Choose a year to start planning</p>
         </div>
-        <div className="grid lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           {getYearRange().map(year => {
             const isCurrent = year === currentYear;
             return (
               <button
                 key={year}
                 onClick={() => handleYearSelect(year)}
-                className={`group relative p-8 sm:p-10 rounded-2xl border-2 text-2xl sm:text-3xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl ${
+                className={`group relative p-6 sm:p-8 md:p-10 rounded-2xl border-2 text-xl sm:text-2xl md:text-3xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl ${
                   isCurrent
                     ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-blue-600 shadow-xl'
                     : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300 shadow-lg'
@@ -206,7 +190,7 @@ export default function Planner() {
               >
                 {year}
                 {isCurrent && (
-                  <span className="absolute top-3 right-3 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">
+                  <span className="absolute top-2 right-2 sm:top-3 sm:right-3 px-2 sm:px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">
                     Current
                   </span>
                 )}
@@ -219,24 +203,24 @@ export default function Planner() {
   );
 
   const renderMonthSelection = () => (
-    <div className="min-h-screen  p-4 sm:p-8">
+    <div className="min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex items-center justify-between mb-8 sm:mb-12">
           <button
             onClick={handleYearChange}
-            className="flex items-center gap-2 px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl font-semibold text-gray-700"
+            className="flex items-center gap-2 px-3 sm:px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl font-semibold text-gray-700"
             aria-label="Back to year selection"
           >
             <ChevronLeft className="w-5 h-5" />
-            Back
+            <span className="hidden sm:inline">Back</span>
           </button>
-          <h2 className="text-4xl sm:text-5xl font-bold text-gray-800">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-800">
             {selectedYear}
           </h2>
-          <div className="w-28"></div>
+          <div className="w-12 sm:w-28"></div>
         </div>
         
-        <div className="grid lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           {months.map((month, idx) => {
             const indicators = getMonthIndicator(selectedYear, idx);
             const today = new Date();
@@ -246,32 +230,32 @@ export default function Planner() {
               <button
                 key={month}
                 onClick={() => setSelectedMonth(idx)}
-                className={`group relative p-8 rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl ${
+                className={`group relative p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl ${
                   isCurrentMonth
                     ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-blue-600 shadow-xl'
                     : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300 shadow-lg'
                 }`}
               >
-                <div className="text-xl sm:text-2xl font-bold mb-4">{month}</div>
+                <div className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">{month}</div>
                 <div className="flex justify-center gap-2 min-h-[24px]">
                   {indicators.length > 0 ? (
                     <>
                       {indicators.includes('green') && (
-                        <div className="w-4 h-4 rounded-full bg-green-500 shadow-md" title="Has upcoming plans"></div>
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-green-500 shadow-md" title="Has upcoming plans"></div>
                       )}
                       {indicators.includes('yellow') && (
-                        <div className="w-4 h-4 rounded-full bg-yellow-400 shadow-md" title="Has urgent plans"></div>
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-yellow-400 shadow-md" title="Has urgent plans"></div>
                       )}
                       {indicators.includes('red') && (
-                        <div className="w-4 h-4 rounded-full bg-red-500 shadow-md" title="Has overdue plans"></div>
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-red-500 shadow-md" title="Has overdue plans"></div>
                       )}
                     </>
                   ) : (
-                    <span className={`text-sm ${isCurrentMonth ? 'text-white/70' : 'text-gray-400'}`}>No plans</span>
+                    <span className={`text-xs sm:text-sm ${isCurrentMonth ? 'text-white/70' : 'text-gray-400'}`}>No plans</span>
                   )}
                 </div>
                 {isCurrentMonth && (
-                  <span className="absolute top-3 right-3 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">
+                  <span className="absolute top-2 right-2 sm:top-3 sm:right-3 px-2 sm:px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">
                     Current
                   </span>
                 )}
@@ -293,7 +277,7 @@ export default function Planner() {
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="p-4"></div>);
+      days.push(<div key={`empty-${i}`} className="p-2 sm:p-4"></div>);
     }
 
     for (let day = 1; day <= daysInMonth; day++) {
@@ -307,7 +291,7 @@ export default function Planner() {
         <button
           key={day}
           onClick={() => setSelectedDate(day)}
-          className={`group relative p-4 sm:p-6 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl min-h-[100px] sm:min-h-[120px] flex flex-col items-center justify-center ${
+          className={`group relative p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl min-h-[80px] sm:min-h-[100px] md:min-h-[120px] flex flex-col items-center justify-center ${
             isToday 
               ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-blue-600 shadow-xl' 
               : hasPlan
@@ -318,20 +302,20 @@ export default function Planner() {
           <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-white/80' : 'text-gray-500'}`}>
             {dayName}
           </div>
-          <div className="text-xl sm:text-2xl font-bold mb-2">{day}</div>
+          <div className="text-lg sm:text-xl md:text-2xl font-bold mb-2">{day}</div>
           <div className="flex justify-center gap-1 min-h-[16px]">
             {indicators.includes('green') && (
-              <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-green-500 shadow-sm"></div>
+              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 rounded-full bg-green-500 shadow-sm"></div>
             )}
             {indicators.includes('yellow') && (
-              <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-yellow-400 shadow-sm"></div>
+              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 rounded-full bg-yellow-400 shadow-sm"></div>
             )}
             {indicators.includes('red') && (
-              <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-red-500 shadow-sm"></div>
+              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 rounded-full bg-red-500 shadow-sm"></div>
             )}
           </div>
           {isToday && (
-            <span className="absolute top-2 right-2 px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">
+            <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">
               Today
             </span>
           )}
@@ -340,19 +324,19 @@ export default function Planner() {
     }
 
     return (
-      <div className="min-h-screen  p-4 sm:p-8">
+      <div className="min-h-screen p-4 sm:p-6 md:p-8">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center justify-between mb-8 sm:mb-12 gap-2">
             <button
               onClick={() => setSelectedMonth(null)}
-              className="flex items-center gap-2 px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl font-semibold text-gray-700"
+              className="flex items-center gap-2 px-3 sm:px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl font-semibold text-gray-700"
               aria-label="Back to month selection"
             >
               <ChevronLeft className="w-5 h-5" />
-              Back
+              <span className="hidden sm:inline">Back</span>
             </button>
-            <div className="text-center">
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-800">
+            <div className="text-center flex-1">
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800">
                 {months[selectedMonth]} {selectedYear}
               </h2>
             </div>
@@ -366,10 +350,10 @@ export default function Planner() {
               </button>
 
               {showIndicatorsInfo && (
-                <div className="absolute top-full right-0 mt-4 z-50 w-80 bg-white border-2 border-indigo-200 rounded-2xl p-6 shadow-2xl animate-in fade-in slide-in-from-top-2">
+                <div className="absolute top-full right-0 mt-4 z-50 w-72 sm:w-80 bg-white border-2 border-indigo-200 rounded-2xl p-4 sm:p-6 shadow-2xl">
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                      <Info className="w-5 h-5 text-indigo-600" />
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                      <Info className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
                       Plan Indicators
                     </h3>
                     <button
@@ -380,22 +364,22 @@ export default function Planner() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                      <div className="w-4 h-4 rounded-full bg-green-500 shadow-md flex-shrink-0"></div>
-                      <span className="text-sm text-gray-700">Due in <strong>more than 3 days</strong></span>
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-green-50 rounded-lg">
+                      <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-green-500 shadow-md flex-shrink-0"></div>
+                      <span className="text-xs sm:text-sm text-gray-700">Due in <strong>more than 3 days</strong></span>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
-                      <div className="w-4 h-4 rounded-full bg-yellow-400 shadow-md flex-shrink-0"></div>
-                      <span className="text-sm text-gray-700">Due <strong>within 3 days</strong></span>
+                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-yellow-50 rounded-lg">
+                      <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-yellow-400 shadow-md flex-shrink-0"></div>
+                      <span className="text-xs sm:text-sm text-gray-700">Due <strong>within 3 days</strong></span>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg">
-                      <div className="w-4 h-4 rounded-full bg-red-500 shadow-md flex-shrink-0"></div>
-                      <span className="text-sm text-gray-700"><strong>Overdue</strong> plans</span>
+                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-red-50 rounded-lg">
+                      <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-red-500 shadow-md flex-shrink-0"></div>
+                      <span className="text-xs sm:text-sm text-gray-700"><strong>Overdue</strong> plans</span>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border-t-2 border-blue-200">
-                      <div className="w-4 h-4 rounded-full bg-blue-500 shadow-md flex-shrink-0"></div>
-                      <span className="text-sm text-gray-700"><strong>Today's date</strong></span>
+                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-blue-50 rounded-lg border-t-2 border-blue-200">
+                      <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-blue-500 shadow-md flex-shrink-0"></div>
+                      <span className="text-xs sm:text-sm text-gray-700"><strong>Today's date</strong></span>
                     </div>
                   </div>
                 </div>
@@ -403,7 +387,7 @@ export default function Planner() {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 sm:gap-3 md:gap-4">
             {days}
           </div>
         </div>
@@ -416,68 +400,68 @@ export default function Planner() {
     const dateString = `${months[selectedMonth]} ${selectedDate}, ${selectedYear}`;
 
     return (
-      <div className="min-h-screen  p-4 sm:p-8">
+      <div className="min-h-screen p-4 sm:p-6 md:p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-6 sm:mb-8 gap-2">
             <button
               onClick={() => setSelectedDate(null)}
-              className="flex items-center gap-2 px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl font-semibold text-gray-700"
+              className="flex items-center gap-2 px-3 sm:px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl font-semibold text-gray-700"
               aria-label="Back to calendar"
             >
               <ChevronLeft className="w-5 h-5" />
-              Back
+              <span className="hidden sm:inline">Back</span>
             </button>
-            <div className="text-center">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
+            <div className="text-center flex-1">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">
                 {dateString}
               </h2>
             </div>
-            <div className="w-28"></div>
+            <div className="w-12 sm:w-28"></div>
           </div>
 
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl text-red-700 text-center shadow-lg">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-4 mb-8">
+          <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
             {selectedDatePlans.length === 0 ? (
-              <div className="text-center py-16 bg-white rounded-2xl shadow-lg border-2 border-gray-100">
-                <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-xl text-gray-400 font-medium">No plans for this day</p>
-                <p className="text-sm text-gray-400 mt-2">Add a plan to get started</p>
+              <div className="text-center py-12 sm:py-16 bg-white rounded-2xl shadow-lg border-2 border-gray-100">
+                <Calendar className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-gray-300" />
+                <p className="text-lg sm:text-xl text-gray-400 font-medium">No plans for this day</p>
+                <p className="text-xs sm:text-sm text-gray-400 mt-2">Add a plan to get started</p>
               </div>
             ) : (
               selectedDatePlans.map(plan => {
                 const indicators = getPlanIndicators(selectedYear, selectedMonth, selectedDate);
                 const planIndicator = indicators[selectedDatePlans.indexOf(plan)];
+                const isTemp = typeof plan.id === 'string' && plan.id.startsWith('temp_');
                 
                 return (
                   <div
-                    key={plan.planner_id}
-                    className={`bg-white border-2 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start gap-4 shadow-lg hover:shadow-xl transition-all ${
+                    key={plan.planner_id || plan.id}
+                    className={`bg-white border-2 p-4 sm:p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 shadow-lg hover:shadow-xl transition-all ${
                       planIndicator === 'red' ? 'border-red-200 bg-red-50/50' :
                       planIndicator === 'yellow' ? 'border-yellow-200 bg-yellow-50/50' :
                       'border-green-200 bg-green-50/50'
                     }`}
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className={`w-3 h-3 rounded-full shadow-sm ${
+                    <div className="flex-1 w-full sm:w-auto">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <div className={`w-3 h-3 rounded-full shadow-sm flex-shrink-0 ${
                           planIndicator === 'red' ? 'bg-red-500' :
                           planIndicator === 'yellow' ? 'bg-yellow-400' :
                           'bg-green-500'
                         }`}></div>
-                        <h3 className="text-xl font-bold text-gray-800">{plan.title}</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 break-words">{plan.title}</h3>
+                        {isTemp && (
+                          <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full border border-amber-300">
+                            Pending Sync
+                          </span>
+                        )}
                       </div>
                       {plan.description && (
-                        <p className="text-gray-600 ml-5">{plan.description}</p>
+                        <p className="text-sm sm:text-base text-gray-600 ml-0 sm:ml-5 break-words">{plan.description}</p>
                       )}
                     </div>
                     <button
-                      onClick={() => deletePlan(plan.planner_id)}
-                      className="flex items-center gap-2 bg-red-500 text-white px-5 py-2.5 rounded-xl hover:bg-red-600 font-semibold transition-all shadow-md hover:shadow-lg"
+                      onClick={() => deletePlan(plan.planner_id || plan.id)}
+                      className="flex items-center justify-center gap-2 bg-red-500 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-red-600 font-semibold transition-all shadow-md hover:shadow-lg w-full sm:w-auto text-sm sm:text-base"
                     >
                       <Trash2 className="w-4 h-4" />
                       Delete
@@ -489,33 +473,33 @@ export default function Planner() {
           </div>
 
           {showForm ? (
-            <div className="bg-white border-2 border-indigo-200 rounded-2xl p-6 space-y-4 shadow-xl">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Add New Plan</h3>
+            <div className="bg-white border-2 border-indigo-200 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-xl">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Add New Plan</h3>
               <input
                 type="text"
                 placeholder="Plan Title *"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:border-indigo-400 focus:outline-none transition-colors"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors"
                 autoFocus
               />
               <textarea
                 placeholder="Plan Description (optional)"
                 value={desc}
                 onChange={(e) => setDesc(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl min-h-[120px] text-base focus:border-indigo-400 focus:outline-none transition-colors resize-none"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl min-h-[100px] sm:min-h-[120px] text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors resize-none"
               />
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={addPlan}
                   disabled={!title.trim()}
-                  className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all shadow-lg ${
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-semibold transition-all shadow-lg ${
                     title.trim()
                       ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 hover:shadow-xl"
                       : "bg-gray-200 text-gray-400 cursor-not-allowed"
                   }`}
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                   Create Plan
                 </button>
                 <button
@@ -524,7 +508,7 @@ export default function Planner() {
                     setTitle("");
                     setDesc("");
                   }}
-                  className="px-6 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 text-base font-semibold transition-all"
+                  className="px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 text-sm sm:text-base font-semibold transition-all"
                 >
                   Cancel
                 </button>
@@ -533,9 +517,9 @@ export default function Planner() {
           ) : (
             <button
               onClick={() => setShowForm(true)}
-              className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-white border-2 border-dashed border-indigo-300 rounded-2xl hover:bg-indigo-50 hover:border-indigo-400 text-lg font-semibold text-gray-700 transition-all shadow-lg hover:shadow-xl"
+              className="w-full flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white border-2 border-dashed border-indigo-300 rounded-2xl hover:bg-indigo-50 hover:border-indigo-400 text-base sm:text-lg font-semibold text-gray-700 transition-all shadow-lg hover:shadow-xl"
             >
-              <Plus className="w-6 h-6" />
+              <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
               Add a plan
             </button>
           )}
@@ -547,7 +531,7 @@ export default function Planner() {
   return (
     <>
       {loading && (
-        <div className="fixed top-4 right-4 bg-white px-6 py-3 rounded-xl shadow-2xl border-2 border-indigo-200 text-base font-semibold text-gray-700 z-50 animate-pulse">
+        <div className="fixed top-4 right-4 bg-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl shadow-2xl border-2 border-indigo-200 text-sm sm:text-base font-semibold text-gray-700 z-50 animate-pulse">
           Loading...
         </div>
       )}

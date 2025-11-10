@@ -1,7 +1,7 @@
-// NoteEditor.jsx - Offline-capable editor with auto-save
+// NoteEditor.jsx - Fixed auto-save and reload issues
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, Save, Share2, Trash2, MessageCircle, Wifi, WifiOff, Cloud, CloudOff } from 'lucide-react';
-import { syncService } from '../utils/syncService';
+import { ArrowLeft, Save, Share2, Trash2, MessageCircle, Wifi, WifiOff, Cloud, CloudOff, FileDown } from 'lucide-react';
+import { notesService } from '../utils/syncService';
 
 const NoteEditor = ({ 
   note, 
@@ -10,6 +10,7 @@ const NoteEditor = ({
   onShare, 
   onBack, 
   onChatbot, 
+  onExport,
   formatDate 
 }) => {
   const [editTitle, setEditTitle] = useState(note.title);
@@ -19,9 +20,14 @@ const NoteEditor = ({
   const [lastSaved, setLastSaved] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const autoSaveTimeoutRef = useRef(null);
+  const noteRef = useRef(note);
+  const saveNoteRef = useRef();
 
+  // Create a stable saveNote function with useRef to avoid dependency issues
   const saveNote = useCallback(async (isAutoSave = false) => {
-    if (isSaving) return;
+    // Don't save if no changes or already saving
+    const hasChanges = editTitle !== noteRef.current.title || editContent !== noteRef.current.content;
+    if (!hasChanges || isSaving) return;
     
     setIsSaving(true);
     
@@ -29,14 +35,13 @@ const NoteEditor = ({
       const wordCount = editContent.trim() ? editContent.trim().split(/\s+/).length : 0;
       
       const updatedNote = {
-        id: note.id, // Ensure ID is included
+        id: noteRef.current.id,
         title: editTitle || 'Untitled Note',
         content: editContent,
         words: wordCount
       };
       
-      // Use syncService for offline-capable saving
-      const result = await syncService.updateNote(updatedNote.id, {
+      const result = await notesService.updateNote(updatedNote.id, {
         title: updatedNote.title,
         content: updatedNote.content,
         words: updatedNote.words
@@ -44,42 +49,65 @@ const NoteEditor = ({
       
       if (result.queued) {
         console.log('📱 Note saved offline, will sync when online');
-      }
-      
-      onSave(updatedNote);
-      setHasUnsavedChanges(false);
-      setLastSaved(new Date());
-      
-      if (!isAutoSave) {
-        // Show notification for manual saves
-        showNotification(result.queued ? 'Saved offline ✓' : 'Saved ✓', 'success');
+        
+        // Update the local note state to reflect the saved content
+        onSave(updatedNote);
+        setHasUnsavedChanges(false);
+        setLastSaved(new Date());
+        
+        if (!isAutoSave) {
+          showNotification('Saved offline ✓', 'success');
+        }
+      } else {
+        // Online save
+        onSave(updatedNote);
+        setHasUnsavedChanges(false);
+        setLastSaved(new Date());
+        
+        if (!isAutoSave) {
+          showNotification('Saved ✓', 'success');
+        }
       }
     } catch (error) {
       console.error('Error saving note:', error);
-      showNotification('Failed to save', 'error');
+      if (!isAutoSave) {
+        showNotification('Failed to save', 'error');
+      }
     } finally {
       setIsSaving(false);
     }
-  }, [editContent, editTitle, isSaving, note.id, onSave]);
+  }, [onSave]);
 
+  // Store the saveNote function in a ref to avoid dependency loops
   useEffect(() => {
+    saveNoteRef.current = saveNote;
+  }, [saveNote]);
+
+  // Update noteRef when note prop changes
+  useEffect(() => {
+    noteRef.current = note;
     setEditTitle(note.title);
     setEditContent(note.content);
     setHasUnsavedChanges(false);
   }, [note]);
 
+  // Auto-save effect - separated from state updates to prevent loops
   useEffect(() => {
-    const hasChanges = editTitle !== note.title || editContent !== note.content;
+    const hasChanges = editTitle !== noteRef.current.title || editContent !== noteRef.current.content;
     setHasUnsavedChanges(hasChanges);
 
-    // Auto-save after 2 seconds of no typing
-    if (hasChanges) {
+    // Only auto-save if there are actual changes
+    if (hasChanges && saveNoteRef.current) {
       if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
+        clearTimeout(autoSaveSaveTimeoutRef.current);
       }
       
       autoSaveTimeoutRef.current = setTimeout(() => {
-        saveNote(true); // true = auto-save
+        // Only save if we still have unsaved changes
+        const currentHasChanges = editTitle !== noteRef.current.title || editContent !== noteRef.current.content;
+        if (currentHasChanges && saveNoteRef.current) {
+          saveNoteRef.current(true); // true = auto-save
+        }
       }, 2000);
     }
 
@@ -88,11 +116,15 @@ const NoteEditor = ({
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [editTitle, editContent, note.title, note.content, saveNote]);
+  }, [editTitle, editContent]); // Removed saveNote from dependencies
 
   // Listen for online/offline events
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Trigger sync when coming back online
+      setTimeout(() => notesService.syncToServer(), 1000);
+    };
     const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
@@ -103,21 +135,47 @@ const NoteEditor = ({
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-  const showNotification = (message, type = 'success') => {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 ${
-      type === 'success' ? 'bg-green-500' : 'bg-red-500'
-    } text-white`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    setTimeout(() => document.body.removeChild(notification), 3000);
+
+  // Handle input changes with debouncing
+  const handleTitleChange = (e) => {
+    setEditTitle(e.target.value);
   };
 
-  const handleBack = () => {
+  const handleContentChange = (e) => {
+    setEditContent(e.target.value);
+  };
+
+  const showNotification = (message, type = 'success') => {
+    // Remove any existing notifications
+    const existingNotifications = document.querySelectorAll('[data-note-editor-notification]');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    const notification = document.createElement('div');
+    notification.setAttribute('data-note-editor-notification', 'true');
+    notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 ${
+      type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    } text-white transition-all duration-300`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            document.body.removeChild(notification);
+          }
+        }, 300);
+      }
+    }, 3000);
+  };
+
+  const handleBack = async () => {
     if (hasUnsavedChanges) {
       if (window.confirm('You have unsaved changes. Save before leaving?')) {
-        saveNote(false);
-        setTimeout(() => onBack(), 500);
+        await saveNote(false);
+        onBack();
       } else if (window.confirm('Discard changes and go back?')) {
         onBack();
       }
@@ -136,6 +194,40 @@ const NoteEditor = ({
   const handleShare = () => {
     onShare(note.id);
     showNotification('Note shared successfully!', 'success');
+  };
+
+  const handleExport = async () => {
+    if (!onExport) {
+      console.error('onExport prop is not provided');
+      showNotification('Export function not available', 'error');
+      return;
+    }
+
+    // Get the current state of the note with latest edits
+    const currentNote = {
+      id: note.id,
+      title: editTitle || 'Untitled Note',
+      content: editContent,
+      createdAt: note.createdAt,
+      words: editContent.trim() ? editContent.trim().split(/\s+/).length : 0
+    };
+    
+    if (hasUnsavedChanges) {
+      if (window.confirm('You have unsaved changes. Save before exporting?')) {
+        await saveNote(false);
+        onExport(currentNote);
+      } else {
+        onExport(currentNote);
+      }
+    } else {
+      onExport(currentNote);
+    }
+  };
+
+  const handleManualSave = async () => {
+    if (hasUnsavedChanges && !isSaving) {
+      await saveNote(false);
+    }
   };
 
   const currentWordCount = editContent.trim() ? editContent.trim().split(/\s+/).length : 0;
@@ -199,6 +291,14 @@ const NoteEditor = ({
             {/* Mobile Actions */}
             <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
               <button
+                onClick={handleExport}
+                className="p-2 sm:px-4 sm:py-2 text-green-600 hover:bg-green-50 rounded-lg transition-all flex items-center gap-2"
+                title="Export to PDF"
+              >
+                <FileDown className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Export</span>
+              </button>
+              <button
                 onClick={() => onChatbot(note.id)}
                 className="p-2 sm:px-4 sm:py-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-all flex items-center gap-2"
                 title="Ask AI Assistant"
@@ -207,7 +307,7 @@ const NoteEditor = ({
                 <span className="hidden sm:inline text-sm">Ask AI</span>
               </button>
               <button
-                onClick={() => saveNote(false)}
+                onClick={handleManualSave}
                 disabled={!hasUnsavedChanges || isSaving}
                 className={`p-2 sm:px-4 sm:py-2 rounded-lg transition-all shadow-sm hover:shadow-md flex items-center gap-2 text-sm ${
                   hasUnsavedChanges && !isSaving
@@ -243,7 +343,7 @@ const NoteEditor = ({
             <input
               type="text"
               value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
+              onChange={handleTitleChange}
               className="w-full text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 placeholder-slate-400 border-none outline-none resize-none bg-transparent"
               placeholder="Untitled Note..."
             />
@@ -253,7 +353,7 @@ const NoteEditor = ({
           <div className="p-4 sm:p-6">
             <textarea
               value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
+              onChange={handleContentChange}
               className="w-full min-h-[400px] sm:min-h-[500px] md:min-h-[600px] text-slate-700 placeholder-slate-400 border-none outline-none resize-none text-base sm:text-lg leading-relaxed bg-transparent"
               placeholder="Start writing your note here..."
               style={{ fontFamily: 'inherit' }}

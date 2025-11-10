@@ -1,27 +1,32 @@
-// indexedDB.js - Enhanced for offline-first with MySQL sync
+// indexedDB.js — Unified cache and sync for Notes + Plans
 const DB_NAME = 'StudAIOfflineDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export const initDB = () => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
-    
+
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      
-      // Cache for notes from MySQL
+
+      // Notes cache
       if (!db.objectStoreNames.contains('notes')) {
         db.createObjectStore('notes', { keyPath: 'id' });
       }
-      
-      // Queue for operations to sync to MySQL
+
+      // Plans cache
+      if (!db.objectStoreNames.contains('plans')) {
+        db.createObjectStore('plans', { keyPath: 'id' });
+      }
+
+      // Sync queue for offline operations
       if (!db.objectStoreNames.contains('syncQueue')) {
-        const syncStore = db.createObjectStore('syncQueue', { 
-          keyPath: 'queueId', 
-          autoIncrement: true 
+        const syncStore = db.createObjectStore('syncQueue', {
+          keyPath: 'queueId',
+          autoIncrement: true,
         });
         syncStore.createIndex('timestamp', 'timestamp', { unique: false });
       }
@@ -29,166 +34,210 @@ export const initDB = () => {
   });
 };
 
-// Cache notes from MySQL
+/* -------------------- NOTES CACHE -------------------- */
+
 export const cacheNotes = async (notes) => {
   try {
     const db = await initDB();
     const tx = db.transaction('notes', 'readwrite');
     const store = tx.objectStore('notes');
-    
-    for (const note of notes) {
-      await store.put(note);
-    }
-    
+    for (const note of notes) await store.put(note);
     return true;
-  } catch (error) {
-    console.error('Error caching notes:', error);
+  } catch (err) {
+    console.error('[IndexedDB] Failed to cache notes:', err);
     return false;
   }
 };
 
-// Cache a single note (for immediate offline updates)
 export const cacheSingleNote = async (note) => {
   try {
     const db = await initDB();
     const tx = db.transaction('notes', 'readwrite');
     const store = tx.objectStore('notes');
-    
     return new Promise((resolve, reject) => {
-      const request = store.put(note);
-      request.onsuccess = () => resolve(true);
-      request.onerror = () => reject(request.error);
+      const req = store.put(note);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
     });
-  } catch (error) {
-    console.error('Error caching single note:', error);
+  } catch (err) {
+    console.error('[IndexedDB] Failed to cache single note:', err);
     return false;
   }
 };
 
-// Get a single cached note by ID
 export const getCachedNote = async (noteId) => {
   try {
     const db = await initDB();
     const tx = db.transaction('notes', 'readonly');
     const store = tx.objectStore('notes');
-    
     return new Promise((resolve) => {
-      const request = store.get(noteId);
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => {
-        console.error('Error reading cached note:', request.error);
-        resolve(null);
-      };
+      const req = store.get(noteId);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
     });
-  } catch (error) {
-    console.error('Error getting cached note:', error);
+  } catch (err) {
+    console.error('[IndexedDB] Failed to read note:', err);
     return null;
   }
 };
 
-// Get cached notes (for offline use)
 export const getCachedNotes = async () => {
   try {
     const db = await initDB();
     const tx = db.transaction('notes', 'readonly');
     const store = tx.objectStore('notes');
-    
-    // Wrap getAll() in a Promise
     return new Promise((resolve) => {
-      const request = store.getAll();
-      request.onsuccess = () => {
-        const notes = request.result;
-        resolve(Array.isArray(notes) ? notes : []);
-      };
-      request.onerror = () => {
-        console.error('Error reading cached notes:', request.error);
-        resolve([]); // Return empty array on error
-      };
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
     });
-  } catch (error) {
-    console.error('Error getting cached notes:', error);
-    return []; // Return empty array on error
+  } catch (err) {
+    console.error('[IndexedDB] Failed to read notes:', err);
+    return [];
   }
 };
 
-// Add operation to sync queue
+/* -------------------- PLANS CACHE -------------------- */
+
+export const cachePlans = async (plans) => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction('plans', 'readwrite');
+    const store = tx.objectStore('plans');
+    for (const plan of plans) await store.put(plan);
+    return true;
+  } catch (err) {
+    console.error('[IndexedDB] Failed to cache plans:', err);
+    return false;
+  }
+};
+
+export const cacheSinglePlan = async (plan) => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction('plans', 'readwrite');
+    const store = tx.objectStore('plans');
+    return new Promise((resolve, reject) => {
+      const req = store.put(plan);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.error('[IndexedDB] Failed to cache single plan:', err);
+    return false;
+  }
+};
+
+export const getCachedPlan = async (planId) => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction('plans', 'readonly');
+    const store = tx.objectStore('plans');
+    return new Promise((resolve) => {
+      const req = store.get(planId);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch (err) {
+    console.error('[IndexedDB] Failed to read plan:', err);
+    return null;
+  }
+};
+
+export const getCachedPlans = async () => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction('plans', 'readonly');
+    const store = tx.objectStore('plans');
+    return new Promise((resolve) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+  } catch (err) {
+    console.error('[IndexedDB] Failed to read plans:', err);
+    return [];
+  }
+};
+
+export const deleteCachedPlan = async (planId) => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction('plans', 'readwrite');
+    const store = tx.objectStore('plans');
+    return new Promise((resolve, reject) => {
+      const req = store.delete(planId);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.error('[IndexedDB] Failed to delete plan:', err);
+    return false;
+  }
+};
+
+/* -------------------- SYNC QUEUE -------------------- */
+
 export const queueOperation = async (operation) => {
   try {
     const db = await initDB();
     const tx = db.transaction('syncQueue', 'readwrite');
     const store = tx.objectStore('syncQueue');
-    
     return new Promise((resolve, reject) => {
-      const request = store.add({
-        ...operation,
-        timestamp: Date.now()
-      });
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      const req = store.add({ ...operation, timestamp: Date.now() });
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
     });
-  } catch (error) {
-    console.error('Error queuing operation:', error);
-    throw error;
+  } catch (err) {
+    console.error('[IndexedDB] Failed to queue operation:', err);
+    throw err;
   }
 };
 
-// Get all pending operations
 export const getPendingOperations = async () => {
   try {
     const db = await initDB();
     const tx = db.transaction('syncQueue', 'readonly');
     const store = tx.objectStore('syncQueue');
-    
-    // Wrap getAll() in a Promise
     return new Promise((resolve) => {
-      const request = store.getAll();
-      request.onsuccess = () => {
-        const operations = request.result;
-        resolve(Array.isArray(operations) ? operations : []);
-      };
-      request.onerror = () => {
-        console.error('Error reading pending operations:', request.error);
-        resolve([]); // Return empty array on error
-      };
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
     });
-  } catch (error) {
-    console.error('Error getting pending operations:', error);
-    return []; // Return empty array on error
+  } catch (err) {
+    console.error('[IndexedDB] Failed to read queue:', err);
+    return [];
   }
 };
 
-// Remove synced operation from queue
 export const removeSyncedOperation = async (queueId) => {
   try {
     const db = await initDB();
     const tx = db.transaction('syncQueue', 'readwrite');
     const store = tx.objectStore('syncQueue');
-    
     return new Promise((resolve, reject) => {
-      const request = store.delete(queueId);
-      request.onsuccess = () => resolve(true);
-      request.onerror = () => reject(request.error);
+      const req = store.delete(queueId);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
     });
-  } catch (error) {
-    console.error('Error removing synced operation:', error);
-    throw error;
+  } catch (err) {
+    console.error('[IndexedDB] Failed to remove queue item:', err);
+    throw err;
   }
 };
 
-// Clear all synced operations
 export const clearSyncQueue = async () => {
   try {
     const db = await initDB();
     const tx = db.transaction('syncQueue', 'readwrite');
     const store = tx.objectStore('syncQueue');
-    
     return new Promise((resolve, reject) => {
-      const request = store.clear();
-      request.onsuccess = () => resolve(true);
-      request.onerror = () => reject(request.error);
+      const req = store.clear();
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
     });
-  } catch (error) {
-    console.error('Error clearing sync queue:', error);
-    throw error;
+  } catch (err) {
+    console.error('[IndexedDB] Failed to clear sync queue:', err);
+    throw err;
   }
 };

@@ -1,60 +1,83 @@
-import { notesApi } from '../api/api';
-import { 
-  queueOperation, 
-  getPendingOperations, 
+// syncService.js – Separate services for Notes and Planner
+
+import axios from 'axios';
+import { notesApi, plansApi } from '../api/api';
+import {
+  queueOperation,
+  getPendingOperations,
   removeSyncedOperation,
   cacheNotes,
-  getCachedNotes,
   cacheSingleNote,
-  getCachedNote
+  getCachedNote,
+  getCachedNotes,
+  cachePlans,
+  cacheSinglePlan,
+  getCachedPlan,
+  getCachedPlans,
+  deleteCachedPlan,
 } from './indexedDB';
 
-class SyncService {
+// ============================================
+// NOTES SERVICE
+// ============================================
+
+class NotesService {
   constructor() {
-    this.DB_NAME = 'StudAIOfflineDB';
-    this.DB_VERSION = 2;
     this.isOnline = navigator.onLine;
     this.isSyncing = false;
-  }
 
-  // Sets up database connection for offline storage
-  async openDB() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
-      
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-      
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        
-        if (!db.objectStoreNames.contains('notes')) {
-          db.createObjectStore('notes', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('syncQueue')) {
-          db.createObjectStore('syncQueue', { 
-            keyPath: 'queueId',
-            autoIncrement: true 
-          });
-        }
-      };
-    });
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => this.handleOnline());
+      window.addEventListener('offline', () => this.handleOffline());
+    }
   }
 
   handleOnline() {
     this.isOnline = true;
+    console.info('[Notes] Online – syncing...');
     this.syncToServer();
   }
 
   handleOffline() {
     this.isOnline = false;
+    console.info('[Notes] Offline mode');
   }
 
-  // Save your work even without internet - will sync later
+  // Get all notes (online: MySQL, offline: IndexedDB)
+  async getAllNotes() {
+    if (!this.isOnline) {
+      console.info('[Notes] Loading from cache (offline)');
+      const cached = await getCachedNotes();
+      return cached || [];
+    }
+
+    try {
+      console.info('[Notes] Fetching from server...');
+      const res = await notesApi.getAll();
+      const notes = (res.data.notes || []).map((n) => ({
+        id: n.note_id || n.id,
+        title: n.title,
+        content: n.content || '',
+        words: n.words,
+        createdAt: n.created_at || n.createdAt,
+        isShared: n.is_shared === true || n.is_shared === 1,
+        isPinned: n.is_pinned === true || n.is_pinned === 1,
+        category: n.category || null,
+        categoryId: n.category_id || null,
+      }));
+      
+      await cacheNotes(notes);
+      console.info(`[Notes] Loaded ${notes.length} notes from server`);
+      return notes;
+    } catch (err) {
+      console.error('[Notes] Server fetch failed, using cache:', err);
+      const cached = await getCachedNotes();
+      return cached || [];
+    }
+  }
+
   async addNote(noteData) {
-    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Create temporary note object for local cache
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const tempNote = {
       id: tempId,
       title: noteData.title || 'Untitled Note',
@@ -64,311 +87,366 @@ class SyncService {
       isShared: false,
       isPinned: false,
       category: null,
-      categoryId: noteData.category_id || null
+      categoryId: noteData.category_id || null,
     };
 
     if (this.isOnline) {
       try {
-        // Try to save directly to MySQL via API
-        const response = await notesApi.create(noteData);
-        const serverNote = {
-          id: response.data.note.note_id || response.data.note.id,
-          title: response.data.note.title,
-          content: response.data.note.content || '',
-          words: response.data.note.words,
-          createdAt: response.data.note.created_at || response.data.note.createdAt,
-          isShared: response.data.note.is_shared || false,
-          isPinned: response.data.note.is_pinned || false,
-          category: response.data.note.category || null,
-          categoryId: response.data.note.category_id || null
+        const res = await notesApi.create(noteData);
+        const n = res.data.note;
+        const note = {
+          id: n.note_id || n.id,
+          title: n.title,
+          content: n.content || '',
+          words: n.words,
+          createdAt: n.created_at || n.createdAt,
+          isShared: n.is_shared === true || n.is_shared === 1,
+          isPinned: n.is_pinned === true || n.is_pinned === 1,
+          category: n.category || null,
+          categoryId: n.category_id || null,
         };
-        
-        // Cache the server response
-        await cacheSingleNote(serverNote);
-        
-        return { success: true, note: serverNote, fromCache: false };
-      } catch (error) {
-        console.log('API failed, saving offline:', error.message);
-        // If API fails, cache locally and queue
+        await cacheSingleNote(note);
+        return { success: true, note };
+      } catch (err) {
+        console.error('[Notes] Create failed, queuing:', err);
         await cacheSingleNote(tempNote);
-        await queueOperation({
-          type: 'CREATE',
-          data: { ...noteData, tempId }
-        });
-        return { success: true, note: tempNote, fromCache: true, queued: true };
+        await queueOperation({ entityType: 'note', type: 'CREATE', data: { ...noteData, tempId } });
+        return { success: true, note: tempNote, queued: true };
       }
     } else {
-      // Offline: cache locally and queue the operation
       await cacheSingleNote(tempNote);
-      await queueOperation({
-        type: 'CREATE',
-        data: { ...noteData, tempId }
-      });
-      return { success: true, note: tempNote, fromCache: true, queued: true };
+      await queueOperation({ entityType: 'note', type: 'CREATE', data: { ...noteData, tempId } });
+      return { success: true, note: tempNote, queued: true };
     }
   }
 
-  // Changes save instantly offline, sync when connected
   async updateNote(noteId, updates) {
-    // Check if this is a temp note
-    const isTempNote = typeof noteId === 'string' && noteId.startsWith('temp_');
-    
-    // First, update the local cache immediately
     const cachedNote = await getCachedNote(noteId);
     if (cachedNote) {
-      const updatedNote = {
-        ...cachedNote,
-        ...updates,
-        title: updates.title !== undefined ? updates.title : cachedNote.title,
-        content: updates.content !== undefined ? updates.content : cachedNote.content,
-        words: updates.content !== undefined 
-          ? (updates.content.trim() ? updates.content.split(/\s+/).length : 0)
-          : cachedNote.words,
-        categoryId: updates.category_id !== undefined ? updates.category_id : cachedNote.categoryId
-      };
-      await cacheSingleNote(updatedNote);
+      await cacheSingleNote({ ...cachedNote, ...updates });
     }
 
-    // If temp note, only update cache and queue - don't try API call
-    if (isTempNote) {
-      console.log('⏳ Temp note - queuing update for after sync');
-      await queueOperation({
-        type: 'UPDATE_TEMP',
-        data: { tempId: noteId, updates }
-      });
-      return { success: true, fromCache: true, queued: true, isTemp: true };
-    }
-
-    // For real notes, proceed with API call
     if (this.isOnline) {
       try {
-        const response = await notesApi.update(noteId, updates);
-        const serverNote = {
-          id: response.data.note.note_id || response.data.note.id,
-          title: response.data.note.title,
-          content: response.data.note.content || '',
-          words: response.data.note.words,
-          createdAt: response.data.note.created_at || response.data.note.createdAt,
-          isShared: response.data.note.is_shared || false,
-          isPinned: response.data.note.is_pinned || false,
-          category: response.data.note.category || null,
-          categoryId: response.data.note.category_id || null
+        const res = await notesApi.update(noteId, updates);
+        const n = res.data.note;
+        const note = {
+          id: n.note_id || n.id,
+          title: n.title,
+          content: n.content || '',
+          words: n.words,
+          createdAt: n.created_at || n.createdAt,
+          isShared: n.is_shared === true || n.is_shared === 1,
+          isPinned: n.is_pinned === true || n.is_pinned === 1,
+          category: n.category || null,
+          categoryId: n.category_id || null,
         };
-        
-        // Update cache with server response
-        await cacheSingleNote(serverNote);
-        return { success: true, note: serverNote, fromCache: false };
-      } catch (error) {
-        console.log('Update API failed, queuing for sync:', error.message);
-        await queueOperation({
-          type: 'UPDATE',
-          data: { noteId, updates }
-        });
-        return { success: true, fromCache: true, queued: true };
+        await cacheSingleNote(note);
+        return { success: true, note };
+      } catch {
+        await queueOperation({ entityType: 'note', type: 'UPDATE', data: { noteId, updates } });
+        return { success: true, queued: true };
       }
     } else {
-      // Offline: queue the operation
-      await queueOperation({
-        type: 'UPDATE',
-        data: { noteId, updates }
-      });
-      return { success: true, fromCache: true, queued: true };
+      await queueOperation({ entityType: 'note', type: 'UPDATE', data: { noteId, updates } });
+      return { success: true, queued: true };
     }
   }
 
-  // Removes note locally first, syncs deletion when online
   async deleteNote(noteId) {
     if (this.isOnline) {
       try {
         await notesApi.delete(noteId);
-        return { success: true, fromCache: false };
-      } catch (error) {
-        console.log('Delete API failed, queuing for sync:', error.message);
-        await queueOperation({
-          type: 'DELETE',
-          data: { noteId }
-        });
-        return { success: true, fromCache: true, queued: true };
+        return { success: true };
+      } catch {
+        await queueOperation({ entityType: 'note', type: 'DELETE', data: { noteId } });
+        return { success: true, queued: true };
       }
     } else {
-      // Offline: queue the operation
-      await queueOperation({
-        type: 'DELETE',
-        data: { noteId }
-      });
-      return { success: true, fromCache: true, queued: true };
+      await queueOperation({ entityType: 'note', type: 'DELETE', data: { noteId } });
+      return { success: true, queued: true };
     }
   }
 
-  // Catches up all offline changes with the server
   async syncToServer() {
     if (this.isSyncing || !this.isOnline) return;
-    
     this.isSyncing = true;
-    console.log('🔄 Syncing queued operations...');
 
     try {
       const operations = await getPendingOperations();
+      const noteOps = operations.filter(op => op.entityType === 'note');
       
-      if (!operations || !Array.isArray(operations) || operations.length === 0) {
-        console.log('No operations to sync');
-        await this.refreshCache();
+      if (noteOps.length === 0) {
+        console.info('[Notes] No pending operations');
         this.isSyncing = false;
         return;
       }
-      
-      console.log(`Found ${operations.length} operations to sync`);
-      
-      // Map to track temp ID to real ID conversions
-      const tempIdMap = new Map();
-      
-      for (const op of operations) {
+
+      console.info(`[Notes] Syncing ${noteOps.length} operations`);
+
+      for (const op of noteOps) {
         try {
-          let serverNote = null;
-          
-          switch (op.type) {
-            case 'CREATE': {
-              // Block scope needed for let/const declarations
-              const createResponse = await notesApi.create({
-                title: op.data.title,
-                content: op.data.content,
-                file_id: op.data.file_id,
-                category_id: op.data.category_id
-              });
-              
-              serverNote = {
-                id: createResponse.data.note.note_id || createResponse.data.note.id,
-                title: createResponse.data.note.title,
-                content: createResponse.data.note.content || '',
-                words: createResponse.data.note.words,
-                createdAt: createResponse.data.note.created_at || createResponse.data.note.createdAt,
-                isShared: createResponse.data.note.is_shared || false,
-                isPinned: createResponse.data.note.is_pinned || false,
-                category: createResponse.data.note.category || null,
-                categoryId: createResponse.data.note.category_id || null
-              };
-              
-              // Replace temp note with real note in cache
-              if (op.data.tempId) {
-                const db = await this.openDB();
-                const tx = db.transaction('notes', 'readwrite');
-                const store = tx.objectStore('notes');
-                await store.delete(op.data.tempId);
-                
-                // Map temp ID to real ID
-                tempIdMap.set(op.data.tempId, serverNote.id);
-              }
-              await cacheSingleNote(serverNote);
-              console.log(`✅ Created note: ${serverNote.title}`);
-              break;
-            }
-            
-            case 'UPDATE_TEMP': {
-              // Check if this temp note was just created in this sync
-              const realId = tempIdMap.get(op.data.tempId);
-              if (realId) {
-                // Apply the update to the real note
-                await notesApi.update(realId, op.data.updates);
-                console.log(`✅ Applied queued update to note: ${realId}`);
-              } else {
-                // Temp note hasn't been synced yet, skip for now
-                console.log('⏭️  Skipping UPDATE_TEMP - note not yet synced');
-                continue; // Don't remove from queue
-              }
-              break;
-            }
-              
-            case 'UPDATE':
-              // SAFETY CHECK: Skip if trying to update a temp note that hasn't been synced yet
-              if (typeof op.data.noteId === 'string' && op.data.noteId.startsWith('temp_')) {
-                console.log('⏭️  Skipping UPDATE for temp note - converting to UPDATE_TEMP');
-                // Convert old UPDATE to UPDATE_TEMP and keep in queue
-                await queueOperation({
-                  type: 'UPDATE_TEMP',
-                  data: { tempId: op.data.noteId, updates: op.data.updates }
-                });
-                // Remove the old UPDATE operation
-                await removeSyncedOperation(op.queueId);
-                continue;
-              }
-              await notesApi.update(op.data.noteId, op.data.updates);
-              console.log(`✅ Updated note: ${op.data.noteId}`);
-              break;
-              
-            case 'DELETE':
-              await notesApi.delete(op.data.noteId);
-              console.log(`✅ Deleted note: ${op.data.noteId}`);
-              break;
-          }
-          
-          // Remove from queue after successful sync
+          await this.processOperation(op);
           await removeSyncedOperation(op.queueId);
-        } catch (error) {
-          console.error(`❌ Failed to sync ${op.type}:`, error);
-          // Keep in queue for retry
+        } catch (err) {
+          console.error('[Notes] Operation failed:', err);
         }
       }
-      
-      console.log('✅ Sync complete!');
-      
-      // refresh cache
-      await this.refreshCache();
-    } catch (error) {
-      console.error('Sync error:', error);
+
+      console.info('[Notes] Sync completed');
+      await this.getAllNotes(); // Refresh cache
+    } catch (err) {
+      console.error('[Notes] Sync error:', err);
     } finally {
       this.isSyncing = false;
     }
   }
 
-  async refreshCache() {
-    if (!this.isOnline) {
-      // return cached data if offline
-      return await getCachedNotes();
-    }
-
-    try {
-      const response = await notesApi.getAll();
-      const notes = response.data.notes;
-      
-      const mappedNotes = notes.map(note => ({
-        id: note.note_id || note.id,
-        title: note.title,
-        content: note.content || '',
-        words: note.words || (note.content ? note.content.split(/\s+/).length : 0),
-        createdAt: note.created_at || note.createdAt,
-        isShared: note.is_shared || false,
-        isPinned: note.is_pinned || false,
-        category: note.category || null,
-        categoryId: note.category_id || null
-      }));
-      
-      await cacheNotes(mappedNotes);
-      
-      return mappedNotes;
-    } catch (error) {
-      console.error('Failed to refresh cache:', error);
-      return await getCachedNotes();
+  async processOperation(op) {
+    switch (op.type) {
+      case 'CREATE': {
+        const res = await notesApi.create(op.data);
+        const n = res.data.note;
+        await cacheSingleNote({
+          id: n.note_id || n.id,
+          title: n.title,
+          content: n.content || '',
+          words: n.words,
+          createdAt: n.created_at || n.createdAt,
+          isShared: n.is_shared === true || n.is_shared === 1,
+          isPinned: n.is_pinned === true || n.is_pinned === 1,
+          category: n.category || null,
+          categoryId: n.category_id || null,
+        });
+        break;
+      }
+      case 'UPDATE':
+        await notesApi.update(op.data.noteId, op.data.updates);
+        break;
+      case 'DELETE':
+        await notesApi.delete(op.data.noteId);
+        break;
     }
   }
 
   async getSyncStatus() {
     const pending = await getPendingOperations();
+    const notePending = pending.filter(op => op.entityType === 'note');
     return {
       isOnline: this.isOnline,
       isSyncing: this.isSyncing,
-      pendingOperations: Array.isArray(pending) ? pending.length : 0
+      pendingOperations: notePending.length,
     };
   }
 }
 
-export const syncService = new SyncService();
+// ============================================
+// PLANNER SERVICE
+// ============================================
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('online', () => {
-    syncService.handleOnline();
-  });
-  
-  window.addEventListener('offline', () => {
-    syncService.handleOffline();
-  });
+class PlannerService {
+  constructor() {
+    this.isOnline = navigator.onLine;
+    this.isSyncing = false;
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => this.handleOnline());
+      window.addEventListener('offline', () => this.handleOffline());
+    }
+  }
+
+  handleOnline() {
+    this.isOnline = true;
+    console.info('[Planner] Online – syncing...');
+    this.syncToServer();
+  }
+
+  handleOffline() {
+    this.isOnline = false;
+    console.info('[Planner] Offline mode');
+  }
+
+  // Get all plans (online: MySQL, offline: IndexedDB)
+  async getAllPlans() {
+    if (!this.isOnline) {
+      console.info('[Planner] Loading from cache (offline)');
+      const cached = await getCachedPlans();
+      return cached || [];
+    }
+
+    try {
+      console.info('[Planner] Fetching from server...');
+      const res = await axios.get("http://localhost:4000/api/plans", { withCredentials: true });
+      const plans = (res.data.plans || []).map((p) => ({
+        id: p.planner_id,
+        planner_id: p.planner_id,
+        title: p.title,
+        description: p.description || '',
+        due_date: p.due_date,
+        created_at: p.created_at,
+      }));
+      
+      await cachePlans(plans);
+      console.info(`[Planner] Loaded ${plans.length} plans from server`);
+      return plans;
+    } catch (err) {
+      console.error('[Planner] Server fetch failed, using cache:', err);
+      const cached = await getCachedPlans();
+      return cached || [];
+    }
+  }
+
+  async addPlan(planData) {
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const tempPlan = {
+      id: tempId,
+      planner_id: tempId,
+      title: planData.title || 'Untitled Plan',
+      description: planData.description || '',
+      due_date: planData.due_date,
+      created_at: new Date().toISOString(),
+    };
+
+    if (this.isOnline) {
+      try {
+        const res = await plansApi.create(planData);
+        const p = res.data.plan;
+        const plan = {
+          id: p.planner_id,
+          planner_id: p.planner_id,
+          title: p.title,
+          description: p.description || '',
+          due_date: p.due_date,
+          created_at: p.created_at,
+        };
+        await cacheSinglePlan(plan);
+        return { success: true, plan };
+      } catch (err) {
+        console.error('[Planner] Create failed, queuing:', err);
+        await cacheSinglePlan(tempPlan);
+        await queueOperation({ entityType: 'plan', type: 'CREATE', data: { ...planData, tempId } });
+        return { success: true, plan: tempPlan, queued: true };
+      }
+    } else {
+      await cacheSinglePlan(tempPlan);
+      await queueOperation({ entityType: 'plan', type: 'CREATE', data: { ...planData, tempId } });
+      return { success: true, plan: tempPlan, queued: true };
+    }
+  }
+
+  async updatePlan(planId, updates) {
+    const cached = await getCachedPlan(planId);
+    if (cached) await cacheSinglePlan({ ...cached, ...updates });
+
+    if (this.isOnline) {
+      try {
+        const res = await plansApi.update(planId, updates);
+        const p = res.data.plan;
+        const plan = {
+          id: p.planner_id,
+          planner_id: p.planner_id,
+          title: p.title,
+          description: p.description || '',
+          due_date: p.due_date,
+          created_at: p.created_at,
+        };
+        await cacheSinglePlan(plan);
+        return { success: true, plan };
+      } catch {
+        await queueOperation({ entityType: 'plan', type: 'UPDATE', data: { planId, updates } });
+        return { success: true, queued: true };
+      }
+    } else {
+      await queueOperation({ entityType: 'plan', type: 'UPDATE', data: { planId, updates } });
+      return { success: true, queued: true };
+    }
+  }
+
+  async deletePlan(planId) {
+    await deleteCachedPlan(planId);
+    if (this.isOnline) {
+      try {
+        await plansApi.delete(planId);
+        return { success: true };
+      } catch {
+        await queueOperation({ entityType: 'plan', type: 'DELETE', data: { planId } });
+        return { success: true, queued: true };
+      }
+    } else {
+      await queueOperation({ entityType: 'plan', type: 'DELETE', data: { planId } });
+      return { success: true, queued: true };
+    }
+  }
+
+  async syncToServer() {
+    if (this.isSyncing || !this.isOnline) return;
+    this.isSyncing = true;
+
+    try {
+      const operations = await getPendingOperations();
+      const planOps = operations.filter(op => op.entityType === 'plan');
+      
+      if (planOps.length === 0) {
+        console.info('[Planner] No pending operations');
+        this.isSyncing = false;
+        return;
+      }
+
+      console.info(`[Planner] Syncing ${planOps.length} operations`);
+
+      for (const op of planOps) {
+        try {
+          await this.processOperation(op);
+          await removeSyncedOperation(op.queueId);
+        } catch (err) {
+          console.error('[Planner] Operation failed:', err);
+        }
+      }
+
+      console.info('[Planner] Sync completed');
+      await this.getAllPlans(); // Refresh cache
+    } catch (err) {
+      console.error('[Planner] Sync error:', err);
+    } finally {
+      this.isSyncing = false;
+    }
+  }
+
+  async processOperation(op) {
+    switch (op.type) {
+      case 'CREATE': {
+        const res = await plansApi.create(op.data);
+        const p = res.data.plan;
+        await cacheSinglePlan({
+          id: p.planner_id,
+          planner_id: p.planner_id,
+          title: p.title,
+          description: p.description || '',
+          due_date: p.due_date,
+          created_at: p.created_at,
+        });
+        break;
+      }
+      case 'UPDATE':
+        await plansApi.update(op.data.planId, op.data.updates);
+        break;
+      case 'DELETE':
+        await plansApi.delete(op.data.planId);
+        break;
+    }
+  }
+
+  async getSyncStatus() {
+    const pending = await getPendingOperations();
+    const planPending = pending.filter(op => op.entityType === 'plan');
+    return {
+      isOnline: this.isOnline,
+      isSyncing: this.isSyncing,
+      pendingOperations: planPending.length,
+    };
+  }
 }
+
+// Export both services
+export const notesService = new NotesService();
+export const plannerService = new PlannerService();
