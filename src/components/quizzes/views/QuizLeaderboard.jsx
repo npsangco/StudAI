@@ -1,5 +1,3 @@
-// src/components/quizzes/views/QuizLeaderboard.jsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import AnswerReviewModal from './AnswerReviewModal';
@@ -18,6 +16,14 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   const [finalPlayers, setFinalPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const syncAttempted = useRef(false); // Prevent double sync
+
+  // Reset sync flag when modal closes or reopens
+  useEffect(() => {
+    if (!isOpen) {
+      syncAttempted.current = false;
+      console.log('🔄 Sync flag reset - modal closed');
+    }
+  }, [isOpen]);
 
   // ========================================
   // FETCH FINAL SCORES FROM FIREBASE
@@ -55,16 +61,21 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
   }, [isOpen, results?.gamePin, results?.players]);
   
   // ========================================
-  // 🔇 SILENT SYNC: NO UI, LOGS ONLY
+  // SYNC WITH PROPER TIMING
   // ========================================
   useEffect(() => {
-    if (!isOpen || !results?.gamePin) return;
+    // Early returns for invalid states
+    if (!isOpen || !results?.gamePin) {
+      return;
+    }
     
-    // 🔍 Debug logging
     console.log('🎮 Leaderboard opened - Sync check:');
+    console.log('   isOpen:', isOpen);
     console.log('   isHost:', results?.isHost);
     console.log('   gamePin:', results?.gamePin);
-    console.log('   finalPlayers:', finalPlayers.length);
+    console.log('   finalPlayers loaded:', finalPlayers.length);
+    console.log('   loading state:', loading);
+    console.log('   syncAttempted.current:', syncAttempted.current);
     
     // Only host syncs
     if (!results?.isHost) {
@@ -74,32 +85,44 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
     
     // Prevent double sync
     if (syncAttempted.current) {
-      console.log('⏭️ Sync already attempted');
+      console.log('⏭️ Sync already attempted (flag is true)');
       return;
     }
     
+    // Wait for data to be loaded
+    if (loading || finalPlayers.length === 0) {
+      console.log('⏳ Waiting for Firebase data to load...');
+      return;
+    }
+    
+    // Mark as attempted IMMEDIATELY to prevent race conditions
     syncAttempted.current = true;
+    console.log('🚩 Sync flag set to TRUE');
     
     console.log('🔄 HOST triggering MySQL sync for:', results.gamePin);
+    console.log('📊 Players to sync:', finalPlayers);
     
-    // Start sync after 2 second delay (let players see leaderboard first)
+    // Start sync with slight delay to ensure Firebase stability
     const syncTimeout = setTimeout(async () => {
       try {
-        console.log('📡 Starting sync with finalPlayers:', finalPlayers);
+        console.log('📡 Starting sync...');
         const result = await syncBattleResultsToMySQL(results.gamePin);
         
         console.log('📋 Sync result:', result);
         
         if (result.success) {
-          console.log('✅ Battle results saved to MySQL database successfully!');
+          console.log('✅ Battle results saved to MySQL successfully!');
           console.log('   Battle ID:', result.battleId);
           console.log('   Winner ID:', result.winnerId);
           console.log('   Total Players:', result.totalPlayers);
-          console.log('   Attempt:', result.attempt || 1);
+          console.log('   Updated Players:', result.updatedPlayers);
+          
+        } else if (result.alreadySynced) {
+          console.log('ℹ️ Battle was already synced previously');
+          
         } else {
           console.error('❌ Failed to save battle results to MySQL');
           console.error('   Error:', result.error);
-          console.error('   Attempt:', result.attempt || 0);
           console.error('   Full result:', result);
         }
       } catch (error) {
@@ -107,15 +130,15 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
         console.error('   Message:', error.message);
         console.error('   Stack:', error.stack);
       }
-    }, 2000);
+    }, 1000); // Reduced to 1 second
     
     return () => {
       clearTimeout(syncTimeout);
     };
-  }, [isOpen, results?.gamePin, results?.isHost, finalPlayers]);
+  }, [isOpen, results?.gamePin, results?.isHost, finalPlayers, loading]); 
 
   // ========================================
-  // 🆕 IMPROVED: ATOMIC VIEWER TRACKING & CLEANUP
+  // ATOMIC VIEWER TRACKING & CLEANUP
   // ========================================
   useEffect(() => {
     if (!isOpen || !results?.gamePin) return;

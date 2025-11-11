@@ -63,7 +63,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Quiz not found' });
     }
 
-    // 🔥 IMPROVED ACCESS CHECK
+    // ACCESS CHECK
     const userId = req.session.userId;
     const isOwner = quiz.created_by === userId;
     const isPublic = quiz.is_public;
@@ -513,7 +513,7 @@ router.post('/:id/battle/create', requireAuth, async (req, res) => {
       game_pin: gamePin,
       host_id: userId,
       status: 'waiting',
-      max_players: 8,
+      max_players: 5, 
       current_players: 1
     });
     
@@ -908,15 +908,17 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     const userId = req.session.userId;
     
     console.log('🔄 MySQL Sync Request - PIN:', gamePin);
-    console.log('📊 Players:', players.length);
+    console.log('📊 Players:', JSON.stringify(players, null, 2));
     console.log('🏆 Winner:', winnerId);
     console.log('👤 Requester:', userId);
+    console.log('📅 CompletedAt:', completedAt);
     
     // ============================================
     // VALIDATION
     // ============================================
     
     if (!players || !Array.isArray(players) || players.length === 0) {
+      console.error('❌ Invalid players data:', players);
       return res.status(400).json({ 
         success: false,
         error: 'Invalid players data' 
@@ -924,6 +926,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     }
     
     if (!winnerId) {
+      console.error('❌ Winner ID is missing');
       return res.status(400).json({ 
         success: false,
         error: 'Winner ID is required' 
@@ -934,9 +937,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     // START TRANSACTION
     // ============================================
     
-    transaction = await sequelize.transaction({
-      isolationLevel: sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
-    });
+    transaction = await sequelize.transaction();
     
     console.log('🔒 Transaction started');
     
@@ -1107,16 +1108,67 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         console.log('🔙 Transaction rolled back');
       } catch (rollbackError) {
         console.error('❌ Rollback failed:', rollbackError);
+        console.error('❌ Rollback error stack:', rollbackError.stack);
       }
     }
     
     console.error('❌ Sync error:', error);
+    console.error('❌ Sync error message:', error.message);
+    console.error('❌ Sync error stack:', error.stack);
+    console.error('❌ Sync error name:', error.name);
     
     return res.status(500).json({ 
       success: false,
       error: 'Failed to sync battle results',
-      details: error.message 
+      details: error.message,
+      errorType: error.name 
     });
+  }
+});
+
+// ============================================
+// VERIFY SYNC STATUS (for debugging)
+// ============================================
+
+router.get('/battle/:gamePin/verify-sync', requireAuth, async (req, res) => {
+  try {
+    const { gamePin } = req.params;
+    
+    const battle = await QuizBattle.findOne({
+      where: { game_pin: gamePin },
+      include: [
+        {
+          model: BattleParticipant,
+          as: 'participants',
+          include: [{
+            model: User,
+            as: 'user',
+            attributes: ['username']
+          }]
+        }
+      ]
+    });
+    
+    if (!battle) {
+      return res.status(404).json({ error: 'Battle not found' });
+    }
+    
+    res.json({
+      battleId: battle.battle_id,
+      status: battle.status,
+      winnerId: battle.winner_id,
+      completedAt: battle.completed_at,
+      participants: battle.participants.map(p => ({
+        userId: p.user_id,
+        username: p.user.username,
+        score: p.score,
+        pointsEarned: p.points_earned,
+        isWinner: p.is_winner
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Verify sync error:', error);
+    res.status(500).json({ error: 'Failed to verify sync' });
   }
 });
 

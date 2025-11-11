@@ -2,7 +2,7 @@ import { ref, set, update, remove, onValue, get, serverTimestamp, runTransaction
 import { realtimeDb } from './config';
 
 // ============================================
-// 🎮 BATTLE ROOM OPERATIONS
+// BATTLE ROOM OPERATIONS
 // ============================================
 
 /**
@@ -162,7 +162,7 @@ export const deleteBattleRoom = async (gamePin) => {
 };
 
 // ============================================
-// 📡 REAL-TIME LISTENERS
+// REAL-TIME LISTENERS
 // ============================================
 
 /**
@@ -486,6 +486,36 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
         // Mark sync complete in Firebase
         await markSyncComplete(gamePin, winnerId);
         
+        // VERIFY THE SYNC WORKED
+        console.log('🔍 Verifying sync in database...');
+        try {
+          const verifyResponse = await fetch(
+            `http://localhost:4000/api/quizzes/battle/${gamePin}/verify-sync`,
+            {
+              method: 'GET',
+              credentials: 'include'
+            }
+          );
+          
+          if (verifyResponse.ok) {
+            const verifyData = await verifyResponse.json();
+            console.log('✅ Sync verification successful:', verifyData);
+            
+            // Double-check status
+            if (verifyData.status !== 'completed') {
+              console.warn('⚠️ WARNING: Battle status is not "completed":', verifyData.status);
+            }
+            if (!verifyData.winnerId) {
+              console.warn('⚠️ WARNING: Winner ID is missing');
+            }
+          } else {
+            console.warn('⚠️ Could not verify sync:', verifyResponse.status);
+          }
+        } catch (verifyError) {
+          console.warn('⚠️ Verification request failed:', verifyError.message);
+          // Don't fail the whole sync if verification fails
+        }
+        
         // Release lock
         await releaseSyncLock(gamePin);
         
@@ -535,7 +565,7 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
 };
 
 // ============================================
-// 🆕 ATOMIC VIEWER MANAGEMENT & CLEANUP
+// ATOMIC VIEWER MANAGEMENT & CLEANUP
 // ============================================
 
 /**
