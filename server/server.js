@@ -45,8 +45,11 @@ import BattleParticipant from "./models/BattleParticipant.js";
 import Session from "./models/Session.js";
 import ZoomToken from "./models/ZoomToken.js"; // ← ADDED
 import { Op } from "sequelize";
-import { startEmailReminders } from "./emailScheduler.js";
 import { auditMiddleware } from "./auditMiddleware.js";
+
+// Emails
+import { startEmailReminders } from "./services/emailScheduler.js";
+import { VerificationEmail, PasswordUpdateEmail, PasswordResetEmail} from "./services/emailService.js";
 
 // Import Note model after creating it
 let Note;
@@ -383,17 +386,6 @@ app.post("/api/auth/signup", async (req, res) => {
         return res.status(400).json({ error: "Invalid email format." });
     }
 
-    // Check email domain exists
-    try {
-        const domain = email.split("@")[1];
-        const mxRecords = await resolveMx(domain);
-        if (!mxRecords || mxRecords.length === 0) {
-            return res.status(400).json({ error: "Email domain does not exist." });
-        }
-    } catch {
-        return res.status(400).json({ error: "Email domain does not exist." });
-    }
-
     if (!passwordRegex.test(password)) {
         return res.status(400).json({
             error:
@@ -426,13 +418,8 @@ app.post("/api/auth/signup", async (req, res) => {
         await transporter.sendMail({
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: email,
-            subject: "Verify Your Email - StudAI",
-            html: `
-        <h2>Welcome to StudAI, ${username}!</h2>
-        <p>Please verify your email by clicking the link below:</p>
-        <a href="${verifyLink}" style="background:#2563eb;color:white;padding:10px 20px;text-decoration:none;border-radius:6px;">Verify Email</a>
-        <p>This link will expire in 30 minutes.</p>
-      `,
+            subject: "Verify Your Email",
+            html:VerificationEmail(username, verifyLink),
         });
 
         res.status(201).json({
@@ -702,11 +689,7 @@ app.post("/api/user/request-password-update", async (req, res) => {
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: user.email,
             subject: "Confirm Your Password Update",
-            html: `
-                <p>You requested to update your password. Click below to confirm:</p>
-                <a href="${confirmLink}">${confirmLink}</a>
-                <p>This link will expire in 10 minutes.</p>
-            `,
+            html:PasswordUpdateEmail(confirmLink),
         });
 
         res.json({ message: "Verification email sent. Please check your inbox." });
@@ -756,8 +739,7 @@ app.post("/api/auth/reset-request", async (req, res) => {
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: "Password Reset Request",
-            text: `Click here to reset your password: ${resetLink}`,
-            html: `<p>Click here to reset your password:</p><a href="${resetLink}">${resetLink}</a><p>This link will expire in 10 minutes.</p>`,
+            html:PasswordResetEmail(resetLink),
         });
 
         res.json({ message: "Password reset link sent" });

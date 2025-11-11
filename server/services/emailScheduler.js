@@ -1,8 +1,8 @@
 import cron from "node-cron";
 import nodemailer from "nodemailer";
 import { Op } from "sequelize";
-import Plan from "./models/Plan.js";
-import User from "./models/User.js";
+import Plan from "../models/Plan.js";
+import User from "../models/User.js";
 
 Plan.belongsTo(User, { foreignKey: 'user_id' });
 
