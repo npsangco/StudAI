@@ -45,7 +45,8 @@ import BattleParticipant from "./models/BattleParticipant.js";
 import Session from "./models/Session.js";
 import ZoomToken from "./models/ZoomToken.js"; // ← ADDED
 import { Op } from "sequelize";
-
+import { startEmailReminders } from "./emailScheduler.js";
+import { auditMiddleware } from "./auditMiddleware.js";
 
 // Import Note model after creating it
 let Note;
@@ -72,6 +73,7 @@ import quizRoutes from "./routes/quizRoutes.js";
 import SharedNote from "./models/SharedNote.js";
 import planRoutes from "./routes/planRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
+import auditRoutes from "./routes/auditRoutes.js";
 
 const app = express();
 
@@ -90,6 +92,8 @@ app.use(cors({
 // ----------------- EXPRESS MIDDLEWARE -----------------
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
+
+app.use("/api", auditMiddleware);
 
 // ============================================
 // STREAK TRACKING SYSTEM
@@ -246,6 +250,8 @@ sequelize.authenticate()
     })
     .then(() => {
         console.log("✅ All models synced");
+        startEmailReminders();
+        // console.log("📅 Email reminder scheduler started!"); for email testing
     })
     .catch((err) => {
         console.error("❌ Database error:", err);
@@ -333,6 +339,7 @@ app.use("/api/notes", noteRoutes);
 app.use("/api/plans", planRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/sessions", sessionRoutes);
+app.use("/api/admin", auditRoutes);
 
 // ----------------- AUTH ROUTES -----------------
 app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
