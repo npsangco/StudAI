@@ -41,8 +41,9 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
           id: `user_${player.userId}`,
           userId: player.userId,
           name: player.name,
-          score: player.score || 0,
-          initial: player.initial || player.name[0]
+          score: player.forfeited ? 0 : (player.score || 0), // Force 0 score if forfeited
+          initial: player.initial || player.name[0],
+          forfeited: player.forfeited || false // Track forfeit status
         }));
         
         setFinalPlayers(formattedResults);
@@ -166,8 +167,52 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
 
     registerViewer();
 
+    // Handle browser close/refresh (X button)
+    const handleBeforeUnload = (e) => {
+      if (isRegistered && gamePin) {
+        console.log('⚠️ Browser closing - marking viewer for cleanup');
+        
+        // Mark viewer for cleanup
+        // The server-side or Firebase Functions can process this later
+        const cleanupUrl = `https://studai-quiz-battles-default-rtdb.asia-southeast1.firebasedatabase.app/battles/${gamePin}/metadata/pendingViewerCleanup/${Date.now()}.json`;
+        
+        if (navigator.sendBeacon) {
+          const blob = new Blob([JSON.stringify({ 
+            timestamp: Date.now(), 
+            action: 'decrement',
+            reason: 'beforeunload'
+          })], { type: 'application/json' });
+          navigator.sendBeacon(cleanupUrl, blob);
+          console.log('📡 Sent viewer cleanup beacon');
+        } else {
+          // Fallback: synchronous XHR
+          try {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', cleanupUrl, false);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send(JSON.stringify({ 
+              timestamp: Date.now(), 
+              action: 'decrement',
+              reason: 'beforeunload'
+            }));
+            console.log('📡 Sent viewer cleanup XHR');
+          } catch (err) {
+            console.error('❌ Failed to send viewer cleanup:', err);
+          }
+        }
+      }
+    };
+
+    // Add event listener for browser close
+    if (isRegistered) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
     // Cleanup when component unmounts OR modal closes
     return () => {
+      // Remove event listener
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
       if (isRegistered) {
         console.log('🚪 Unregistering viewer from battle:', gamePin);
         
@@ -444,6 +489,9 @@ const QuizLeaderboard = ({ isOpen, onClose, onRetry, results }) => {
                       
                       <div className="font-semibold text-black text-sm sm:text-base truncate">
                         {player.name}
+                        {player.forfeited && (
+                          <span className="ml-2 text-xs text-red-600 font-medium">(Forfeited)</span>
+                        )}
                       </div>
                     </div>
                     

@@ -273,6 +273,20 @@ function QuizzesPage() {
   
   const handleDismissBanner = () => {
     console.log('🚫 Reconnection banner dismissed');
+    
+    // Permanently invalidate the reconnection token
+    if (reconnectionOpportunity) {
+      const { gamePin, userId } = reconnectionOpportunity;
+      
+      // Remove from localStorage
+      const key = `reconnect_${gamePin}_${userId}`;
+      localStorage.removeItem(key);
+      console.log('✅ Reconnection token removed from localStorage');
+      
+      // Note: Firebase cleanup will happen via token expiration
+      // or can be done here if needed
+    }
+    
     setReconnectionOpportunity(null);
   };
 
@@ -526,6 +540,7 @@ function QuizzesPage() {
           onBack={handlers.handleBackFromEditor}
           onSave={handlers.handleSaveQuiz}
           onUpdateTitle={handlers.handleUpdateQuizTitle}
+          onUpdatePublicStatus={handlers.handleUpdatePublicStatus}
           onAddQuestion={handlers.handleAddQuestion}
           onDeleteQuestion={handlers.handleDeleteQuestion}
           onUpdateQuestion={handlers.handleUpdateQuestion}
@@ -563,6 +578,7 @@ function QuizzesPage() {
         gamePin={quizDataHook.gameState.gamePin}
         setGamePin={(pin) => quizDataHook.updateGameState({ gamePin: pin })}
         onJoinSuccess={handlers.handleJoinSuccess}
+        onQuizImported={() => quizAPI.loadQuizzesFromAPI()}
       />
 
       {/* Modals */}

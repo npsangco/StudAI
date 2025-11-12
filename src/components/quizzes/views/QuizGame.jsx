@@ -6,6 +6,8 @@ import { QuizQuestion } from '../QuizCore';
 import { LiveLeaderboard } from './QuizLiveLeaderboard';
 import { ANSWER_DISPLAY_DURATION, MATCHING_REVIEW_DURATION_BATTLE } from '../utils/constants';
 import { listenToPlayers, updatePlayerScore, updatePlayerProgress } from '../../../firebase/battleOperations';
+import { ref, update, get } from 'firebase/database';
+import { realtimeDb } from '../../../firebase/config';
 import { useReconnection } from '../hooks/useReconnection';
 import { ReconnectionModal } from './ReconnectionModal';
 
@@ -32,30 +34,66 @@ const QuizGame = ({
   const [isWaitingForPlayers, setIsWaitingForPlayers] = useState(false);
   const [playersWhoAnswered, setPlayersWhoAnswered] = useState(new Set());
 
+  // 🔥 AUTO-ADVANCE TIMER: Proceed automatically after timeout even if not all players answered
+  const waitingTimeoutRef = useRef(null);
+  
   // Listen to players who have answered (battle mode only)
   useEffect(() => {
-    if (mode !== 'battle' || !quiz?.gamePin || !isWaitingForPlayers) return;
+    if (mode !== 'battle' || !quiz?.gamePin || !isWaitingForPlayers) {
+      // Clear timeout if no longer waiting
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
+      }
+      return;
+    }
+    
+    // 🔥 SET AUTO-ADVANCE TIMEOUT (5 seconds after waiting starts)
+    // This ensures game continues even if disconnected players haven't answered
+    if (!waitingTimeoutRef.current) {
+      console.log('⏱️ Auto-advance timer started (5s)');
+      waitingTimeoutRef.current = setTimeout(() => {
+        console.log('⏰ TIMEOUT! Auto-advancing to next question...');
+        setIsWaitingForPlayers(false);
+        
+        if (game.currentQuestionIndex >= questions.length - 1) {
+          finishQuizWithAnswers(answersHistory);
+        } else {
+          handleNextQuestion();
+        }
+      }, 5000); // 5 seconds timeout
+    }
     
     const unsubscribe = listenToPlayers(quiz.gamePin, (firebasePlayers) => {
-      // Count how many players have progressed past current question
-      const playersOnNextQuestion = firebasePlayers.filter(
+      // ✅ FILTER OUT FORFEITED AND OFFLINE PLAYERS - only count ACTIVE & ONLINE players
+      const activePlayers = firebasePlayers.filter(p => !p.forfeited && p.isOnline !== false);
+      
+      // Count how many ACTIVE players have progressed past current question
+      const playersOnNextQuestion = activePlayers.filter(
         player => (player.currentQuestion || 0) >= game.currentQuestionIndex + 1
       ).length;
       
-      const totalPlayers = firebasePlayers.length;
+      const totalActivePlayers = activePlayers.length;
       
-      console.log(`📊 Progress: ${playersOnNextQuestion}/${totalPlayers} players answered Q${game.currentQuestionIndex + 1}`);
+      console.log(`📊 Progress: ${playersOnNextQuestion}/${totalActivePlayers} ACTIVE players answered Q${game.currentQuestionIndex + 1}`);
+      console.log(`⚠️ Forfeited/Offline players: ${firebasePlayers.length - activePlayers.length}`);
       
-      // Update the count for UI
+      // Update the count for UI (only active players)
       setPlayersWhoAnswered(new Set(
-        firebasePlayers
+        activePlayers
           .filter(p => (p.currentQuestion || 0) >= game.currentQuestionIndex + 1)
           .map(p => p.userId)
       ));
       
-      // If all players answered, proceed automatically
-      if (playersOnNextQuestion === totalPlayers && totalPlayers > 0) {
-        console.log('✅ All players answered! Proceeding to next question in 2s...');
+      // ✅ Check if ALL ACTIVE ONLINE players answered (ignoring forfeited/offline)
+      if (playersOnNextQuestion === totalActivePlayers && totalActivePlayers > 0) {
+        console.log('✅ All ACTIVE players answered! Proceeding to next question in 2s...');
+        
+        // Clear the auto-advance timeout since everyone answered
+        if (waitingTimeoutRef.current) {
+          clearTimeout(waitingTimeoutRef.current);
+          waitingTimeoutRef.current = null;
+        }
         
         setTimeout(() => {
           setIsWaitingForPlayers(false);
@@ -69,7 +107,14 @@ const QuizGame = ({
       }
     });
     
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      // Clean up timeout
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
+      }
+    };
   }, [mode, quiz?.gamePin, game.currentQuestionIndex, isWaitingForPlayers]);
 
   // Listen to real players in battle mode
@@ -84,7 +129,8 @@ const QuizGame = ({
             id: p.userId,
             name: p.name,
             initial: p.initial,
-            score: p.score || 0
+            score: p.score || 0,
+            forfeited: p.forfeited || false // Include forfeit status
           }))
           .sort((a, b) => b.score - a.score);
         
@@ -145,22 +191,100 @@ const QuizGame = ({
     if (result.success) {
       console.log('✅ Reconnected! Restoring state:', result.playerData);
       
-      // Use proper game state setters
+      // 1. Restore score
       if (result.playerData.score !== undefined) {
         game.scoreRef.current = result.playerData.score;
-        // Force re-render by updating a dummy state if needed
       }
       
-      // Jump to correct question if provided
-      if (result.playerData.currentQuestion !== undefined) {
-        // The game hook should handle this, or we manually set it
-        const targetIndex = result.playerData.currentQuestion;
-        if (targetIndex < questions.length) {
-          game.currentQuestionIndex = targetIndex;
+      // 2. Check current question of OTHER players (not disconnected player)
+      if (mode === 'battle' && quiz?.gamePin) {
+        try {
+          const battleRef = ref(realtimeDb, `battles/${quiz.gamePin}/players`);
+          const snapshot = await get(battleRef);
+          
+          if (snapshot.exists()) {
+            const playersData = snapshot.val();
+            const allPlayers = Object.values(playersData);
+            
+            console.log('👥 All players in battle:', allPlayers.map(p => ({
+              userId: p.userId,
+              name: p.name,
+              currentQuestion: p.currentQuestion,
+              isOnline: p.isOnline
+            })));
+            
+            // Find the MAXIMUM currentQuestion among OTHER active players
+            // Note: userId in Firebase might be stored with or without 'user_' prefix
+            const activePlayersQuestions = allPlayers
+              .filter(p => {
+                // Check both with and without prefix
+                const pUserId = String(p.userId);
+                const currentUserId = String(quiz.currentUserId);
+                const isNotSelf = pUserId !== currentUserId && 
+                                 pUserId !== `user_${currentUserId}` &&
+                                 `user_${pUserId}` !== currentUserId;
+                const isOnline = p.isOnline !== false; // Treat undefined as online
+                
+                console.log('🔍 Player filter:', {
+                  playerUserId: pUserId,
+                  currentUserId: currentUserId,
+                  isNotSelf,
+                  isOnline,
+                  included: isNotSelf && isOnline
+                });
+                
+                return isNotSelf && isOnline;
+              })
+              .map(p => p.currentQuestion || 0);
+            
+            console.log('🔍 Active other players questions:', activePlayersQuestions);
+            console.log('🔍 My saved question:', result.playerData.currentQuestion);
+            
+            if (activePlayersQuestions.length > 0) {
+              const maxCurrentQuestion = Math.max(...activePlayersQuestions);
+              console.log('🔍 Maximum question reached by others:', maxCurrentQuestion);
+              
+              // Jump to where other players are (catch up to the furthest player)
+              const targetQuestion = maxCurrentQuestion;
+              
+              if (targetQuestion >= 0 && targetQuestion < questions.length) {
+                console.log(`🚀 JUMPING to question index ${targetQuestion} (question #${targetQuestion + 1}) to catch up with other players`);
+                
+                // ✅ USE SETTER to trigger re-render!
+                game.setCurrentQuestionIndex(targetQuestion);
+                
+                // Update in Firebase too
+                await updatePlayerProgress(quiz.gamePin, quiz.currentUserId, targetQuestion);
+                
+                // Reset timer for this question
+                resetTimer(30);
+              } else if (targetQuestion >= questions.length) {
+                console.log('⚠️ Other players finished, using saved progress');
+                const savedQuestion = result.playerData.currentQuestion || 0;
+                game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
+              }
+            } else {
+              // No other active players online, use SAVED progress (not question 0!)
+              const savedQuestion = result.playerData.currentQuestion || 0;
+              console.log(`⚠️ No other active players found, using SAVED progress: question ${savedQuestion}`);
+              game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
+            }
+          } else {
+            // Battle doesn't exist, use saved progress
+            const savedQuestion = result.playerData.currentQuestion || 0;
+            console.log(`⚠️ Battle data not found, using SAVED progress: question ${savedQuestion}`);
+            game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
+          }
+        } catch (error) {
+          console.error('❌ Error checking other players progress:', error);
+          // Fallback to SAVED progress (not question 0!)
+          const savedQuestion = result.playerData.currentQuestion || 0;
+          console.log(`⚠️ Fallback: Using SAVED progress: question ${savedQuestion}`);
+          game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
         }
       }
       
-      // Resume game
+      // 3. Resume game
       game.setIsPaused(false);
       
       return result;
@@ -195,17 +319,117 @@ const QuizGame = ({
   }, [reconnection.connectionState.reconnectionAvailable, reconnection.connectionState.isReconnecting, mode]);
 
   // ============================================
-  // CLEANUP ON UNMOUNT
+  // FORFEIT BATTLE HANDLER
+  // ============================================
+  
+  const handleBackOrForfeit = async () => {
+    // Solo mode: just go back normally
+    if (mode === 'solo') {
+      onBack();
+      return;
+    }
+    
+    // Battle mode: forfeit with score reset
+    console.log('🏁 Player forfeiting battle...');
+    
+    if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
+      try {
+        // 1. Set score to 0 in Firebase
+        await updatePlayerScore(quiz.gamePin, quiz.currentUserId, 0);
+        console.log('✅ Score set to 0');
+        
+        // 2. Mark as forfeited
+        const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
+        await update(playerRef, {
+          forfeited: true,
+          forfeitedAt: Date.now(),
+          isOnline: false
+        });
+        console.log('✅ Player marked as forfeited');
+        
+        // 3. Cleanup connection tracking
+        await reconnection.disconnect();
+        console.log('✅ Connection cleaned up');
+        
+      } catch (error) {
+        console.error('❌ Error during forfeit:', error);
+      }
+    }
+    
+    // 4. Call onBack to return to previous screen
+    onBack();
+  };
+
+  // ============================================
+  // CLEANUP ON UNMOUNT & BROWSER CLOSE
   // ============================================
 
   useEffect(() => {
+    // Track if this is an intentional exit
+    let isIntentionalExit = false;
+    
+    // Handle browser close/refresh (X button)
+    const handleBeforeUnload = (e) => {
+      if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
+        console.log('⚠️ Browser closing/refreshing');
+        
+        // DON'T delete player data - just mark as disconnected
+        // This allows reconnection to work!
+        const connectionUrl = `https://studai-quiz-battles-default-rtdb.asia-southeast1.firebasedatabase.app/battles/${quiz.gamePin}/connections/user_${quiz.currentUserId}.json`;
+        
+        // Mark as disconnected but keep player data intact
+        const disconnectData = {
+          userId: quiz.currentUserId,
+          isOnline: false,
+          disconnectedAt: Date.now(),
+          reason: 'beforeunload'
+        };
+        
+        // Use sendBeacon for reliable delivery
+        if (navigator.sendBeacon) {
+          const blob = new Blob([JSON.stringify(disconnectData)], { type: 'application/json' });
+          navigator.sendBeacon(connectionUrl, blob);
+          console.log('📡 Sent disconnect beacon (keeping player data for reconnection)');
+        } else {
+          // Fallback: synchronous XHR
+          try {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', connectionUrl, false); // synchronous PUT
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send(JSON.stringify(disconnectData));
+            console.log('📡 Sent disconnect XHR');
+          } catch (err) {
+            console.error('❌ Failed to send disconnect:', err);
+          }
+        }
+        
+        // Also mark player as offline in players node
+        const playerOnlineUrl = `https://studai-quiz-battles-default-rtdb.asia-southeast1.firebasedatabase.app/battles/${quiz.gamePin}/players/user_${quiz.currentUserId}/isOnline.json`;
+        if (navigator.sendBeacon) {
+          const blob = new Blob([JSON.stringify(false)], { type: 'application/json' });
+          navigator.sendBeacon(playerOnlineUrl, blob);
+        }
+      }
+    };
+
+    // Add event listener for browser close
+    if (mode === 'battle') {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    // Cleanup on unmount (when user intentionally exits via button)
     return () => {
       if (mode === 'battle') {
         console.log('🧹 QuizGame unmounting - cleaning up connection');
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        
+        // Check if this is an intentional exit from the app (via onBack/onComplete)
+        // If yes, fully cleanup. If no, it's likely a navigation/refresh
+        // The reconnection.disconnect() will handle proper cleanup
         reconnection.disconnect();
       }
     };
-  }, [mode]);
+  }, [mode, quiz?.gamePin, quiz?.currentUserId]);
 
   const handleTimeUp = () => {
     // Prevent multiple timeout recordings
@@ -552,7 +776,7 @@ const QuizGame = ({
         displayScore={game.displayScore}
         mode={mode}
         playersCount={allPlayers.length}
-        onBack={onBack}
+        onBack={handleBackOrForfeit}
       />
 
       {/* Waiting Overlay */}
@@ -564,7 +788,7 @@ const QuizGame = ({
               Waiting for other players...
             </h3>
             <p className="text-gray-600">
-              {playersWhoAnswered.size}/{allPlayers.length} players answered
+              {playersWhoAnswered.size}/{allPlayers.filter(p => !p.forfeited).length} players answered
             </p>
           </div>
         </div>

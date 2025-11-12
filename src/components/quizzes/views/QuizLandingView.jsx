@@ -15,7 +15,8 @@ export const QuizLandingView = ({
   handlers,
   gamePin,
   setGamePin,
-  onJoinSuccess
+  onJoinSuccess,
+  onQuizImported
 }) => {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -35,6 +36,7 @@ export const QuizLandingView = ({
               onQuizSelect={handlers.handleQuizSelect}
               onDeleteQuiz={handlers.handleDeleteQuiz}
               onCreateQuiz={handlers.handleCreateQuiz}
+              onImportQuiz={onQuizImported}
             />
           </div>
 
@@ -92,6 +94,7 @@ export const QuizLandingView = ({
                   onQuizSelect={handlers.handleQuizSelect}
                   onDeleteQuiz={handlers.handleDeleteQuiz}
                   onCreateQuiz={handlers.handleCreateQuiz}
+                  onImportQuiz={onQuizImported}
                 />
               </div>
             ) : (
@@ -124,6 +127,7 @@ export const QuizLandingView = ({
                   onQuizSelect={handlers.handleQuizSelect}
                   onDeleteQuiz={handlers.handleDeleteQuiz}
                   onCreateQuiz={handlers.handleCreateQuiz}
+                  onImportQuiz={onQuizImported}
                 />
               </div>
             ) : (

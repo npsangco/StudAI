@@ -27,6 +27,23 @@ const Quiz = sequelize.define('Quiz', {
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
+  share_code: {
+    type: DataTypes.STRING(6),
+    allowNull: true,
+    unique: true
+  },
+  original_quiz_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'quizzes',
+      key: 'quiz_id'
+    }
+  },
+  shared_by_username: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
   total_questions: {
     type: DataTypes.INTEGER,
     defaultValue: 0

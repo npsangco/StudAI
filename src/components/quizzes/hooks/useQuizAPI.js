@@ -114,10 +114,11 @@ export function useQuizAPI(quizDataHook) {
         console.log('✅ Quiz created with ID:', quizId);
       } else {
         // Update existing quiz metadata
+        // ✅ Ensure is_public is explicitly sent (default to false if undefined)
         await quizApi.update(quizId, {
           title: quizData.editing.title,
           description: quizData.editing.description || '',
-          is_public: quizData.editing.isPublic  
+          is_public: quizData.editing.isPublic !== undefined ? quizData.editing.isPublic : false
         });
         console.log('✅ Quiz updated:', quizId);
       }

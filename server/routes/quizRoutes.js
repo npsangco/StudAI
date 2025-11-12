@@ -18,6 +18,31 @@ const requireAuth = (req, res, next) => {
 };
 
 // ============================================
+// HELPER: Generate unique share code
+// ============================================
+const generateUniqueShareCode = async () => {
+  let shareCode;
+  let isUnique = false;
+  let attempts = 0;
+  const maxAttempts = 10;
+  
+  while (!isUnique && attempts < maxAttempts) {
+    shareCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const existing = await Quiz.findOne({ 
+      where: { share_code: shareCode } 
+    });
+    if (!existing) isUnique = true;
+    attempts++;
+  }
+  
+  if (!isUnique) {
+    throw new Error('Failed to generate unique share code');
+  }
+  
+  return shareCode;
+};
+
+// ============================================
 // QUIZ ROUTES
 // ============================================
 
@@ -138,17 +163,31 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Title is required' });
     }
 
+    // ✅ FIX: Default is PRIVATE, share code generated only when toggled to PUBLIC
+    const isPublic = is_public !== undefined ? is_public : false;
+    let shareCode = null;
+    
+    if (isPublic) {
+      shareCode = await generateUniqueShareCode();
+    }
+
     const newQuiz = await Quiz.create({
       title: title.trim(),
       description: description || '',
       created_by: userId,
-      is_public: is_public !== undefined ? is_public : true,
+      is_public: isPublic,
+      share_code: shareCode, // ✅ Set share code on creation
       total_questions: 0,
       total_attempts: 0,
       average_score: 0
     });
 
-    res.status(201).json({ quiz: newQuiz });
+    console.log(`✅ Quiz created with share code: ${shareCode}`);
+
+    res.status(201).json({ 
+      quiz: newQuiz,
+      share_code: shareCode 
+    });
   } catch (err) {
     console.error('❌ Create quiz error:', err);
     res.status(500).json({ error: 'Failed to create quiz' });
@@ -172,12 +211,19 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to edit this quiz' });
     }
 
-    await quiz.update({
+    // ✅ Only update is_public if explicitly provided
+    const updateData = {
       title: title || quiz.title,
       description: description !== undefined ? description : quiz.description,
-      is_public: is_public !== undefined ? is_public : quiz.is_public,
       updated_at: new Date()
-    });
+    };
+    
+    // Only update is_public if it's explicitly passed in the request
+    if (is_public !== undefined) {
+      updateData.is_public = is_public;
+    }
+    
+    await quiz.update(updateData);
 
     res.json({ quiz });
   } catch (err) {
@@ -925,13 +971,17 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
       });
     }
     
-    if (!winnerId) {
-      console.error('❌ Winner ID is missing');
-      return res.status(400).json({ 
-        success: false,
-        error: 'Winner ID is required' 
-      });
-    }
+    // ============================================
+    // FIND TIED WINNERS (highest score)
+    // ============================================
+    
+    const maxScore = Math.max(...players.map(p => p.score));
+    const winners = players.filter(p => p.score === maxScore);
+    const winnerIds = winners.map(w => w.userId);
+    
+    console.log('🔍 Max score:', maxScore);
+    console.log('🏆 Winners (tied or single):', winnerIds);
+    console.log(`🎯 ${winners.length} winner(s) with ${maxScore} points`);
     
     // ============================================
     // START TRANSACTION
@@ -988,6 +1038,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         alreadySynced: true,
         battleId: battle.battle_id,
         winnerId: battle.winner_id,
+        winnerIds: winnerIds,
         totalPlayers: battle.current_players
       });
     }
@@ -996,13 +1047,20 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     // 4. UPDATE BATTLE STATUS
     // ============================================
     
+    // For single winner: use winnerId
+    // For tied winners: use first winner's ID (just for DB constraint)
+    const primaryWinnerId = winnerIds[0];
+    
     await battle.update({
       status: 'completed',
-      winner_id: winnerId,
+      winner_id: primaryWinnerId, // Store primary winner (for single or first of tied)
       completed_at: completedAt || new Date()
     }, { transaction });
     
-    console.log('✅ Battle marked as completed');
+    console.log(`✅ Battle marked as completed with winner ${primaryWinnerId}`);
+    if (winnerIds.length > 1) {
+      console.log(`🤝 ${winnerIds.length} tied winners detected`);
+    }
     
     // ============================================
     // 5. UPDATE PARTICIPANTS & AWARD POINTS
@@ -1015,7 +1073,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
       try {
         const pointsEarned = player.score * 10;
         const expEarned = player.score * 5;
-        const isWinner = player.userId === winnerId;
+        const isWinner = winnerIds.includes(player.userId);
         
         console.log(`📝 Updating player ${player.userId}: score=${player.score}, points=${pointsEarned}`);
         
@@ -1082,6 +1140,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     
     await transaction.commit();
     console.log('✅ Transaction committed successfully');
+    console.log(`🎯 Final summary: ${winnerIds.length} winner(s), ${updatedCount} players updated`);
     
     // ============================================
     // 8. SUCCESS RESPONSE
@@ -1091,9 +1150,11 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
       success: true,
       message: 'Battle results synced successfully',
       battleId: battle.battle_id,
-      winnerId,
+      winnerId: primaryWinnerId,
+      winnerIds: winnerIds, // All tied winners
       totalPlayers: players.length,
       updatedPlayers: updatedCount,
+      isTied: winnerIds.length > 1,
       timestamp: new Date().toISOString()
     });
     
@@ -1169,6 +1230,219 @@ router.get('/battle/:gamePin/verify-sync', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('❌ Verify sync error:', error);
     res.status(500).json({ error: 'Failed to verify sync' });
+  }
+});
+
+
+// ============================================
+// QUIZ SHARING ROUTES
+// ============================================
+
+// ✅ FIX: Toggle quiz public/private status WITHOUT regenerating share code
+router.post('/:id/toggle-public', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const quizId = req.params.id;
+    const { is_public } = req.body;
+
+    const quiz = await Quiz.findByPk(quizId);
+
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    if (quiz.created_by !== userId) {
+      return res.status(403).json({ error: 'Not authorized to modify this quiz' });
+    }
+
+    // ✅ FIX: Only generate share code if:
+    // 1. Making public AND
+    // 2. No share code exists yet
+    let shareCode = quiz.share_code;
+    
+    if (is_public && !shareCode) {
+      console.log('🔑 Generating NEW share code for quiz:', quizId);
+      shareCode = await generateUniqueShareCode();
+    } else if (is_public && shareCode) {
+      console.log('♻️ Reusing existing share code:', shareCode);
+    } else {
+      console.log('🔒 Making quiz private, keeping share code:', shareCode);
+    }
+
+    // Update quiz
+    await quiz.update({
+      is_public,
+      share_code: shareCode, // Always save the share code (new or existing)
+      updated_at: new Date()
+    });
+
+    console.log(`✅ Quiz ${quizId} updated: public=${is_public}, code=${shareCode}`);
+
+    res.json({ 
+      quiz,
+      share_code: is_public ? shareCode : null // Only return code if public
+    });
+  } catch (err) {
+    console.error('❌ Toggle public error:', err);
+    res.status(500).json({ error: 'Failed to update quiz sharing status' });
+  }
+});
+
+// ✅ WORKING: Import quiz via share code
+router.post('/import', requireAuth, async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const userId = req.session.userId;
+    const { share_code } = req.body;
+
+    if (!share_code || share_code.length !== 6) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Invalid share code. Please enter a 6-digit code.' });
+    }
+
+    console.log('🔍 Looking for quiz with share code:', share_code);
+
+    // Find the quiz with this share code
+    const originalQuiz = await Quiz.findOne({
+      where: { 
+        share_code: share_code.trim(),
+        is_public: true 
+      },
+      include: [{
+        model: User,
+        as: 'creator',
+        attributes: ['username']
+      }],
+      transaction
+    });
+
+    if (!originalQuiz) {
+      await transaction.rollback();
+      console.log('❌ Quiz not found for code:', share_code);
+      return res.status(404).json({ 
+        error: 'Quiz not found. Make sure the code is correct and the quiz is public.' 
+      });
+    }
+
+    console.log('✅ Found quiz:', originalQuiz.title, 'by', originalQuiz.creator.username);
+
+    // Don't allow importing your own quiz
+    if (originalQuiz.created_by === userId) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'You cannot import your own quiz' });
+    }
+
+    // Check if user already imported this quiz
+    const existingImport = await Quiz.findOne({
+      where: {
+        created_by: userId,
+        original_quiz_id: originalQuiz.quiz_id
+      },
+      transaction
+    });
+
+    if (existingImport) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'You already imported this quiz' });
+    }
+
+    console.log('📦 Creating imported quiz copy...');
+
+    // Create a copy of the quiz for this user
+    const importedQuiz = await Quiz.create({
+      title: originalQuiz.title,
+      description: originalQuiz.description,
+      created_by: userId,
+      is_public: false, // Imported quizzes start as private
+      share_code: null, // Don't copy the share code
+      original_quiz_id: originalQuiz.quiz_id,
+      shared_by_username: originalQuiz.creator.username,
+      total_questions: 0,
+      total_attempts: 0,
+      average_score: 0
+    }, { transaction });
+
+    // Copy all questions from original quiz
+    const originalQuestions = await Question.findAll({
+      where: { quiz_id: originalQuiz.quiz_id },
+      order: [['question_order', 'ASC']],
+      transaction
+    });
+
+    console.log(`📝 Copying ${originalQuestions.length} questions...`);
+
+    for (const originalQuestion of originalQuestions) {
+      await Question.create({
+        quiz_id: importedQuiz.quiz_id,
+        type: originalQuestion.type,
+        question: originalQuestion.question,
+        question_order: originalQuestion.question_order,
+        choices: originalQuestion.choices,
+        correct_answer: originalQuestion.correct_answer,
+        answer: originalQuestion.answer,
+        matching_pairs: originalQuestion.matching_pairs,
+        points: originalQuestion.points
+      }, { transaction });
+    }
+
+    // Update total_questions count
+    await importedQuiz.update({
+      total_questions: originalQuestions.length
+    }, { transaction });
+
+    await transaction.commit();
+
+    console.log(`✅ Quiz "${originalQuiz.title}" imported successfully by user ${userId}`);
+    
+    res.json({ 
+      message: 'Quiz imported successfully',
+      quiz: importedQuiz
+    });
+  } catch (err) {
+    await transaction.rollback();
+    console.error('❌ Import quiz error:', err);
+    res.status(500).json({ error: 'Failed to import quiz' });
+  }
+});
+
+// ✅ NEW: Backfill share codes for existing public quizzes
+router.post('/admin/backfill-share-codes', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    
+    // Only allow for development/admin - you can add admin check here
+    
+    // Find all public quizzes without share codes
+    const quizzes = await Quiz.findAll({
+      where: {
+        is_public: true,
+        share_code: null
+      }
+    });
+    
+    console.log(`🔧 Found ${quizzes.length} public quizzes without share codes`);
+    
+    let updated = 0;
+    for (const quiz of quizzes) {
+      try {
+        const shareCode = await generateUniqueShareCode();
+        await quiz.update({ share_code: shareCode });
+        console.log(`✅ Added share code ${shareCode} to quiz ${quiz.quiz_id}`);
+        updated++;
+      } catch (err) {
+        console.error(`❌ Failed to update quiz ${quiz.quiz_id}:`, err);
+      }
+    }
+    
+    res.json({
+      message: 'Share codes backfilled',
+      total: quizzes.length,
+      updated: updated
+    });
+  } catch (err) {
+    console.error('❌ Backfill error:', err);
+    res.status(500).json({ error: 'Failed to backfill share codes' });
   }
 });
 

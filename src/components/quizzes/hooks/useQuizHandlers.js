@@ -235,6 +235,18 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
     }
   };
 
+  const handleUpdatePublicStatus = (isPublic, shareCode) => {
+    if (quizData.editing) {
+      const updatedQuiz = { 
+        ...quizData.editing, 
+        isPublic,
+        share_code: shareCode || quizData.editing.share_code // Preserve share_code
+      };
+      updateQuizData({ editing: updatedQuiz });
+      console.log('✅ Quiz public status updated in state:', { isPublic, shareCode });
+    }
+  };
+
   const handleSaveQuiz = async () => {
     const success = await quizAPI.saveQuiz();
     
@@ -443,6 +455,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
     handleDeleteQuiz,
     handleConfirmDelete,
     handleUpdateQuizTitle,
+    handleUpdatePublicStatus,
     handleSaveQuiz,
 
     // Questions

@@ -1,6 +1,134 @@
 import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
+import { Copy, Check } from 'lucide-react';
+
+// ============================================
+// SHARE TOGGLE COMPONENT
+// ============================================
+
+const ShareToggle = ({ quiz, onPublicStatusChange }) => {
+  // ✅ Check both camelCase and snake_case, default to false (private)
+  const initialIsPublic = quiz.isPublic ?? quiz.is_public ?? false;
+  const [isPublic, setIsPublic] = useState(initialIsPublic);
+  const [shareCode, setShareCode] = useState(quiz.share_code || null);
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // ✅ Update state when quiz prop changes (important for editor refresh)
+  React.useEffect(() => {
+    const updatedIsPublic = quiz.isPublic ?? quiz.is_public ?? false;
+    const updatedShareCode = quiz.share_code || null;
+    
+    console.log('📋 ShareToggle useEffect:', { updatedIsPublic, updatedShareCode });
+    
+    setIsPublic(updatedIsPublic);
+    setShareCode(updatedShareCode);
+  }, [quiz.isPublic, quiz.is_public, quiz.share_code]);
+
+  const handleToggle = async () => {
+    try {
+      setLoading(true);
+      const newIsPublic = !isPublic;
+
+      console.log('🔄 Toggling quiz visibility:', { 
+        quizId: quiz.id, 
+        currentPublic: isPublic, 
+        newPublic: newIsPublic,
+        currentShareCode: shareCode 
+      });
+
+      const response = await fetch(`http://localhost:4000/api/quizzes/${quiz.id}/toggle-public`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ is_public: newIsPublic })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('✅ Toggle successful:', data);
+        const newShareCode = data.share_code || shareCode; // Keep existing code if not in response
+        
+        setIsPublic(newIsPublic);
+        setShareCode(newShareCode);
+        
+        console.log('✅ State updated:', { newIsPublic, newShareCode });
+        
+        // ✅ Notify parent component of the change (pass shareCode too)
+        if (onPublicStatusChange) {
+          onPublicStatusChange(newIsPublic, newShareCode);
+        }
+      } else {
+        console.error('❌ Toggle failed:', data);
+        alert(data.error || 'Failed to update quiz sharing');
+      }
+    } catch (error) {
+      console.error('❌ Toggle error:', error);
+      alert('Failed to update quiz sharing');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!shareCode) return;
+    
+    try {
+      await navigator.clipboard.writeText(shareCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Copy error:', error);
+    }
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+      {/* Toggle Section */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleToggle}
+          disabled={loading}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+            isPublic ? 'bg-green-500' : 'bg-gray-300'
+          } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              isPublic ? 'translate-x-6' : 'translate-x-1'
+            }`}
+          />
+        </button>
+        <span className="text-sm font-medium text-gray-700">
+          {isPublic ? '🌍 Public' : '🔒 Private'}
+        </span>
+      </div>
+
+      {/* Share Code Display - Using key to force re-render */}
+      {isPublic && shareCode && (
+        <div key={shareCode} className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">Share Code:</span>
+          <div className="flex items-center gap-1 px-2 py-1 bg-white rounded border border-gray-300">
+            <code className="text-sm font-mono font-bold text-blue-600">{shareCode}</code>
+            <button
+              onClick={handleCopy}
+              className="p-1 hover:bg-gray-100 rounded transition-colors"
+              title={copied ? 'Copied!' : 'Copy code'}
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-green-500" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 text-gray-500" />
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ============================================
 // COMPREHENSIVE VALIDATION SYSTEM
@@ -233,7 +361,7 @@ const findDuplicates = (arr) => {
 // QUIZ CONTROLS COMPONENT - RESPONSIVE
 // ============================================
 
-const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions }) => {
+const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, onUpdatePublicStatus, questions }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempTitle, setTempTitle] = useState(quiz.title);
   const [showEmptyWarning, setShowEmptyWarning] = useState(false);
@@ -355,6 +483,9 @@ const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, ques
                 )}
               </div>
 
+              {/* Share Toggle Row */}
+              <ShareToggle quiz={quiz} onPublicStatusChange={onUpdatePublicStatus} />
+
               {/* Actions Row */}
               <div className="flex gap-2">
                 <button 
@@ -389,86 +520,91 @@ const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, ques
               </div>
             </div>
 
-            {/* Tablet/Desktop Layout - Single Row */}
-            <div className="hidden sm:flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={tempTitle}
-                    onChange={(e) => setTempTitle(e.target.value)}
-                    onBlur={handleTitleBlur}
-                    onKeyDown={handleTitleKeyDown}
-                    autoFocus
-                    className="text-lg md:text-xl font-bold text-black border-2 border-blue-500 rounded px-2 py-1 focus:outline-none flex-1 min-w-0"
-                    placeholder="Enter quiz title..."
-                  />
-                ) : (
-                  <h1 
-                    onClick={handleTitleClick}
-                    className="text-lg md:text-xl font-bold text-black cursor-pointer hover:text-blue-600 transition-colors px-2 py-1 hover:bg-gray-100 rounded truncate"
-                    title="Click to edit title"
-                  >
-                    {quiz.title}
-                  </h1>
-                )}
+            {/* Tablet/Desktop Layout */}
+            <div className="hidden sm:flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={tempTitle}
+                      onChange={(e) => setTempTitle(e.target.value)}
+                      onBlur={handleTitleBlur}
+                      onKeyDown={handleTitleKeyDown}
+                      autoFocus
+                      className="text-lg md:text-xl font-bold text-black border-2 border-blue-500 rounded px-2 py-1 focus:outline-none flex-1 min-w-0"
+                      placeholder="Enter quiz title..."
+                    />
+                  ) : (
+                    <h1 
+                      onClick={handleTitleClick}
+                      className="text-lg md:text-xl font-bold text-black cursor-pointer hover:text-blue-600 transition-colors px-2 py-1 hover:bg-gray-100 rounded truncate"
+                      title="Click to edit title"
+                    >
+                      {quiz.title}
+                    </h1>
+                  )}
+                  
+                  <span className={`px-2 md:px-3 py-1 text-xs rounded-full font-medium flex-shrink-0 ${
+                    questionCount === 0 
+                      ? 'bg-red-100 text-red-700' 
+                      : 'bg-green-100 text-green-700'
+                  }`}>
+                    {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
+                  </span>
+                  
+                  {hasErrors && (
+                    <button
+                      onClick={() => setShowErrorModal(true)}
+                      className="px-2 md:px-3 py-1 bg-red-500 text-white text-xs rounded-full font-medium hover:bg-red-600 transition-colors animate-pulse cursor-pointer shadow-lg flex-shrink-0"
+                      title="Click to view all errors"
+                    >
+                      ⚠️ {errors.length} {errors.length === 1 ? 'Error' : 'Errors'}
+                    </button>
+                  )}
+                </div>
                 
-                <span className={`px-2 md:px-3 py-1 text-xs rounded-full font-medium flex-shrink-0 ${
-                  questionCount === 0 
-                    ? 'bg-red-100 text-red-700' 
-                    : 'bg-green-100 text-green-700'
-                }`}>
-                  {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
-                </span>
-                
-                {hasErrors && (
-                  <button
-                    onClick={() => setShowErrorModal(true)}
-                    className="px-2 md:px-3 py-1 bg-red-500 text-white text-xs rounded-full font-medium hover:bg-red-600 transition-colors animate-pulse cursor-pointer shadow-lg flex-shrink-0"
-                    title="Click to view all errors"
+                <div className="flex gap-2 md:gap-3 items-center relative flex-shrink-0">
+                  {showEmptyWarning && (
+                    <div className="absolute right-0 top-full mt-2 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium animate-shake whitespace-nowrap z-50">
+                      ⚠️ Fix all errors before saving!
+                    </div>
+                  )}
+                  
+                  <button 
+                    onClick={onBack}
+                    className="text-xs md:text-sm text-gray-600 hover:text-gray-800 font-medium px-2"
                   >
-                    ⚠️ {errors.length} {errors.length === 1 ? 'Error' : 'Errors'}
+                    Back
                   </button>
-                )}
+                  <button 
+                    onClick={onAddQuestion}
+                    disabled={questions.length >= 30}
+                    className={`px-3 md:px-4 py-2 text-xs md:text-sm rounded-md font-medium ${
+                      questions.length >= 30 
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Add Question {questions.length >= 30 && '(Max 30)'}
+                  </button>
+                  <button 
+                    onClick={handleSaveClick}
+                    disabled={hasErrors}
+                    className={`px-3 md:px-4 py-2 text-xs md:text-sm rounded-md font-medium transition-all ${
+                      hasErrors
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-black text-white hover:bg-gray-800'
+                    }`}
+                    title={hasErrors ? 'Fix errors before saving' : 'Save quiz'}
+                  >
+                    Save
+                  </button>
+                </div>
               </div>
-              
-              <div className="flex gap-2 md:gap-3 items-center relative flex-shrink-0">
-                {showEmptyWarning && (
-                  <div className="absolute right-0 top-full mt-2 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium animate-shake whitespace-nowrap z-50">
-                    ⚠️ Fix all errors before saving!
-                  </div>
-                )}
-                
-                <button 
-                  onClick={onBack}
-                  className="text-xs md:text-sm text-gray-600 hover:text-gray-800 font-medium px-2"
-                >
-                  Back
-                </button>
-                <button 
-                  onClick={onAddQuestion}
-                  disabled={questions.length >= 30}
-                  className={`px-3 md:px-4 py-2 text-xs md:text-sm rounded-md font-medium ${
-                    questions.length >= 30 
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Add Question {questions.length >= 30 && '(Max 30)'}
-                </button>
-                <button 
-                  onClick={handleSaveClick}
-                  disabled={hasErrors}
-                  className={`px-3 md:px-4 py-2 text-xs md:text-sm rounded-md font-medium transition-all ${
-                    hasErrors
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-black text-white hover:bg-gray-800'
-                  }`}
-                  title={hasErrors ? 'Fix errors before saving' : 'Save quiz'}
-                >
-                  Save
-                </button>
-              </div>
+
+              {/* Share Toggle Row - Full width on desktop */}
+              <ShareToggle quiz={quiz} onPublicStatusChange={onUpdatePublicStatus} />
             </div>
           </div>
         </div>
@@ -505,6 +641,7 @@ export const QuizEditor = ({
   onBack, 
   onSave, 
   onUpdateTitle,
+  onUpdatePublicStatus,
   onAddQuestion,
   onDeleteQuestion,
   onUpdateQuestion,
@@ -523,6 +660,7 @@ export const QuizEditor = ({
         onAddQuestion={onAddQuestion}
         onSave={onSave}
         onUpdateTitle={onUpdateTitle}
+        onUpdatePublicStatus={onUpdatePublicStatus}
       />
       
       <div className="max-w-4xl mx-auto p-3 sm:p-4 md:p-6">

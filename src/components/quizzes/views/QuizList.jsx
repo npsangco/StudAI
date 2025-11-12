@@ -2,12 +2,94 @@ import React, { useState } from 'react';
 import { Edit, Play, GripVertical, Trash2 } from 'lucide-react';
 import EmptyQuizState from './EmptyState';
 
+// Share Code Input Component
+const ShareCodeInput = ({ onImportQuiz }) => {
+  const [shareCode, setShareCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleImport = async () => {
+    if (shareCode.length !== 6) {
+      setError('Enter a valid 6-digit code');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+
+      const response = await fetch('http://localhost:4000/api/quizzes/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ share_code: shareCode })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setShareCode('');
+        if (onImportQuiz) onImportQuiz();
+        alert(`Quiz "${data.quiz.title}" imported successfully!`);
+      } else {
+        setError(data.error || 'Failed to import quiz');
+      }
+    } catch (err) {
+      console.error('Import error:', err);
+      setError('Failed to import quiz');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (value) => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 6);
+    setShareCode(cleaned);
+    setError('');
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-xs font-semibold text-gray-600 uppercase">
+        Import Quiz
+      </label>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="6-digit code"
+          maxLength={6}
+          value={shareCode}
+          onChange={(e) => handleChange(e.target.value)}
+          className="flex-1 px-3 py-2 text-sm font-mono border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+          disabled={loading}
+        />
+        <button
+          onClick={handleImport}
+          disabled={shareCode.length !== 6 || loading}
+          className={`px-4 py-2 text-sm rounded-lg font-semibold transition-all ${
+            shareCode.length === 6 && !loading
+              ? 'bg-blue-500 text-white hover:bg-blue-600'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {loading ? '...' : 'Import'}
+        </button>
+      </div>
+      {error && (
+        <p className="text-xs text-red-600 font-medium">{error}</p>
+      )}
+    </div>
+  );
+};
+
 // Quiz Item Component with Drag & Drop
 const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const isBeingDragged = draggedIndex === index;
   const showDropIndicator = isDragOver && !isBeingDragged;
   const isEmpty = !quiz.questionCount || quiz.questionCount === 0;
+  const isShared = quiz.shared_by_username; // Check if quiz is shared
 
   const handleDragStart = (e) => {
     e.currentTarget.style.cursor = 'grabbing';
@@ -98,6 +180,12 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
                   <span className="ml-2 text-xs text-red-500 font-normal">(Empty)</span>
                 )}
               </h3>
+              {/* Shared By Indicator */}
+              {isShared && (
+                <p className="text-xs text-blue-600 font-medium mt-0.5">
+                  📤 Shared by {quiz.shared_by_username}
+                </p>
+              )}
             </div>
           </div>
 
@@ -164,13 +252,20 @@ export const QuizList = ({
   onEditQuiz, 
   onQuizSelect, 
   onDeleteQuiz, 
-  onCreateQuiz 
+  onCreateQuiz,
+  onImportQuiz
 }) => {
-  // If no quizzes, show empty state (no scroll needed)
+  // If no quizzes, show empty state with import option
   if (quizzes.length === 0) {
     return (
-      <div className="h-full bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 flex items-center justify-center overflow-hidden">
-        <EmptyQuizState onCreateQuiz={onCreateQuiz} />
+      <div className="h-full bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+        <div className="flex-1 flex items-center justify-center">
+          <EmptyQuizState onCreateQuiz={onCreateQuiz} />
+        </div>
+        {/* Import Quiz Section at bottom */}
+        <div className="pt-4 border-t border-gray-200">
+          <ShareCodeInput onImportQuiz={onImportQuiz} />
+        </div>
       </div>
     );
   }
@@ -201,18 +296,22 @@ export const QuizList = ({
             />
           ))}
         </div>
-        {/* Extra padding at bottom to ensure button is never cut off */}
+        {/* Extra padding at bottom */}
         <div className="h-3 sm:h-4"></div>
       </div>
       
-      {/* Create Button */}
-      <div className="flex-shrink-0 p-3 sm:p-4 md:p-6 pt-2 sm:pt-3 md:pt-4 border-t border-gray-100 bg-white">
+      {/* Bottom Section - Create + Import */}
+      <div className="flex-shrink-0 p-3 sm:p-4 md:p-6 pt-2 sm:pt-3 md:pt-4 border-t border-gray-100 bg-white space-y-3">
+        {/* Create Button */}
         <button 
           onClick={onCreateQuiz}
           className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 sm:py-3 px-4 rounded-lg font-semibold text-sm sm:text-base hover:from-yellow-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-md hover:shadow-lg active:scale-95"
         >
           Create Quiz
         </button>
+        
+        {/* Import Quiz Input */}
+        <ShareCodeInput onImportQuiz={onImportQuiz} />
       </div>
     </div>
   );
