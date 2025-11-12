@@ -14,19 +14,28 @@ const ShareToggle = ({ quiz, onPublicStatusChange }) => {
   const [shareCode, setShareCode] = useState(quiz.share_code || null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // ✅ Check if this is a temp quiz (not saved yet)
+  const isTempQuiz = quiz.isTemp || quiz.id?.toString().startsWith('temp-');
 
   // ✅ Update state when quiz prop changes (important for editor refresh)
   React.useEffect(() => {
     const updatedIsPublic = quiz.isPublic ?? quiz.is_public ?? false;
     const updatedShareCode = quiz.share_code || null;
     
-    console.log('📋 ShareToggle useEffect:', { updatedIsPublic, updatedShareCode });
+    console.log('📋 ShareToggle useEffect:', { updatedIsPublic, updatedShareCode, isTempQuiz });
     
     setIsPublic(updatedIsPublic);
     setShareCode(updatedShareCode);
-  }, [quiz.isPublic, quiz.is_public, quiz.share_code]);
+  }, [quiz.isPublic, quiz.is_public, quiz.share_code, isTempQuiz]);
 
   const handleToggle = async () => {
+    // ✅ Prevent toggle for unsaved quizzes
+    if (isTempQuiz) {
+      alert('⚠️ Please save the quiz first before changing visibility settings.');
+      return;
+    }
+    
     try {
       setLoading(true);
       const newIsPublic = !isPublic;
@@ -90,10 +99,11 @@ const ShareToggle = ({ quiz, onPublicStatusChange }) => {
       <div className="flex items-center gap-2">
         <button
           onClick={handleToggle}
-          disabled={loading}
+          disabled={loading || isTempQuiz}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
             isPublic ? 'bg-green-500' : 'bg-gray-300'
-          } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          } ${loading || isTempQuiz ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          title={isTempQuiz ? 'Save quiz first to change visibility' : ''}
         >
           <span
             className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -104,6 +114,9 @@ const ShareToggle = ({ quiz, onPublicStatusChange }) => {
         <span className="text-sm font-medium text-gray-700">
           {isPublic ? '🌍 Public' : '🔒 Private'}
         </span>
+        {isTempQuiz && (
+          <span className="text-xs text-gray-500 italic">(Save quiz first)</span>
+        )}
       </div>
 
       {/* Share Code Display - Using key to force re-render */}

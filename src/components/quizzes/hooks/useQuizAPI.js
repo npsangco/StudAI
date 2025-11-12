@@ -40,6 +40,7 @@ export function useQuizAPI(quizDataHook) {
         questionCount: quiz.total_questions || 0,
         created: new Date(quiz.created_at).toLocaleDateString(),
         isPublic: quiz.is_public,
+        share_code: quiz.share_code, // ✅ Include share_code
         creator: quiz.creator?.username || 'Unknown'
       }));
 
