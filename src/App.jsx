@@ -15,6 +15,11 @@ import Planner from "./pages/Planner";
 import Profile from "./pages/Profile";
 import EmailStatus from "./components/confirmations/EmailStatus";
 import PasswordStatus from "./components/confirmations/PasswordStatus";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import UserManagement from "./pages/Admin/UserManagement";
+import QuizManagement from "./pages/Admin/QuizManagement";
+import StudySessions from "./pages/Admin/StudySessions";
+import AuditLogs from "./pages/Admin/AuditLogs";
 import 'primereact/resources/themes/lara-light-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
@@ -70,6 +75,12 @@ function App() {
           <Route path="/sessions" element={<Sessions />} />
           <Route path="/planner" element={<Planner />} />
           <Route path="/profile" element={<Profile />} />
+
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<UserManagement />} />
+          <Route path="/admin/quizzes" element={<QuizManagement />} />
+          <Route path="/admin/sessions" element={<StudySessions />} />
+          <Route path="/admin/logs" element={<AuditLogs />} />
 
           <Route path="/verify-status" element={<EmailStatus />} />
           <Route path="/password-updated" element={<PasswordStatus type="success" />} />
