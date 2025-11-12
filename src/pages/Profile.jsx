@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Lock, Eye, EyeOff, Trophy } from "lucide-react";
+import { Lock, Eye, EyeOff, Trophy, Camera } from "lucide-react";
 import axios from "axios";
 import { API_BASE } from "../components/api";
-import AchievementsModal from "../components/AchievementsModal"; // Add this import
+import AchievementsModal from "../components/AchievementsModal";
 
 export default function Profile() {
     const [showPassword, setShowPassword] = useState(false);
@@ -16,7 +16,8 @@ export default function Profile() {
     const [savedPhoto, setSavedPhoto] = useState(null);
     const [passwordMessage, setPasswordMessage] = useState("");
     const [originalProfile, setOriginalProfile] = useState(null);
-    const [showAchievementsModal, setShowAchievementsModal] = useState(false); // Add this state
+    const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+    const [isHovering, setIsHovering] = useState(false);
 
     const fileInputRef = useRef(null);
 
@@ -149,159 +150,210 @@ export default function Profile() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            {/* Add Achievements Modal */}
+        <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
             <AchievementsModal 
                 isOpen={showAchievementsModal} 
                 onClose={() => setShowAchievementsModal(false)} 
             />
             
-            <div className="flex justify-center items-center py-12">
-                <div className="bg-white rounded-2xl shadow-md w-full max-w-2xl p-10">
-                    <div className="flex justify-between items-center mb-8">
-                        <h2 className="text-2xl font-bold">Profile</h2>
-                        
-                        {/* Achievements Button */}
-                        <button
-                            onClick={() => setShowAchievementsModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl transition-colors duration-200"
-                        >
-                            <Trophy className="w-5 h-5" />
-                            <span>Achievements</span>
-                        </button>
+            <div className="max-w-4xl mx-auto">
+                <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    {/* Card Header */}
+                    <div className="px-6 py-8 sm:px-8 sm:py-8 border-b border-gray-200">
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center sm:text-left">
+                                Profile Settings
+                            </h1>
+                            
+                            <button
+                                onClick={() => setShowAchievementsModal(true)}
+                                className="flex items-center gap-3 px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                            >
+                                <Trophy className="w-5 h-5 sm:w-6 sm:h-6" />
+                                <span className="font-semibold text-sm sm:text-base">Achievements</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
-                        {/* Profile Picture */}
-                        <div className="flex flex-col items-center">
-                            <div className="w-32 h-32 bg-gray-200 rounded-full overflow-hidden">
-                                <img
-                                    src={
-                                        photo
-                                            ? photo.startsWith("http")
-                                                ? photo
-                                                : `${API_BASE}${photo}`
-                                            : "/uploads/profile_pictures/default-avatar.png"
-                                    }
-                                    alt=""
-                                    className="w-full h-full object-cover"
-                                />
-                            </div>
-
-                            <button
-                                type="button"
-                                className="mt-4 px-4 py-1 rounded-xl text-sm bg-black text-white hover:bg-gray-800 transition cursor-pointer"
-                                onClick={() => fileInputRef.current.click()}
-                            >
-                                Upload Photo
-                            </button>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                ref={fileInputRef}
-                                className="hidden"
-                                onChange={handlePhotoSelect}
-                            />
-                        </div>
-
-                        {/* Profile Fields */}
-                        <div className="flex-1 space-y-6">
-                            {/* Email */}
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Email</label>
-                                <div className="relative">
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        className="w-full px-4 py-2 border rounded-xl border-gray-300 bg-gray-100"
-                                        disabled
-                                    />
-                                    <Lock className="absolute right-3 top-2.5 text-gray-400 w-5 h-5" />
-                                </div>
-                            </div>
-
-                            {/* Username */}
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Username</label>
-                                <input
-                                    type="text"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    className="w-full px-4 py-2 border rounded-xl border-gray-300"
-                                />
-                            </div>
-
-                            {/* Password */}
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Password</label>
-                                <div className="relative">
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="Enter new password"
-                                        className="w-full px-4 py-2 border rounded-xl border-gray-300"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-2.5 text-gray-500"
-                                    >
-                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                    </button>
-                                </div>
-                                {passwordMessage && (
-                                    <p className="mt-2 text-sm text-red-600">{passwordMessage}</p>
-                                )}
-                            </div>
-
-                            {/* Birthday */}
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Birthday</label>
-                                <div className="flex gap-2 mb-3">
-                                    <select
-                                        value={month}
-                                        onChange={(e) => setMonth(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700"
-                                    >
-                                        <option value="">Month</option>
-                                        {months.map((m, i) => (
-                                            <option key={i} value={i + 1}>{m}</option>
-                                        ))}
-                                    </select>
-
-                                    <select
-                                        value={day}
-                                        onChange={(e) => setDay(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700"
-                                    >
-                                        <option value="">Day</option>
-                                        {days.map((d) => <option key={d} value={d}>{d}</option>)}
-                                    </select>
-
-                                    <select
-                                        value={year}
-                                        onChange={(e) => setYear(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm text-gray-700"
-                                    >
-                                        <option value="">Year</option>
-                                        {years.map((y) => <option key={y} value={y}>{y}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Update Button */}
-                            <div className="text-center">
-                                <button
-                                    onClick={handleUpdate}
-                                    disabled={!isChanged} // ✅ disable when unchanged
-                                    className={`px-8 py-2 rounded-xl text-white ${isChanged
-                                        ? "bg-green-600 hover:bg-green-700 cursor-pointer"
-                                        : "bg-gray-400 cursor-not-allowed"
-                                        }`}
+                    {/* Content Section */}
+                    <div className="p-6 sm:p-8 lg:p-10">
+                        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+                            {/* Profile Picture Section */}
+                            <div className="flex flex-col items-center lg:items-start lg:w-1/3">
+                                <div 
+                                    className="relative mb-6 cursor-pointer group"
+                                    onMouseEnter={() => setIsHovering(true)}
+                                    onMouseLeave={() => setIsHovering(false)}
+                                    onClick={() => fileInputRef.current.click()}
                                 >
-                                    Update
-                                </button>
+                                    <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 bg-gray-200 rounded-full overflow-hidden border-4 border-white shadow-lg relative">
+                                        <img
+                                            src={
+                                                photo
+                                                    ? photo.startsWith("http")
+                                                        ? photo
+                                                        : `${API_BASE}${photo}`
+                                                    : "/uploads/profile_pictures/default-avatar.png"
+                                            }
+                                            alt="Profile"
+                                            className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-50"
+                                        />
+                                        
+                                        {/* Hover Overlay */}
+                                        <div className={`absolute inset-0 bg-black bg-opacity-50 rounded-full flex flex-col items-center justify-center transition-all duration-300 ${
+                                            isHovering ? 'opacity-100' : 'opacity-0'
+                                        }`}>
+                                            <Camera className="w-8 h-8 text-white mb-2" />
+                                            <span className="text-white text-sm font-medium text-center px-2">
+                                                Upload Image
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    onChange={handlePhotoSelect}
+                                />
+                                
+                                {/* Profile Stats */}
+                                <div className="hidden lg:block mt-8 w-full">
+                                    <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                                        <h3 className="font-semibold text-gray-700 mb-4">Profile Info</h3>
+                                        <div className="space-y-3 text-sm text-gray-600">
+                                            <div className="flex justify-between">
+                                                <span>Member since</span>
+                                                <span className="font-medium">2024</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Last updated</span>
+                                                <span className="font-medium">Recently</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Profile Form Section */}
+                            <div className="flex-1 space-y-6 lg:space-y-8">
+                                {/* Email */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Email Address
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                            disabled
+                                        />
+                                        <Lock className="absolute right-4 top-3.5 text-gray-400 w-5 h-5" />
+                                    </div>
+                                    <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+                                </div>
+
+                                {/* Username */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Username
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                        placeholder="Enter your username"
+                                    />
+                                </div>
+
+                                {/* Password */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        New Password
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            placeholder="Enter new password"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-12"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-4 top-3.5 text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                                        >
+                                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                        </button>
+                                    </div>
+                                    {passwordMessage && (
+                                        <p className="mt-2 text-sm text-red-600 font-medium">{passwordMessage}</p>
+                                    )}
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Leave blank to keep current password
+                                    </p>
+                                </div>
+
+                                {/* Birthday */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Birthday
+                                    </label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <select
+                                            value={month}
+                                            onChange={(e) => setMonth(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-700"
+                                        >
+                                            <option value="" className="text-gray-400">Month</option>
+                                            {months.map((m, i) => (
+                                                <option key={i} value={i + 1}>{m}</option>
+                                            ))}
+                                        </select>
+
+                                        <select
+                                            value={day}
+                                            onChange={(e) => setDay(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-700"
+                                        >
+                                            <option value="" className="text-gray-400">Day</option>
+                                            {days.map((d) => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+
+                                        <select
+                                            value={year}
+                                            onChange={(e) => setYear(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-700"
+                                        >
+                                            <option value="" className="text-gray-400">Year</option>
+                                            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Update Button */}
+                                <div className="pt-4">
+                                    <button
+                                        onClick={handleUpdate}
+                                        disabled={!isChanged}
+                                        className={`w-full sm:w-auto px-8 py-4 rounded-xl font-semibold text-white transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                            isChanged
+                                                ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500 shadow-lg hover:shadow-xl cursor-pointer"
+                                                : "bg-gray-400 cursor-not-allowed shadow"
+                                        }`}
+                                    >
+                                        Update Profile
+                                    </button>
+                                    {!isChanged && (
+                                        <p className="mt-2 text-sm text-gray-500 text-center sm:text-left">
+                                            Make changes to enable update button
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

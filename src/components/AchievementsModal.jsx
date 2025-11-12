@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Trophy, Lock, Star, CheckCircle } from 'lucide-react';
-import { achievementsApi } from '../api/api'; // Update this import
+import { achievementsApi } from '../api/api';
 
 export default function AchievementsModal({ isOpen, onClose }) {
     const [achievements, setAchievements] = useState([]);
@@ -17,7 +17,7 @@ export default function AchievementsModal({ isOpen, onClose }) {
     const fetchAchievements = async () => {
         try {
             setLoading(true);
-            const response = await achievementsApi.getAll(); // Use the new API
+            const response = await achievementsApi.getAll();
             
             if (response.data.success) {
                 setAchievements(response.data.achievements);
@@ -89,7 +89,6 @@ export default function AchievementsModal({ isOpen, onClose }) {
         } catch (error) {
             console.error('Failed to equip achievement:', error);
             console.error('Error response data:', error.response?.data);
-            // You might want to add user-facing error handling here
         }
     };
 
@@ -120,28 +119,28 @@ export default function AchievementsModal({ isOpen, onClose }) {
     const getStatusIcon = (achievement, status) => {
         switch (status) {
             case 'equipped':
-                return <CheckCircle className="w-6 h-6 text-green-500" />;
+                return <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />;
             case 'unlocked':
-                return <Trophy className="w-6 h-6" style={{ color: achievement.color }} />;
+                return <Trophy className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: achievement.color }} />;
             case 'locked':
-                return <Lock className="w-6 h-6 text-gray-400" />;
+                return <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />;
             default:
-                return <Lock className="w-6 h-6 text-gray-400" />;
+                return <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />;
         }
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden mx-2 sm:mx-4">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <div className="flex items-center gap-3">
-                        <Trophy className="w-8 h-8 text-yellow-500" />
+                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500" />
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-900">Achievements</h2>
-                            <p className="text-gray-600">
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Achievements</h2>
+                            <p className="text-sm sm:text-base text-gray-600">
                                 {totalUnlocked} of {achievements.length} unlocked
                                 {equippedAchievement && ` • 1 equipped`}
                             </p>
@@ -149,30 +148,30 @@ export default function AchievementsModal({ isOpen, onClose }) {
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-1 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                        <X className="w-6 h-6 text-gray-500" />
+                        <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
                     </button>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="px-6 pt-4">
-                    <div className="w-full bg-gray-200 rounded-full h-3">
+                <div className="px-4 sm:px-6 pt-3 sm:pt-4">
+                    <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3">
                         <div 
-                            className="bg-green-500 h-3 rounded-full transition-all duration-500"
+                            className="bg-green-500 h-2 sm:h-3 rounded-full transition-all duration-500"
                             style={{ width: `${(totalUnlocked / achievements.length) * 100}%` }}
                         ></div>
                     </div>
                 </div>
 
                 {/* Achievements Grid */}
-                <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+                <div className="p-3 sm:p-4 md:p-6 overflow-y-auto max-h-[calc(95vh-140px)]">
                     {loading ? (
-                        <div className="flex justify-center items-center py-12">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                        <div className="flex justify-center items-center py-8 sm:py-12">
+                            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-500"></div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                             {achievements.map((achievement) => {
                                 const status = getAchievementStatus(achievement);
                                 const statusColor = getStatusColor(status);
@@ -180,14 +179,14 @@ export default function AchievementsModal({ isOpen, onClose }) {
                                 return (
                                     <div
                                         key={achievement.achievement_id}
-                                        className={`border rounded-xl p-4 transition-all duration-300 ${statusColor} ${
+                                        className={`border rounded-lg sm:rounded-xl p-3 sm:p-4 transition-all duration-300 ${statusColor} ${
                                             status === 'locked' ? 'grayscale' : ''
                                         }`}
                                     >
-                                        <div className="flex items-start gap-4">
+                                        <div className="flex items-start gap-3 sm:gap-4">
                                             {/* Achievement Icon */}
                                             <div
-                                                className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                                                className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center ${
                                                     status === 'locked' ? 'bg-gray-200' : 'bg-opacity-20'
                                                 }`}
                                                 style={{ 
@@ -201,22 +200,22 @@ export default function AchievementsModal({ isOpen, onClose }) {
 
                                             {/* Achievement Details */}
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1">
+                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 mb-1">
                                                     <div className="flex items-center gap-2">
                                                         <h3 
-                                                            className="font-semibold text-lg"
+                                                            className="font-semibold text-base sm:text-lg truncate"
                                                             style={status === 'locked' ? {} : { color: achievement.color }}
                                                         >
                                                             {achievement.title}
                                                         </h3>
                                                         {achievement.points_reward > 0 && (
-                                                            <div className="flex items-center gap-1 bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm">
-                                                                <Star className="w-3 h-3" />
+                                                            <div className="flex items-center gap-1 bg-yellow-100 text-yellow-800 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs">
+                                                                <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                                                 <span>+{achievement.points_reward}</span>
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <span className={`text-xs px-2 py-1 rounded-full ${
+                                                    <span className={`text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full self-start sm:self-auto ${
                                                         status === 'equipped' 
                                                             ? 'bg-green-100 text-green-800'
                                                             : status === 'unlocked'
@@ -227,7 +226,7 @@ export default function AchievementsModal({ isOpen, onClose }) {
                                                     </span>
                                                 </div>
                                                 
-                                                <p className={`text-sm mb-2 ${
+                                                <p className={`text-xs sm:text-sm mb-2 ${
                                                     status === 'locked' 
                                                         ? 'text-gray-500' 
                                                         : 'text-gray-700'
@@ -242,9 +241,9 @@ export default function AchievementsModal({ isOpen, onClose }) {
                                                             <span>Progress</span>
                                                             <span>{achievement.current_value} / {achievement.requirement_value}</span>
                                                         </div>
-                                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
                                                             <div 
-                                                                className="h-2 rounded-full transition-all duration-500"
+                                                                className="h-1.5 sm:h-2 rounded-full transition-all duration-500"
                                                                 style={{ 
                                                                     width: `${achievement.progress}%`,
                                                                     backgroundColor: achievement.color
@@ -270,7 +269,7 @@ export default function AchievementsModal({ isOpen, onClose }) {
                                                 {status === 'unlocked' && (
                                                     <button
                                                         onClick={() => handleEquipAchievement(achievement.achievement_id)}
-                                                        className="w-full mt-2 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors"
+                                                        className="w-full mt-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs sm:text-sm rounded-lg transition-colors"
                                                     >
                                                         Equip Achievement
                                                     </button>
@@ -278,7 +277,7 @@ export default function AchievementsModal({ isOpen, onClose }) {
                                                 {status === 'equipped' && (
                                                     <button
                                                         disabled
-                                                        className="w-full mt-2 px-3 py-1 bg-green-500 text-white text-sm rounded-lg cursor-default"
+                                                        className="w-full mt-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-green-500 text-white text-xs sm:text-sm rounded-lg cursor-default"
                                                     >
                                                         Currently Equipped
                                                     </button>
@@ -293,9 +292,9 @@ export default function AchievementsModal({ isOpen, onClose }) {
                 </div>
 
                 {/* Footer */}
-                <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
+                <div className="border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4 bg-gray-50">
                     <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-xs sm:text-sm text-gray-600">
                             Complete tasks and reach milestones to unlock more achievements!
                         </p>
                     </div>
