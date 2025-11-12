@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import TextExtractor from '../components/TextExtractor';
 import PetBuddy from '../components/PetBuddy';
+import AchievementsModal from '../components/AchievementsModal';
 import { FileText, BookOpen, Trophy, TrendingUp, Clock, Calendar, Target, Zap } from 'lucide-react';
 
 export default function Dashboard() {
@@ -17,6 +18,9 @@ export default function Dashboard() {
   const [recentNotes, setRecentNotes] = useState([]);
   const [recentQuizzes, setRecentQuizzes] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [equippedAchievement, setEquippedAchievement] = useState(null);
+  const [recentAchievements, setRecentAchievements] = useState([]);
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [stats, setStats] = useState({
     totalNotes: 0,
     totalQuizzes: 0,
@@ -44,6 +48,47 @@ export default function Dashboard() {
     };
 
     fetchUser();
+  }, []);
+
+  useEffect(() => {
+    const fetchEquippedAchievement = async () => {
+      try {
+        const res = await axios.get("http://localhost:4000/api/achievements", {
+          withCredentials: true,
+        });
+        
+        if (res.data.success) {
+          const equipped = res.data.achievements.find(a => a.is_equipped);
+          setEquippedAchievement(equipped || null);
+        }
+      } catch (err) {
+        console.error("Failed to fetch equipped achievement:", err);
+      }
+    };
+
+    fetchEquippedAchievement();
+  }, []);
+
+  useEffect(() => {
+    const fetchRecentAchievements = async () => {
+      try {
+        const res = await axios.get("http://localhost:4000/api/achievements/unlocked", {
+          withCredentials: true,
+        });
+        
+        if (res.data.success) {
+          // Get the 3 most recently unlocked achievements
+          const sortedAchievements = res.data.achievements
+            .sort((a, b) => new Date(b.unlocked_at) - new Date(a.unlocked_at))
+            .slice(0, 1);
+          setRecentAchievements(sortedAchievements);
+        }
+      } catch (err) {
+        console.error("Failed to fetch recent achievements:", err);
+      }
+    };
+
+    fetchRecentAchievements();
   }, []);
 
   useEffect(() => {
@@ -167,19 +212,19 @@ export default function Dashboard() {
   };
 
   // AI Summarization using OpenAI
-const generateAISummary = async (content, title) => {
-  try {
-    let systemPrompt = "You are an expert educational assistant that creates comprehensive, well-structured study notes and summaries.";
-    
-    if (restriction.uploaded && !restriction.openai) {
-      systemPrompt += " You must ONLY use information from the provided content. Do not add any external knowledge or information.";
-    } else if (!restriction.uploaded && restriction.openai) {
-      systemPrompt += " You can enhance the summary with relevant additional knowledge and context from your training.";
-    } else if (restriction.uploaded && restriction.openai) {
-      systemPrompt += " Use the provided content as the primary source, but you may enhance it with relevant additional knowledge when it adds value.";
-    }
+  const generateAISummary = async (content, title) => {
+    try {
+      let systemPrompt = "You are an expert educational assistant that creates comprehensive, well-structured study notes and summaries.";
+      
+      if (restriction.uploaded && !restriction.openai) {
+        systemPrompt += " You must ONLY use information from the provided content. Do not add any external knowledge or information.";
+      } else if (!restriction.uploaded && restriction.openai) {
+        systemPrompt += " You can enhance the summary with relevant additional knowledge and context from your training.";
+      } else if (restriction.uploaded && restriction.openai) {
+        systemPrompt += " Use the provided content as the primary source, but you may enhance it with relevant additional knowledge when it adds value.";
+      }
 
-    const userPrompt = `Please create a comprehensive, well-organized summary of the following educational content titled "${title}".
+      const userPrompt = `Please create a comprehensive, well-organized summary of the following educational content titled "${title}".
 
 Include:
 1. Key Topics and Main Ideas
@@ -193,51 +238,51 @@ ${content}
 
 Please format the summary in a clear, organized manner with proper headings and bullet points where appropriate.`;
 
-    const APIBody = {
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt
+      const APIBody = {
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user",
+            content: userPrompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+        top_p: 1.0,
+        frequency_penalty: 0.3,
+        presence_penalty: 0.3
+      };
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
         },
-        {
-          role: "user",
-          content: userPrompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-      top_p: 1.0,
-      frequency_penalty: 0.3,
-      presence_penalty: 0.3
-    };
+        body: JSON.stringify(APIBody)
+      });
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
-      },
-      body: JSON.stringify(APIBody)
-    });
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const data = await response.json();
+      const summary = data.choices[0]?.message?.content?.trim();
+
+      if (!summary) {
+        throw new Error("No summary generated");
+      }
+
+      return summary;
+    } catch (error) {
+      console.error("Error generating AI summary:", error);
+      throw error;
     }
-
-    const data = await response.json();
-    const summary = data.choices[0]?.message?.content?.trim();
-
-    if (!summary) {
-      throw new Error("No summary generated");
-    }
-
-    return summary;
-  } catch (error) {
-    console.error("Error generating AI summary:", error);
-    throw error;
-  }
-};
+  };
 
   const removeFile = (index) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
@@ -266,113 +311,118 @@ Please format the summary in a clear, organized manner with proper headings and 
   };
 
   const handleUploadAndGenerate = async () => {
-  if (uploadedFiles.length === 0) {
-    alert("No file selected!");
-    return;
-  }
-
-  if (!extractedContent) {
-    alert("Content extraction incomplete. Please wait.");
-    return;
-  }
-
-  setIsGenerating(true);
-  setShowModal(false);
-
-  try {
-    console.log("Generating AI summary...");
-    const aiSummary = await generateAISummary(
-      extractedContent.content,
-      extractedContent.title
-    );
-
-    console.log("AI Summary generated:", aiSummary);
-
-    const formData = new FormData();
-    formData.append("myFile", uploadedFiles[0]);
-
-    const uploadRes = await axios.post("http://localhost:4000/api/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-      withCredentials: true
-    });
-
-    console.log("File uploaded:", uploadRes.data.filename);
-
-    const payload = {
-      content: aiSummary,
-      title: extractedContent.title,
-      restrictions: restriction,
-      metadata: {
-        source: extractedContent.source,
-        wordCount: extractedContent.wordCount,
-        slideCount: extractedContent.slideCount,
-        originalContent: extractedContent.content.substring(0, 500) + "..."
-      }
-    };
-
-    const summaryRes = await axios.post(
-      "http://localhost:4000/api/generate-summary",
-      payload,
-      { withCredentials: true }
-    );
-
-    console.log("Summary saved to backend:", summaryRes.data);
-
-    alert("Summary generated and saved successfully!");
-    
-    // Clear the uploaded files and reset state
-    setUploadedFiles([]);
-    setExtractedContent(null);
-    setRestriction({ uploaded: false, openai: false });
-
-    // Refresh recent notes
-    const notesRes = await axios.get("http://localhost:4000/api/notes", { withCredentials: true });
-    if (Array.isArray(notesRes.data.notes)) {
-      const sortedNotes = notesRes.data.notes
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 3);
-      setRecentNotes(sortedNotes);
-      setStats(prev => ({ ...prev, totalNotes: notesRes.data.notes.length }));
+    if (uploadedFiles.length === 0) {
+      alert("No file selected!");
+      return;
     }
 
-  } catch (err) {
-    console.error("Error in upload and generate process:", err);
-    
-    if (err.response) {
-      if (err.response.status === 409) {
-        alert("File with the same name already exists. Please rename your file.");
-      } else if (err.response.status === 401) {
-        alert("You must be logged in to upload files.");
+    if (!extractedContent) {
+      alert("Content extraction incomplete. Please wait.");
+      return;
+    }
+
+    setIsGenerating(true);
+    setShowModal(false);
+
+    try {
+      console.log("Generating AI summary...");
+      const aiSummary = await generateAISummary(
+        extractedContent.content,
+        extractedContent.title
+      );
+
+      console.log("AI Summary generated:", aiSummary);
+
+      const formData = new FormData();
+      formData.append("myFile", uploadedFiles[0]);
+
+      const uploadRes = await axios.post("http://localhost:4000/api/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true
+      });
+
+      console.log("File uploaded:", uploadRes.data.filename);
+
+      const payload = {
+        content: aiSummary,
+        title: extractedContent.title,
+        restrictions: restriction,
+        metadata: {
+          source: extractedContent.source,
+          wordCount: extractedContent.wordCount,
+          slideCount: extractedContent.slideCount,
+          originalContent: extractedContent.content.substring(0, 500) + "..."
+        }
+      };
+
+      const summaryRes = await axios.post(
+        "http://localhost:4000/api/generate-summary",
+        payload,
+        { withCredentials: true }
+      );
+
+      console.log("Summary saved to backend:", summaryRes.data);
+
+      alert("Summary generated and saved successfully!");
+      
+      // Clear the uploaded files and reset state
+      setUploadedFiles([]);
+      setExtractedContent(null);
+      setRestriction({ uploaded: false, openai: false });
+
+      // Refresh recent notes
+      const notesRes = await axios.get("http://localhost:4000/api/notes", { withCredentials: true });
+      if (Array.isArray(notesRes.data.notes)) {
+        const sortedNotes = notesRes.data.notes
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, 3);
+        setRecentNotes(sortedNotes);
+        setStats(prev => ({ ...prev, totalNotes: notesRes.data.notes.length }));
+      }
+
+    } catch (err) {
+      console.error("Error in upload and generate process:", err);
+      
+      if (err.response) {
+        if (err.response.status === 409) {
+          alert("File with the same name already exists. Please rename your file.");
+        } else if (err.response.status === 401) {
+          alert("You must be logged in to upload files.");
+        } else {
+          alert(`Upload failed: ${err.response.data.error || err.message}`);
+        }
+      } else if (err.message.includes("OpenAI")) {
+        alert("AI summarization failed. Please check your API key and try again.");
       } else {
-        alert(`Upload failed: ${err.response.data.error || err.message}`);
+        alert("Network error, please try again later.");
       }
-    } else if (err.message.includes("OpenAI")) {
-      alert("AI summarization failed. Please check your API key and try again.");
-    } else {
-      alert("Network error, please try again later.");
+    } finally {
+      setIsGenerating(false);
     }
-  } finally {
-    setIsGenerating(false);
-  }
-};
+  };
 
-  {/* Loading Overlay */}
-  {isGenerating && (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-        <div className="flex flex-col items-center">
-          <svg className="animate-spin h-12 w-12 text-indigo-600 mb-4" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Generating Summary</h3>
-          <p className="text-gray-600 text-center">
-            AI is analyzing your content and creating a comprehensive summary...
-          </p>
-        </div>
-      </div>
-    </div>
-  )}
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Recently';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Get user title based on equipped achievement
+  const getUserTitle = () => {
+    if (equippedAchievement) {
+      return equippedAchievement.title;
+    }
+    return "No User Title";
+  };
 
   const GenerateModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -439,20 +489,6 @@ Please format the summary in a clear, organized manner with proper headings and 
     </div>
   );
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
-  };
-
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -467,9 +503,28 @@ Please format the summary in a clear, organized manner with proper headings and 
                 Let's make today productive
               </p>
             </div>
-            <div className="hidden sm:flex items-center space-x-2 bg-indigo-50 px-4 py-2 rounded-full">
-              <span className="text-2xl"></span>
-              <span className="text-sm font-medium text-indigo-700">user title</span>
+            <div className={`hidden sm:flex items-center space-x-2 px-4 py-2 rounded-full border ${
+              equippedAchievement 
+                ? '' 
+                : 'bg-gray-50 border-gray-200'
+            }`}
+              style={
+                equippedAchievement ? { 
+                  backgroundColor: `${equippedAchievement.color}15`,
+                  borderColor: `${equippedAchievement.color}30`
+                } : {}
+              }
+            >
+              <Trophy 
+                className="w-4 h-4" 
+                style={{ color: equippedAchievement?.color || '#9ca3af' }} 
+              />
+              <span 
+                className="text-sm font-medium"
+                style={{ color: equippedAchievement?.color || '#4b5563' }}
+              >
+                {getUserTitle()}
+              </span>
             </div>
           </div>
         </div>
@@ -524,8 +579,7 @@ Please format the summary in a clear, organized manner with proper headings and 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center space-x-3 mb-6">
                 <div className="bg-indigo-100 rounded-lg p-2">
-                  <span className="text-2xl">
-                  </span>
+                  <span className="text-2xl">🤖</span>
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900">AI Summarizer</h2>
@@ -708,37 +762,40 @@ Please format the summary in a clear, organized manner with proper headings and 
               </div>
             </div>
 
-            {/* Quick Actions - Bottom Left */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="grid grid-cols-3 md:grid-cols-3 gap-3">
-                <a
-                  href="/notes"
-                  className="flex flex-col items-center justify-center p-4 rounded-lg hover:bg-blue-50 transition-colors border border-gray-200 hover:border-blue-300"
-                >
-                  <div className="bg-blue-100 p-3 rounded-lg mb-2">
-                    <FileText className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <p className="text-sm font-medium text-gray-900 text-center">Create Note</p>
-                </a>
-                <a
-                  href="/quizzes"
-                  className="flex flex-col items-center justify-center p-4 rounded-lg hover:bg-yellow-50 transition-colors border border-gray-200 hover:border-yellow-300"
-                >
-                  <div className="bg-yellow-100 p-3 rounded-lg mb-2">
-                    <Trophy className="w-6 h-6 text-yellow-600" />
-                  </div>
-                  <p className="text-sm font-medium text-gray-900 text-center">Start Quiz</p>
-                </a>
-                <a
-                  href="/planner"
-                  className="flex flex-col items-center justify-center p-4 rounded-lg hover:bg-red-50 transition-colors border border-gray-200 hover:border-red-300"
-                >
-                  <div className="bg-red-100 p-3 rounded-lg mb-2">
-                    <Calendar className="w-6 h-6 text-red-600" />
-                  </div>
-                  <p className="text-sm font-medium text-gray-900 text-center">Add Plan</p>
-                </a>
+            {/* Quick Actions & Recent Achievements - Now aligned side by side */}
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+              {/* Quick Actions */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <a
+                    href="/notes"
+                    className="flex flex-col items-center justify-center p-4 rounded-lg hover:bg-blue-50 transition-colors border border-gray-200 hover:border-blue-300"
+                  >
+                    <div className="bg-blue-100 p-3 rounded-lg mb-2">
+                      <FileText className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-900 text-center">Create Note</p>
+                  </a>
+                  <a
+                    href="/quizzes"
+                    className="flex flex-col items-center justify-center p-4 rounded-lg hover:bg-yellow-50 transition-colors border border-gray-200 hover:border-yellow-300"
+                  >
+                    <div className="bg-yellow-100 p-3 rounded-lg mb-2">
+                      <Trophy className="w-6 h-6 text-yellow-600" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-900 text-center">Start Quiz</p>
+                  </a>
+                  <a
+                    href="/planner"
+                    className="flex flex-col items-center justify-center p-4 rounded-lg hover:bg-red-50 transition-colors border border-gray-200 hover:border-red-300"
+                  >
+                    <div className="bg-red-100 p-3 rounded-lg mb-2">
+                      <Calendar className="w-6 h-6 text-red-600" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-900 text-center">Add Plan</p>
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -813,11 +870,81 @@ Please format the summary in a clear, organized manner with proper headings and 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
               <PetBuddy userId={user?.user_id} />
             </div>
+
+            {/* Recent Achievements */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Trophy className="w-5 h-5 text-yellow-600" />
+                  <h3 className="font-semibold text-gray-900">Recent Achievement</h3>
+                </div>
+                <button 
+                  onClick={() => setShowAchievementsModal(true)}
+                  className="text-sm text-indigo-600 hover:text-indigo-700"
+                >
+                  View all
+                </button>
+              </div>
+              <div className="space-y-3">
+                {recentAchievements.length > 0 ? (
+                  recentAchievements.map((achievement) => (
+                    <div
+                      key={achievement.achievement_id}
+                      className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                    >
+                      <div 
+                        className="w-10 h-10 rounded-full flex items-center justify-center bg-opacity-20 flex-shrink-0"
+                        style={{ backgroundColor: achievement.color }}
+                      >
+                        <Trophy className="w-5 h-5" style={{ color: achievement.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-gray-900 truncate">{achievement.title}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Unlocked {formatDate(achievement.unlocked_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6">
+                    <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No achievements yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Complete tasks to unlock achievements</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {showModal && <GenerateModal />}
+          
+          {showAchievementsModal && (
+            <AchievementsModal 
+              isOpen={showAchievementsModal} 
+              onClose={() => setShowAchievementsModal(false)} 
+            />
+          )}
+
+      {/* Loading Overlay */}
+      {isGenerating && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex flex-col items-center">
+              <svg className="animate-spin h-12 w-12 text-indigo-600 mb-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Generating Summary</h3>
+              <p className="text-gray-600 text-center">
+                AI is analyzing your content and creating a comprehensive summary...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

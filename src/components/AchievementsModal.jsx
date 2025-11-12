@@ -298,12 +298,6 @@ export default function AchievementsModal({ isOpen, onClose }) {
                         <p className="text-sm text-gray-600">
                             Complete tasks and reach milestones to unlock more achievements!
                         </p>
-                        {equippedAchievement && (
-                            <div className="flex items-center gap-2 text-sm text-green-600">
-                                <CheckCircle className="w-4 h-4" />
-                                <span>Achievement equipped: {equippedAchievement.title}</span>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
