@@ -3,19 +3,149 @@ import Quiz from '../models/Quiz.js';
 import Question from '../models/Question.js';
 import QuizAttempt from '../models/QuizAttempt.js';
 import User from '../models/User.js';
+import UserDailyStat from '../models/UserDailyStat.js';
 import QuizBattle from '../models/QuizBattle.js';
 import BattleParticipant from '../models/BattleParticipant.js';
 import sequelize from '../db.js';
 
 const router = express.Router();
 
-// Auth middleware
+// ============================================
+// CONFIGURATION (Pet Buddy)
+// ============================================
+
+const QUIZ_CONFIG = {
+  points: {
+    formula: (score, total) => {
+      if (total === 0) return 0;
+      const percentage = (score / total) * 100;
+      if (percentage >= 100) return 50;
+      if (percentage >= 80) return 40;
+      if (percentage >= 60) return 30;
+      if (percentage >= 40) return 20;
+      return 10; // Participation
+    },
+    dailyCap: 3,
+    capMessage: "Daily quiz limit reached (3/3). Come back tomorrow for more points!"
+  },
+  exp: {
+    formula: (score, total) => {
+      if (total === 0) return 0;
+      const percentage = (score / total) * 100;
+      return Math.floor((percentage / 100) * 30); // Max 30 EXP
+    }
+  }
+};
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
 const requireAuth = (req, res, next) => {
   if (!req.session || !req.session.userId) {
     return res.status(401).json({ error: 'Not logged in' });
   }
   next();
 };
+
+async function checkAndResetDailyCaps(userId) {
+  const user = await User.findByPk(userId);
+  const today = new Date().toISOString().split('T')[0];
+  
+  if (!user.daily_reset_date || user.daily_reset_date !== today) {
+    await user.update({
+      daily_notes_count: 0,
+      daily_quizzes_count: 0,
+      daily_tasks_count: 0,
+      daily_reset_date: today
+    });
+  }
+  
+  return user;
+}
+
+async function logDailyStats(userId, activityType, points, exp) {
+  const today = new Date().toISOString().split('T')[0];
+  
+  let dailyStat = await UserDailyStat.findOne({
+    where: { user_id: userId, last_reset_date: today } // FIXED: Changed from stat_date to last_reset_date
+  });
+  
+  if (!dailyStat) {
+    dailyStat = await UserDailyStat.create({
+      user_id: userId,
+      last_reset_date: today, // FIXED: Changed from stat_date to last_reset_date
+      notes_created_today: 0, // FIXED: Match actual column names
+      quizzes_completed_today: 0,
+      planner_updates_today: 0,
+      points_earned_today: 0,
+      exp_earned_today: 0,
+      streak_active: false
+    });
+  }
+  
+  const updates = {
+    points_earned_today: dailyStat.points_earned_today + points, // FIXED: Updated column name
+    exp_earned_today: dailyStat.exp_earned_today + exp // FIXED: Updated column name
+  };
+  
+  if (activityType === 'quiz') {
+    updates.quizzes_completed_today = dailyStat.quizzes_completed_today + 1; // FIXED: Updated column name
+  }
+  
+  await dailyStat.update(updates);
+  return dailyStat;
+}
+
+async function updateUserStreak(userId) {
+  const user = await User.findByPk(userId);
+  const today = new Date().toISOString().split('T')[0];
+  const lastActivity = user.last_activity_date;
+  
+  if (!lastActivity) {
+    await user.update({
+      study_streak: 1,
+      last_activity_date: today,
+      longest_streak: 1
+    });
+    return 1;
+  }
+  
+  const lastDate = new Date(lastActivity);
+  const todayDate = new Date(today);
+  const daysDiff = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+  
+  if (daysDiff === 1) {
+    // Consecutive day
+    const newStreak = user.study_streak + 1;
+    await user.update({
+      study_streak: newStreak,
+      last_activity_date: today,
+      longest_streak: Math.max(user.longest_streak || 0, newStreak)
+    });
+    return newStreak;
+  } else if (daysDiff > 1) {
+    // Streak broken
+    await user.update({
+      study_streak: 1,
+      last_activity_date: today
+    });
+    return 1;
+  }
+  
+  // Same day, return current streak
+  return user.study_streak;
+}
+
+async function checkAchievements(userId) {
+  try {
+    const { checkAndUnlockAchievements } = await import('../services/achievementService.js');
+    return await checkAndUnlockAchievements(userId);
+  } catch (err) {
+    console.log('Achievement service not available');
+    return [];
+  }
+}
 
 // ============================================
 // HELPER: Generate unique share code
@@ -415,10 +545,9 @@ router.delete('/:quizId/questions/:questionId', requireAuth, async (req, res) =>
 });
 
 // ============================================
-// QUIZ ATTEMPT ROUTES
+// QUIZ ATTEMPT ROUTES (WITH DAILY CAPS)
 // ============================================
 
-// Submit quiz attempt
 router.post('/:id/attempt', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -429,9 +558,54 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Score and total_questions are required' });
     }
 
+    // Check and reset daily caps
+    const user = await checkAndResetDailyCaps(userId);
+
+    // Check if user has reached daily quiz cap
+    if (user.daily_quizzes_count >= QUIZ_CONFIG.points.dailyCap) {
+      // Still allow quiz attempt but no points/exp
+      const percentage = total_questions > 0 ? (score / total_questions * 100).toFixed(2) : 0;
+      
+      const attempt = await QuizAttempt.create({
+        quiz_id: quizId,
+        user_id: userId,
+        score,
+        total_questions,
+        percentage,
+        time_spent: time_spent || '0:00',
+        answers: answers || null,
+        points_earned: 0,
+        exp_earned: 0
+      });
+
+      // Update quiz stats
+      const quiz = await Quiz.findByPk(quizId);
+      if (quiz) {
+        const newTotalAttempts = quiz.total_attempts + 1;
+        const newAverageScore = (
+          (quiz.average_score * quiz.total_attempts + parseFloat(percentage)) / newTotalAttempts
+        ).toFixed(2);
+
+        await quiz.update({
+          total_attempts: newTotalAttempts,
+          average_score: newAverageScore
+        });
+      }
+
+      return res.status(200).json({
+        attempt,
+        points_earned: 0,
+        exp_earned: 0,
+        dailyCapReached: true,
+        message: QUIZ_CONFIG.points.capMessage,
+        study_streak: user.study_streak
+      });
+    }
+
+    // Calculate points and EXP with new formulas
     const percentage = total_questions > 0 ? (score / total_questions * 100).toFixed(2) : 0;
-    const points_earned = score * 10; // 10 points per correct answer
-    const exp_earned = score * 5; // 5 EXP per correct answer
+    const points_earned = QUIZ_CONFIG.points.formula(score, total_questions);
+    const exp_earned = QUIZ_CONFIG.exp.formula(score, total_questions);
 
     const attempt = await QuizAttempt.create({
       quiz_id: quizId,
@@ -445,11 +619,20 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       exp_earned
     });
 
-    // Update user points
+    // Update streak
+    const streak = await updateUserStreak(userId);
+
+    // Award points
     await User.increment('points', {
       by: points_earned,
       where: { user_id: userId }
     });
+
+    // Increment daily quiz count
+    await user.increment('daily_quizzes_count');
+
+    // Log daily stats - FIXED: Now uses correct column names
+    await logDailyStats(userId, 'quiz', points_earned, exp_earned);
 
     // Update quiz statistics
     const quiz = await Quiz.findByPk(quizId);
@@ -465,11 +648,17 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       });
     }
 
+    // Check achievements
+    await checkAchievements(userId);
+
     res.status(201).json({
       attempt,
       points_earned,
       exp_earned,
-      message: 'Quiz attempt submitted successfully'
+      study_streak: streak,
+      dailyCapReached: false,
+      remainingQuizzes: QUIZ_CONFIG.points.dailyCap - user.daily_quizzes_count - 1,
+      message: `Quiz completed! Earned ${points_earned} points and ${exp_earned} EXP!`
     });
   } catch (err) {
     console.error('❌ Submit attempt error:', err);
@@ -477,7 +666,6 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
   }
 });
 
-// Get user's quiz attempts
 router.get('/:id/attempts', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -495,7 +683,6 @@ router.get('/:id/attempts', requireAuth, async (req, res) => {
   }
 });
 
-// Get quiz leaderboard
 router.get('/:id/leaderboard', requireAuth, async (req, res) => {
   try {
     const quizId = req.params.id;
@@ -807,6 +994,8 @@ router.post('/battle/:gamePin/submit', requireAuth, async (req, res) => {
     if (!battle) {
       return res.status(404).json({ error: 'Battle not found' });
     }
+
+    const streak = await updateUserStreak(userId);
     
     // Update participant score
     const participant = await BattleParticipant.findOne({
@@ -819,7 +1008,10 @@ router.post('/battle/:gamePin/submit', requireAuth, async (req, res) => {
     
     await participant.update({ score });
     
-    res.json({ message: 'Score submitted' });
+    res.json({ 
+      message: 'Score submitted',
+      study_streak: streak
+   });
   } catch (err) {
     console.error('❌ Submit score error:', err);
     res.status(500).json({ error: 'Failed to submit score' });

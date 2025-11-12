@@ -62,6 +62,21 @@ const User = sequelize.define('User', {
     longest_streak: {
         type: DataTypes.INTEGER,
         defaultValue: 0
+    },
+      daily_notes_count: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    daily_quizzes_count: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    daily_tasks_count: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    daily_reset_date: {
+        type: DataTypes.DATEONLY
     }
 }, {
     tableName: 'users',

@@ -43,7 +43,9 @@ import QuizAttempt from "./models/QuizAttempt.js";
 import QuizBattle from "./models/QuizBattle.js";
 import BattleParticipant from "./models/BattleParticipant.js";
 import Session from "./models/Session.js";
-import ZoomToken from "./models/ZoomToken.js"; // ← ADDED
+import ZoomToken from "./models/ZoomToken.js";
+import Achievement from "./models/Achievement.js"; // ← ADD THIS
+import UserAchievement from "./models/UserAchievement.js"; // ← ADD THIS
 import { Op } from "sequelize";
 import { auditMiddleware } from "./auditMiddleware.js";
 
@@ -77,6 +79,7 @@ import SharedNote from "./models/SharedNote.js";
 import planRoutes from "./routes/planRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
+import achievementRoutes from "./routes/achievementRoutes.js"
 
 const app = express();
 
@@ -139,17 +142,17 @@ async function updateUserStreak(userId) {
                 // Check for milestone rewards
                 await checkStreakMilestones(userId, user.study_streak);
             } else {
-                // Streak broken - reset to 1
-                console.log(`⚠️ User ${userId}: Streak broken after ${user.study_streak} days. Reset to 1 day`);
-                user.study_streak = 1;
+                // Streak broken - reset to 0 (not 1)
+                console.log(`⚠️ User ${userId}: Streak broken after ${user.study_streak} days. Reset to 0 days`);
+                user.study_streak = 0; // CHANGED FROM 1 TO 0
                 user.last_activity_date = today;
             }
         } else {
-            // First time activity
-            user.study_streak = 1;
+            // First time activity - start at 0 (not 1)
+            user.study_streak = 0; // CHANGED FROM 1 TO 0
             user.last_activity_date = today;
-            user.longest_streak = 1;
-            console.log(`🎉 User ${userId}: First activity! Streak started`);
+            user.longest_streak = 0; // CHANGED FROM 1 TO 0
+            console.log(`🎉 User ${userId}: First activity! Streak started at 0`);
         }
 
         await user.save();
@@ -231,6 +234,27 @@ if (Note) {
         as: 'notes'
     });
 }
+
+// Achievement associations
+Achievement.hasMany(UserAchievement, { 
+    foreignKey: 'achievement_id', 
+    as: 'userAchievements' 
+});
+
+UserAchievement.belongsTo(Achievement, { 
+    foreignKey: 'achievement_id', 
+    as: 'achievement' 
+});
+
+UserAchievement.belongsTo(User, { 
+    foreignKey: 'user_id', 
+    as: 'user' 
+});
+
+User.hasMany(UserAchievement, { 
+    foreignKey: 'user_id', 
+    as: 'userAchievements' 
+});
 
 // ----------------- DB Connection -----------------
 sequelize.authenticate()
@@ -343,6 +367,7 @@ app.use("/api/plans", planRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/admin", auditRoutes);
+app.use("/api/achievements", achievementRoutes);
 
 // ----------------- AUTH ROUTES -----------------
 app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
@@ -357,7 +382,7 @@ app.get(
             req.session.username = req.user.username;
             req.session.role = req.user.role;
 
-            await updateUserStreak(req.user.user_id);
+            // await updateUserStreak(req.user.user_id);
 
             console.log("✅ Google login session set:", req.session);
             res.redirect("http://localhost:5173/dashboard");
@@ -489,7 +514,7 @@ app.post("/api/auth/login", async (req, res) => {
         const user = await User.findOne({ where: { email } });
         if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-        // 🚫 Block unverified accounts
+        // Block unverified accounts
         if (user.status !== "active") {
             return res.status(403).json({ error: "Please verify your email before logging in." });
         }
@@ -502,7 +527,7 @@ app.post("/api/auth/login", async (req, res) => {
         req.session.username = user.username;
         req.session.role = user.role;
 
-        await updateUserStreak(user.user_id);
+        // await updateUserStreak(user.user_id);
 
         const updatedUser = await User.findByPk(user.user_id);
 

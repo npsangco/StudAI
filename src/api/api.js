@@ -157,4 +157,28 @@ export const quizApi = {
   endBattle: (gamePin) => api.post(`/quizzes/battle/${gamePin}/end`),
 };
 
+// Achievements API
+export const achievementsApi = {
+  // Get all achievements with user progress
+  getAll: () => api.get('/achievements'),
+  
+  // Get unlocked achievements only
+  getUnlocked: () => api.get('/achievements/unlocked'),
+  
+  // Get locked achievements only
+  getLocked: () => api.get('/achievements/locked'),
+  
+  // Get achievement statistics
+  getStats: () => api.get('/achievements/stats'),
+  
+  // Manually check for new achievements
+  check: () => api.post('/achievements/check'),
+  
+  // Equip an achievement
+  equip: (achievementId) => api.post('/achievements/equip', { achievementId }),
+  
+  // Get user achievements (legacy endpoint - you might want to use getAll instead)
+  getUserAchievements: () => api.get('/achievements/user-achievements'),
+};
+
 export default api;

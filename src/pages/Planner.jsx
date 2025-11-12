@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, Plus, Trash2, Info, X, Calendar } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Info, X, Calendar, Check } from "lucide-react";
 import { plannerService } from "../utils/syncService";
 
 export default function Planner() {
@@ -13,6 +13,8 @@ export default function Planner() {
   const [desc, setDesc] = useState("");
   const [loading, setLoading] = useState(false);
   const [showIndicatorsInfo, setShowIndicatorsInfo] = useState(false);
+  const [dailyTaskStatus, setDailyTaskStatus] = useState({ used: 0, remaining: 3, max: 3 });
+  const [showLimitModal, setShowLimitModal] = useState(false);
 
   const months = [
     "January", "February", "March", "April", "May", "June",
@@ -22,6 +24,11 @@ export default function Planner() {
   useEffect(() => {
     fetchPlans();
   }, []);
+
+  useEffect(() => {
+    // Update daily task status whenever plans change
+    updateDailyTaskStatus();
+  }, [plans]);
 
   useEffect(() => {
     let timer;
@@ -44,6 +51,22 @@ export default function Planner() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateDailyTaskStatus = () => {
+    // Count incomplete tasks created TODAY
+    const today = new Date().toISOString().split('T')[0];
+    const incompleteTasks = plans.filter(plan => 
+      !plan.completed && 
+      plan.created_at && 
+      plan.created_at.startsWith(today)
+    ).length;
+    
+    setDailyTaskStatus({
+      used: incompleteTasks,
+      remaining: Math.max(0, 3 - incompleteTasks),
+      max: 3
+    });
   };
 
   const getYearRange = () => {
@@ -75,7 +98,7 @@ export default function Planner() {
   const getPlanIndicators = (year, month, day) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const dayPlans = plans.filter(plan => {
-      if (!plan.due_date) return false;
+      if (!plan.due_date || plan.completed) return false;
       const planDate = new Date(plan.due_date).toISOString().split('T')[0];
       return planDate === dateStr;
     });
@@ -110,6 +133,12 @@ export default function Planner() {
   const addPlan = async () => {
     if (!title.trim() || !selectedDate) return;
 
+    // Check daily task limit
+    if (dailyTaskStatus.remaining <= 0) {
+      setShowLimitModal(true);
+      return;
+    }
+
     const dueDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
 
     try {
@@ -119,40 +148,62 @@ export default function Planner() {
         due_date: dueDate
       });
 
+      console.log('Add plan result:', result);
+
       if (result.success) {
         setPlans(prev => [...prev, result.plan]);
         
         if (result.queued) {
           alert('📱 Offline: Plan will sync when back online');
         }
-      }
 
-      setTitle("");
-      setDesc("");
-      setShowForm(false);
+        setTitle("");
+        setDesc("");
+        setShowForm(false);
+      } else {
+        // Handle validation errors (like daily limit)
+        if (result.error) {
+          alert(`Error: ${result.error}`);
+          if (result.error.includes('Daily task limit reached')) {
+            setShowLimitModal(true);
+          }
+        }
+      }
     } catch (err) {
       console.error("Failed to create plan:", err);
       alert('Failed to create plan. Please try again.');
     }
   };
 
-  const deletePlan = async (planner_id) => {
+  // Mark as done function
+  const markAsDone = async (planner_id) => {
     if (!planner_id) return;
-    if (!window.confirm("Are you sure you want to delete this plan?")) return;
+    if (!window.confirm("Mark this task as completed?")) return;
 
     try {
-      const result = await plannerService.deletePlan(planner_id);
+      const result = await plannerService.updatePlan(planner_id, {
+        completed: true,
+        completed_at: new Date().toISOString()
+      });
       
       if (result.success) {
-        setPlans(prev => prev.filter(p => p.planner_id !== planner_id && p.id !== planner_id));
+        setPlans(prev => prev.map(p => 
+          (p.planner_id === planner_id || p.id === planner_id) 
+            ? { ...p, completed: true, completed_at: new Date().toISOString() }
+            : p
+        ));
         
         if (result.queued) {
-          alert('📱 Offline: Delete will sync when back online');
+          alert('📱 Offline: Completion will sync when back online');
+        }
+      } else {
+        if (result.error) {
+          alert(`Error: ${result.error}`);
         }
       }
     } catch (err) {
-      console.error("Failed to delete plan:", err);
-      alert('Failed to delete plan. Please try again.');
+      console.error("Failed to mark task as done:", err);
+      alert('Failed to update task. Please try again.');
     }
   };
 
@@ -160,10 +211,17 @@ export default function Planner() {
     if (!selectedYear || selectedMonth === null || !selectedDate) return [];
     
     const dateStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
-    return plans.filter(plan => {
+    const datePlans = plans.filter(plan => {
       if (!plan.due_date) return false;
       const planDate = new Date(plan.due_date).toISOString().split('T')[0];
       return planDate === dateStr;
+    });
+    
+    // Sort: incomplete first, then completed
+    return datePlans.sort((a, b) => {
+      if (a.completed && !b.completed) return 1;
+      if (!a.completed && b.completed) return -1;
+      return 0;
     });
   };
 
@@ -436,36 +494,64 @@ export default function Planner() {
                   <div
                     key={plan.planner_id || plan.id}
                     className={`bg-white border-2 p-4 sm:p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 shadow-lg hover:shadow-xl transition-all ${
-                      planIndicator === 'red' ? 'border-red-200 bg-red-50/50' :
-                      planIndicator === 'yellow' ? 'border-yellow-200 bg-yellow-50/50' :
-                      'border-green-200 bg-green-50/50'
+                      plan.completed 
+                        ? 'opacity-60 bg-gray-50 border-gray-200' 
+                        : planIndicator === 'red' 
+                          ? 'border-red-200 bg-red-50/50' 
+                          : planIndicator === 'yellow' 
+                            ? 'border-yellow-200 bg-yellow-50/50' 
+                            : 'border-green-200 bg-green-50/50'
                     }`}
                   >
                     <div className="flex-1 w-full sm:w-auto">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <div className={`w-3 h-3 rounded-full shadow-sm flex-shrink-0 ${
-                          planIndicator === 'red' ? 'bg-red-500' :
-                          planIndicator === 'yellow' ? 'bg-yellow-400' :
-                          'bg-green-500'
-                        }`}></div>
-                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 break-words">{plan.title}</h3>
+                        {!plan.completed && (
+                          <div className={`w-3 h-3 rounded-full shadow-sm flex-shrink-0 ${
+                            planIndicator === 'red' ? 'bg-red-500' :
+                            planIndicator === 'yellow' ? 'bg-yellow-400' :
+                            'bg-green-500'
+                          }`}></div>
+                        )}
+                        <h3 className={`text-lg sm:text-xl font-bold break-words ${
+                          plan.completed ? 'text-gray-500 line-through' : 'text-gray-800'
+                        }`}>
+                          {plan.title}
+                        </h3>
                         {isTemp && (
                           <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full border border-amber-300">
                             Pending Sync
                           </span>
                         )}
+                        {plan.completed && (
+                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full border border-green-300">
+                            Completed
+                          </span>
+                        )}
                       </div>
                       {plan.description && (
-                        <p className="text-sm sm:text-base text-gray-600 ml-0 sm:ml-5 break-words">{plan.description}</p>
+                        <p className={`text-sm sm:text-base break-words ml-0 sm:ml-5 ${
+                          plan.completed ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                          {plan.description}
+                        </p>
                       )}
                     </div>
-                    <button
-                      onClick={() => deletePlan(plan.planner_id || plan.id)}
-                      className="flex items-center justify-center gap-2 bg-red-500 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-red-600 font-semibold transition-all shadow-md hover:shadow-lg w-full sm:w-auto text-sm sm:text-base"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                      {!plan.completed ? (
+                        <button
+                          onClick={() => markAsDone(plan.planner_id || plan.id)}
+                          className="flex items-center justify-center gap-2 bg-green-500 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-green-600 font-semibold transition-all shadow-md hover:shadow-lg w-full sm:w-auto text-sm sm:text-base"
+                        >
+                          <Check className="w-4 h-4" />
+                          Mark Done
+                        </button>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2 bg-gray-400 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-semibold w-full sm:w-auto text-sm sm:text-base">
+                          <Check className="w-4 h-4" />
+                          Completed
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })
@@ -517,13 +603,41 @@ export default function Planner() {
           ) : (
             <button
               onClick={() => setShowForm(true)}
-              className="w-full flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white border-2 border-dashed border-indigo-300 rounded-2xl hover:bg-indigo-50 hover:border-indigo-400 text-base sm:text-lg font-semibold text-gray-700 transition-all shadow-lg hover:shadow-xl"
+              disabled={dailyTaskStatus.remaining <= 0}
+              className={`w-full flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl text-base sm:text-lg font-semibold transition-all shadow-lg hover:shadow-xl ${
+                dailyTaskStatus.remaining > 0
+                  ? "bg-white border-2 border-dashed border-indigo-300 hover:bg-indigo-50 hover:border-indigo-400 text-gray-700"
+                  : "bg-gray-100 border-2 border-gray-300 text-gray-400 cursor-not-allowed"
+              }`}
             >
               <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
-              Add a plan
+              {dailyTaskStatus.remaining > 0 ? "Add a plan" : "Daily limit reached"}
             </button>
           )}
         </div>
+
+        {/* Limit Modal */}
+        {showLimitModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Info className="w-8 h-8 text-yellow-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Daily Task Limit Reached</h3>
+                <p className="text-gray-600 mb-4">
+                  You've reached your daily limit of 3 tasks. Complete existing tasks or wait until tomorrow to add more.
+                </p>
+                <button
+                  onClick={() => setShowLimitModal(false)}
+                  className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
