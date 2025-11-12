@@ -123,6 +123,9 @@ export const quizApi = {
   // Delete quiz
   delete: (id) => api.delete(`/quizzes/${id}`),
   
+  // Generate quiz from notes using AI
+  generateFromNote: (data) => api.post('/quizzes/generate-from-notes', data),
+  
   // Add question to quiz
   addQuestion: (quizId, questionData) => api.post(`/quizzes/${quizId}/questions`, questionData),
   

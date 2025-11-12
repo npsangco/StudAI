@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText, 
          MessageCircle, Edit3, ExternalLink, Pin, PinOff, FolderPlus, 
-         Tag, Wifi, WifiOff, RefreshCw, FileDown, X, Check } from 'lucide-react';
+         Tag, Wifi, WifiOff, RefreshCw, FileDown, X, Check, Brain } from 'lucide-react';
 import { notesService } from '../utils/syncService';
 import { cacheSingleNote } from '../utils/indexedDB';
 import NoteEditor from '../components/NoteEditor';
 import Chatbot from '../components/Chatbot';
-import { notesApi, sharedNotesApi } from '../api/api';
+import { notesApi, sharedNotesApi, quizApi } from '../api/api';
 import { exportNoteToPDF, exportMultipleNotesToPDF } from '../utils/pdfExport';
 import ToastContainer from '../components/ToastContainer';
 import { useToast } from '../hooks/useToast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useConfirm } from '../hooks/useConfirm';
+import GenerateQuizModal from '../components/GenerateQuizModal';
 
 const Notes = () => {
   const [notes, setNotes] = useState([]);
@@ -38,6 +39,10 @@ const Notes = () => {
   // PDF Export states
   const [exportMode, setExportMode] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState(new Set());
+  
+  // Quiz Generation states
+  const [showGenerateQuizModal, setShowGenerateQuizModal] = useState(false);
+  const [quizGenerationNote, setQuizGenerationNote] = useState(null);
   
   const { toasts, removeToast, toast } = useToast();
   const { confirmState, confirm, closeConfirm } = useConfirm();
@@ -362,6 +367,11 @@ const Notes = () => {
     }
   };
 
+  const handleGenerateQuiz = (note) => {
+    setQuizGenerationNote(note);
+    setShowGenerateQuizModal(true);
+  };
+
   const openEditPage = (note) => {
     if (exportMode) return; // Don't open editor in export mode
     setEditingNote(note);
@@ -604,6 +614,16 @@ const Notes = () => {
               >
                 <FileDown className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleGenerateQuiz(note);
+                }}
+                className="p-1.5 sm:p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                title="Generate Quiz with AI"
+              >
+                <Brain className="w-3 h-3 sm:w-4 sm:h-4" />
+              </button>
             </div>
             {showCategoryPicker === note.id && (
               <div 
@@ -652,6 +672,16 @@ const Notes = () => {
             title="Export to PDF"
           >
             <FileDown className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleGenerateQuiz(note);
+            }}
+            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+            title="Generate Quiz with AI"
+          >
+            <Brain className="w-4 h-4" />
           </button>
           <button
             onClick={(e) => {
@@ -766,24 +796,44 @@ const Notes = () => {
 
   if (currentView === 'edit' && editingNote) {
     return (
-      <NoteEditor
-        note={editingNote}
-        onSave={updateNote}
-        onDelete={deleteNote}
-        onShare={shareNote}
-        onBack={goBackToList}
-        onChatbot={handleChatbot}
-        formatDate={formatDate}
-        categories={categories}
-        onExport={(note) => {
-          const result = exportNoteToPDF(note);
-          if (result.success) {
-          toast.success(`PDF exported successfully!\n\nFile: ${result.fileName}`);
-          } else {
-          toast.error(`Export failed: ${result.error}`);
-          }
-        }}
-      />
+      <>
+        <NoteEditor
+          note={editingNote}
+          onSave={updateNote}
+          onDelete={deleteNote}
+          onShare={shareNote}
+          onBack={goBackToList}
+          onChatbot={handleChatbot}
+          onGenerateQuiz={handleGenerateQuiz}
+          formatDate={formatDate}
+          categories={categories}
+          onExport={(note) => {
+            const result = exportNoteToPDF(note);
+            if (result.success) {
+            toast.success(`PDF exported successfully!\n\nFile: ${result.fileName}`);
+            } else {
+            toast.error(`Export failed: ${result.error}`);
+            }
+          }}
+        />
+        
+        {/* Generate Quiz Modal - for Edit View */}
+        {showGenerateQuizModal && quizGenerationNote && (
+          <GenerateQuizModal
+            note={quizGenerationNote}
+            onClose={() => {
+              setShowGenerateQuizModal(false);
+              setQuizGenerationNote(null);
+            }}
+            onQuizCreated={() => {
+              setShowGenerateQuizModal(false);
+              setQuizGenerationNote(null);
+              toast.success('Quiz generated successfully! Redirecting...');
+            }}
+            toast={toast}
+          />
+        )}
+      </>
     );
   }
 
@@ -1095,6 +1145,24 @@ const Notes = () => {
           </div>
         </div>
       </div>
+
+      {/* Generate Quiz Modal */}
+      {showGenerateQuizModal && quizGenerationNote && (
+        <GenerateQuizModal
+          note={quizGenerationNote}
+          onClose={() => {
+            setShowGenerateQuizModal(false);
+            setQuizGenerationNote(null);
+          }}
+          onQuizCreated={() => {
+            setShowGenerateQuizModal(false);
+            setQuizGenerationNote(null);
+            toast.success('Quiz generated successfully! Redirecting...');
+            // The modal will handle navigation to the quiz
+          }}
+          toast={toast}
+        />
+      )}
     </div>
   );
 };

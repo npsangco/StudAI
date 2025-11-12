@@ -1,6 +1,6 @@
 // NoteEditor.jsx - Fixed auto-save and reload issues
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, Save, Share2, Trash2, MessageCircle, Wifi, WifiOff, Cloud, CloudOff, FileDown } from 'lucide-react';
+import { ArrowLeft, Save, Share2, Trash2, MessageCircle, Wifi, WifiOff, Cloud, CloudOff, FileDown, Brain } from 'lucide-react';
 import { notesService } from '../utils/syncService';
 
 const NoteEditor = ({ 
@@ -11,6 +11,7 @@ const NoteEditor = ({
   onBack, 
   onChatbot, 
   onExport,
+  onGenerateQuiz,
   formatDate 
 }) => {
   const [editTitle, setEditTitle] = useState(note.title);
@@ -224,6 +225,25 @@ const NoteEditor = ({
     }
   };
 
+  const handleGenerateQuiz = () => {
+    if (!onGenerateQuiz) {
+      console.error('onGenerateQuiz prop is not provided');
+      showNotification('Quiz generation not available', 'error');
+      return;
+    }
+
+    // Get the current state of the note with latest edits
+    const currentNote = {
+      id: note.id,
+      title: editTitle || 'Untitled Note',
+      content: editContent,
+      createdAt: note.createdAt,
+      words: editContent.trim() ? editContent.trim().split(/\s+/).length : 0
+    };
+
+    onGenerateQuiz(currentNote);
+  };
+
   const handleManualSave = async () => {
     if (hasUnsavedChanges && !isSaving) {
       await saveNote(false);
@@ -297,6 +317,14 @@ const NoteEditor = ({
               >
                 <FileDown className="w-4 h-4" />
                 <span className="hidden sm:inline text-sm">Export</span>
+              </button>
+              <button
+                onClick={handleGenerateQuiz}
+                className="p-2 sm:px-4 sm:py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-2"
+                title="Generate Quiz with AI"
+              >
+                <Brain className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">AI Quiz</span>
               </button>
               <button
                 onClick={() => onChatbot(note.id)}

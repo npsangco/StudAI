@@ -1,0 +1,184 @@
+import React, { useState } from 'react';
+import { X, Loader, CheckCircle, AlertCircle, Brain } from 'lucide-react';
+import { quizApi } from '../api/api';
+
+const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [quizTitle, setQuizTitle] = useState(`Quiz from "${note.title}"`);
+  const [success, setSuccess] = useState(false);
+  const [generatedQuizId, setGeneratedQuizId] = useState(null);
+  
+  // Fixed 10-question default
+  const questionCount = 10;
+
+  const handleGenerateQuiz = async () => {
+    if (!quizTitle.trim()) {
+      setError('Please enter a quiz title');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Call the API to generate quiz from notes (always 10 questions)
+      const response = await quizApi.generateFromNote({
+        noteId: note.id,
+        noteContent: note.content,
+        noteTitle: note.title,
+        quizTitle: quizTitle.trim()
+      });
+
+      if (response.data && response.data.quiz) {
+        setGeneratedQuizId(response.data.quiz.quiz_id);
+        setSuccess(true);
+
+        // Redirect to quiz after 2 seconds
+        setTimeout(() => {
+          window.location.href = `/quizzes`;
+        }, 2000);
+      } else {
+        setError('Failed to generate quiz. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error generating quiz:', err);
+      const errorMessage = 
+        err.response?.data?.error || 
+        err.response?.data?.details || 
+        'Failed to generate quiz. Please ensure your note has enough content and try again.';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl p-6 max-w-md w-full text-center">
+          <div className="mb-4 flex justify-center">
+            <CheckCircle className="w-16 h-16 text-green-500 animate-bounce" />
+          </div>
+          <h3 className="text-xl font-semibold text-slate-800 mb-2">Quiz Generated!</h3>
+          <p className="text-slate-600 mb-6">
+            Your quiz has been created successfully with {questionCount} questions.
+          </p>
+          <p className="text-sm text-slate-500">
+            Redirecting to your quizzes...
+          </p>
+          <div className="mt-6 flex items-center justify-center">
+            <Loader className="w-4 h-4 animate-spin text-blue-600 mr-2" />
+            <span className="text-sm text-slate-600">Loading</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Brain className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-lg font-semibold text-slate-800">Generate Quiz with AI</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+            disabled={isLoading}
+          >
+            <X className="w-5 h-5 text-slate-400" />
+          </button>
+        </div>
+
+        {/* Note Info */}
+        <div className="bg-slate-50 rounded-lg p-4 mb-4 border border-slate-200">
+          <p className="text-xs text-slate-500 mb-1">Generating from note:</p>
+          <p className="font-medium text-slate-800 truncate">{note.title}</p>
+          <p className="text-xs text-slate-600 mt-1">{note.words || 0} words</p>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-red-800">Error</p>
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Quiz Title Input */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Quiz Title
+          </label>
+          <input
+            type="text"
+            value={quizTitle}
+            onChange={(e) => setQuizTitle(e.target.value)}
+            placeholder="Enter quiz title..."
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
+            disabled={isLoading}
+          />
+        </div>
+
+        {/* Question Count Display */}
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-6">
+          <p className="text-sm font-medium text-indigo-900 mb-1">Quiz Details</p>
+          <p className="text-sm text-indigo-800">
+            <strong>{questionCount} questions</strong> will be generated with a mix of multiple choice, fill in the blanks, true/false, and matching types.
+          </p>
+        </div>
+
+        {/* Daily Limit Info */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+          <p className="text-xs text-amber-800">
+            <strong>⏰ Daily Limit:</strong> You can generate <strong>1 AI quiz per day</strong>. Use it wisely!
+          </p>
+        </div>
+
+        {/* Info Message */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+          <p className="text-xs text-blue-800">
+            <strong>ℹ️ Note:</strong> AI-generated questions are based on your note content. Review and edit them as needed after generation.
+          </p>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="flex-1 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleGenerateQuiz}
+            disabled={isLoading}
+            className="flex-1 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                <span>Generating...</span>
+              </>
+            ) : (
+              <>
+                <Brain className="w-4 h-4" />
+                <span>Generate Quiz</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default GenerateQuizModal;
