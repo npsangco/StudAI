@@ -284,6 +284,8 @@ class PlannerService {
         description: p.description || '',
         due_date: p.due_date,
         created_at: p.created_at,
+        completed: p.completed || false,        // ADD THIS
+        completed_at: p.completed_at || null   // ADD THIS
       }));
       
       await cachePlans(plans);
@@ -305,11 +307,19 @@ class PlannerService {
       description: planData.description || '',
       due_date: planData.due_date,
       created_at: new Date().toISOString(),
+      completed: false,        // ADD THIS
+      completed_at: null      // ADD THIS
     };
 
     if (this.isOnline) {
       try {
         const res = await plansApi.create(planData);
+        
+        // Check if response indicates validation error (400)
+        if (res.status === 400) {
+          return { success: false, error: res.data.error };
+        }
+        
         const p = res.data.plan;
         const plan = {
           id: p.planner_id,
@@ -318,16 +328,36 @@ class PlannerService {
           description: p.description || '',
           due_date: p.due_date,
           created_at: p.created_at,
+          completed: p.completed || false,
+          completed_at: p.completed_at || null
         };
         await cacheSinglePlan(plan);
         return { success: true, plan };
       } catch (err) {
-        console.error('[Planner] Create failed, queuing:', err);
-        await cacheSinglePlan(tempPlan);
-        await queueOperation({ entityType: 'plan', type: 'CREATE', data: { ...planData, tempId } });
-        return { success: true, plan: tempPlan, queued: true };
+        // Handle different types of errors
+        if (err.response) {
+          // Server responded with error status (4xx, 5xx)
+          if (err.response.status === 400) {
+            // Validation error - don't queue, just return error
+            return { success: false, error: err.response.data.error };
+          }
+          // Other server errors - don't queue for offline
+          console.error('[Planner] Server error:', err.response.status);
+          return { success: false, error: 'Server error' };
+        } else if (err.request) {
+          // Network error - no response received, queue for offline
+          console.error('[Planner] Network error, queuing:', err);
+          await cacheSinglePlan(tempPlan);
+          await queueOperation({ entityType: 'plan', type: 'CREATE', data: { ...planData, tempId } });
+          return { success: true, plan: tempPlan, queued: true };
+        } else {
+          // Other errors
+          console.error('[Planner] Unexpected error:', err);
+          return { success: false, error: 'Unexpected error' };
+        }
       }
     } else {
+      // Offline mode - always queue
       await cacheSinglePlan(tempPlan);
       await queueOperation({ entityType: 'plan', type: 'CREATE', data: { ...planData, tempId } });
       return { success: true, plan: tempPlan, queued: true };
@@ -341,6 +371,12 @@ class PlannerService {
     if (this.isOnline) {
       try {
         const res = await plansApi.update(planId, updates);
+        
+        // Check for validation errors
+        if (res.status === 400) {
+          return { success: false, error: res.data.error };
+        }
+        
         const p = res.data.plan;
         const plan = {
           id: p.planner_id,
@@ -349,12 +385,27 @@ class PlannerService {
           description: p.description || '',
           due_date: p.due_date,
           created_at: p.created_at,
+          completed: p.completed || false,
+          completed_at: p.completed_at || null
         };
         await cacheSinglePlan(plan);
         return { success: true, plan };
-      } catch {
-        await queueOperation({ entityType: 'plan', type: 'UPDATE', data: { planId, updates } });
-        return { success: true, queued: true };
+      } catch (err) {
+        // Handle different types of errors
+        if (err.response) {
+          if (err.response.status === 400) {
+            return { success: false, error: err.response.data.error };
+          }
+          console.error('[Planner] Server error:', err.response.status);
+          return { success: false, error: 'Server error' };
+        } else if (err.request) {
+          // Network error - queue for offline
+          await queueOperation({ entityType: 'plan', type: 'UPDATE', data: { planId, updates } });
+          return { success: true, queued: true };
+        } else {
+          console.error('[Planner] Unexpected error:', err);
+          return { success: false, error: 'Unexpected error' };
+        }
       }
     } else {
       await queueOperation({ entityType: 'plan', type: 'UPDATE', data: { planId, updates } });
@@ -368,9 +419,20 @@ class PlannerService {
       try {
         await plansApi.delete(planId);
         return { success: true };
-      } catch {
-        await queueOperation({ entityType: 'plan', type: 'DELETE', data: { planId } });
-        return { success: true, queued: true };
+      } catch (err) {
+        if (err.response) {
+          if (err.response.status === 400) {
+            return { success: false, error: err.response.data.error };
+          }
+          console.error('[Planner] Server error:', err.response.status);
+          return { success: false, error: 'Server error' };
+        } else if (err.request) {
+          await queueOperation({ entityType: 'plan', type: 'DELETE', data: { planId } });
+          return { success: true, queued: true };
+        } else {
+          console.error('[Planner] Unexpected error:', err);
+          return { success: false, error: 'Unexpected error' };
+        }
       }
     } else {
       await queueOperation({ entityType: 'plan', type: 'DELETE', data: { planId } });
@@ -400,6 +462,7 @@ class PlannerService {
           await removeSyncedOperation(op.queueId);
         } catch (err) {
           console.error('[Planner] Operation failed:', err);
+          // Don't remove from queue if it failed (will retry later)
         }
       }
 
@@ -424,12 +487,26 @@ class PlannerService {
           description: p.description || '',
           due_date: p.due_date,
           created_at: p.created_at,
+          completed: p.completed || false,        // ADD THIS
+          completed_at: p.completed_at || null   // ADD THIS
         });
         break;
       }
-      case 'UPDATE':
-        await plansApi.update(op.data.planId, op.data.updates);
+      case 'UPDATE': {
+        const res = await plansApi.update(op.data.planId, op.data.updates);
+        const p = res.data.plan;
+        await cacheSinglePlan({
+          id: p.planner_id,
+          planner_id: p.planner_id,
+          title: p.title,
+          description: p.description || '',
+          due_date: p.due_date,
+          created_at: p.created_at,
+          completed: p.completed || false,        // ADD THIS
+          completed_at: p.completed_at || null   // ADD THIS
+        });
         break;
+      }
       case 'DELETE':
         await plansApi.delete(op.data.planId);
         break;

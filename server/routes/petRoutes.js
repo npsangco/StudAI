@@ -1,16 +1,40 @@
-// petRoutes.js (Optimized with Caching & Performance & Authentication)
+// petRoutes.js - Updated with Pet Buddy v2.1 Configuration
 import express from "express";
 import sequelize from "../db.js";
 import PetCompanion from "../models/PetCompanion.js";
 import PetItem from "../models/PetItem.js";
 import UserPetItem from "../models/UserPetItem.js";
 import User from "../models/User.js";
+import UserDailyStat from "../models/UserDailyStat.js";
 import rateLimit from "express-rate-limit";
 import NodeCache from "node-cache";
 
 const router = express.Router();
 
-// Authentication Middleware
+// ============================================
+// CONFIGURATION (Pet Buddy v2.1)
+// ============================================
+
+const CONFIG = {
+  stats: {
+    hunger: { decay: 10, interval: 180, max: 100 },      // 3 hours
+    happiness: { decay: 10, interval: 180, max: 100 },   // 3 hours
+    cleanliness: { decay: 5, interval: 240, max: 100 },  // 4 hours
+    energy: { replenish: 5, interval: 300, max: 100 }    // 5 minutes
+  },
+  exp: {
+    perItem: 4,  // EXP per item used
+    maxLevel: 50 // Max level changed from 100
+  },
+  shop: {
+    energy: { cost: 40, effect: 35 } // Reduced from 70
+  }
+};
+
+// ============================================
+// MIDDLEWARE & CACHING
+// ============================================
+
 const requireAuth = (req, res, next) => {
   if (!req.session || !req.session.userId) {
     return res.status(401).json({ error: 'Not logged in' });
@@ -18,62 +42,56 @@ const requireAuth = (req, res, next) => {
   next();
 };
 
-// Performance Optimizations using nodecache
 const cache = new NodeCache({ 
-  stdTTL: 300, // 5 minutes cache
+  stdTTL: 300,
   checkperiod: 60 
 });
 
-// rate limiter
 const actionLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 15, // 15 requests per minute
-  message: { error: "Too many actions, please try again later." },
-  skipSuccessfulRequests: false,
+  windowMs: 60 * 1000,
+  max: 15,
+  message: { error: "Too many actions, please try again later." }
 });
 
 const purchaseLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 100, // 5 purchases per minute
+  windowMs: 60 * 1000,
+  max: 10, // Reduced from 100
   message: { error: "Too many purchases, please slow down." }
 });
 
 const generalLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 30, // 30 general requests per minute
+  windowMs: 60 * 1000,
+  max: 30,
   message: { error: "Too many requests, please try again later." }
 });
 
-// Helper configurations for actions
-const DECAY_RATES = { hunger: 10, happiness: 10, cleanliness: 5 };
-const DECAY_INTERVALS = { hunger: 1, happiness: 1, cleanliness: 1 };
-const ENERGY_REPLENISH = { amount: 10, interval: 10 };
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 
-// Cache key generators
-const getPetCacheKey = (userId) => `pet:${userId}`;
-const getInventoryCacheKey = (userId) => `inventory:${userId}`;
-const getShopCacheKey = () => 'shop:items';
-const getUserCacheKey = (userId) => `user:${userId}`;
-
-function calculateDecay(lastActionTime, currentTime, decayRate, decayInterval) {
+function calculateDecay(lastActionTime, currentTime, statType) {
   if (!lastActionTime) return 0;
+  
+  const config = CONFIG.stats[statType];
   const minutesElapsed = (currentTime - new Date(lastActionTime)) / (1000 * 60);
-  const decayPeriods = Math.floor(minutesElapsed / decayInterval);
-  return decayPeriods * decayRate;
+  const decayPeriods = Math.floor(minutesElapsed / config.interval);
+  
+  return decayPeriods * config.decay;
 }
 
 async function applyStatDecay(pet) {
   const now = new Date();
 
-  const hungerDecay = calculateDecay(pet.last_fed, now, DECAY_RATES.hunger, DECAY_INTERVALS.hunger);
-  const happinessDecay = calculateDecay(pet.last_played, now, DECAY_RATES.happiness, DECAY_INTERVALS.happiness);
-  const cleanlinessDecay = calculateDecay(pet.last_cleaned, now, DECAY_RATES.cleanliness, DECAY_INTERVALS.cleanliness);
+  const hungerDecay = calculateDecay(pet.last_fed, now, 'hunger');
+  const happinessDecay = calculateDecay(pet.last_played, now, 'happiness');
+  const cleanlinessDecay = calculateDecay(pet.last_cleaned, now, 'cleanliness');
 
+  // Energy replenishment
   let energyReplenish = 0;
   if (pet.last_updated) {
     const secondsElapsed = (now - new Date(pet.last_updated)) / 1000;
-    const replenishPeriods = Math.floor(secondsElapsed / ENERGY_REPLENISH.interval);
-    energyReplenish = replenishPeriods * ENERGY_REPLENISH.amount;
+    const replenishPeriods = Math.floor(secondsElapsed / CONFIG.stats.energy.interval);
+    energyReplenish = replenishPeriods * CONFIG.stats.energy.replenish;
   }
 
   const updatedStats = {
@@ -89,12 +107,12 @@ async function applyStatDecay(pet) {
 }
 
 function getExpNeeded(level) {
-  return Math.floor(100 * Math.pow(1.1, level - 1));
+  // Formula: 100 × 1.08^(level-1)
+  return Math.floor(100 * Math.pow(1.08, level - 1));
 }
 
-// Helper function to get equipped items for a specific effect type
 async function getEquippedItems(userId, effectType) {
-  const equippedItems = await UserPetItem.findAll({
+  return await UserPetItem.findAll({
     where: { 
       user_id: userId, 
       is_equipped: true 
@@ -106,44 +124,50 @@ async function getEquippedItems(userId, effectType) {
     }],
     order: [[PetItem, 'effect_value', 'DESC']]
   });
-
-  return equippedItems;
 }
 
-// Helper function to select best items to use
 function selectItemsToUse(equippedItems, currentLevel, maxLevel = 100) {
   const itemsToUse = [];
   let remainingNeeded = maxLevel - currentLevel;
+  const usedIndices = new Set();
 
-  // Sort items by effect value (highest first)
   const sortedItems = [...equippedItems].sort((a, b) => 
-    b.PetItem.effect_value - a.PetItem.effect_value
+    a.PetItem.effect_value - b.PetItem.effect_value
   );
 
-  for (const item of sortedItems) {
-    if (remainingNeeded <= 0) break;
-
+  for (let i = 0; i < sortedItems.length && remainingNeeded > 0; i++) {
+    if (usedIndices.has(i)) continue;
+    
+    const item = sortedItems[i];
     const effectValue = item.PetItem.effect_value;
     
-    // If remaining needed is less than the highest effect, find a better fit
-    if (remainingNeeded < effectValue) {
-      // Look for an item with effect value closer to remainingNeeded
-      const betterFit = sortedItems.find(i => 
-        i.PetItem.effect_value <= remainingNeeded && 
-        !itemsToUse.includes(i)
-      );
+    if (effectValue > remainingNeeded) {
+      let bestIdx = i;
+      let bestWaste = effectValue - remainingNeeded;
       
-      if (betterFit) {
-        itemsToUse.push(betterFit);
-        remainingNeeded -= betterFit.PetItem.effect_value;
-      } else {
-        // Use the highest anyway if no better fit
-        itemsToUse.push(item);
-        remainingNeeded -= effectValue;
+      for (let j = i + 1; j < sortedItems.length; j++) {
+        if (usedIndices.has(j)) continue;
+        const altEffect = sortedItems[j].PetItem.effect_value;
+        
+        if (altEffect <= remainingNeeded) {
+          bestIdx = j;
+          bestWaste = 0;
+          break;
+        }
+        
+        const waste = altEffect - remainingNeeded;
+        if (waste < bestWaste) {
+          bestIdx = j;
+          bestWaste = waste;
+        }
       }
+      
+      itemsToUse.push(sortedItems[bestIdx]);
+      usedIndices.add(bestIdx);
+      remainingNeeded -= sortedItems[bestIdx].PetItem.effect_value;
     } else {
-      // Use the highest effect item
       itemsToUse.push(item);
+      usedIndices.add(i);
       remainingNeeded -= effectValue;
     }
   }
@@ -151,58 +175,106 @@ function selectItemsToUse(equippedItems, currentLevel, maxLevel = 100) {
   return itemsToUse;
 }
 
-// Auto-equip first item of each category
-async function autoEquipFirstItems(userId) {
+async function autoEquipFirstItems(userId, transaction = null) {
+  const inventoryItems = await UserPetItem.findAll({
+    where: { user_id: userId },
+    include: [PetItem],
+    order: [[PetItem, 'effect_type', 'ASC']],
+    transaction
+  });
+
+  const itemsByType = {};
+  inventoryItems.forEach(item => {
+    const effectType = item.PetItem.effect_type;
+    if (!itemsByType[effectType]) {
+      itemsByType[effectType] = [];
+    }
+    itemsByType[effectType].push(item);
+  });
+
+  const equipPromises = [];
+  Object.values(itemsByType).forEach(items => {
+    const firstItem = items[0];
+    if (firstItem && !firstItem.is_equipped) {
+      equipPromises.push(
+        firstItem.update({ is_equipped: true }, { transaction })
+      );
+    }
+  });
+
+  await Promise.all(equipPromises);
+  return true;
+}
+
+function clearUserCache(userId) {
+  cache.del(`pet:${userId}`);
+  cache.del(`inventory:${userId}`);
+  cache.del(`user:${userId}`);
+}
+
+// ============================================
+// DAILY STATS & ACHIEVEMENT TRACKING
+// ============================================
+
+async function logDailyStats(userId, activityType, points, exp) {
+  const today = new Date().toISOString().split('T')[0];
+  
+  let dailyStat = await UserDailyStat.findOne({
+    where: { user_id: userId, last_reset_date: today }
+  });
+  
+  if (!dailyStat) {
+    dailyStat = await UserDailyStat.create({
+      user_id: userId,
+      stat_date: today,
+      notes_created: 0,
+      quizzes_completed: 0,
+      tasks_added: 0,
+      points_earned: 0,
+      exp_earned: 0,
+      streak_active: false
+    });
+  }
+  
+  const updates = {
+    points_earned: dailyStat.points_earned + points,
+    exp_earned: dailyStat.exp_earned + exp
+  };
+  
+  switch(activityType) {
+    case 'pet_action':
+      // Track pet actions
+      break;
+    case 'quiz':
+      updates.quizzes_completed = dailyStat.quizzes_completed + 1;
+      break;
+  }
+  
+  await dailyStat.update(updates);
+  return dailyStat;
+}
+
+async function checkPetAchievements(userId) {
+  // Import achievement checker if available
+  // This should be implemented in a separate achievementService.js
   try {
-    // Group items in the invv by categories
-    const inventoryItems = await UserPetItem.findAll({
-      where: { user_id: userId },
-      include: [PetItem],
-      order: [[PetItem, 'effect_type', 'ASC']]
-    });
-
-    // Group by effect type and equip the first item of each type
-    const itemsByType = {};
-    inventoryItems.forEach(item => {
-      const effectType = item.PetItem.effect_type;
-      if (!itemsByType[effectType]) {
-        itemsByType[effectType] = [];
-      }
-      itemsByType[effectType].push(item);
-    });
-
-    // Equip first item of each type that isn't already equipped
-    const equipPromises = [];
-    Object.values(itemsByType).forEach(items => {
-      const firstItem = items[0];
-      if (firstItem && !firstItem.is_equipped) {
-        equipPromises.push(
-          firstItem.update({ is_equipped: true })
-        );
-      }
-    });
-
-    await Promise.all(equipPromises);
-    return true;
-  } catch (error) {
-    console.error("Auto-equip error:", error);
-    return false;
+    const { checkAndUnlockAchievements } = await import('../services/achievementService.js');
+    return await checkAndUnlockAchievements(userId);
+  } catch (err) {
+    console.log('Achievement service not available:', err.message);
+    return [];
   }
 }
 
-// Clear user-related cache
-function clearUserCache(userId) {
-  cache.del(getPetCacheKey(userId));
-  cache.del(getInventoryCacheKey(userId));
-  cache.del(getUserCacheKey(userId));
-}
+// ============================================
+// PET ROUTES
+// ============================================
 
-// Get user's pet with caching
 router.get("/", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
 
   try {
-    const cacheKey = getPetCacheKey(userId);
+    const cacheKey = `pet:${userId}`;
     const cachedPet = cache.get(cacheKey);
     
     if (cachedPet) {
@@ -213,13 +285,12 @@ router.get("/", generalLimiter, requireAuth, async (req, res) => {
     
     if (!pet) {
       const response = { choosePet: true };
-      cache.set(cacheKey, response, 60); // Cache for 1 minute
+      cache.set(cacheKey, response, 60);
       return res.json(response);
     }
 
     pet = await applyStatDecay(pet);
     
-    // Cache the pet data for 30 seconds
     cache.set(cacheKey, pet, 30);
     res.json(pet);
   } catch (err) {
@@ -228,7 +299,6 @@ router.get("/", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// Pet adoption
 router.post("/", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { petType, petName } = req.body;
@@ -279,9 +349,10 @@ router.post("/", generalLimiter, requireAuth, async (req, res) => {
       last_updated: now,
     });
 
-    // Clear cache for this user
-    clearUserCache(userId);
+    // Check achievement: Pet Parent
+    await checkPetAchievements(userId);
     
+    clearUserCache(userId);
     res.json(newPet);
   } catch (err) {
     console.error("Create pet error:", err);
@@ -289,7 +360,6 @@ router.post("/", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// Update pet name
 router.put("/name", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { petName } = req.body;
@@ -313,9 +383,7 @@ router.put("/name", generalLimiter, requireAuth, async (req, res) => {
       last_updated: new Date(),
     });
 
-    // Clear cache for this user
     clearUserCache(userId);
-    
     res.json(pet);
   } catch (err) {
     console.error("Update pet name error:", err);
@@ -323,7 +391,6 @@ router.put("/name", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// Pet actions
 router.post("/action", actionLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { actionType } = req.body;
@@ -341,7 +408,6 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
     let totalExpGain = 0;
     let itemsUsed = [];
 
-    // Map action types to effect types
     const actionEffectMap = {
       feed: { effectType: 'hunger', statKey: 'hunger_level', timestampKey: 'last_fed' },
       play: { effectType: 'happiness', statKey: 'happiness_level', timestampKey: 'last_played' },
@@ -354,7 +420,6 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
 
     const { effectType, statKey, timestampKey } = actionEffectMap[actionType];
 
-    // Get equipped items for this action
     const equippedItems = await getEquippedItems(userId, effectType);
 
     if (equippedItems.length === 0) {
@@ -363,7 +428,6 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
       });
     }
 
-    // Select best items to use
     const itemsToUse = selectItemsToUse(equippedItems, pet[statKey]);
 
     if (itemsToUse.length === 0) {
@@ -372,48 +436,50 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
       });
     }
 
-    // Calculate total effect
     let totalEffect = 0;
     for (const item of itemsToUse) {
       totalEffect += item.PetItem.effect_value;
-      totalExpGain += 3; // Exp per item used
+      totalExpGain += CONFIG.exp.perItem; // 4 EXP per item
       itemsUsed.push({
         name: item.PetItem.item_name,
         effect: item.PetItem.effect_value
       });
     }
 
-    // Apply stat changes
     updates[statKey] = Math.min(100, pet[statKey] + totalEffect);
     updates[timestampKey] = now;
 
-    // Special handling for play action (reduces energy)
     if (actionType === 'play') {
       updates.energy_level = Math.max(0, pet.energy_level - 10);
     }
 
-    // Calculate experience and level up
+    // Level up calculation with MAX LEVEL 50
     let newExp = pet.experience_points + totalExpGain;
     let newLevel = pet.level;
     let expNeeded = getExpNeeded(newLevel);
+    let levelsGained = 0;
 
-    while (newExp >= expNeeded) {
+    while (newExp >= expNeeded && newLevel < CONFIG.exp.maxLevel) {
       newExp -= expNeeded;
       newLevel++;
+      levelsGained++;
       expNeeded = getExpNeeded(newLevel);
     }
 
     updates.experience_points = newExp;
     updates.level = newLevel;
 
-    // Start transaction to update pet and remove items
+    // Track pet action count
+    const actionCountKey = `times_${actionType === 'feed' ? 'fed' : actionType === 'play' ? 'played' : 'cleaned'}`;
+    if (pet[actionCountKey] !== undefined) {
+      updates[actionCountKey] = pet[actionCountKey] + 1;
+    }
+
     const transaction = await sequelize.transaction();
 
     try {
-      // Update pet stats
       await pet.update(updates, { transaction });
 
-      // Remove used items from inventory
       for (const item of itemsToUse) {
         if (item.quantity > 1) {
           await UserPetItem.update(
@@ -428,20 +494,28 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
         }
       }
 
-      await transaction.commit();
+      // Log daily stats
+      await logDailyStats(userId, 'pet_action', 0, totalExpGain);
 
-      // Clear cache for this user
+      // Check achievements (Dedicated Caretaker, Pet Trainer, etc.)
+      if (levelsGained > 0) {
+        await checkPetAchievements(userId);
+      }
+
+      await transaction.commit();
       clearUserCache(userId);
 
-      // Return updated pet with info about items used
       const updatedPet = await PetCompanion.findOne({ where: { user_id: userId } });
       
-      // Return pet data at root level for backward compatibility
       res.json({
         ...updatedPet.toJSON(),
         itemsUsed,
         totalEffect,
-        message: `Used ${itemsUsed.length} item(s) for +${totalEffect} ${effectType}!`
+        expGained: totalExpGain,
+        levelsGained,
+        message: levelsGained > 0 
+          ? `Level up! Now level ${newLevel}! Used ${itemsUsed.length} item(s) for +${totalEffect} ${effectType}!`
+          : `Used ${itemsUsed.length} item(s) for +${totalEffect} ${effectType}!`
       });
 
     } catch (err) {
@@ -455,7 +529,10 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// Equip/Unequip item endpoint
+// ============================================
+// INVENTORY ROUTES
+// ============================================
+
 router.post("/inventory/equip", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { inventoryId, isEquipped } = req.body;
@@ -470,11 +547,8 @@ router.post("/inventory/equip", generalLimiter, requireAuth, async (req, res) =>
       return res.status(404).json({ error: "Item not found in inventory." });
     }
 
-    // Toggle equipped status
     await inventoryItem.update({ is_equipped: !isEquipped });
-
-    // Clear inventory cache
-    cache.del(getInventoryCacheKey(userId));
+    cache.del(`inventory:${userId}`);
 
     res.json({ 
       message: isEquipped ? "Item unequipped" : "Item equipped",
@@ -487,15 +561,12 @@ router.post("/inventory/equip", generalLimiter, requireAuth, async (req, res) =>
   }
 });
 
-// Auto-equip first items endpoint
 router.post("/inventory/auto-equip", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
 
   try {
     await autoEquipFirstItems(userId);
-    
-    // Clear inventory cache
-    cache.del(getInventoryCacheKey(userId));
+    cache.del(`inventory:${userId}`);
     
     res.json({ message: "Auto-equipped first items of each category" });
   } catch (err) {
@@ -504,109 +575,11 @@ router.post("/inventory/auto-equip", generalLimiter, requireAuth, async (req, re
   }
 });
 
-// ----------------- SHOP & INVENTORY ROUTES -----------------
-
-// get shop items
-router.get("/shop/items", generalLimiter, async (req, res) => {
-  try {
-    const cacheKey = getShopCacheKey();
-    const cachedItems = cache.get(cacheKey);
-    
-    if (cachedItems) {
-      return res.json({ items: cachedItems });
-    }
-
-    console.log("🛍️ Fetching shop items from database...");
-    const items = await PetItem.findAll({ raw: true });
-    
-    // Cache shop items for 10 minutes (they rarely change)
-    cache.set(cacheKey, items, 600);
-    
-    res.json({ items });
-  } catch (err) {
-    console.error("Get shop items error:", err);
-    res.status(500).json({ error: "Failed to fetch shop items." });
-  }
-});
-
-// Purchase item with rate limiting 
-router.post("/shop/purchase", purchaseLimiter, requireAuth, async (req, res) => {
-  const userId = req.session.userId;
-  const { itemId } = req.body;
-
-  try {
-    const user = await User.findByPk(userId);
-    const item = await PetItem.findByPk(itemId);
-
-    if (!user || !item) {
-      return res.status(404).json({ error: "User or item not found." });
-    }
-
-    if (user.points < item.cost) {
-      return res.status(400).json({ error: "Not enough points." });
-    }
-
-    const transaction = await sequelize.transaction();
-
-    try {
-      await User.update(
-        { points: user.points - item.cost },
-        { where: { user_id: userId }, transaction }
-      );
-
-      const existingInventory = await UserPetItem.findOne({
-        where: { user_id: userId, item_id: itemId },
-        transaction
-      });
-
-      if (existingInventory) {
-        await UserPetItem.update(
-          { quantity: existingInventory.quantity + 1 },
-          { where: { inventory_id: existingInventory.inventory_id }, transaction }
-        );
-      } else {
-        await UserPetItem.create({
-          user_id: userId,
-          item_id: itemId,
-          quantity: 1,
-        }, { transaction });
-      }
-
-      await transaction.commit();
-
-      // Auto-equip the first item of this type for new users
-      try {
-        await autoEquipFirstItems(userId);
-      } catch (equipError) {
-        console.log("Auto-equip not critical, continuing...", equipError);
-      }
-
-      // Clear all user-related cache
-      clearUserCache(userId);
-
-      const updatedUser = await User.findByPk(userId);
-      res.json({ 
-        message: "Purchase successful", 
-        updatedPoints: updatedUser.points 
-      });
-
-    } catch (err) {
-      await transaction.rollback();
-      throw err;
-    }
-
-  } catch (err) {
-    console.error("Purchase error:", err);
-    res.status(500).json({ error: "Failed to purchase item." });
-  }
-});
-
-// Get user inventory with caching
 router.get("/inventory", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
 
   try {
-    const cacheKey = getInventoryCacheKey(userId);
+    const cacheKey = `inventory:${userId}`;
     const cachedInventory = cache.get(cacheKey);
     
     if (cachedInventory) {
@@ -634,9 +607,7 @@ router.get("/inventory", generalLimiter, requireAuth, async (req, res) => {
       effect_value: invItem.PetItem?.effect_value
     }));
 
-    // Cache inventory for 1 minute
     cache.set(cacheKey, formattedInventory, 60);
-    
     res.json({ inventory: formattedInventory });
   } catch (err) {
     console.error("Get inventory error:", err);
@@ -644,86 +615,100 @@ router.get("/inventory", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// Use item from inventory (manual use)
-router.post("/inventory/use", actionLimiter, requireAuth, async (req, res) => {
+// ============================================
+// SHOP ROUTES
+// ============================================
+
+router.get("/shop/items", generalLimiter, async (req, res) => {
+  try {
+    const cacheKey = 'shop:items';
+    const cachedItems = cache.get(cacheKey);
+    
+    if (cachedItems) {
+      return res.json({ items: cachedItems });
+    }
+
+    const items = await PetItem.findAll({ raw: true });
+    cache.set(cacheKey, items, 600);
+    
+    res.json({ items });
+  } catch (err) {
+    console.error("Get shop items error:", err);
+    res.status(500).json({ error: "Failed to fetch shop items." });
+  }
+});
+
+router.post("/shop/purchase", purchaseLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
-  const { inventoryId } = req.body;
+  const { itemId, quantity = 1 } = req.body;
 
   try {
-    const inventoryItem = await UserPetItem.findOne({
-      where: { inventory_id: inventoryId, user_id: userId },
-      include: [PetItem]
-    });
+    const user = await User.findByPk(userId);
+    const item = await PetItem.findByPk(itemId);
 
-    if (!inventoryItem) {
-      return res.status(404).json({ error: "Item not found in inventory." });
+    if (!user || !item) {
+      return res.status(404).json({ error: "User or item not found." });
     }
 
-    let pet = await PetCompanion.findOne({ where: { user_id: userId } });
-    if (!pet) {
-      return res.status(404).json({ error: "Pet not found." });
+    const totalCost = item.cost * quantity;
+
+    if (user.points < totalCost) {
+      return res.status(400).json({ 
+        error: `Not enough points! Need ${totalCost}, have ${user.points}` 
+      });
     }
 
-    pet = await applyStatDecay(pet);
+    const transaction = await sequelize.transaction();
 
-    const item = inventoryItem.PetItem;
-    const now = new Date();
-
-    const updates = { last_updated: now };
-
-    switch (item.effect_type) {
-      case 'hunger':
-        updates.hunger_level = Math.min(100, pet.hunger_level + item.effect_value);
-        updates.last_fed = now;
-        break;
-      case 'happiness':
-        updates.happiness_level = Math.min(100, pet.happiness_level + item.effect_value);
-        updates.last_played = now;
-        break;
-      case 'cleanliness':
-        updates.cleanliness_level = Math.min(100, pet.cleanliness_level + item.effect_value);
-        updates.last_cleaned = now;
-        break;
-      case 'energy':
-        updates.energy_level = Math.min(100, pet.energy_level + item.effect_value);
-        break;
-      default:
-        break;
-    }
-
-    let newExp = pet.experience_points + 3;
-    let newLevel = pet.level;
-    let expNeeded = getExpNeeded(newLevel);
-
-    while (newExp >= expNeeded) {
-      newExp -= expNeeded;
-      newLevel++;
-      expNeeded = getExpNeeded(newLevel);
-    }
-
-    updates.experience_points = newExp;
-    updates.level = newLevel;
-
-    await pet.update(updates);
-
-    if (inventoryItem.quantity > 1) {
-      await UserPetItem.update(
-        { quantity: inventoryItem.quantity - 1 },
-        { where: { inventory_id: inventoryId } }
+    try {
+      await User.update(
+        { points: user.points - totalCost },
+        { where: { user_id: userId }, transaction }
       );
-    } else {
-      await UserPetItem.destroy({ where: { inventory_id: inventoryId } });
+
+      const existingInventory = await UserPetItem.findOne({
+        where: { user_id: userId, item_id: itemId },
+        transaction
+      });
+
+      if (existingInventory) {
+        await UserPetItem.update(
+          { quantity: existingInventory.quantity + quantity },
+          { where: { inventory_id: existingInventory.inventory_id }, transaction }
+        );
+      } else {
+        await UserPetItem.create({
+          user_id: userId,
+          item_id: itemId,
+          quantity: quantity,
+        }, { transaction });
+      }
+
+      // Auto-equip if first purchase
+      await autoEquipFirstItems(userId, transaction);
+
+      // Check Shopping Spree achievement
+      await checkPetAchievements(userId);
+
+      await transaction.commit();
+      clearUserCache(userId);
+
+      const updatedUser = await User.findByPk(userId);
+      res.json({ 
+        message: `Purchase successful! Bought ${quantity}x ${item.item_name}`,
+        updatedPoints: updatedUser.points,
+        itemsPurchased: quantity,
+        totalCost
+      });
+
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
     }
-
-    // Clear user cache
-    clearUserCache(userId);
-
-    const updatedPet = await PetCompanion.findOne({ where: { user_id: userId } });
-    res.json({ updatedPet });
 
   } catch (err) {
-    console.error("Use item error:", err);
-    res.status(500).json({ error: "Failed to use item." });
+    console.error("Purchase error:", err);
+    res.status(500).json({ error: "Failed to purchase item." });
   }
 });
 

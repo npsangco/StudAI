@@ -1,7 +1,27 @@
 import express from 'express';
+import sequelize from '../db.js';
 import Plan from '../models/Plan.js';
+import User from '../models/User.js';
+import UserDailyStat from '../models/UserDailyStat.js';
+import { checkAndUnlockAchievements } from '../services/achievementServices.js';
 
 const router = express.Router();
+
+// ============================================
+// CONFIGURATION (Consistent with Quiz Routes)
+// ============================================
+
+const PLAN_CONFIG = {
+  points: {
+    perTask: 30,
+    dailyCap: 3,
+    capMessage: "Daily task points limit reached (3/3). You can still complete tasks but won't earn points until tomorrow!"
+  }
+};
+
+// ============================================
+// HELPER FUNCTIONS (Consistent with Quiz Routes)
+// ============================================
 
 // Middleware to check authentication
 const requireAuth = (req, res, next) => {
@@ -10,6 +30,102 @@ const requireAuth = (req, res, next) => {
   }
   next();
 };
+
+// Check and reset daily caps (same as quiz routes)
+async function checkAndResetDailyCaps(userId) {
+  const user = await User.findByPk(userId);
+  const today = new Date().toISOString().split('T')[0];
+  
+  if (!user.daily_reset_date || user.daily_reset_date !== today) {
+    await user.update({
+      daily_notes_count: 0,
+      daily_quizzes_count: 0,
+      daily_tasks_count: 0,
+      daily_reset_date: today
+    });
+  }
+  
+  return user;
+}
+
+// Log daily stats (consistent with quiz routes)
+async function logDailyStats(userId, activityType, points, exp = 0) {
+  const today = new Date().toISOString().split('T')[0];
+  
+  let dailyStat = await UserDailyStat.findOne({
+    where: { user_id: userId, last_reset_date: today }
+  });
+  
+  if (!dailyStat) {
+    dailyStat = await UserDailyStat.create({
+      user_id: userId,
+      last_reset_date: today,
+      notes_created_today: 0,
+      quizzes_completed_today: 0,
+      planner_updates_today: 0,
+      points_earned_today: 0,
+      exp_earned_today: 0,
+      streak_active: false
+    });
+  }
+  
+  const updates = {
+    points_earned_today: dailyStat.points_earned_today + points,
+    exp_earned_today: dailyStat.exp_earned_today + exp
+  };
+  
+  if (activityType === 'task') {
+    updates.planner_updates_today = dailyStat.planner_updates_today + 1;
+  }
+  
+  await dailyStat.update(updates);
+  return dailyStat;
+}
+
+// Update user streak (same as quiz routes)
+async function updateUserStreak(userId) {
+  const user = await User.findByPk(userId);
+  const today = new Date().toISOString().split('T')[0];
+  const lastActivity = user.last_activity_date;
+  
+  if (!lastActivity) {
+    await user.update({
+      study_streak: 1,
+      last_activity_date: today,
+      longest_streak: 1
+    });
+    return 1;
+  }
+  
+  const lastDate = new Date(lastActivity);
+  const todayDate = new Date(today);
+  const daysDiff = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+  
+  if (daysDiff === 1) {
+    // Consecutive day
+    const newStreak = user.study_streak + 1;
+    await user.update({
+      study_streak: newStreak,
+      last_activity_date: today,
+      longest_streak: Math.max(user.longest_streak || 0, newStreak)
+    });
+    return newStreak;
+  } else if (daysDiff > 1) {
+    // Streak broken
+    await user.update({
+      study_streak: 1,
+      last_activity_date: today
+    });
+    return 1;
+  }
+  
+  // Same day, return current streak
+  return user.study_streak;
+}
+
+// ============================================
+// PLAN ROUTES (Updated with Daily Points Limit)
+// ============================================
 
 // Get all plans for current user
 router.get('/', requireAuth, async (req, res) => {
@@ -26,10 +142,10 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// Create a new plan
+// Create a new plan - NO DAILY LIMIT ON CREATION
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { title, description, due_date } = req.body;
+    const { title, description, due_date, completed } = req.body;
     
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
@@ -39,7 +155,9 @@ router.post('/', requireAuth, async (req, res) => {
       user_id: req.session.userId,
       title,
       description: description || null,
-      due_date: due_date || null
+      due_date: due_date || null,
+      completed: completed || false,
+      created_at: new Date()
     });
 
     res.status(201).json({ plan: newPlan });
@@ -49,57 +167,223 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// Update a plan
+// Update a plan - Handle marking as done WITH DAILY POINTS LIMIT
 router.put('/:id', requireAuth, async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
   try {
-    const { title, description, due_date } = req.body;
+    const { title, description, due_date, completed } = req.body;
     const planId = req.params.id;
+    const userId = req.session.userId;
 
     const plan = await Plan.findOne({
       where: { 
         planner_id: planId,
-        user_id: req.session.userId 
-      }
+        user_id: userId 
+      },
+      transaction
     });
 
     if (!plan) {
+      await transaction.rollback();
       return res.status(404).json({ error: 'Plan not found' });
     }
 
-    await plan.update({ 
-      title: title || plan.title,
+    const updateData = { 
+      title: title !== undefined ? title : plan.title,
       description: description !== undefined ? description : plan.description,
       due_date: due_date !== undefined ? due_date : plan.due_date
+    };
+
+    let pointsAwarded = 0;
+    let wasNewlyCompleted = false;
+    let dailyCapReached = false;
+
+    // Handle completed status - this is where marking as done happens
+    if (completed !== undefined) {
+      updateData.completed = completed;
+      if (completed && !plan.completed) {
+        // Check and reset daily caps
+        const user = await checkAndResetDailyCaps(userId);
+        
+        updateData.completed_at = new Date();
+        wasNewlyCompleted = true;
+        
+        // CHECK DAILY POINTS LIMIT (but don't block completion)
+        if (user.daily_tasks_count >= PLAN_CONFIG.points.dailyCap) {
+          dailyCapReached = true;
+          console.log(`[Planner] Plan ${planId} marked as completed - daily limit reached, no points awarded`);
+        } else {
+          // AWARD POINTS AND UPDATE STATS (only if under daily limit)
+          const TASK_POINTS = PLAN_CONFIG.points.perTask;
+          
+          // Update user points
+          await User.increment('points', {
+            by: TASK_POINTS,
+            where: { user_id: userId },
+            transaction
+          });
+          
+          // Update user daily task count
+          await user.increment('daily_tasks_count', { transaction });
+          
+          // Update user_daily_stats
+          await UserDailyStat.upsert({
+            user_id: userId,
+            planner_updates_today: sequelize.literal('COALESCE(planner_updates_today, 0) + 1'),
+            points_earned_today: sequelize.literal(`COALESCE(points_earned_today, 0) + ${TASK_POINTS}`),
+            last_reset_date: new Date().toISOString().split('T')[0]
+          }, {
+            transaction,
+            conflictFields: ['user_id', 'last_reset_date']
+          });
+          
+          pointsAwarded = TASK_POINTS;
+          console.log(`[Planner] Awarded ${TASK_POINTS} points for completing task (${user.daily_tasks_count + 1}/3 daily)`);
+        }
+        
+        // Update streak regardless of points limit
+        await updateUserStreak(userId);
+        
+      } else if (!completed && plan.completed) {
+        updateData.completed_at = null;
+        console.log(`[Planner] Plan ${planId} marked as incomplete`);
+      }
+    }
+
+    await plan.update(updateData, { transaction });
+    await transaction.commit();
+
+    // Check achievements after successful completion (even without points)
+    if (wasNewlyCompleted) {
+      try {
+        await checkAndUnlockAchievements(userId);
+      } catch (achievementError) {
+        console.error('Error checking achievements:', achievementError);
+        // Don't fail the request if achievement check fails
+      }
+    }
+
+    const updatedUser = await checkAndResetDailyCaps(userId);
+    
+    res.json({ 
+      plan,
+      points_awarded: pointsAwarded,
+      dailyCapReached: dailyCapReached,
+      message: dailyCapReached 
+        ? PLAN_CONFIG.points.capMessage
+        : pointsAwarded > 0 
+          ? `Task completed! +${pointsAwarded} points` 
+          : 'Task updated',
+      remainingTasks: PLAN_CONFIG.points.dailyCap - updatedUser.daily_tasks_count
     });
 
-    res.json({ plan });
   } catch (err) {
+    await transaction.rollback();
     console.error('Failed to update plan:', err);
     res.status(500).json({ error: 'Failed to update plan' });
   }
 });
 
-// Delete a plan
+// Mark as completed (DELETE route) WITH DAILY POINTS LIMIT
 router.delete('/:id', requireAuth, async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const planId = req.params.id;
+    const userId = req.session.userId;
 
     const plan = await Plan.findOne({
       where: { 
         planner_id: planId,
-        user_id: req.session.userId 
-      }
+        user_id: userId 
+      },
+      transaction
     });
 
     if (!plan) {
+      await transaction.rollback();
       return res.status(404).json({ error: 'Plan not found' });
     }
 
-    await plan.destroy();
-    res.json({ message: 'Plan deleted successfully' });
+    // Check if already completed to avoid double rewards
+    if (plan.completed) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Task already completed' });
+    }
+
+    // Check and reset daily caps
+    const user = await checkAndResetDailyCaps(userId);
+    
+    let pointsAwarded = 0;
+    let dailyCapReached = false;
+
+    // CHECK DAILY POINTS LIMIT (but don't block completion)
+    if (user.daily_tasks_count >= PLAN_CONFIG.points.dailyCap) {
+      dailyCapReached = true;
+      console.log(`[Planner] Plan ${planId} marked as completed via DELETE - daily limit reached, no points awarded`);
+    } else {
+      // AWARD POINTS AND UPDATE STATS (only if under daily limit)
+      const TASK_POINTS = PLAN_CONFIG.points.perTask;
+      
+      // Update user points
+      await User.increment('points', {
+        by: TASK_POINTS,
+        where: { user_id: userId },
+        transaction
+      });
+      
+      // Update user daily task count
+      await user.increment('daily_tasks_count', { transaction });
+      
+      // Update user_daily_stats
+      await UserDailyStat.upsert({
+        user_id: userId,
+        planner_updates_today: sequelize.literal('COALESCE(planner_updates_today, 0) + 1'),
+        points_earned_today: sequelize.literal(`COALESCE(points_earned_today, 0) + ${TASK_POINTS}`),
+        last_reset_date: new Date().toISOString().split('T')[0]
+      }, {
+        transaction,
+        conflictFields: ['user_id', 'last_reset_date']
+      });
+
+      pointsAwarded = TASK_POINTS;
+      console.log(`[Planner] Plan ${planId} marked as completed via DELETE - +${TASK_POINTS} points awarded (${user.daily_tasks_count + 1}/3 daily)`);
+    }
+
+    // Update streak regardless of points limit
+    await updateUserStreak(userId);
+
+    // Mark as completed instead of deleting (ALWAYS ALLOWED)
+    await plan.update({ 
+      completed: true,
+      completed_at: new Date()
+    }, { transaction });
+
+    await transaction.commit();
+
+    // Check achievements (even without points)
+    try {
+      await checkAndUnlockAchievements(userId);
+    } catch (achievementError) {
+      console.error('Error checking achievements:', achievementError);
+    }
+
+    const updatedUser = await checkAndResetDailyCaps(userId);
+    
+    res.json({ 
+      message: dailyCapReached 
+        ? 'Task completed (daily points limit reached)' 
+        : 'Task marked as completed', 
+      plan,
+      points_awarded: pointsAwarded,
+      dailyCapReached: dailyCapReached,
+      remainingTasks: PLAN_CONFIG.points.dailyCap - updatedUser.daily_tasks_count
+    });
   } catch (err) {
-    console.error('Failed to delete plan:', err);
-    res.status(500).json({ error: 'Failed to delete plan' });
+    await transaction.rollback();
+    console.error('Failed to update task:', err);
+    res.status(500).json({ error: 'Failed to update task' });
   }
 });
 

@@ -1,11 +1,29 @@
+// noteRoutes.js - Updated with Pet Buddy v2.1 Points System
 import express from 'express';
 import Note from '../models/Note.js';
 import SharedNote from '../models/SharedNote.js';
 import NoteCategory from '../models/NoteCategory.js';
+import User from '../models/User.js';
+import UserDailyStat from '../models/UserDailyStat.js';
 
 const router = express.Router();
 
-// Middleware to check authentication
+// ============================================
+// CONFIGURATION (Pet Buddy v2.1)
+// ============================================
+
+const NOTE_CONFIG = {
+  points: {
+    amount: 50,
+    dailyCap: 3,
+    capMessage: "Daily note limit reached (3/3). Come back tomorrow for more points!"
+  }
+};
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
 const requireAuth = (req, res, next) => {
   if (!req.session || !req.session.userId) {
     return res.status(401).json({ error: 'Not logged in' });
@@ -13,7 +31,6 @@ const requireAuth = (req, res, next) => {
   next();
 };
 
-// Helper function to add computed fields for frontend
 const formatNoteForFrontend = (note) => {
   const noteData = note.toJSON ? note.toJSON() : note;
   return {
@@ -25,7 +42,6 @@ const formatNoteForFrontend = (note) => {
   };
 };
 
-// Generate a random 6-character alphanumeric code
 function generateShareCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
@@ -35,8 +51,68 @@ function generateShareCode() {
   return code;
 }
 
+async function checkAndResetDailyCaps(userId) {
+  const user = await User.findByPk(userId);
+  const today = new Date().toISOString().split('T')[0];
+  
+  if (!user.daily_reset_date || user.daily_reset_date !== today) {
+    await user.update({
+      daily_notes_count: 0,
+      daily_quizzes_count: 0,
+      daily_tasks_count: 0,
+      daily_reset_date: today
+    });
+  }
+  
+  return user;
+}
+
+async function logDailyStats(userId, activityType, points) {
+  const today = new Date().toISOString().split('T')[0];
+  
+  let dailyStat = await UserDailyStat.findOne({
+    where: { user_id: userId, stat_date: today }
+  });
+  
+  if (!dailyStat) {
+    dailyStat = await UserDailyStat.create({
+      user_id: userId,
+      stat_date: today,
+      notes_created: 0,
+      quizzes_completed: 0,
+      tasks_added: 0,
+      points_earned: 0,
+      exp_earned: 0,
+      streak_active: false
+    });
+  }
+  
+  const updates = {
+    points_earned: dailyStat.points_earned + points
+  };
+  
+  if (activityType === 'note') {
+    updates.notes_created = dailyStat.notes_created + 1;
+  }
+  
+  await dailyStat.update(updates);
+  return dailyStat;
+}
+
+async function checkAchievements(userId) {
+  try {
+    const { checkAndUnlockAchievements } = await import('../services/achievementService.js');
+    return await checkAndUnlockAchievements(userId);
+  } catch (err) {
+    console.log('Achievement service not available');
+    return [];
+  }
+}
+
+// ============================================
 // CATEGORY ROUTES
-// Get all categories for current user
+// ============================================
+
 router.get('/categories', requireAuth, async (req, res) => {
   try {
     const categories = await NoteCategory.findAll({
@@ -51,7 +127,6 @@ router.get('/categories', requireAuth, async (req, res) => {
   }
 });
 
-// Create a new category
 router.post('/categories', requireAuth, async (req, res) => {
   try {
     const { name, color } = req.body;
@@ -60,7 +135,6 @@ router.post('/categories', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Category name is required' });
     }
 
-    // Check if category already exists for this user
     const existing = await NoteCategory.findOne({
       where: { 
         user_id: req.session.userId,
@@ -85,8 +159,10 @@ router.post('/categories', requireAuth, async (req, res) => {
   }
 });
 
-// NOTES ROUTES
-// Get all notes for current user
+// ============================================
+// NOTES ROUTES (WITH DAILY CAPS)
+// ============================================
+
 router.get('/', requireAuth, async (req, res) => {
   try {
     const notes = await Note.findAll({
@@ -98,14 +174,13 @@ router.get('/', requireAuth, async (req, res) => {
         required: false
       }],
       order: [
-        ['is_pinned', 'DESC'], // pinned notes first
-        ['createdAt', 'DESC']  // then by creation date
+        ['is_pinned', 'DESC'],
+        ['createdAt', 'DESC']
       ]
     });
 
     const notesWithExtras = notes.map(note => {
       const formatted = formatNoteForFrontend(note);
-      // Add category info if exists
       if (note.category) {
         formatted.category = {
           category_id: note.category.category_id,
@@ -123,17 +198,20 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// Create a new note
 router.post('/create', requireAuth, async (req, res) => {
   try {
+    const userId = req.session.userId;
     const { title, content, file_id, category_id } = req.body;
+    
+    // Check and reset daily caps
+    const user = await checkAndResetDailyCaps(userId);
     
     // Validate category if provided
     if (category_id) {
       const category = await NoteCategory.findOne({
         where: {
           category_id: category_id,
-          user_id: req.session.userId
+          user_id: userId
         }
       });
 
@@ -143,13 +221,60 @@ router.post('/create', requireAuth, async (req, res) => {
     }
 
     const newNote = await Note.create({
-      user_id: req.session.userId,
+      user_id: userId,
       file_id: file_id || null,
       category_id: category_id || null,
       title,
       content: content || '',
       is_pinned: false
     });
+
+    // Award points if under daily cap
+    let pointsEarned = 0;
+    let dailyCapReached = false;
+    let remainingNotes = 0;
+    
+    // Handle case where daily_notes_count might be undefined
+    const currentNoteCount = user.daily_notes_count || 0;
+    console.log('Before increment - daily_notes_count:', currentNoteCount);
+    
+    if (currentNoteCount < NOTE_CONFIG.points.dailyCap) {
+      pointsEarned = NOTE_CONFIG.points.amount;
+      
+      // Award points
+      await User.increment('points', {
+        by: pointsEarned,
+        where: { user_id: userId }
+      });
+      
+      // Increment daily count - handle both cases (field exists or not)
+      if (user.daily_notes_count !== undefined) {
+        await user.increment('daily_notes_count');
+      } else {
+        // If field doesn't exist, set it to 1
+        await User.update(
+          { daily_notes_count: 1 },
+          { where: { user_id: userId } }
+        );
+      }
+      
+      const updatedUser = await User.findByPk(userId); // ⬅️ REFRESH USER
+      
+      const updatedNoteCount = updatedUser.daily_notes_count || 1;
+      console.log('After increment - daily_notes_count:', updatedNoteCount);
+      
+      // Calculate remaining notes with updated count
+      remainingNotes = Math.max(0, NOTE_CONFIG.points.dailyCap - updatedNoteCount);
+      
+      // Log daily stats
+      await logDailyStats(userId, 'note', pointsEarned);
+      
+      // Check achievements
+      await checkAchievements(userId);
+    } else {
+      dailyCapReached = true;
+      remainingNotes = 0;
+    }
 
     // Fetch the note with category info
     const noteWithCategory = await Note.findOne({
@@ -171,14 +296,21 @@ router.post('/create', requireAuth, async (req, res) => {
       };
     }
 
-    res.status(201).json({ note: noteWithExtras });
+    res.status(201).json({ 
+      note: noteWithExtras,
+      pointsEarned,
+      dailyCapReached,
+      remainingNotes: remainingNotes,
+      message: dailyCapReached 
+        ? NOTE_CONFIG.points.capMessage 
+        : `Note created! Earned ${pointsEarned} points!`
+    });
   } catch (err) {
     console.error('Failed to create note:', err);
     res.status(500).json({ error: 'Failed to create note' });
   }
 });
 
-// Update a note
 router.put('/:id', requireAuth, async (req, res) => {
   try {
     const { title, content, category_id } = req.body;
@@ -195,7 +327,6 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Note not found' });
     }
 
-    // Validate category if provided
     if (category_id) {
       const category = await NoteCategory.findOne({
         where: {
@@ -215,7 +346,6 @@ router.put('/:id', requireAuth, async (req, res) => {
       category_id: category_id !== undefined ? category_id : note.category_id
     });
 
-    // Fetch the updated note with category info
     const updatedNote = await Note.findOne({
       where: { note_id: noteId },
       include: [{
@@ -242,7 +372,6 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Delete a note
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;
@@ -266,13 +395,14 @@ router.delete('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ============================================
 // SHARED NOTES ROUTES
-// Share a note - generates a share code
+// ============================================
+
 router.post('/:id/share', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;
 
-    // Verify the note belongs to the user
     const note = await Note.findOne({
       where: { 
         note_id: noteId,
@@ -284,7 +414,6 @@ router.post('/:id/share', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Note not found' });
     }
 
-    // Check if already shared
     let sharedNote = await SharedNote.findOne({
       where: { 
         note_id: noteId,
@@ -293,14 +422,12 @@ router.post('/:id/share', requireAuth, async (req, res) => {
     });
 
     if (sharedNote) {
-      // Return existing share code
       return res.json({ 
         shareCode: sharedNote.share_code,
         message: 'Note already shared'
       });
     }
 
-    // Generate unique share code
     let shareCode;
     let isUnique = false;
     while (!isUnique) {
@@ -311,7 +438,6 @@ router.post('/:id/share', requireAuth, async (req, res) => {
       if (!existing) isUnique = true;
     }
 
-    // Create shared note record
     sharedNote = await SharedNote.create({
       user_id: req.session.userId,
       note_id: noteId,
@@ -330,7 +456,6 @@ router.post('/:id/share', requireAuth, async (req, res) => {
   }
 });
 
-// Retrieve a shared note by code
 router.post('/shared/retrieve', requireAuth, async (req, res) => {
   try {
     const { shareCode } = req.body;
@@ -339,7 +464,6 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid share code' });
     }
 
-    // Find the shared note
     const sharedNote = await SharedNote.findOne({
       where: { 
         share_code: shareCode.toUpperCase(),
@@ -357,7 +481,6 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
 
     const originalNote = sharedNote.note;
 
-    // check if user already has this note
     const existingNote = await Note.findOne({
       where: {
         user_id: req.session.userId,
@@ -370,11 +493,10 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
       return res.status(409).json({ error: 'You already have this shared note' });
     }
 
-    // creates copy for the current user (without category to avoid conflicts)
     const newNote = await Note.create({
       user_id: req.session.userId,
       file_id: null,
-      category_id: null, // Don't copy category
+      category_id: null,
       title: `${originalNote.title} (Shared)`,
       content: originalNote.content
     });
@@ -393,7 +515,6 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
   }
 });
 
-// retrieves all notes of current user
 router.get('/shared/my-shares', requireAuth, async (req, res) => {
   try {
     const sharedNotes = await SharedNote.findAll({
@@ -423,7 +544,6 @@ router.get('/shared/my-shares', requireAuth, async (req, res) => {
   }
 });
 
-// deactivates sharing
 router.delete('/:id/share', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;
@@ -450,7 +570,6 @@ router.delete('/:id/share', requireAuth, async (req, res) => {
   }
 });
 
-// Pin a note
 router.post('/:id/pin', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;
@@ -479,7 +598,6 @@ router.post('/:id/pin', requireAuth, async (req, res) => {
   }
 });
 
-// Unpin a note
 router.post('/:id/unpin', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;

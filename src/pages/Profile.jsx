@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff, Trophy } from "lucide-react";
 import axios from "axios";
 import { API_BASE } from "../components/api";
+import AchievementsModal from "../components/AchievementsModal"; // Add this import
 
 export default function Profile() {
     const [showPassword, setShowPassword] = useState(false);
@@ -15,6 +16,7 @@ export default function Profile() {
     const [savedPhoto, setSavedPhoto] = useState(null);
     const [passwordMessage, setPasswordMessage] = useState("");
     const [originalProfile, setOriginalProfile] = useState(null);
+    const [showAchievementsModal, setShowAchievementsModal] = useState(false); // Add this state
 
     const fileInputRef = useRef(null);
 
@@ -112,8 +114,6 @@ export default function Profile() {
         }
     };
 
-
-
     const handlePhotoSelect = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -150,9 +150,26 @@ export default function Profile() {
 
     return (
         <div className="min-h-screen bg-gray-100">
+            {/* Add Achievements Modal */}
+            <AchievementsModal 
+                isOpen={showAchievementsModal} 
+                onClose={() => setShowAchievementsModal(false)} 
+            />
+            
             <div className="flex justify-center items-center py-12">
                 <div className="bg-white rounded-2xl shadow-md w-full max-w-2xl p-10">
-                    <h2 className="text-2xl font-bold text-center mb-8">Profile</h2>
+                    <div className="flex justify-between items-center mb-8">
+                        <h2 className="text-2xl font-bold">Profile</h2>
+                        
+                        {/* Achievements Button */}
+                        <button
+                            onClick={() => setShowAchievementsModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl transition-colors duration-200"
+                        >
+                            <Trophy className="w-5 h-5" />
+                            <span>Achievements</span>
+                        </button>
+                    </div>
 
                     <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
                         {/* Profile Picture */}

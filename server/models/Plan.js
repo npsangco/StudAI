@@ -27,6 +27,10 @@ const Plan = sequelize.define("Plan", {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
   },
+  completed: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  }
 }, {
   tableName: "study_planner",  
   timestamps: false,          
