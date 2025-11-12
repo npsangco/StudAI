@@ -129,8 +129,9 @@ async function updateUserStreak(userId) {
 
 async function awardPetExp(userId, expAmount) {
   try {
-    // Load PetCompanion model dynamically
-    const { PetCompanion } = await import('../models/PetCompanion.js');
+    // Load PetCompanion model dynamically (default export)
+    const PetCompanionModule = await import('../models/PetCompanion.js');
+    const PetCompanion = PetCompanionModule.default;
     
     const pet = await PetCompanion.findOne({ where: { user_id: userId } });
     

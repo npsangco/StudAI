@@ -107,11 +107,8 @@ async function logDailyStats(userId, activityType, points, exp = 0) {
 
 async function checkAchievements(userId) {
   try {
-    console.log(`🏆 Checking achievements for user ${userId}...`);
     const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
-    const result = await checkAndUnlockAchievements(userId);
-    console.log(`🏆 Achievement check completed, unlocked:`, result);
-    return result;
+    return await checkAndUnlockAchievements(userId);
   } catch (err) {
     console.log('Achievement service not available:', err.message);
     return [];

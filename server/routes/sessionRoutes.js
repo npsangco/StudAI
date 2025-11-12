@@ -136,6 +136,18 @@ router.post('/create', async (req, res) => {
 
     console.log('✅ Session created successfully for user:', req.session.userId);
 
+    // Check for session-related achievements
+    try {
+      const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
+      const unlockedAchievements = await checkAndUnlockAchievements(req.session.userId);
+      if (unlockedAchievements && unlockedAchievements.length > 0) {
+        console.log(`🏆 User ${req.session.userId} unlocked ${unlockedAchievements.length} achievement(s):`, 
+          unlockedAchievements.map(a => a.title).join(', '));
+      }
+    } catch (err) {
+      console.error('Achievement check error:', err);
+    }
+
     res.json({
       message: '🎉 Session created successfully!',
       session: {

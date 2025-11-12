@@ -140,17 +140,23 @@ async function updateUserStreak(userId) {
 async function checkAchievements(userId) {
   try {
     const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
-    return await checkAndUnlockAchievements(userId);
+    const unlockedAchievements = await checkAndUnlockAchievements(userId);
+    if (unlockedAchievements && unlockedAchievements.length > 0) {
+      console.log(`🏆 User ${userId} unlocked ${unlockedAchievements.length} achievement(s):`, 
+        unlockedAchievements.map(a => a.title).join(', '));
+    }
+    return unlockedAchievements;
   } catch (err) {
-    console.log('Achievement service not available');
+    console.error('❌ Achievement service error:', err);
     return [];
   }
 }
 
 async function awardPetExp(userId, expAmount) {
   try {
-    // Load PetCompanion model dynamically
-    const { PetCompanion } = await import('../models/PetCompanion.js');
+    // Load PetCompanion model dynamically (default export)
+    const PetCompanionModule = await import('../models/PetCompanion.js');
+    const PetCompanion = PetCompanionModule.default;
     
     const pet = await PetCompanion.findOne({ where: { user_id: userId } });
     
@@ -1763,7 +1769,21 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     console.log(`🎯 Final summary: ${winnerIds.length} winner(s), ${updatedCount} players updated`);
     
     // ============================================
-    // 8. SUCCESS RESPONSE
+    // 8. CHECK ACHIEVEMENTS FOR ALL PARTICIPANTS
+    // ============================================
+    
+    // Check achievements for all participants (points + battles_won)
+    for (const player of players) {
+      try {
+        await checkAchievements(player.userId);
+      } catch (achievementError) {
+        console.error(`Error checking achievements for user ${player.userId}:`, achievementError);
+        // Don't fail the request if achievement check fails
+      }
+    }
+    
+    // ============================================
+    // 9. SUCCESS RESPONSE
     // ============================================
     
     return res.json({ 
