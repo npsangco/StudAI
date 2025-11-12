@@ -110,7 +110,7 @@ async function checkAchievements(userId) {
     const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
     return await checkAndUnlockAchievements(userId);
   } catch (err) {
-    console.log('Achievement service not available');
+    console.log('Achievement service not available:', err.message);
     return [];
   }
 }

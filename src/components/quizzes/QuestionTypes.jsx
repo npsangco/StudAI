@@ -2,56 +2,69 @@ import React, { useState } from 'react';
 import { Plus, X, Check } from 'lucide-react';
 
 // Multiple Choice Question Component
-export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateChoice, onAddChoice }) => (
-  <div className="space-y-2">
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      {question.choices?.map((choice, choiceIndex) => (
-        <div
-          key={choiceIndex}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              onUpdateQuestion(question.id, 'correctAnswer', choice);
-            }
-          }}
-          className={`p-2 sm:p-3 rounded border transition-colors cursor-pointer ${
-            question.correctAnswer === choice
-              ? 'bg-green-500 text-white border-green-500'
-              : 'bg-white border-gray-200 hover:border-gray-300'
-          }`}
-        >
-          <input
-            type="text"
-            value={choice}
-            onChange={(e) => {
-              e.stopPropagation();
-              const newValue = e.target.value;
-              onUpdateChoice(question.id, choiceIndex, newValue);
-              
-              if (question.correctAnswer === choice) {
-                onUpdateQuestion(question.id, 'correctAnswer', newValue);
+export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateChoice, onAddChoice }) => {
+  // Parse choices if it's a JSON string
+  let choices = question.choices;
+  if (typeof choices === 'string') {
+    try {
+      choices = JSON.parse(choices);
+    } catch (e) {
+      choices = [];
+    }
+  }
+  choices = choices || [];
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {choices?.map((choice, choiceIndex) => (
+          <div
+            key={choiceIndex}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                onUpdateQuestion(question.id, 'correctAnswer', choice);
               }
             }}
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-            className={`w-full bg-transparent border-0 text-xs sm:text-sm focus:outline-none ${
-              question.correctAnswer === choice ? 'text-white placeholder-green-200' : 'text-gray-800 placeholder-gray-400'
+            className={`p-2 sm:p-3 rounded border transition-colors cursor-pointer ${
+              question.correctAnswer === choice
+                ? 'bg-green-500 text-white border-green-500'
+                : 'bg-white border-gray-200 hover:border-gray-300'
             }`}
-            placeholder={`Option ${choiceIndex + 1}`}
-          />
-        </div>
-      ))}
+          >
+            <input
+              type="text"
+              value={choice}
+              onChange={(e) => {
+                e.stopPropagation();
+                const newValue = e.target.value;
+                onUpdateChoice(question.id, choiceIndex, newValue);
+                
+                if (question.correctAnswer === choice) {
+                  onUpdateQuestion(question.id, 'correctAnswer', newValue);
+                }
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              className={`w-full bg-transparent border-0 text-xs sm:text-sm focus:outline-none ${
+                question.correctAnswer === choice ? 'text-white placeholder-green-200' : 'text-gray-800 placeholder-gray-400'
+              }`}
+              placeholder={`Option ${choiceIndex + 1}`}
+            />
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() => onAddChoice(question.id)}
+        className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-blue-500 hover:bg-blue-50 rounded text-xs sm:text-sm font-medium transition-colors"
+        type="button"
+      >
+        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+        Add more choices 
+      </button>
     </div>
-    <button
-      onClick={() => onAddChoice(question.id)}
-      className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-blue-500 hover:bg-blue-50 rounded text-xs sm:text-sm font-medium transition-colors"
-      type="button"
-    >
-      <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-      Add more choices 
-    </button>
-  </div>
-);
+  );
+};
 
 // Fill in the Blanks Question Component
 export const FillInBlanksQuestion = ({ question, onUpdateQuestion }) => (
@@ -96,7 +109,16 @@ export const TrueFalseQuestion = ({ question, onUpdateQuestion }) => (
 
 // Matching Question Component
 export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatchingPair, onRemoveMatchingPair }) => {
-  const pairs = question.matchingPairs || [];
+  // Parse matchingPairs if it's a JSON string
+  let pairs = question.matchingPairs;
+  if (typeof pairs === 'string') {
+    try {
+      pairs = JSON.parse(pairs);
+    } catch (e) {
+      pairs = [];
+    }
+  }
+  pairs = pairs || [];
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -155,14 +177,39 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
 
 // Matching Quiz Player Component
 export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode = 'solo' }) => {
+  // Parse matchingPairs if it's a JSON string
+  let parsedPairs = question.matchingPairs;
+  if (typeof parsedPairs === 'string') {
+    try {
+      parsedPairs = JSON.parse(parsedPairs);
+    } catch (e) {
+      parsedPairs = [];
+    }
+  }
+  
+  // Ensure it's an array
+  parsedPairs = Array.isArray(parsedPairs) ? parsedPairs : [];
+  
+  // Validate matchingPairs exists
+  if (!parsedPairs || parsedPairs.length === 0) {
+    return (
+      <div className="min-h-screen px-3 sm:px-4 py-4 sm:py-6 flex items-center justify-center bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600">
+        <div className="bg-white rounded-2xl p-6 text-center max-w-md">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
+          <p className="text-gray-700">No matching pairs available for this question.</p>
+        </div>
+      </div>
+    );
+  }
+
   const [matches, setMatches] = useState([]);
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverZone, setDragOverZone] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showCorrectMatches, setShowCorrectMatches] = useState(false);
   const [showMistakes, setShowMistakes] = useState(false);
-  const [leftItems] = useState(question.matchingPairs.map(p => p.left));
-  const [rightItems] = useState([...question.matchingPairs.map(p => p.right)].sort(() => Math.random() - 0.5));
+  const [leftItems] = useState(parsedPairs.map(p => p.left));
+  const [rightItems] = useState([...parsedPairs.map(p => p.right)].sort(() => Math.random() - 0.5));
 
   const [colorPalette] = useState(() => {
     const colors = [];
@@ -177,7 +224,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
       { bg: '#fce7f3', border: '#f472b6', text: '#9f1239' }
     ];
     
-    for (let i = 0; i < question.matchingPairs.length; i++) {
+    for (let i = 0; i < parsedPairs.length; i++) {
       if (i < baseColors.length) {
         colors.push(baseColors[i]);
       } else {
@@ -193,13 +240,13 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   });
 
   const isMatchCorrect = (match) => {
-    return question.matchingPairs.some(pair => 
+    return parsedPairs.some(pair => 
       pair.left === match.left && pair.right === match.right
     );
   };
 
   const getCorrectMatch = (item, side) => {
-    return question.matchingPairs.find(pair => pair[side] === item);
+    return parsedPairs.find(pair => pair[side] === item);
   };
 
   const handleDragStart = (e, item, side) => {
@@ -273,13 +320,13 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     return matches.some(m => m[side] === item);
   };
 
-  const canSubmit = matches.length > 0 && matches.length === question.matchingPairs.length;
+  const canSubmit = matches.length > 0 && matches.length === parsedPairs.length;
 
   // Calculate results
   const correctMatches = matches.filter(isMatchCorrect);
   const incorrectMatches = matches.filter(match => !isMatchCorrect(match));
   const correctCount = correctMatches.length;
-  const totalCount = question.matchingPairs.length;
+  const totalCount = parsedPairs.length;
   const percentage = Math.round((correctCount / totalCount) * 100);
 
   // Get gradient colors based on score

@@ -188,9 +188,18 @@ export const validateQuestions = (questions) => {
 
 // Multiple Choice Validation
 const validateMultipleChoice = (question, questionNumber, errors) => {
-  const choices = question.choices || [];
+  let choices = question.choices || [];
+  
+  // Parse choices if it's a JSON string
+  if (typeof choices === 'string') {
+    try {
+      choices = JSON.parse(choices);
+    } catch (e) {
+      choices = [];
+    }
+  }
 
-  if (!choices || choices.length === 0) {
+  if (!choices || !Array.isArray(choices) || choices.length === 0) {
     errors.push({
       questionNumber,
       message: `Question ${questionNumber}: No choices added`,
@@ -284,9 +293,18 @@ const validateTrueFalse = (question, questionNumber, errors) => {
 
 // Matching Validation
 const validateMatching = (question, questionNumber, errors) => {
-  const pairs = question.matchingPairs || [];
+  let pairs = question.matchingPairs || [];
+  
+  // Parse matchingPairs if it's a JSON string
+  if (typeof pairs === 'string') {
+    try {
+      pairs = JSON.parse(pairs);
+    } catch (e) {
+      pairs = [];
+    }
+  }
 
-  if (!pairs || pairs.length === 0) {
+  if (!pairs || !Array.isArray(pairs) || pairs.length === 0) {
     errors.push({
       questionNumber,
       message: `Question ${questionNumber}: No matching pairs added`,

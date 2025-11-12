@@ -46,6 +46,7 @@ import Session from "./models/Session.js";
 import ZoomToken from "./models/ZoomToken.js";
 import Achievement from "./models/Achievement.js"; // ← ADD THIS
 import UserAchievement from "./models/UserAchievement.js"; // ← ADD THIS
+import UserDailyStat from "./models/UserDailyStat.js";
 import { Op } from "sequelize";
 import { auditMiddleware } from "./auditMiddleware.js";
 
@@ -83,7 +84,83 @@ import achievementRoutes from "./routes/achievementRoutes.js"
 
 const app = express();
 
-// ----------------- CORS -----------------
+// ============================================
+// ACHIEVEMENT INITIALIZATION
+// ============================================
+
+async function initializeDefaultAchievements() {
+  try {
+    const existingCount = await Achievement.count();
+    
+    if (existingCount === 0) {
+      console.log("🏆 Initializing default achievements...");
+      
+      const defaultAchievements = [
+        {
+          title: 'Note Taker',
+          description: 'Create 5 notes',
+          requirement_type: 'notes_created',
+          requirement_value: 5,
+          points_reward: 50,
+          color: '#3B82F6'
+        },
+        {
+          title: 'Quiz Master',
+          description: 'Complete 10 quizzes',
+          requirement_type: 'quizzes_completed',
+          requirement_value: 10,
+          points_reward: 100,
+          color: '#8B5CF6'
+        },
+        {
+          title: 'Battle Champion',
+          description: 'Win 5 battles',
+          requirement_type: 'battles_won',
+          requirement_value: 5,
+          points_reward: 150,
+          color: '#EC4899'
+        },
+        {
+          title: 'Pet Parent',
+          description: 'Adopt a pet companion',
+          requirement_type: 'pet_adopted',
+          requirement_value: 1,
+          points_reward: 75,
+          color: '#F59E0B'
+        },
+        {
+          title: 'Pet Caretaker',
+          description: 'Feed your pet 20 times',
+          requirement_type: 'times_fed',
+          requirement_value: 20,
+          points_reward: 100,
+          color: '#F59E0B'
+        },
+        {
+          title: 'Study Streak',
+          description: 'Maintain a 7-day study streak',
+          requirement_type: 'streak',
+          requirement_value: 7,
+          points_reward: 200,
+          color: '#10B981'
+        }
+      ];
+      
+      await Achievement.bulkCreate(defaultAchievements);
+      console.log(`✅ Created ${defaultAchievements.length} default achievements`);
+    } else {
+      console.log(`📊 Found ${existingCount} existing achievements`);
+    }
+  } catch (error) {
+    console.error('Error initializing achievements:', error);
+  }
+}
+
+// ============================================
+// CORS
+// ============================================
+
+// ----------- CORS -----------------
 app.use(cors({
     origin: [
         "http://localhost:5173",
@@ -272,11 +349,18 @@ sequelize.authenticate()
             QuizBattle.sync({ force: false }),
             BattleParticipant.sync({ force: false }),
             Session.sync({ force: false }),
-            ZoomToken.sync({ force: false }) // ← ADDED TO SYNC
+            ZoomToken.sync({ force: false }), // ← ADDED TO SYNC
+            Achievement.sync({ force: false }), // ← ADD THIS
+            UserAchievement.sync({ force: false }), // ← ADD THIS
+            UserDailyStat.sync({ force: false }) // ← ADD THIS
         ]);
     })
-    .then(() => {
+    .then(async () => {
         console.log("✅ All models synced");
+        
+        // Initialize default achievements if they don't exist
+        await initializeDefaultAchievements();
+        
         startEmailReminders();
         // console.log("📅 Email reminder scheduler started!"); for email testing
     })

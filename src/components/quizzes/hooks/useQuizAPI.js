@@ -63,15 +63,37 @@ export function useQuizAPI(quizDataHook) {
       const response = await quizApi.getById(quizId);
       const quizData = response.data;
       
-      const formattedQuestions = quizData.questions.map(q => ({
-        id: q.question_id,
-        type: q.type,
-        question: q.question,
-        choices: q.choices,
-        correctAnswer: q.correct_answer,
-        answer: q.answer,
-        matchingPairs: q.matching_pairs
-      }));
+      const formattedQuestions = quizData.questions.map(q => {
+        // Parse choices if it's a JSON string
+        let choices = q.choices;
+        if (typeof choices === 'string') {
+          try {
+            choices = JSON.parse(choices);
+          } catch (e) {
+            choices = null;
+          }
+        }
+        
+        // Parse matchingPairs if it's a JSON string
+        let matchingPairs = q.matchingPairs || q.matching_pairs;
+        if (typeof matchingPairs === 'string') {
+          try {
+            matchingPairs = JSON.parse(matchingPairs);
+          } catch (e) {
+            matchingPairs = null;
+          }
+        }
+        
+        return {
+          id: q.question_id || q.questionId,
+          type: q.type,
+          question: q.question,
+          choices: choices,
+          correctAnswer: q.correctAnswer || q.correct_answer,
+          answer: q.answer,
+          matchingPairs: matchingPairs
+        };
+      });
 
       return {
         quiz: quizData.quiz,
@@ -136,14 +158,34 @@ export function useQuizAPI(quizDataHook) {
 
       for (let i = 0; i < questions.length; i++) {
         const question = questions[i];
+        
+        // Ensure choices and matchingPairs are properly formatted
+        let choicesData = question.choices;
+        if (typeof choicesData === 'string') {
+          try {
+            choicesData = JSON.parse(choicesData);
+          } catch (e) {
+            choicesData = null;
+          }
+        }
+        
+        let matchingPairsData = question.matchingPairs;
+        if (typeof matchingPairsData === 'string') {
+          try {
+            matchingPairsData = JSON.parse(matchingPairsData);
+          } catch (e) {
+            matchingPairsData = null;
+          }
+        }
+        
         const questionData = {
           type: question.type,
           question: question.question,
           question_order: i + 1,
-          choices: question.choices || null,
+          choices: choicesData || null,
           correct_answer: question.correctAnswer || null,
           answer: question.answer || null,
-          matching_pairs: question.matchingPairs || null,
+          matching_pairs: matchingPairsData || null,
           points: 1
         };
 

@@ -343,6 +343,13 @@ router.get('/:id', requireAuth, async (req, res) => {
         }
       }
 
+      // Convert snake_case to camelCase for frontend
+      questionData.matchingPairs = questionData.matching_pairs;
+      questionData.correctAnswer = questionData.correct_answer;
+      questionData.questionOrder = questionData.question_order;
+      questionData.quizId = questionData.quiz_id;
+      questionData.questionId = questionData.question_id;
+
       return questionData;
     });
 
@@ -394,6 +401,351 @@ router.post('/', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('❌ Create quiz error:', err);
     res.status(500).json({ error: 'Failed to create quiz' });
+  }
+});
+
+// Generate quiz from notes using AI
+router.post('/generate-from-notes', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const { noteId, noteContent, noteTitle, quizTitle, questionCount } = req.body;
+
+    // Validate inputs
+    if (!quizTitle || !quizTitle.trim()) {
+      return res.status(400).json({ error: 'Quiz title is required' });
+    }
+
+    if (!noteContent || noteContent.trim().length < 50) {
+      return res.status(400).json({ 
+        error: 'Note content must be at least 50 characters long for AI generation' 
+      });
+    }
+
+    // AI-generated quizzes are always exactly 10 questions
+    const targetQuestionCount = 10;
+    if (questionCount && questionCount !== 10) {
+      return res.status(400).json({ error: 'AI-generated quizzes are exactly 10 questions' });
+    }
+
+    // Create the quiz first
+    const newQuiz = await Quiz.create({
+      title: quizTitle.trim(),
+      description: `AI-generated quiz from "${noteTitle}"`,
+      created_by: userId,
+      is_public: false,
+      total_questions: 0,
+      total_attempts: 0,
+      average_score: 0
+    });
+
+    // Generate questions using OpenAI
+    try {
+      const openAiApiKey = process.env.OPENAI_API_KEY;
+      if (!openAiApiKey) {
+        throw new Error('OpenAI API key not configured');
+      }
+
+      // Truncate note content to ~2000 chars to keep token count low
+      const maxNoteLength = 2000;
+      const truncatedContent = noteContent.length > maxNoteLength 
+        ? noteContent.substring(0, maxNoteLength) + '...' 
+        : noteContent;
+
+      const prompt = `Generate EXACTLY 10 valid JSON quiz questions. CRITICAL RULES:
+1. Return ONLY JSON array in brackets [], nothing else
+2. NO markdown, NO code blocks, NO text outside JSON
+3. NO escaped quotes (\"), NO newlines in strings
+4. ONLY use these exact keys: "type", "question", "choices", "correctAnswer", "answer", "matchingPairs"
+5. NEVER use: "_blank1_", "_blank2_", "blank" fields, or underscore keys
+6. For Fill blanks: ALWAYS use "answer" key with single word value ONLY
+7. Each question must have all required fields for its type
+
+CRITICAL: If you generate any field with underscore or blank numbers, the entire response fails!
+
+Content: "${truncatedContent}"
+
+Generate EXACTLY in this format - no variations:
+[
+{"type":"Multiple Choice","question":"What...?","choices":["opt1","opt2","opt3","opt4"],"correctAnswer":"opt1"},
+{"type":"Fill in the blanks","question":"The ___ is...","answer":"word"},
+{"type":"True/False","question":"Is...true?","correctAnswer":"True"},
+{"type":"Matching","question":"Match these","matchingPairs":[{"left":"A","right":"1"},{"left":"B","right":"2"}]}
+]`;
+
+      const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openAiApiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert educator that creates well-structured quiz questions. Return only valid JSON.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 2500,
+          top_p: 1.0,
+          frequency_penalty: 0.5,
+          presence_penalty: 0.5
+        })
+      });
+
+      if (!openAiResponse.ok) {
+        const errorData = await openAiResponse.json();
+        console.error('OpenAI API error:', errorData);
+        throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+      }
+
+      const aiData = await openAiResponse.json();
+      const generatedText = aiData.choices[0]?.message?.content;
+
+      if (!generatedText) {
+        throw new Error('No response from OpenAI');
+      }
+
+      // Extract JSON from markdown code blocks if present
+      let jsonText = generatedText.trim();
+      
+      // Remove markdown code blocks if present (```json ... ```)
+      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1].trim();
+      }
+
+      // Try to parse JSON with error handling
+      let questionsData;
+      try {
+        questionsData = JSON.parse(jsonText);
+      } catch (parseError) {
+        console.error('Initial JSON parse error:', parseError.message);
+        console.error('Position:', parseError.message.match(/position (\d+)/) ? parseError.message.match(/position (\d+)/)[1] : 'unknown');
+        console.error('Attempting to fix common JSON issues...');
+        
+        let fixedJson = jsonText;
+        
+        // Remove control characters and bad escapes
+        fixedJson = fixedJson.replace(/[\x00-\x1f\x7f]/g, '');
+        
+        // Remove all escaped quotes (they break JSON)
+        fixedJson = fixedJson.replace(/\\"/g, '"');
+        fixedJson = fixedJson.replace(/\\\"/g, '"');
+        
+        // Handle newlines within quoted strings - replace with spaces
+        fixedJson = fixedJson.replace(/"([^"]*(?:\n[^"]*)*)"/g, (match) => {
+          return match.replace(/\n\s+/g, ' ').replace(/[\r\n]+/g, ' ');
+        });
+        
+        // Replace single quotes with double quotes
+        fixedJson = fixedJson.replace(/'/g, '"');
+        
+        // Fix _blank fields - more aggressive approach
+        // Find and remove entire objects that have _blank fields instead of standard fields
+        fixedJson = fixedJson.replace(/\{\s*"_blank\d+_"\s*:[^}]*\}/g, '');
+        fixedJson = fixedJson.replace(/,\s*\{\s*"_blank\d+_"/g, '');
+        
+        // Convert remaining _blank fields to "answer" for safety
+        fixedJson = fixedJson.replace(/"_blank\d+_"/g, '"answer"');
+        
+        // Fix trailing commas
+        fixedJson = fixedJson.replace(/,(\s*[\]\}])/g, '$1');
+        
+        // Fix missing commas between objects
+        fixedJson = fixedJson.replace(/\}\s*\{/g, '},{');
+        fixedJson = fixedJson.replace(/\]\s*\{/g, '],[{');
+        
+        // Fix unquoted keys
+        fixedJson = fixedJson.replace(/([{,]\s*)([a-zA-Z_]\w*)(\s*:)/g, '$1"$2"$3');
+        
+        // Ensure all bracket pairs match
+        const openBrackets = (fixedJson.match(/\[/g) || []).length;
+        const closeBrackets = (fixedJson.match(/\]/g) || []).length;
+        const openBraces = (fixedJson.match(/\{/g) || []).length;
+        const closeBraces = (fixedJson.match(/\}/g) || []).length;
+        
+        if (openBrackets > closeBrackets) {
+          fixedJson = fixedJson + ']'.repeat(openBrackets - closeBrackets);
+        }
+        if (openBraces > closeBraces) {
+          fixedJson = fixedJson + '}'.repeat(openBraces - closeBraces);
+        }
+        
+        try {
+          questionsData = JSON.parse(fixedJson);
+          console.log('✅ JSON fixed and parsed successfully');
+        } catch (secondError) {
+          console.error('Failed to parse JSON even after fixes:', secondError.message);
+          console.error('Raw response (first 1000 chars):', jsonText.substring(0, 1000));
+          console.error('Fixed response (first 1000 chars):', fixedJson.substring(0, 1000));
+          throw new Error('AI response was not valid JSON. Please try again.');
+        }
+      }
+      
+      // Ensure it's an array
+      if (!Array.isArray(questionsData)) {
+        questionsData = [questionsData];
+      }
+
+      // Pad with default questions if fewer than 10 were generated
+      if (questionsData.length < 10) {
+        console.warn(`⚠️ AI generated ${questionsData.length} questions. Padding to 10...`);
+        
+        // Create filler questions based on the note content
+        const defaultQuestions = [
+          {
+            type: 'True/False',
+            question: 'The content discussed above is important to understand.',
+            correctAnswer: 'True'
+          },
+          {
+            type: 'Fill in the blanks',
+            question: 'The main topic of the note is about _______.',
+            answer: 'the subject matter'
+          },
+          {
+            type: 'Multiple Choice',
+            question: 'Which of the following is related to the note content?',
+            choices: ['All of the above', 'Some of the above', 'None of the above', 'Unclear'],
+            correctAnswer: 'All of the above'
+          },
+          {
+            type: 'True/False',
+            question: 'Understanding this material requires careful study.',
+            correctAnswer: 'True'
+          },
+          {
+            type: 'Multiple Choice',
+            question: 'What is the primary purpose of this note?',
+            choices: ['To inform', 'To educate', 'To document', 'To clarify'],
+            correctAnswer: 'To educate'
+          }
+        ];
+        
+        // Add filler questions until we reach 10
+        while (questionsData.length < 10 && defaultQuestions.length > 0) {
+          questionsData.push(defaultQuestions.shift());
+        }
+      }
+      
+      // Trim to exactly 10 if somehow we have more
+      if (questionsData.length > 10) {
+        console.warn(`⚠️ AI generated ${questionsData.length} questions. Trimming to 10...`);
+        questionsData = questionsData.slice(0, 10);
+      }
+
+      // Create questions in the quiz
+      const questions = [];
+      for (let i = 0; i < questionsData.length; i++) {
+        const questionData = questionsData[i];
+        
+        // Validate question type
+        const validTypes = ['Multiple Choice', 'Fill in the blanks', 'True/False', 'Matching'];
+        const questionType = validTypes.includes(questionData.type) ? questionData.type : 'Multiple Choice';
+
+        // Ensure correctAnswer is a string, not an array or object
+        let correctAnswer = null;
+        if (typeof questionData.correctAnswer === 'string') {
+          correctAnswer = questionData.correctAnswer;
+        } else if (Array.isArray(questionData.correctAnswer)) {
+          correctAnswer = questionData.correctAnswer[0] || null; // Take first element if array
+        }
+
+        // Ensure choices is an array, convert to JSON string for storage
+        let choicesData = null;
+        if (Array.isArray(questionData.choices) && questionData.choices.length > 0) {
+          choicesData = JSON.stringify(questionData.choices);
+        }
+
+        // Ensure matchingPairs is an array, convert to JSON string for storage
+        let matchingPairsData = null;
+        if (Array.isArray(questionData.matchingPairs) && questionData.matchingPairs.length > 0) {
+          matchingPairsData = JSON.stringify(questionData.matchingPairs);
+        }
+
+        const questionRecord = await Question.create({
+          quiz_id: newQuiz.quiz_id,
+          type: questionType,
+          question: questionData.question || 'Question',
+          question_order: i + 1,
+          choices: choicesData,
+          correct_answer: correctAnswer,
+          answer: questionData.answer || null,
+          matching_pairs: matchingPairsData,
+          points: 1
+        });
+
+        questions.push(questionRecord);
+      }
+
+      // Update quiz with question count
+      await newQuiz.update({
+        total_questions: questions.length
+      });
+
+      console.log(`✅ AI Quiz created: ${newQuiz.quiz_id} with ${questions.length} questions`);
+
+      // Parse JSON fields in response (same as GET endpoint)
+      const parsedQuestions = questions.map(q => {
+        const qData = q.toJSON();
+        
+        // Parse choices
+        if (typeof qData.choices === 'string') {
+          try {
+            qData.choices = JSON.parse(qData.choices);
+          } catch (e) {
+            qData.choices = null;
+          }
+        }
+        
+        // Parse matching_pairs
+        if (typeof qData.matching_pairs === 'string') {
+          try {
+            qData.matching_pairs = JSON.parse(qData.matching_pairs);
+          } catch (e) {
+            qData.matching_pairs = null;
+          }
+        }
+        
+        // Convert to camelCase
+        qData.matchingPairs = qData.matching_pairs;
+        qData.correctAnswer = qData.correct_answer;
+        qData.questionOrder = qData.question_order;
+        qData.quizId = qData.quiz_id;
+        qData.questionId = qData.question_id;
+        
+        return qData;
+      });
+
+      res.status(201).json({
+        quiz: newQuiz,
+        questions: parsedQuestions,
+        message: `Successfully generated ${parsedQuestions.length} questions`
+      });
+
+    } catch (aiError) {
+      // If AI generation fails, delete the quiz and return error
+      await newQuiz.destroy();
+      console.error('❌ AI Generation error:', aiError);
+      const errorMessage = aiError.message || 'Failed to generate questions using AI';
+      return res.status(400).json({ 
+        error: 'Failed to generate quiz with AI',
+        details: errorMessage
+      });
+    }
+
+  } catch (err) {
+    console.error('❌ Generate from notes error:', err);
+    res.status(500).json({ 
+      error: 'Failed to generate quiz from notes',
+      details: err.message 
+    });
   }
 });
 
