@@ -2,28 +2,57 @@ export function validateQuestion(question, index) {
   const errors = [];
   const questionNumber = index + 1;
 
+  // Parse choices if it's a JSON string
+  let parsedQuestion = { ...question };
+  if (typeof parsedQuestion.choices === 'string') {
+    try {
+      parsedQuestion.choices = JSON.parse(parsedQuestion.choices);
+    } catch (e) {
+      parsedQuestion.choices = [];
+    }
+  }
+  
+  // Ensure choices is always an array
+  if (!Array.isArray(parsedQuestion.choices)) {
+    parsedQuestion.choices = [];
+  }
+  
+  // Parse matchingPairs if it's a JSON string
+  if (typeof parsedQuestion.matchingPairs === 'string') {
+    try {
+      parsedQuestion.matchingPairs = JSON.parse(parsedQuestion.matchingPairs);
+    } catch (e) {
+      parsedQuestion.matchingPairs = [];
+    }
+  }
+  
+  // Ensure matchingPairs is always an array
+  if (!Array.isArray(parsedQuestion.matchingPairs)) {
+    parsedQuestion.matchingPairs = [];
+  }
+
   // Check if question text is empty
-  if (!question.question || !question.question.trim()) {
+  if (!parsedQuestion.question || !parsedQuestion.question.trim()) {
     errors.push(`Question ${questionNumber}: Question text is required`);
     return errors; // Return early if no question text
   }
 
   // Validate based on question type
-  switch (question.type) {
+  switch (parsedQuestion.type) {
     case 'Multiple Choice':
       // Check if choices exist and have at least 2 options
-      if (!question.choices || question.choices.length < 2) {
+      if (!parsedQuestion.choices || parsedQuestion.choices.length < 2) {
         errors.push(`Question ${questionNumber}: Multiple choice needs at least 2 choices`);
       } else {
         // Check for empty choices
-        const emptyChoices = question.choices.filter(c => !c || !c.trim());
+        const emptyChoices = parsedQuestion.choices.filter(c => !c || !c.trim());
         if (emptyChoices.length > 0) {
           errors.push(`Question ${questionNumber}: All choices must have text`);
         }
 
         // Check for duplicate choices
-        const uniqueChoices = new Set(question.choices.map(c => c.trim().toLowerCase()));
-        if (uniqueChoices.size !== question.choices.length) {
+        const uniqueChoices = new Set(parsedQuestion.choices.map(c => c.trim().toLowerCase()));
+        if (uniqueChoices.size !== parsedQuestion.choices.length) {
           errors.push(`Question ${questionNumber}: Choices must be unique`);
         }
       }
@@ -31,7 +60,7 @@ export function validateQuestion(question, index) {
       // Check if correct answer is set
       if (!question.correctAnswer || !question.correctAnswer.trim()) {
         errors.push(`Question ${questionNumber}: Please select a correct answer`);
-      } else if (question.choices && !question.choices.includes(question.correctAnswer)) {
+      } else if (parsedQuestion.choices && Array.isArray(parsedQuestion.choices) && !parsedQuestion.choices.includes(question.correctAnswer)) {
         errors.push(`Question ${questionNumber}: Correct answer must be one of the choices`);
       }
       break;

@@ -139,7 +139,7 @@ async function updateUserStreak(userId) {
 
 async function checkAchievements(userId) {
   try {
-    const { checkAndUnlockAchievements } = await import('../services/achievementService.js');
+    const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
     return await checkAndUnlockAchievements(userId);
   } catch (err) {
     console.log('Achievement service not available');

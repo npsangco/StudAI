@@ -177,8 +177,21 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
 
 // Matching Quiz Player Component
 export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode = 'solo' }) => {
+  // Parse matchingPairs if it's a JSON string
+  let parsedPairs = question.matchingPairs;
+  if (typeof parsedPairs === 'string') {
+    try {
+      parsedPairs = JSON.parse(parsedPairs);
+    } catch (e) {
+      parsedPairs = [];
+    }
+  }
+  
+  // Ensure it's an array
+  parsedPairs = Array.isArray(parsedPairs) ? parsedPairs : [];
+  
   // Validate matchingPairs exists
-  if (!question.matchingPairs || !Array.isArray(question.matchingPairs) || question.matchingPairs.length === 0) {
+  if (!parsedPairs || parsedPairs.length === 0) {
     return (
       <div className="min-h-screen px-3 sm:px-4 py-4 sm:py-6 flex items-center justify-center bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600">
         <div className="bg-white rounded-2xl p-6 text-center max-w-md">
@@ -195,8 +208,8 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showCorrectMatches, setShowCorrectMatches] = useState(false);
   const [showMistakes, setShowMistakes] = useState(false);
-  const [leftItems] = useState(question.matchingPairs.map(p => p.left));
-  const [rightItems] = useState([...question.matchingPairs.map(p => p.right)].sort(() => Math.random() - 0.5));
+  const [leftItems] = useState(parsedPairs.map(p => p.left));
+  const [rightItems] = useState([...parsedPairs.map(p => p.right)].sort(() => Math.random() - 0.5));
 
   const [colorPalette] = useState(() => {
     const colors = [];
@@ -211,7 +224,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
       { bg: '#fce7f3', border: '#f472b6', text: '#9f1239' }
     ];
     
-    for (let i = 0; i < question.matchingPairs.length; i++) {
+    for (let i = 0; i < parsedPairs.length; i++) {
       if (i < baseColors.length) {
         colors.push(baseColors[i]);
       } else {
@@ -227,13 +240,13 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   });
 
   const isMatchCorrect = (match) => {
-    return question.matchingPairs.some(pair => 
+    return parsedPairs.some(pair => 
       pair.left === match.left && pair.right === match.right
     );
   };
 
   const getCorrectMatch = (item, side) => {
-    return question.matchingPairs.find(pair => pair[side] === item);
+    return parsedPairs.find(pair => pair[side] === item);
   };
 
   const handleDragStart = (e, item, side) => {
@@ -307,13 +320,13 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     return matches.some(m => m[side] === item);
   };
 
-  const canSubmit = matches.length > 0 && matches.length === question.matchingPairs.length;
+  const canSubmit = matches.length > 0 && matches.length === parsedPairs.length;
 
   // Calculate results
   const correctMatches = matches.filter(isMatchCorrect);
   const incorrectMatches = matches.filter(match => !isMatchCorrect(match));
   const correctCount = correctMatches.length;
-  const totalCount = question.matchingPairs.length;
+  const totalCount = parsedPairs.length;
   const percentage = Math.round((correctCount / totalCount) * 100);
 
   // Get gradient colors based on score

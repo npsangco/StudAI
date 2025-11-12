@@ -38,13 +38,18 @@ export async function checkAndUnlockAchievements(userId) {
       }
     });
 
+    console.log(`🔍 Checking ${lockedAchievements.length} locked achievements for user ${userId}`);
+
     // Calculate current stats based on ACTUAL database requirement types
     const stats = await calculateUserStats(userId, user);
+    console.log(`📊 User stats:`, stats);
 
     const newlyUnlocked = [];
 
     // Check each locked achievement
     for (const achievement of lockedAchievements) {
+      console.log(`⚔️ Checking achievement: ${achievement.title} (type: ${achievement.requirement_type}, required: ${achievement.requirement_value}, current: ${stats[achievement.requirement_type]})`);
+      
       const requirementMet = await checkAchievementRequirement(
         achievement,
         stats
@@ -90,38 +95,74 @@ export async function checkAndUnlockAchievements(userId) {
  * Calculate all user statistics based on ACTUAL database requirement types
  */
 async function calculateUserStats(userId, user) {
-  const [
-    notesCount,
-    quizzesCount,
-    battlesWonCount,
-    filesUploadedCount,
-    sessionsHostedCount,
-    pet
-  ] = await Promise.all([
-    Note.count({ where: { user_id: userId } }),
-    QuizAttempt.count({ where: { user_id: userId } }),
-    BattleParticipant.count({ 
-      where: { user_id: userId, is_winner: true } 
-    }),
-    File.count({ where: { user_id: userId } }),
-    Session.count({ where: { user_id: userId } }),
-    PetCompanion.findOne({ where: { user_id: userId } })
-  ]);
+  try {
+    const [
+      notesCount,
+      quizzesCount,
+      battlesWonCount,
+      filesUploadedCount,
+      sessionsHostedCount,
+      pet
+    ] = await Promise.all([
+      Note.count({ where: { user_id: userId } }).catch(e => {
+        console.error('Error counting notes:', e);
+        return 0;
+      }),
+      QuizAttempt.count({ where: { user_id: userId } }).catch(e => {
+        console.error('Error counting quizzes:', e);
+        return 0;
+      }),
+      BattleParticipant.count({ 
+        where: { user_id: userId, is_winner: true } 
+      }).catch(e => {
+        console.error('Error counting battles:', e);
+        return 0;
+      }),
+      File.count({ where: { user_id: userId } }).catch(e => {
+        console.error('Error counting files:', e);
+        return 0;
+      }),
+      Session.count({ where: { user_id: userId } }).catch(e => {
+        console.error('Error counting sessions:', e);
+        return 0;
+      }),
+      PetCompanion.findOne({ where: { user_id: userId } }).catch(e => {
+        console.error('Error finding pet:', e);
+        return null;
+      })
+    ]);
 
-  return {
-    points: user.points || 0,
-    streak: user.study_streak || 0,
-    notes_created: notesCount,
-    quizzes_completed: quizzesCount,
-    battles_won: battlesWonCount,
-    files_uploaded: filesUploadedCount,
-    sessions_hosted: sessionsHostedCount,
-    pet_level: pet?.level || 0,
-    times_fed: pet?.times_fed || 0,
-    times_played: pet?.times_played || 0,
-    times_cleaned: pet?.times_cleaned || 0,
-    pet_adopted: pet ? 1 : 0
-  };
+    return {
+      points: user.points || 0,
+      streak: user.study_streak || 0,
+      notes_created: notesCount,
+      quizzes_completed: quizzesCount,
+      battles_won: battlesWonCount,
+      files_uploaded: filesUploadedCount,
+      sessions_hosted: sessionsHostedCount,
+      pet_level: pet?.level || 0,
+      times_fed: pet?.times_fed || 0,
+      times_played: pet?.times_played || 0,
+      times_cleaned: pet?.times_cleaned || 0,
+      pet_adopted: pet ? 1 : 0
+    };
+  } catch (error) {
+    console.error('Error calculating user stats:', error);
+    return {
+      points: user?.points || 0,
+      streak: user?.study_streak || 0,
+      notes_created: 0,
+      quizzes_completed: 0,
+      battles_won: 0,
+      files_uploaded: 0,
+      sessions_hosted: 0,
+      pet_level: 0,
+      times_fed: 0,
+      times_played: 0,
+      times_cleaned: 0,
+      pet_adopted: 0
+    };
+  }
 }
 
 /**
@@ -132,7 +173,9 @@ function checkAchievementRequirement(achievement, stats) {
   const reqValue = achievement.requirement_value;
   const currentValue = stats[reqType] || 0;
 
-  return currentValue >= reqValue;
+  const isMet = currentValue >= reqValue;
+  console.log(`  → ${reqType}: ${currentValue} >= ${reqValue}? ${isMet}`);
+  return isMet;
 }
 
 /**
@@ -141,6 +184,10 @@ function checkAchievementRequirement(achievement, stats) {
 export async function getUserAchievements(userId) {
   try {
     const user = await User.findByPk(userId);
+
+    // First, check and unlock any newly unlocked achievements
+    console.log(`🔄 Checking for newly unlocked achievements for user ${userId}...`);
+    await checkAndUnlockAchievements(userId);
 
     // Get all achievements
     const allAchievements = await Achievement.findAll({
