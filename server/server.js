@@ -1,9 +1,11 @@
 // 🌐 Environment variables
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
+import { createRequire } from "module";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
 
 // Load .env from root directory explicitly
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -24,6 +26,7 @@ if (!process.env.ZOOM_CLIENT_ID || !process.env.ZOOM_CLIENT_SECRET) {
 // 📦 Core modules
 import fs from "fs";
 import path from "path";
+import unzipper from 'unzipper';
 
 // 🚀 Framework
 import express from "express";
@@ -64,7 +67,9 @@ try {
 }
 
 // 🖼️ PPTX Parser (for text extraction)
-import pptxParser from "node-pptx-parser";
+import { parseString } from 'xml2js';
+import Tesseract from 'tesseract.js';
+import sharp from 'sharp';
 
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
@@ -965,147 +970,60 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
 // ----------------- PPTX EXTRACTION ENDPOINT -----------------
 app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
     try {
+        if (!req.file) {
+            console.error("❌ No file uploaded");
+            return res.status(400).json({ error: "No file uploaded" });
+        }
+
         const filePath = req.file.path;
         console.log("📊 Processing PPTX:", filePath);
 
-        const parser = new pptxParser(filePath);
-        const parsedContent = await parser.parse();
+        try {
+            const extractedText = await extractTextFromPPTX(filePath);
+            console.log(`✅ Successfully extracted text from PPTX`);
 
-        let extractedText = "";
-        let slideCount = 0;
+            const wordCount = extractedText.trim().split(/\s+/).filter(w => w.length > 0).length;
+            console.log(`✅ Extracted ${extractedText.length} characters, ${wordCount} words from PPTX`);
 
-        if (parsedContent.slides && Array.isArray(parsedContent.slides)) {
-            slideCount = parsedContent.slides.length;
+            res.json({
+                text: extractedText,
+                wordCount
+            });
 
-            extractedText = parsedContent.slides
-                .map((slide, index) => {
-                    const slideNum = slide.id || index + 1;
-                    let slideText = "";
-
-                    if (typeof slide.parsed === 'string') {
-                        slideText = slide.parsed;
-                    } else if (typeof slide.parsed === 'object' && slide.parsed !== null) {
-                        slideText = extractTextFromObject(slide.parsed);
-                    } else if (slide.text) {
-                        slideText = typeof slide.text === 'string' ? slide.text : extractTextFromObject(slide.text);
+            // Delete file AFTER successful response
+            setImmediate(() => {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                        console.log(`🧹 Deleted PPTX file: ${filePath}`);
                     }
+                } catch (e) {
+                    console.error("Warning: Failed to delete PPTX file:", e.message);
+                }
+            });
+        } catch (extractErr) {
+            console.error("❌ Text extraction failed:", extractErr.message);
 
-                    slideText = cleanPPTXText(slideText);
+            res.status(400).json({ 
+                error: "Failed to extract text from PPTX",
+                details: extractErr.message 
+            });
 
-                    return slideText ? `Slide ${slideNum}:\n${slideText}\n` : '';
-                })
-                .filter(text => text.length > 0)
-                .join("\n");
+            // Delete file even on error
+            setImmediate(() => {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                } catch (e) {
+                    console.error("Warning: Failed to delete PPTX file:", e.message);
+                }
+            });
         }
-
-        function cleanPPTXText(text) {
-            if (!text) return '';
-
-            // Remove XML namespaces and schemas
-            text = text.replace(/http:\/\/schemas\.[^\s]+/g, '');
-            text = text.replace(/urn:schemas-[^\s]+/g, '');
-
-            // Remove common PPTX metadata patterns
-            text = text.replace(/\brId\d+\b/g, '');
-            text = text.replace(/\bShape\s+\d+\b/g, '');
-            text = text.replace(/\bGoogle\s+Shape;[^\s]+/g, '');
-            text = text.replace(/\b(rect|flowChartTerminator|flowChartConnector|straightConnector\d+)\b/g, '');
-            text = text.replace(/\b(title|body|ctr|ctrTitle)\b/g, '');
-            text = text.replace(/\b(solid|flat|sng|none|noStrike|square|arabicPeriod)\b/g, '');
-            text = text.replace(/\b(dk1|lt1|sm)\b/g, '');
-
-            // Remove font names
-            text = text.replace(/\b(Arial|Proxima Nova|Twentieth Century|Corsiva|Times New Roman|Architects Daughter)\b/g, '');
-
-            // Remove language codes
-            text = text.replace(/\ben-US\b/g, '');
-
-            // Remove hex color codes (6 digit)
-            text = text.replace(/\b[0-9A-Fa-f]{6}\b/g, '');
-
-            // Remove large numbers (coordinates, dimensions)
-            text = text.replace(/\b\d{4,}\b/g, '');
-
-            // Remove small isolated numbers and formatting codes
-            text = text.replace(/\bl\s+\d+\b/g, '');
-            text = text.replace(/\bt\s+\d+\b/g, '');
-            text = text.replace(/\b\d+\s+l\b/g, '');
-            text = text.replace(/\b\d+\s+t\b/g, '');
-
-            // Remove image references
-            text = text.replace(/\b(Related image|Image result for[^\n]*)\b/gi, '');
-            text = text.replace(/\b[\w-]+\.(jpg|jpeg|png|gif|JPG|PNG)\b/g, '');
-
-            // Remove standalone single letters and numbers
-            text = text.replace(/\b[a-z]\s+\d+\b/gi, '');
-            text = text.replace(/\b\d+\s+[a-z]\b/gi, '');
-
-            // Remove excessive whitespace
-            text = text.replace(/\s+/g, ' ');
-
-            // Split by common delimiters
-            const sentences = text.split(/[•\-–—\n]/);
-
-            const cleanedSentences = sentences
-                .map(s => s.trim())
-                .filter(s => {
-                    if (s.length < 10) return false;
-
-                    // Must not be mostly numbers
-                    const letterCount = (s.match(/[a-zA-Z]/g) || []).length;
-                    const digitCount = (s.match(/\d/g) || []).length;
-                    if (digitCount > letterCount) return false;
-
-                    // Must have at least 3 words
-                    const words = s.split(/\s+/).filter(w => w.length > 0);
-                    if (words.length < 3) return false;
-
-                    // Check if it's mostly real words (alphabetic content)
-                    const alphaRatio = letterCount / s.replace(/\s/g, '').length;
-                    if (alphaRatio < 0.6) return false;
-
-                    return true;
-                });
-
-            return cleanedSentences.join('\n• ');
-        }
-
-        function extractTextFromObject(obj) {
-            if (typeof obj === 'string') {
-                return obj;
-            }
-
-            if (Array.isArray(obj)) {
-                return obj.map(item => extractTextFromObject(item)).join(' ');
-            }
-
-            if (typeof obj === 'object' && obj !== null) {
-                if (obj.text) return extractTextFromObject(obj.text);
-                if (obj.content) return extractTextFromObject(obj.content);
-                if (obj.value) return extractTextFromObject(obj.value);
-
-                return Object.values(obj)
-                    .map(value => extractTextFromObject(value))
-                    .filter(text => text && text.trim().length > 0)
-                    .join(' ');
-            }
-
-            return '';
-        }
-
-        fs.unlinkSync(filePath);
-
-        console.log(`✅ Extracted ${extractedText.length} characters from ${slideCount} slides`);
-
-        res.json({
-            text: extractedText,
-            slideCount,
-            wordCount: extractedText.trim().split(/\s+/).filter(w => w.length > 0).length
-        });
     } catch (err) {
-        console.error("❌ PPTX extraction error:", err);
+        console.error("❌ PPTX extraction endpoint error:", err);
 
-        if (req.file && req.file.path) {
+        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
             try {
                 fs.unlinkSync(req.file.path);
             } catch (e) {
@@ -1113,11 +1031,559 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
             }
         }
 
-        res.status(500).json({ error: "Failed to extract text from PPTX" });
+        res.status(500).json({ 
+            error: "Failed to extract text from PPTX",
+            details: err.message 
+        });
     }
 });
 
-// ----------------- SUMMARY GENERATION -----------------
+// ----------------- PDF EXTRACTION ENDPOINT -----------------
+app.post("/api/extract-pdf", upload.single("file"), async (req, res) => {
+    try {
+        if (!req.file) {
+            console.error("❌ No file uploaded");
+            return res.status(400).json({ error: "No file uploaded" });
+        }
+
+        const filePath = req.file.path;
+        console.log("📄 Processing PDF:", filePath);
+        console.log(`📋 File details:`, {
+            originalName: req.file.originalname,
+            mimeType: req.file.mimetype,
+            size: req.file.size,
+            path: filePath,
+            exists: fs.existsSync(filePath)
+        });
+
+        try {
+            const extractedText = await extractTextFromPDF(filePath);
+            console.log(`✅ Successfully extracted text from PDF`);
+
+            const wordCount = extractedText.trim().split(/\s+/).filter(w => w.length > 0).length;
+            console.log(`✅ Extracted ${extractedText.length} characters, ${wordCount} words from PDF`);
+
+            res.json({
+                text: extractedText,
+                wordCount
+            });
+
+            // Delete file AFTER successful response
+            setImmediate(() => {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                        console.log(`🧹 Deleted PDF file: ${filePath}`);
+                    }
+                } catch (e) {
+                    console.error("Warning: Failed to delete PDF file:", e.message);
+                }
+            });
+        } catch (extractErr) {
+            console.error("❌ Text extraction failed:", extractErr.message);
+
+            res.status(400).json({ 
+                error: "Failed to extract text from PDF",
+                details: extractErr.message 
+            });
+
+            // Delete file even on error
+            setImmediate(() => {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                } catch (e) {
+                    console.error("Warning: Failed to delete PDF file:", e.message);
+                }
+            });
+        }
+    } catch (err) {
+        console.error("❌ PDF extraction endpoint error:", err);
+
+        res.status(500).json({ 
+            error: "Failed to extract text from PDF",
+            details: err.message 
+        });
+    }
+});
+
+async function extractTextFromPPTX(filePath) {
+    return new Promise((resolve, reject) => {
+        try {
+            if (!fs.existsSync(filePath)) {
+                reject(new Error(`File not found: ${filePath}`));
+                return;
+            }
+
+            const extractedSlides = [];
+            const imageFiles = []; // Track images for OCR fallback
+            let hasError = false;
+            let pendingParsers = 0;
+            const tempDir = path.join(path.dirname(filePath), `pptx_temp_${Date.now()}`);
+
+            const stream = fs.createReadStream(filePath);
+            
+            stream.on('error', (err) => {
+                console.error('Stream error:', err);
+                hasError = true;
+                reject(err);
+            });
+
+            const unzipStream = stream.pipe(unzipper.Parse());
+
+            unzipStream.on('entry', (entry) => {
+                const fileName = entry.path;
+                
+                if (hasError) {
+                    entry.autodrain();
+                    return;
+                }
+
+                // Extract text from slide XML files
+                if (fileName.match(/ppt\/slides\/slide\d+\.xml$/)) {
+                    pendingParsers++;
+                    let xmlContent = '';
+                    
+                    entry.on('data', (chunk) => {
+                        try {
+                            xmlContent += chunk.toString('utf8');
+                        } catch (e) {
+                            console.error('Error reading chunk:', e);
+                        }
+                    });
+                    
+                    entry.on('error', (err) => {
+                        console.error('Entry error:', err);
+                        pendingParsers--;
+                        entry.autodrain();
+                    });
+                    
+                    entry.on('end', () => {
+                        try {
+                            if (xmlContent.trim()) {
+                                // Save first slide XML for debugging
+                                if (fileName === 'ppt/slides/slide1.xml' && !fs.existsSync('./slide1_debug.xml')) {
+                                    fs.writeFileSync('./slide1_debug.xml', xmlContent);
+                                    console.log('💾 Saved slide1.xml for debugging');
+                                }
+
+                                parseString(xmlContent, { strict: false, mergeAttrs: true }, (err, result) => {
+                                    try {
+                                        if (err) {
+                                            console.warn(`Warning: Failed to parse ${fileName}:`, err.message);
+                                            pendingParsers--;
+                                            return;
+                                        }
+
+                                        console.log(`📄 Parsing ${fileName}...`);
+                                        
+                                        const slideText = extractTextFromSlideXML(result);
+                                        
+                                        if (slideText && slideText.trim().length > 0) {
+                                            console.log(`   ✓ Found text: "${slideText.substring(0, 100).replace(/\n/g, ' ')}..."`);
+                                            extractedSlides.push(slideText);
+                                        } else {
+                                            console.log(`   ⚠️ No text found in this slide - will try OCR on images`);
+                                        }
+                                    } catch (extractErr) {
+                                        console.warn(`Warning: Failed to extract text from ${fileName}:`, extractErr.message);
+                                    } finally {
+                                        pendingParsers--;
+                                        if (pendingParsers === 0) {
+                                            console.log(`📊 All slides parsed. Total with text: ${extractedSlides.length}`);
+                                        }
+                                    }
+                                });
+                            } else {
+                                pendingParsers--;
+                            }
+                        } catch (e) {
+                            console.warn('Warning: Error processing entry:', e.message);
+                            pendingParsers--;
+                        }
+                    });
+                } 
+                // Collect images for OCR if needed
+                else if (fileName.match(/ppt\/media\/image\d+\.(png|jpg|jpeg|gif)$/i)) {
+                    pendingParsers++;
+                    
+                    // Ensure temp directory exists
+                    if (!fs.existsSync(tempDir)) {
+                        fs.mkdirSync(tempDir, { recursive: true });
+                    }
+                    
+                    const imagePath = path.join(tempDir, path.basename(fileName));
+                    const writeStream = fs.createWriteStream(imagePath);
+                    
+                    entry.pipe(writeStream);
+                    writeStream.on('finish', () => {
+                        imageFiles.push(imagePath);
+                        console.log(`📸 Extracted image: ${imagePath}`);
+                        pendingParsers--;
+                    });
+                    writeStream.on('error', (err) => {
+                        console.error(`Error writing image ${fileName}:`, err);
+                        pendingParsers--;
+                    });
+                } else {
+                    entry.autodrain();
+                }
+            });
+
+            unzipStream.on('error', (err) => {
+                console.error('Unzip stream error:', err);
+                hasError = true;
+                reject(err);
+            });
+
+            unzipStream.on('close', () => {
+                // Wait for pending operations
+                const checkCompletion = () => {
+                    if (pendingParsers === 0) {
+                        handleExtractionComplete();
+                    } else {
+                        setTimeout(checkCompletion, 50);
+                    }
+                };
+
+                const handleExtractionComplete = async () => {
+                    try {
+                        if (hasError) return;
+
+                        const textResult = extractedSlides.join('\n\n').trim();
+                        console.log(`✅ Text extraction complete: ${textResult.length} characters`);
+                        
+                        if (textResult.length > 0) {
+                            // Clean up temp files
+                            cleanupTempDir(tempDir);
+                            resolve(textResult);
+                        } else if (imageFiles.length > 0) {
+                            // Try OCR on images
+                            console.log(`🔍 No text found - attempting OCR on ${imageFiles.length} images...`);
+                            try {
+                                const ocrText = await performOCROnImages(imageFiles);
+                                cleanupTempDir(tempDir);
+                                resolve(ocrText || 'No readable text found in presentation');
+                            } catch (ocrErr) {
+                                console.error('❌ OCR failed:', ocrErr.message);
+                                cleanupTempDir(tempDir);
+                                resolve('No readable text found in presentation');
+                            }
+                        } else {
+                            console.warn('⚠️ No text or images found');
+                            cleanupTempDir(tempDir);
+                            resolve('No readable text found in presentation');
+                        }
+                    } catch (err) {
+                        console.error('Error in handleExtractionComplete:', err);
+                        cleanupTempDir(tempDir);
+                        reject(err);
+                    }
+                };
+
+                checkCompletion();
+            });
+
+        } catch (err) {
+            console.error('Error in extractTextFromPPTX:', err);
+            reject(err);
+        }
+    });
+}
+
+async function performOCROnImages(imagePaths) {
+    if (!imagePaths || imagePaths.length === 0) {
+        return '';
+    }
+
+    try {
+        const ocrResults = [];
+
+        for (const imagePath of imagePaths) {
+            try {
+                console.log(`🔍 Preprocessing image: ${imagePath}`);
+                
+                // Preprocess image: increase contrast, brightness, and upscale
+                const processedImagePath = imagePath.replace(/\.([^.]+)$/, '_processed.$1');
+                
+                await sharp(imagePath)
+                    .normalize()  // Normalize histogram
+                    .modulate({ brightness: 1.2, contrast: 1.6, saturation: 1.2 })  // Enhance contrast, brightness, and saturation
+                    .sharpen({ sigma: 2.5 })  // More aggressive sharpening
+                    .median(2)  // Reduce noise
+                    .resize(2400, 1800, {  // Upscale to 2x for better OCR
+                        fit: 'contain',
+                        withoutEnlargement: false
+                    })
+                    .toFile(processedImagePath);
+                
+                console.log(`   ✓ Preprocessed: ${processedImagePath}`);
+                console.log(`🔍 Running OCR on: ${processedImagePath}`);
+                
+                const { data: { text, confidence } } = await Tesseract.recognize(
+                    processedImagePath,
+                    'eng',
+                    {
+                        logger: m => {
+                            if (m.status === 'recognizing') {
+                                console.log(`   Tesseract: ${m.status} ${Math.round(m.progress * 100)}%`);
+                            }
+                        }
+                    }
+                );
+
+                if (text && text.trim()) {
+                    console.log(`   ✓ OCR found (${Math.round(confidence * 100)}% confidence): "${text.substring(0, 100).replace(/\n/g, ' ')}..."`);
+                    ocrResults.push(text);
+                } else {
+                    console.log(`   ⚠️ OCR found no text in this image`);
+                }
+                
+                // Clean up processed image
+                try {
+                    fs.unlinkSync(processedImagePath);
+                } catch (e) {
+                    console.warn(`   Warning: Could not delete processed image: ${e.message}`);
+                }
+            } catch (err) {
+                console.warn(`   ⚠️ OCR failed for ${imagePath}:`, err.message);
+            }
+        }
+
+        return ocrResults.join('\n\n').trim();
+    } catch (err) {
+        console.error('Error in performOCROnImages:', err);
+        throw err;
+    }
+}
+
+function cleanupTempDir(dirPath) {
+    try {
+        if (fs.existsSync(dirPath)) {
+            fs.rmSync(dirPath, { recursive: true, force: true });
+            console.log(`🧹 Cleaned up temp directory: ${dirPath}`);
+        }
+    } catch (err) {
+        console.warn(`Warning: Failed to cleanup temp directory: ${err.message}`);
+    }
+}
+
+function extractTextFromSlideXML(xmlObj) {
+    try {
+        const textElements = [];
+
+        // Navigate through the slide structure - handle both p:sld and variations
+        const slide = xmlObj['p:sld'] || xmlObj['p:cSld'] || xmlObj;
+        
+        if (!slide) {
+            console.warn('No slide element found');
+            return '';
+        }
+
+        // Get the shape tree which contains all shapes on the slide
+        let spTree = null;
+        if (slide['p:cSld'] && Array.isArray(slide['p:cSld'])) {
+            spTree = slide['p:cSld'][0]['p:spTree'];
+        } else if (slide['p:spTree']) {
+            spTree = slide['p:spTree'];
+        }
+
+        if (!spTree) {
+            console.warn('No shape tree found in slide');
+            return '';
+        }
+
+        const spTreeArray = Array.isArray(spTree) ? spTree : [spTree];
+
+        // Extract from all shape elements
+        spTreeArray.forEach(tree => {
+            // Regular shapes
+            if (tree['p:sp'] && Array.isArray(tree['p:sp'])) {
+                tree['p:sp'].forEach(sp => {
+                    const text = extractTextFromShape(sp);
+                    if (text && text.trim()) {
+                        textElements.push(text);
+                    }
+                });
+            }
+
+            // Graphic frames (for charts, etc)
+            if (tree['p:graphicFrame'] && Array.isArray(tree['p:graphicFrame'])) {
+                tree['p:graphicFrame'].forEach(frame => {
+                    const text = extractTextFromShape(frame);
+                    if (text && text.trim()) {
+                        textElements.push(text);
+                    }
+                });
+            }
+
+            // Group shapes
+            if (tree['p:grpSp'] && Array.isArray(tree['p:grpSp'])) {
+                tree['p:grpSp'].forEach(grpSp => {
+                    // Check for shapes within group
+                    if (grpSp['p:grpSpPr']) {
+                        // This might be a grouped element, try to extract
+                        const text = extractTextFromShape(grpSp);
+                        if (text && text.trim()) {
+                            textElements.push(text);
+                        }
+                    }
+                    
+                    // Also check for nested shapes
+                    if (grpSp['p:sp'] && Array.isArray(grpSp['p:sp'])) {
+                        grpSp['p:sp'].forEach(sp => {
+                            const text = extractTextFromShape(sp);
+                            if (text && text.trim()) {
+                                textElements.push(text);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
+        console.log(`✅ Extracted ${textElements.length} text elements from slide`);
+        return textElements.join('\n');
+    } catch (err) {
+        console.error('Error extracting text from slide XML:', err.message);
+        return '';
+    }
+}
+
+function extractTextFromShape(shape) {
+    try {
+        const textBody = shape['p:txBody'];
+        if (!textBody || !Array.isArray(textBody) || textBody.length === 0) {
+            return '';
+        }
+
+        const paragraphs = [];
+
+        textBody.forEach(body => {
+            if (body['a:p'] && Array.isArray(body['a:p'])) {
+                body['a:p'].forEach(paragraph => {
+                    const paragraphText = extractTextFromParagraph(paragraph);
+                    if (paragraphText && paragraphText.trim()) {
+                        paragraphs.push(paragraphText);
+                    }
+                });
+            }
+        });
+
+        return paragraphs.join('\n');
+    } catch (err) {
+        console.error('Error extracting text from shape:', err.message);
+        return '';
+    }
+}
+
+function extractTextFromParagraph(paragraph) {
+    try {
+        const textRuns = [];
+
+        // Extract from text runs
+        if (paragraph['a:r'] && Array.isArray(paragraph['a:r'])) {
+            paragraph['a:r'].forEach(run => {
+                if (run['a:t'] && Array.isArray(run['a:t']) && run['a:t'][0]) {
+                    textRuns.push(run['a:t'][0]);
+                } else if (typeof run['a:t'] === 'string') {
+                    textRuns.push(run['a:t']);
+                }
+            });
+        }
+
+        // Also check for direct text (endParaRPr contains formatting)
+        if (paragraph['a:t'] && Array.isArray(paragraph['a:t']) && paragraph['a:t'][0]) {
+            textRuns.push(paragraph['a:t'][0]);
+        }
+
+        return textRuns.join('');
+    } catch (err) {
+        console.error('Error extracting text from paragraph:', err.message);
+        return '';
+    }
+}
+
+// ==================== PDF EXTRACTION ====================
+async function extractTextFromPDF(filePath) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Check file exists with detailed logging
+            const fileExists = fs.existsSync(filePath);
+            console.log(`📄 File check for ${filePath}: ${fileExists ? '✓ EXISTS' : '✗ MISSING'}`);
+            
+            if (!fileExists) {
+                console.error(`❌ File not found at path: ${filePath}`);
+                console.error(`📁 Uploads directory contents:`, fs.readdirSync('uploads/').slice(0, 10));
+                reject(new Error(`File not found: ${filePath}`));
+                return;
+            }
+
+            console.log(`📄 Reading PDF: ${filePath}`);
+            const fileBuffer = fs.readFileSync(filePath);
+            console.log(`📊 Buffer size: ${fileBuffer.length} bytes`);
+
+            // Try to extract text using pdf-parse
+            let textExtracted = false;
+            try {
+                console.log(`🔍 Parsing PDF with pdf-parse...`);
+                // Use require for pdf-parse to avoid ES module loading issues
+                const pdfParse = require('pdf-parse');
+                const data = await pdfParse(fileBuffer);
+
+                if (data.text && data.text.trim().length > 0) {
+                    console.log(`✅ Successfully extracted text from ${data.numpages} pages`);
+                    resolve(data.text.trim());
+                    textExtracted = true;
+                    return;
+                } else {
+                    console.log(`⚠️ pdf-parse found no text - attempting OCR on PDF images...`);
+                }
+            } catch (err) {
+                console.warn(`⚠️ pdf-parse failed: ${err.message}`);
+            }
+
+            // If no text extracted, try OCR on PDF
+            if (!textExtracted) {
+                console.log(`🔍 Attempting OCR on PDF...`);
+                try {
+                    const ocrText = await performOCROnPDFBuffer(fileBuffer);
+                    if (ocrText && ocrText.trim().length > 0) {
+                        console.log(`✅ OCR extracted ${ocrText.trim().split(/\s+/).length} words from PDF`);
+                        resolve(ocrText);
+                        return;
+                    }
+                } catch (ocrErr) {
+                    console.warn(`⚠️ OCR failed: ${ocrErr.message}`);
+                }
+            }
+
+            // Fallback message
+            console.log(`⚠️ No text found in PDF via text extraction or OCR`);
+            resolve('No readable text found in PDF. This PDF may contain only images or be encrypted. Please upload a text-based PDF or document.');
+        } catch (err) {
+            console.error('Error in extractTextFromPDF:', err);
+            reject(err);
+        }
+    });
+}
+
+async function performOCROnPDFBuffer(fileBuffer) {
+    try {
+        // Note: Full PDF rendering to images requires additional setup
+        // For now, we'll return empty to fall back to message
+        console.log(`⚠️ PDF image extraction requires additional libraries (pdf-lib for rendering)`);
+        return '';
+    } catch (err) {
+        console.error('Error in performOCROnPDFBuffer:', err);
+        throw err;
+    }
+}
+
+// ==================== END PDF EXTRACTION ====================
+
+// ==================== SUMMARY GENERATION ==================== SUMMARY GENERATION -----------------
 app.post("/api/generate-summary", async (req, res) => {
     try {
         const userId = req.session.userId;
@@ -1129,7 +1595,7 @@ app.post("/api/generate-summary", async (req, res) => {
             return res.status(503).json({ error: "Notes feature not available" });
         }
 
-        const { content, title, restrictions, metadata } = req.body;
+        const { content, title, file_id, restrictions, metadata } = req.body;
 
         if (!content || !title) {
             return res.status(400).json({ error: "Missing required fields" });
@@ -1137,7 +1603,7 @@ app.post("/api/generate-summary", async (req, res) => {
 
         const newNote = await Note.create({
             user_id: userId,
-            file_id: null,
+            file_id: file_id || null,
             title: title,
             content: content
         });

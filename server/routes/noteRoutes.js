@@ -1,6 +1,9 @@
 // noteRoutes.js - Updated with Pet Buddy v2.1 Points System
 import express from 'express';
+import { Op } from 'sequelize';
+import sequelize from '../db.js';
 import Note from '../models/Note.js';
+import File from '../models/File.js';
 import SharedNote from '../models/SharedNote.js';
 import NoteCategory from '../models/NoteCategory.js';
 import User from '../models/User.js';
@@ -435,22 +438,133 @@ router.put('/:id', requireAuth, async (req, res) => {
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;
+    const userId = req.session.userId;
+
+    console.log(`🗑️ Attempting to delete note ${noteId} for user ${userId}`);
 
     const note = await Note.findOne({
       where: { 
         note_id: noteId,
-        user_id: req.session.userId 
+        user_id: userId
       }
     });
 
     if (!note) {
+      console.log(`❌ Note not found: ${noteId}`);
       return res.status(404).json({ error: 'Note not found' });
     }
 
+    console.log(`✓ Found note: ${noteId}, file_id: ${note.file_id}`);
+
+    // =====================================
+    // CAPTURE FILE INFO BEFORE DELETION
+    // =====================================
+    const noteFileId = note.file_id;
+    console.log(`📝 Captured file_id for cleanup: ${noteFileId}`);
+
+    // =====================================
+    // DELETE NOTE FIRST (remove FK constraint)
+    // =====================================
     await note.destroy();
+    console.log(`✅ Note ${noteId} destroyed successfully`);
+
+    // =====================================
+    // FILE CLEANUP LOGIC (after note deletion)
+    // =====================================
+    
+    // Strategy 1: Delete the file if this note had a file_id
+    if (noteFileId) {
+      console.log(`📋 Strategy 1: Direct file_id match. Checking for other notes using file ${noteFileId}...`);
+      
+      const otherNotesWithFile = await Note.count({
+        where: {
+          file_id: noteFileId,
+          user_id: userId
+        }
+      });
+
+      console.log(`   Found ${otherNotesWithFile} other note(s) using file ${noteFileId}`);
+
+      if (otherNotesWithFile === 0) {
+        console.log(`🔍 Deleting file ${noteFileId} from File table...`);
+        console.log(`📊 Delete query: file_id=${noteFileId}, user_id=${userId}`);
+        try {
+          const fileToDelete = await File.findOne({
+            where: {
+              file_id: noteFileId,
+              user_id: userId
+            }
+          });
+          
+          if (!fileToDelete) {
+            console.log(`⚠️  File not found: file_id=${noteFileId}, user_id=${userId}`);
+          } else {
+            console.log(`✓ Found file to delete:`, fileToDelete.dataValues);
+            
+            const destroyResult = await File.destroy({
+              where: {
+                file_id: noteFileId,
+                user_id: userId
+              },
+              force: true
+            });
+            console.log(`✅ Destroyed ${destroyResult} file record(s)`);
+          }
+        } catch (deleteErr) {
+          console.error(`❌ Error deleting file:`, deleteErr.message);
+        }
+      } else {
+        console.log(`⏳ File ${noteFileId} still in use by ${otherNotesWithFile} other note(s)`);
+      }
+    } else {
+      // Strategy 2: After note deletion, check for orphaned files
+      console.log(`📋 Strategy 2: Note had no file_id. Checking for orphaned files...`);
+      
+      try {
+        // Get all file IDs that are currently referenced by any note for this user
+        const referencedFileIds = await Note.findAll({
+          where: {
+            user_id: userId,
+            file_id: { [Op.not]: null }
+          },
+          attributes: ['file_id'],
+          raw: true
+        });
+        
+        const referencedIds = referencedFileIds.map(n => n.file_id);
+        console.log(`   Files still referenced: [${referencedIds.join(', ')}]`);
+        
+        // Find files that aren't referenced by any note
+        const orphanedFiles = await File.findAll({
+          where: {
+            user_id: userId,
+            file_id: referencedIds.length > 0 ? { [Op.notIn]: referencedIds } : {} // If no referenced files, all are orphaned
+          }
+        });
+        
+        if (orphanedFiles.length > 0) {
+          console.log(`   Found ${orphanedFiles.length} orphaned file(s)`);
+          
+          const orphanedFileIds = orphanedFiles.map(f => f.file_id);
+          const destroyCount = await File.destroy({
+            where: {
+              file_id: { [Op.in]: orphanedFileIds },
+              user_id: userId
+            }
+          });
+          
+          console.log(`✅ Deleted ${destroyCount} orphaned file(s): [${orphanedFileIds.join(', ')}]`);
+        } else {
+          console.log(`ℹ️  No orphaned files found`);
+        }
+      } catch (orphanErr) {
+        console.error(`⚠️  Error checking orphaned files:`, orphanErr.message);
+      }
+    }
+    console.log(`✅ Note ${noteId} destroyed successfully`);
     res.json({ message: 'Note deleted successfully' });
   } catch (err) {
-    console.error('Failed to delete note:', err);
+    console.error('❌ Failed to delete note:', err);
     res.status(500).json({ error: 'Failed to delete note' });
   }
 });

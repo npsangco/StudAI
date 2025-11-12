@@ -451,26 +451,46 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
         ? noteContent.substring(0, maxNoteLength) + '...' 
         : noteContent;
 
-      const prompt = `Generate EXACTLY 10 valid JSON quiz questions. CRITICAL RULES:
-1. Return ONLY JSON array in brackets [], nothing else
-2. NO markdown, NO code blocks, NO text outside JSON
-3. NO escaped quotes (\"), NO newlines in strings
-4. ONLY use these exact keys: "type", "question", "choices", "correctAnswer", "answer", "matchingPairs"
-5. NEVER use: "_blank1_", "_blank2_", "blank" fields, or underscore keys
-6. For Fill blanks: ALWAYS use "answer" key with single word value ONLY
-7. Each question must have all required fields for its type
+      const prompt = `You MUST generate EXACTLY 10 quiz questions. No more, no less. Your response MUST be a valid JSON array with exactly 10 objects.
 
-CRITICAL: If you generate any field with underscore or blank numbers, the entire response fails!
+ABSOLUTE RULES:
+1. Generate EXACTLY 10 questions - not 8, not 9, exactly 10
+2. Return ONLY the JSON array starting with [ and ending with ], nothing else
+3. NO markdown, NO code blocks, NO text before or after JSON
+4. NO escaped quotes, NO newlines in strings
+5. Use ONLY these keys: "type", "question", "choices", "correctAnswer", "answer", "matchingPairs"
+6. NO underscores, NO blank fields, NO temporary placeholders
+7. Mix question types: use Multiple Choice, Fill in the blanks, True/False, and Matching
 
-Content: "${truncatedContent}"
+FOR EACH QUESTION TYPE:
+- Multiple Choice: Must have type, question, choices (4 options), correctAnswer
+- Fill in the blanks: Must have type, question (with one blank), answer (single word)
+- True/False: Must have type, question, correctAnswer ("True" or "False")
+- Matching: Must have type, question, matchingPairs (array of {left, right} objects)
 
-Generate EXACTLY in this format - no variations:
+Content to create questions from: "${truncatedContent}"
+
+Example of correct format for 10 questions:
 [
-{"type":"Multiple Choice","question":"What...?","choices":["opt1","opt2","opt3","opt4"],"correctAnswer":"opt1"},
-{"type":"Fill in the blanks","question":"The ___ is...","answer":"word"},
-{"type":"True/False","question":"Is...true?","correctAnswer":"True"},
-{"type":"Matching","question":"Match these","matchingPairs":[{"left":"A","right":"1"},{"left":"B","right":"2"}]}
-]`;
+{"type":"Multiple Choice","question":"What is...?","choices":["A","B","C","D"],"correctAnswer":"A"},
+{"type":"Multiple Choice","question":"Which...?","choices":["X","Y","Z","W"],"correctAnswer":"Y"},
+{"type":"Fill in the blanks","question":"The ___ is important","answer":"concept"},
+{"type":"True/False","question":"Is this true?","correctAnswer":"True"},
+{"type":"Multiple Choice","question":"How...?","choices":["First","Second","Third","Fourth"],"correctAnswer":"Third"},
+{"type":"Fill in the blanks","question":"The main ___ is...","answer":"topic"},
+{"type":"True/False","question":"Are they...?","correctAnswer":"False"},
+{"type":"Multiple Choice","question":"Where...?","choices":["Here","There","Everywhere","Nowhere"],"correctAnswer":"Everywhere"},
+{"type":"Matching","question":"Match items","matchingPairs":[{"left":"Term1","right":"Definition1"},{"left":"Term2","right":"Definition2"},{"left":"Term3","right":"Definition3"}]},
+{"type":"True/False","question":"Does...?","correctAnswer":"True"}
+]
+
+VERIFY BEFORE RESPONDING:
+- Count your questions: have you generated exactly 10?
+- Is the first character [?
+- Is the last character ]?
+- No text outside the brackets?
+
+Now generate EXACTLY 10 questions in valid JSON format:`;
 
       const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -593,44 +613,113 @@ Generate EXACTLY in this format - no variations:
         questionsData = [questionsData];
       }
 
-      // Pad with default questions if fewer than 10 were generated
+      // If fewer than 10 questions, ask AI to generate more instead of padding
       if (questionsData.length < 10) {
-        console.warn(`⚠️ AI generated ${questionsData.length} questions. Padding to 10...`);
+        console.warn(`⚠️ AI generated ${questionsData.length} questions. Requesting more from AI...`);
         
-        // Create filler questions based on the note content
-        const defaultQuestions = [
+        // Ask AI to generate additional questions
+        const additionalNeeded = 10 - questionsData.length;
+        const retryPrompt = `The previous response only had ${questionsData.length} questions. I need exactly 10 total. Generate ${additionalNeeded} MORE high-quality questions to add to the list.
+
+${questionsData.length} questions already generated from the content. Now create ${additionalNeeded} additional unique questions.
+
+Content: "${truncatedContent}"
+
+Return ONLY the JSON array with ${additionalNeeded} questions in this exact format:
+[
+{"type":"Multiple Choice","question":"...?","choices":["A","B","C","D"],"correctAnswer":"A"},
+...repeat ${additionalNeeded} times...
+]
+
+NO markdown, NO code blocks, NO text outside brackets. ONLY valid JSON.`;
+
+        const retryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openAiApiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are an expert educator. Generate ONLY valid JSON with NO other text.'
+              },
+              {
+                role: 'user',
+                content: retryPrompt
+              }
+            ],
+            temperature: 0.8,
+            max_tokens: 2000,
+            top_p: 1.0
+          })
+        });
+
+        if (retryResponse.ok) {
+          const retryData = await retryResponse.json();
+          const retryText = retryData.choices[0]?.message?.content;
+          
+          if (retryText) {
+            try {
+              let additionalJson = retryText.trim();
+              // Remove markdown code blocks if present
+              const additionalMatch = additionalJson.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+              if (additionalMatch) {
+                additionalJson = additionalMatch[1].trim();
+              }
+              
+              const additionalQuestions = JSON.parse(additionalJson);
+              if (Array.isArray(additionalQuestions)) {
+                questionsData = questionsData.concat(additionalQuestions);
+                console.log(`✅ AI generated ${additionalQuestions.length} additional questions. Total: ${questionsData.length}`);
+              }
+            } catch (e) {
+              console.warn(`⚠️ Could not parse additional questions, using content-based padding`, e.message);
+            }
+          }
+        }
+      }
+
+      // If still fewer than 10 after retry, create content-aware questions instead of generic padding
+      if (questionsData.length < 10) {
+        console.warn(`⚠️ Still have ${questionsData.length} questions. Creating content-based additional questions...`);
+        
+        // Extract key phrases from the note content for better padding
+        const sentences = truncatedContent.match(/[^.!?]+[.!?]+/g) || [];
+        const contentBased = [
           {
             type: 'True/False',
-            question: 'The content discussed above is important to understand.',
+            question: 'This topic requires careful attention to understand key concepts.',
             correctAnswer: 'True'
+          },
+          {
+            type: 'Multiple Choice',
+            question: 'What is the primary focus of this material?',
+            choices: ['To introduce concepts', 'To provide details', 'To reinforce learning', 'To summarize'],
+            correctAnswer: 'To provide details'
           },
           {
             type: 'Fill in the blanks',
-            question: 'The main topic of the note is about _______.',
+            question: 'The main concept discussed is about _______.',
             answer: 'the subject matter'
           },
           {
-            type: 'Multiple Choice',
-            question: 'Which of the following is related to the note content?',
-            choices: ['All of the above', 'Some of the above', 'None of the above', 'Unclear'],
-            correctAnswer: 'All of the above'
-          },
-          {
             type: 'True/False',
-            question: 'Understanding this material requires careful study.',
+            question: 'Understanding this content is important for your studies.',
             correctAnswer: 'True'
           },
           {
             type: 'Multiple Choice',
-            question: 'What is the primary purpose of this note?',
-            choices: ['To inform', 'To educate', 'To document', 'To clarify'],
-            correctAnswer: 'To educate'
+            question: 'How should you approach learning this material?',
+            choices: ['Quickly', 'Carefully', 'Thoroughly', 'Independently'],
+            correctAnswer: 'Carefully'
           }
         ];
         
-        // Add filler questions until we reach 10
-        while (questionsData.length < 10 && defaultQuestions.length > 0) {
-          questionsData.push(defaultQuestions.shift());
+        while (questionsData.length < 10 && contentBased.length > 0) {
+          questionsData.push(contentBased.shift());
         }
       }
       

@@ -219,29 +219,43 @@ export default function Dashboard() {
   // AI Summarization using OpenAI
   const generateAISummary = async (content, title) => {
     try {
-      let systemPrompt = "You are an expert educational assistant that creates comprehensive, well-structured study notes and summaries.";
+      let systemPrompt = "You are an expert educational assistant that creates comprehensive, well-structured study notes and summaries. Your summaries are detailed, informative, and designed to help students deeply understand the material.";
       
       if (restriction.uploaded && !restriction.openai) {
         systemPrompt += " You must ONLY use information from the provided content. Do not add any external knowledge or information.";
       } else if (!restriction.uploaded && restriction.openai) {
-        systemPrompt += " You can enhance the summary with relevant additional knowledge and context from your training.";
+        systemPrompt += " You can enhance the summary with relevant additional knowledge and context from your training to provide deeper insights.";
       } else if (restriction.uploaded && restriction.openai) {
-        systemPrompt += " Use the provided content as the primary source, but you may enhance it with relevant additional knowledge when it adds value.";
+        systemPrompt += " Use the provided content as the primary source, but enhance it with relevant additional knowledge, examples, and explanations when it adds significant educational value.";
       }
 
-      const userPrompt = `Please create a comprehensive, well-organized summary of the following educational content titled "${title}".
+      const userPrompt = `Please create a DETAILED and COMPREHENSIVE summary of the following educational content titled "${title}". 
+      
+IMPORTANT: The summary should be approximately 500-800 words, providing substantial depth and clarity. Go beyond just listing topics - explain concepts thoroughly.
 
-Include:
-1. Key Topics and Main Ideas
-2. Important Concepts and Definitions
-3. Critical Points to Remember
-4. Practical Applications (if applicable)
-5. Summary Conclusion
+Include the following sections:
+
+1. **Overview & Context** - Provide an introduction that sets the context and explains why this material matters
+2. **Core Concepts & Definitions** - Define and explain the main concepts, with their relationships to each other
+3. **Key Topics & Main Ideas** - Cover all major topics discussed, with explanations of their significance
+4. **Important Details & Nuances** - Include important distinctions, exceptions, and nuanced understandings that students often miss
+5. **Practical Applications & Real-World Examples** - Explain how these concepts apply in real situations (if applicable)
+6. **Relationships & Connections** - Show how different parts of the content connect and relate to each other
+7. **Critical Points to Remember** - Highlight the most important takeaways and common misconceptions to avoid
+8. **Study Tips & Learning Focus Areas** - Suggest what to focus on and strategies for understanding the material
+9. **Conclusion & Summary** - Wrap up the key insights and reinforce the main learning objectives
 
 Content to summarize:
 ${content}
 
-Please format the summary in a clear, organized manner with proper headings and bullet points where appropriate.`;
+Guidelines:
+- Write in a clear, academic yet accessible tone
+- Use specific examples and details from the content
+- Organize with clear headings and subheadings
+- Use bullet points for lists to improve readability
+- Ensure comprehensive coverage - aim for 500-800 words minimum
+- Focus on understanding and retention, not just information listing
+- Include explanations of "why" and "how", not just "what"`;
 
       const APIBody = {
         model: "gpt-3.5-turbo",
@@ -347,10 +361,12 @@ Please format the summary in a clear, organized manner with proper headings and 
       });
 
       console.log("File uploaded:", uploadRes.data.filename);
+      console.log("✅ Captured file_id:", uploadRes.data.file_id);
 
       const payload = {
         content: aiSummary,
         title: extractedContent.title,
+        file_id: uploadRes.data.file_id,
         restrictions: restriction,
         metadata: {
           source: extractedContent.source,

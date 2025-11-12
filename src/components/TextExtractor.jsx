@@ -44,32 +44,41 @@
 
     const extractFromPDF = async (file) => {
       try {
-        setProgress('Extracting text from PDF...');
+        setProgress('Sending PDF to server for extraction...');
         
-        // Use react-pdftotext for text extraction
-        const pdfToText = (await import('react-pdftotext')).default;
-        const text = await pdfToText(file);
+        const formData = new FormData();
+        formData.append('file', file);
 
-        if (text && text.trim()) {
-          setProgress('Text extracted successfully');
+        const response = await fetch(`${API_URL}/api/extract-pdf`, {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.details || errorData.error || 'Server extraction failed');
+        }
+
+        const data = await response.json();
+        
+        if (data.text && data.text.trim()) {
+          setProgress('Text extracted from PDF');
           
           if (onTextExtracted) {
             onTextExtracted({
               title: file.name.replace(/\.[^/.]+$/, ''),
-              content: text.trim(),
+              content: data.text.trim(),
               source: 'PDF',
-              wordCount: text.trim().split(/\s+/).length
+              wordCount: data.wordCount || data.text.trim().split(/\s+/).length
             });
           }
         } else {
-          // If no text extracted, PDF might be image-based
-          setProgress('No text found, attempting OCR...');
-          await extractWithOCR(file);
+          setError('Could not extract text from this PDF. The file may be image-based or encrypted. Please try uploading a text-based PDF.');
         }
       } catch (err) {
-        console.error('PDF extraction error:', err);
-        setProgress('PDF text extraction failed, trying OCR...');
-        await extractWithOCR(file);
+        console.error('PDF extraction error:', err.message);
+        setError('PDF extraction failed: ' + err.message);
       }
     };
 
@@ -87,7 +96,8 @@
         });
 
         if (!response.ok) {
-          throw new Error('Server extraction failed');
+          const errorData = await response.json();
+          throw new Error(errorData.details || errorData.error || 'Server extraction failed');
         }
 
         const data = await response.json();
@@ -100,25 +110,24 @@
               title: file.name.replace(/\.[^/.]+$/, ''),
               content: data.text.trim(),
               source: 'PPTX',
-              wordCount: data.text.trim().split(/\s+/).length,
-              slideCount: data.slideCount || 0
+              wordCount: data.wordCount || data.text.trim().split(/\s+/).length
             });
           }
         } else {
           setError('No text found in PowerPoint file');
         }
       } catch (err) {
-        console.error('PPTX extraction error:', err);
-        setError('Failed to extract text from PowerPoint file');
+        console.error('PPTX extraction error:', err.message);
+        setError(`Failed to extract from PowerPoint: ${err.message}`);
       }
     };
 
     const extractWithOCR = async (file) => {
       try {
-        setProgress('Running OCR on images...');
+        setProgress('Running OCR on images (Filipino language support)...');
         
         const { createWorker } = await import('tesseract.js');
-        const worker = await createWorker('eng', 1, {
+        const worker = await createWorker('fil', 1, {
           logger: (m) => {
             if (m.status === 'recognizing text') {
               setProgress(`OCR Progress: ${Math.round(m.progress * 100)}%`);
