@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { API_URL } from "../config/api.config";
 import { Eye, EyeOff } from "lucide-react";
 
 function PassRecovery() {
@@ -36,7 +37,7 @@ function PassRecovery() {
 
     try {
       // Check with backend if new password == old password
-      const res = await axios.post("http://localhost:4000/api/auth/reset-password", {
+      const res = await axios.post(`${API_URL}/api/auth/reset-password`, {
         token,
         newPassword: password,
       });

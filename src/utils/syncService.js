@@ -1,6 +1,7 @@
 // syncService.js – Separate services for Notes and Planner
 
 import axios from 'axios';
+import { API_URL } from '../config/api.config';
 import { notesApi, plansApi } from '../api/api';
 import {
   queueOperation,
@@ -276,7 +277,7 @@ class PlannerService {
 
     try {
       console.info('[Planner] Fetching from server...');
-      const res = await axios.get("http://localhost:4000/api/plans", { withCredentials: true });
+      const res = await axios.get(`${API_URL}/api/plans`, { withCredentials: true });
       const plans = (res.data.plans || []).map((p) => ({
         id: p.planner_id,
         planner_id: p.planner_id,

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { API_URL } from "../config/api.config";
 
 function ResetPassword() {
     const [email, setEmail] = useState("");
@@ -13,7 +14,7 @@ function ResetPassword() {
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await axios.post("http://localhost:4000/api/auth/reset-request", { email });
+            const res = await axios.post(`${API_URL}/api/auth/reset-request`, { email });
             setMessage("Password reset link sent. Redirecting to Login...");
             setDisabled(true);
 

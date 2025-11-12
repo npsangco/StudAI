@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, Plus, Trash2, Info, X, Calendar, Check } from "lucide-react";
 import { plannerService } from "../utils/syncService";
+import ToastContainer from "../components/ToastContainer";
+import { useToast } from "../hooks/useToast";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useConfirm } from "../hooks/useConfirm";
 
 export default function Planner() {
   const [currentYear] = useState(new Date().getFullYear());
@@ -13,6 +17,9 @@ export default function Planner() {
   const [desc, setDesc] = useState("");
   const [loading, setLoading] = useState(false);
   const [showIndicatorsInfo, setShowIndicatorsInfo] = useState(false);
+  
+  const { toasts, removeToast, toast } = useToast();
+  const { confirmState, confirm, closeConfirm } = useConfirm();
   const [dailyTaskStatus, setDailyTaskStatus] = useState({ used: 0, remaining: 3, max: 3 });
   const [showLimitModal, setShowLimitModal] = useState(false);
 
@@ -154,7 +161,9 @@ export default function Planner() {
         setPlans(prev => [...prev, result.plan]);
         
         if (result.queued) {
-          alert('📱 Offline: Plan will sync when back online');
+          toast.info('📱 Offline: Plan will sync when back online');
+        } else {
+          toast.success('Task created successfully!');
         }
 
         setTitle("");
@@ -163,7 +172,7 @@ export default function Planner() {
       } else {
         // Handle validation errors (like daily limit)
         if (result.error) {
-          alert(`Error: ${result.error}`);
+          toast.error(`Error: ${result.error}`);
           if (result.error.includes('Daily task limit reached')) {
             setShowLimitModal(true);
           }
@@ -171,40 +180,50 @@ export default function Planner() {
       }
     } catch (err) {
       console.error("Failed to create plan:", err);
-      alert('Failed to create plan. Please try again.');
+      toast.error('Failed to create plan. Please try again.');
     }
   };
 
   // Mark as done function
   const markAsDone = async (planner_id) => {
     if (!planner_id) return;
-    if (!window.confirm("Mark this task as completed?")) return;
-
-    try {
-      const result = await plannerService.updatePlan(planner_id, {
-        completed: true,
-        completed_at: new Date().toISOString()
-      });
-      
-      if (result.success) {
-        setPlans(prev => prev.map(p => 
-          (p.planner_id === planner_id || p.id === planner_id) 
-            ? { ...p, completed: true, completed_at: new Date().toISOString() }
-            : p
-        ));
-        
-        if (result.queued) {
-          alert('📱 Offline: Completion will sync when back online');
-        }
-      } else {
-        if (result.error) {
-          alert(`Error: ${result.error}`);
+    
+    await confirm({
+      title: 'Complete Task',
+      message: 'Mark this task as completed?',
+      confirmText: 'Complete',
+      cancelText: 'Cancel',
+      variant: 'info',
+      onConfirm: async () => {
+        try {
+          const result = await plannerService.updatePlan(planner_id, {
+            completed: true,
+            completed_at: new Date().toISOString()
+          });
+          
+          if (result.success) {
+            setPlans(prev => prev.map(p => 
+              (p.planner_id === planner_id || p.id === planner_id) 
+                ? { ...p, completed: true, completed_at: new Date().toISOString() }
+                : p
+            ));
+            
+            if (result.queued) {
+              toast.info('📱 Offline: Completion will sync when back online');
+            } else {
+              toast.success('Task marked as completed!');
+            }
+          } else {
+            if (result.error) {
+              toast.error(`Error: ${result.error}`);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to mark task as done:", err);
+          toast.error('Failed to update task. Please try again.');
         }
       }
-    } catch (err) {
-      console.error("Failed to mark task as done:", err);
-      alert('Failed to update task. Please try again.');
-    }
+    });
   };
 
   const getPlansForSelectedDate = () => {
@@ -644,6 +663,17 @@ export default function Planner() {
 
   return (
     <>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        onClose={closeConfirm}
+        onConfirm={confirmState.onConfirm}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+        variant={confirmState.variant}
+      />
       {loading && (
         <div className="fixed top-4 right-4 bg-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl shadow-2xl border-2 border-indigo-200 text-sm sm:text-base font-semibold text-gray-700 z-50 animate-pulse">
           Loading...

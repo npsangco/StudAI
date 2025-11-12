@@ -4,6 +4,8 @@ import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { API_BASE } from './api'
+import ToastContainer from './ToastContainer'
+import { useToast } from '../hooks/useToast'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard' },
@@ -20,6 +22,7 @@ function classNames(...classes) {
 export default function Navigation() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { toasts, toast, removeToast } = useToast()
   const [userPhoto, setUserPhoto] = useState(null)
 
   useEffect(() => {
@@ -56,12 +59,15 @@ export default function Navigation() {
       navigate('/login')
     } catch (err) {
       console.error('Logout error:', err)
-      alert('Failed to log out')
+      toast.error('Failed to log out')
     }
   }
 
   return (
-    <Disclosure
+    <>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      
+      <Disclosure
       as="nav"
       className="relative bg-yellow-300 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/10"
     >
@@ -174,5 +180,6 @@ export default function Navigation() {
         </div>
       </DisclosurePanel>
     </Disclosure>
+    </>
   )
 }

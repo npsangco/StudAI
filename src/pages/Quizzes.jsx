@@ -13,6 +13,9 @@ import { useQuizAPI } from '../components/quizzes/hooks/useQuizAPI';
 import { useQuizHandlers } from '../components/quizzes/hooks/useQuizHandlers';
 import { VIEWS, COUNTDOWN_SECONDS } from '../components/quizzes/utils/constants';
 import { validateAllQuestions } from '../components/quizzes/utils/validation';
+import ToastContainer from "../components/ToastContainer";
+import { useToast } from "../hooks/useToast";
+import { API_URL } from '../config/api.config';
 import { listenToQuizQuestions, storeQuizQuestions, listenToBattleStatus } from '../firebase/battleOperations';
 import { ReconnectionBanner } from '../components/quizzes/views/ReconnectionModal';
 import { checkForReconnectionOpportunity } from '../firebase/reconnectionTokens';
@@ -140,6 +143,7 @@ function QuizzesPage() {
   // ============================================
   // INITIALIZE HOOKS
   // ============================================
+  const { toasts, toast, removeToast } = useToast();
   const [currentUser, setCurrentUser] = useState(null);
   const quizDataHook = useQuizData();
   const quizAPI = useQuizAPI(quizDataHook);
@@ -157,7 +161,7 @@ function QuizzesPage() {
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const response = await fetch('http://localhost:4000/api/user/profile', {
+        const response = await fetch(`${API_URL}/api/user/profile`, {
           credentials: 'include'
         });
         const userData = await response.json();
@@ -223,7 +227,7 @@ function QuizzesPage() {
         const { quizId, battleId, quizTitle, gamePin } = result.playerData;
         
         if (!quizId) {
-          alert('Failed to load quiz data - quiz ID missing');
+          toast.error('Failed to load quiz data - quiz ID missing');
           setReconnectionOpportunity(null);
           return;
         }
@@ -257,16 +261,16 @@ function QuizzesPage() {
           
           console.log('✅ Reconnection complete!');
         } else {
-          alert('Failed to load quiz questions');
+          toast.error('Failed to load quiz questions');
           setReconnectionOpportunity(null);
         }
       } else {
-        alert('Failed to rejoin: ' + (result.error || 'Unknown error'));
+        toast.error('Failed to rejoin: ' + (result.error || 'Unknown error'));
         setReconnectionOpportunity(null);
       }
     } catch (error) {
       console.error('❌ Reconnection failed:', error);
-      alert('Failed to rejoin battle: ' + error.message);
+      toast.error('Failed to rejoin battle: ' + error.message);
       setReconnectionOpportunity(null);
     }
   };
@@ -561,6 +565,7 @@ function QuizzesPage() {
 
   return (
     <>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <style>{styles}</style>
       
       {/* 🔄 RECONNECTION BANNER - Show on landing page too */}

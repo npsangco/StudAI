@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Users, FileText, PlayCircle, StickyNote, Lock, Unlock, Clock, Menu, X, } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+import { API_URL } from "../../config/api.config";
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState({
@@ -17,7 +18,7 @@ export default function AdminDashboard() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await axios.get("http://localhost:4000/api/admin/stats", {
+                const res = await axios.get(`${API_URL}/api/admin/stats`, {
                     withCredentials: true,
                 });
                 setStats(res.data);
@@ -29,7 +30,7 @@ export default function AdminDashboard() {
         const fetchRecentUsers = async () => {
             try {
                 const res = await axios.get(
-                    "http://localhost:4000/api/admin/recent-users",
+                    `${API_URL}/api/admin/recent-users`,
                     {
                         withCredentials: true,
                     }
@@ -43,7 +44,7 @@ export default function AdminDashboard() {
         const fetchRecentSessions = async () => {
             try {
                 const res = await axios.get(
-                    "http://localhost:4000/api/admin/recent-sessions",
+                    `${API_URL}/api/admin/recent-sessions`,
                     {
                         withCredentials: true,
                     }
@@ -62,7 +63,7 @@ export default function AdminDashboard() {
     const handleUserAction = async (userId, action) => {
         try {
             await axios.post(
-                `http://localhost:4000/api/admin/users/${userId}/${action}`,
+                `${API_URL}/api/admin/users/${userId}/${action}`,
                 {},
                 { withCredentials: true }
             );

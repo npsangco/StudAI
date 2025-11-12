@@ -1,49 +1,16 @@
-// PetInventory.jsx - With Auto-Dismiss Alerts
+// PetInventory.jsx - With Toast Notifications
 import { useState, useEffect } from "react";
 import { petApi } from "../api/api";
-import { X } from "lucide-react";
-
-// Alert
-const Alert = ({ message, onDismiss }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onDismiss();
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [onDismiss]);
-
-  return (
-    <div className="fixed top-4 right-4 z-[60] animate-slide-in">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 shadow-lg flex items-center gap-3 max-w-sm">
-        <div className="flex-1">
-          <p className="text-sm text-blue-800">{message}</p>
-        </div>
-        <button
-          onClick={onDismiss}
-          className="text-blue-600 hover:text-blue-800 transition-colors flex-shrink-0"
-        >
-          <X size={16} />
-        </button>
-      </div>
-    </div>
-  );
-};
+import ToastContainer from "./ToastContainer";
+import { useToast } from "../hooks/useToast";
 
 export default function PetInventory({ onClose, onUseItem }) {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [usingItem, setUsingItem] = useState(null);
   const [error, setError] = useState(null);
-  const [alerts, setAlerts] = useState([]);
-
-  const addAlert = (message) => {
-    const id = Date.now();
-    setAlerts(prev => [...prev, { id, message }]);
-  };
-
-  const removeAlert = (id) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== id));
-  };
+  
+  const { toasts, removeToast, toast } = useToast();
 
   const loadInventory = async () => {
     setLoading(true);
@@ -86,11 +53,9 @@ export default function PetInventory({ onClose, onUseItem }) {
         isEquipped,
       });
       await loadInventory();
-      setAlerts([]);
-      addAlert(isEquipped ? "Item unequipped!" : "Item equipped!");
+      toast.success(isEquipped ? "Item unequipped!" : "Item equipped!");
     } catch {
-      setAlerts([]);
-      addAlert("Failed to update equipment status.");
+      toast.error("Failed to update equipment status.");
     }
   };
 
@@ -104,10 +69,10 @@ export default function PetInventory({ onClose, onUseItem }) {
       });
       onUseItem && onUseItem(res.data.updatedPet);
       await loadInventory();
-      addAlert("Item used successfully!");
+      toast.success("Item used successfully!");
     } catch (err) {
       const msg = err.response?.data?.error || "Failed to use item.";
-      addAlert(msg);
+      toast.error(msg);
     } finally {
       setUsingItem(null);
     }
@@ -174,14 +139,7 @@ export default function PetInventory({ onClose, onUseItem }) {
 
   return (
     <>
-      {/* Alerts */}
-      {alerts.map(alert => (
-        <Alert 
-          key={alert.id} 
-          message={alert.message} 
-          onDismiss={() => removeAlert(alert.id)}
-        />
-      ))}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">

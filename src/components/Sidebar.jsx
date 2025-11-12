@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE } from "./api";
 import { PowerIcon } from "@heroicons/react/24/outline";
+import ToastContainer from "./ToastContainer";
+import { useToast } from "../hooks/useToast";
 
 const navigation = [
     { name: "Dashboard", href: "/admin/dashboard" },
@@ -21,6 +23,8 @@ export default function Sidebar() {
     const navigate = useNavigate();
     const [userPhoto, setUserPhoto] = useState(null);
     const [collapsed, setCollapsed] = useState(false);
+    
+    const { toasts, removeToast, toast } = useToast();
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -53,17 +57,20 @@ export default function Sidebar() {
             navigate("/login");
         } catch (err) {
             console.error("Logout error:", err);
-            alert("Failed to log out");
+            toast.error("Failed to log out");
         }
     };
 
     return (
-        <div
-            className={classNames(
-                "flex flex-col h-screen bg-yellow-300 text-black transition-all duration-300",
-                collapsed ? "w-20" : "w-64"
-            )}
-        >
+        <>
+            <ToastContainer toasts={toasts} onDismiss={removeToast} />
+            
+            <div
+                className={classNames(
+                    "flex flex-col h-screen bg-yellow-300 text-black transition-all duration-300",
+                    collapsed ? "w-20" : "w-64"
+                )}
+            >
             {/* Logo */}
             <div className="flex items-center justify-between px-4 py-4 border-b border-black/20">
                 <Link
@@ -130,5 +137,6 @@ export default function Sidebar() {
                 )}
             </div>
         </div>
+        </>
     );
 }

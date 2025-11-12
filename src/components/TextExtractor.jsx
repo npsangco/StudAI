@@ -1,4 +1,5 @@
   import { useState, useEffect } from 'react';
+  import { API_URL } from '../config/api.config';
 
   const TextExtractor = ({ file, onTextExtracted }) => {
     const [isProcessing, setIsProcessing] = useState(false);
@@ -79,7 +80,7 @@
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch('http://localhost:4000/api/extract-pptx', {
+        const response = await fetch(`${API_URL}/api/extract-pptx`, {
           method: 'POST',
           body: formData,
           credentials: 'include'

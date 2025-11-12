@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Menu, X } from "lucide-react"; // for hamburger + close icons
 import Sidebar from "../../components/Sidebar";
+import { API_URL } from "../../config/api.config";
 
 export default function AuditLogs() {
     const [logs, setLogs] = useState([]);
@@ -12,7 +13,7 @@ export default function AuditLogs() {
     useEffect(() => {
         const fetchLogs = async () => {
             try {
-                const res = await axios.get("http://localhost:4000/api/admin/audit-logs", {
+                const res = await axios.get(`${API_URL}/api/admin/audit-logs`, {
                     withCredentials: true,
                 });
                 setLogs(res.data || []);

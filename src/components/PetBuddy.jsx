@@ -1,57 +1,24 @@
-// PetBuddy.jsx - With Auto-Dismiss Alerts
+// PetBuddy.jsx - With Toast Notifications
 import { useState, useEffect, useCallback } from "react";
 import { petApi } from "../api/api";
-import { X } from "lucide-react";
 import PetShop from "./PetShop";
 import PetInventory from "./PetInventory";
-
-// Alert
-const Alert = ({ message, onDismiss }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onDismiss();
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [onDismiss]);
-
-  return (
-    <div className="fixed top-4 right-4 z-[60] animate-slide-in">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 shadow-lg flex items-center gap-3 max-w-sm">
-        <div className="flex-1">
-          <p className="text-sm text-blue-800">{message}</p>
-        </div>
-        <button
-          onClick={onDismiss}
-          className="text-blue-600 hover:text-blue-800 transition-colors flex-shrink-0"
-        >
-          <X size={16} />
-        </button>
-      </div>
-    </div>
-  );
-};
+import ToastContainer from "./ToastContainer";
+import { useToast } from "../hooks/useToast";
 
 export default function PetBuddy() {
   const [pet, setPet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState("pet");
   const [actionLoading, setActionLoading] = useState(null);
-  const [alerts, setAlerts] = useState([]);
   
   // Adoption states
   const [choosePet, setChoosePet] = useState(false);
   const [namingPet, setNamingPet] = useState(false);
   const [selectedPetType, setSelectedPetType] = useState(null);
   const [petName, setPetName] = useState("");
-
-  const addAlert = (message) => {
-    const id = Date.now();
-    setAlerts(prev => [...prev, { id, message }]);
-  };
-
-  const removeAlert = (id) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== id));
-  };
+  
+  const { toasts, removeToast, toast } = useToast();
 
   // Load user pet
   const loadPet = useCallback(async () => {
@@ -118,8 +85,7 @@ export default function PetBuddy() {
 
   const createPet = async () => {
     if (!petName.trim()) {
-      setAlerts([]); 
-      addAlert("Please enter a name for your pet!");
+      toast.warning("Please enter a name for your pet!");
       return;
     }
 
@@ -128,16 +94,14 @@ export default function PetBuddy() {
         petType: selectedPetType,
         petName: petName.trim(),
       });
-      setAlerts([]); 
-      addAlert(`You have adopted ${petName.trim()}! 🐾`);
+      toast.success(`You have adopted ${petName.trim()}! 🐾`);
       setPet(res.data);
       setNamingPet(false);
       setSelectedPetType(null);
       setPetName("");
     } catch (err) {
-      setAlerts([]); 
       const message = err.response?.data?.error || "Failed to adopt pet.";
-      addAlert(message);
+      toast.error(message);
       if (message.includes("already")) {
         setNamingPet(false);
         setChoosePet(false);
@@ -151,20 +115,17 @@ export default function PetBuddy() {
   // Update pet name
   const updatePetName = async (newName) => {
     if (!newName.trim()) {
-      setAlerts([]); 
-      addAlert("Please enter a name for your pet!");
+      toast.warning("Please enter a name for your pet!");
       return false;
     }
 
     try {
       const res = await petApi.updateName(newName.trim());
       setPet(res.data);
-      setAlerts([]); 
-      addAlert(`Pet name updated to ${newName.trim()}!`);
+      toast.success(`Pet name updated to ${newName.trim()}!`);
       return true;
     } catch (err) {
-      setAlerts([]); 
-      addAlert("Failed to update pet name.", err);
+      toast.error("Failed to update pet name.");
       return false;
     }
   };
@@ -185,7 +146,6 @@ export default function PetBuddy() {
 
     setActionLoading(type);
     try {
-      setAlerts([]); 
       const res = await petApi.doAction({ actionType: type });
       setPet(res.data);
       
@@ -195,13 +155,12 @@ export default function PetBuddy() {
         play: "Played with your pet! 🎾",
         clean: "Cleaned your pet! 🧼"
       };
-      addAlert(actionMessages[type]);
+      toast.success(actionMessages[type]);
       
     } catch (err) {
-      setAlerts([]); 
       console.error("Action failed:", err);
       const errorMsg = err.response?.data?.error || "Action failed!";
-      addAlert(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setActionLoading(null);
     }
@@ -216,21 +175,6 @@ export default function PetBuddy() {
     return (
       <div className="p-4 text-center">
         <p className="text-sm text-gray-600">Loading pet...</p>
-        <style jsx>{`
-          @keyframes slide-in {
-            from {
-              transform: translateX(100%);
-              opacity: 0;
-            }
-            to {
-              transform: translateX(0);
-              opacity: 1;
-            }
-          }
-          .animate-slide-in {
-            animation: slide-in 0.3s ease-out;
-          }
-        `}</style>
       </div>
     );
   }
@@ -238,29 +182,8 @@ export default function PetBuddy() {
   if (choosePet) {
     return (
       <>
-        {alerts.map(alert => (
-          <Alert 
-            key={alert.id} 
-            message={alert.message} 
-            onDismiss={() => removeAlert(alert.id)}
-          />
-        ))}
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
         <CompactPetSelection onSelectPet={handlePetSelection} />
-        <style jsx>{`
-          @keyframes slide-in {
-            from {
-              transform: translateX(100%);
-              opacity: 0;
-            }
-            to {
-              transform: translateX(0);
-              opacity: 1;
-            }
-          }
-          .animate-slide-in {
-            animation: slide-in 0.3s ease-out;
-          }
-        `}</style>
       </>
     );
   }
@@ -268,13 +191,7 @@ export default function PetBuddy() {
   if (namingPet) {
     return (
       <>
-        {alerts.map(alert => (
-          <Alert 
-            key={alert.id} 
-            message={alert.message} 
-            onDismiss={() => removeAlert(alert.id)}
-          />
-        ))}
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
         <CompactPetNaming
           selectedPetType={selectedPetType}
           petName={petName}
@@ -285,21 +202,6 @@ export default function PetBuddy() {
             setChoosePet(true);
           }}
         />
-        <style jsx>{`
-          @keyframes slide-in {
-            from {
-              transform: translateX(100%);
-              opacity: 0;
-            }
-            to {
-              transform: translateX(0);
-              opacity: 1;
-            }
-          }
-          .animate-slide-in {
-            animation: slide-in 0.3s ease-out;
-          }
-        `}</style>
       </>
     );
   }
@@ -326,13 +228,7 @@ export default function PetBuddy() {
   // Compact Main Pet View
   return (
     <div>
-      {alerts.map(alert => (
-        <Alert 
-          key={alert.id} 
-          message={alert.message} 
-          onDismiss={() => removeAlert(alert.id)}
-        />
-      ))}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
       
       <CompactPetHeader 
         pet={pet} 
@@ -349,22 +245,6 @@ export default function PetBuddy() {
         onAction={handleAction}
         actionLoading={actionLoading}
       />
-
-      <style jsx>{`
-        @keyframes slide-in {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 }

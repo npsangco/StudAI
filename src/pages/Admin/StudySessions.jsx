@@ -1,14 +1,21 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Sidebar from "../../components/Sidebar";
+import ToastContainer from "../../components/ToastContainer";
+import { useToast } from "../../hooks/useToast";
+import ConfirmDialog from "../../components/ConfirmDialog";
+import { useConfirm } from "../../hooks/useConfirm";
+import { API_URL } from "../../config/api.config";
 
 export default function StudySessions() {
+    const { toasts, toast, removeToast } = useToast();
+    const { confirmState, confirm, closeConfirm } = useConfirm();
     const [sessions, setSessions] = useState([]);
 
     useEffect(() => {
         const fetchSessions = async () => {
             try {
-                const res = await axios.get("http://localhost:4000/api/admin/sessions", {
+                const res = await axios.get(`${API_URL}/api/admin/sessions`, {
                     withCredentials: true,
                 });
                 setSessions(res.data || []);
@@ -20,25 +27,46 @@ export default function StudySessions() {
     }, []);
 
     const handleEndSession = async (sessionId) => {
-        if (!window.confirm("End this study session?")) return;
-        try {
-            await axios.put(
-                `http://localhost:4000/api/admin/sessions/${sessionId}/end`,
-                {},
-                { withCredentials: true }
-            );
-            setSessions((prev) =>
-                prev.map((s) =>
-                    s.session_id === sessionId ? { ...s, status: "Ended" } : s
-                )
-            );
-        } catch (err) {
-            console.error("Failed to end session:", err);
-        }
+        await confirm({
+            title: 'End Session',
+            message: 'Are you sure you want to end this study session?',
+            confirmText: 'End Session',
+            cancelText: 'Cancel',
+            variant: 'warning',
+            onConfirm: async () => {
+                try {
+                    await axios.put(
+                        `${API_URL}/api/admin/sessions/${sessionId}/end`,
+                        {},
+                        { withCredentials: true }
+                    );
+                    setSessions((prev) =>
+                        prev.map((s) =>
+                            s.session_id === sessionId ? { ...s, status: "Ended" } : s
+                        )
+                    );
+                    toast.success("Session ended successfully!");
+                } catch (err) {
+                    console.error("Failed to end session:", err);
+                    toast.error("Failed to end session. Please try again.");
+                }
+            }
+        });
     };
 
     return (
         <div className="flex min-h-screen bg-gray-100">
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
+            <ConfirmDialog
+                isOpen={confirmState.isOpen}
+                onClose={closeConfirm}
+                onConfirm={confirmState.onConfirm}
+                title={confirmState.title}
+                message={confirmState.message}
+                confirmText={confirmState.confirmText}
+                cancelText={confirmState.cancelText}
+                variant={confirmState.variant}
+            />
             {/* Sidebar */}
             <div className="hidden md:block fixed top-0 left-0 h-screen">
 

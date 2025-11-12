@@ -17,6 +17,11 @@ const NOTE_CONFIG = {
     amount: 50,
     dailyCap: 3,
     capMessage: "Daily note limit reached (3/3). Come back tomorrow for more points!"
+  },
+  exp: {
+    create: 15,      // EXP for creating a note
+    aiSummary: 25,   // EXP for AI-generated summary (counts as create)
+    unlimited: true  // No daily cap on EXP
   }
 };
 
@@ -67,32 +72,33 @@ async function checkAndResetDailyCaps(userId) {
   return user;
 }
 
-async function logDailyStats(userId, activityType, points) {
+async function logDailyStats(userId, activityType, points, exp = 0) {
   const today = new Date().toISOString().split('T')[0];
   
   let dailyStat = await UserDailyStat.findOne({
-    where: { user_id: userId, stat_date: today }
+    where: { user_id: userId, last_reset_date: today }
   });
   
   if (!dailyStat) {
     dailyStat = await UserDailyStat.create({
       user_id: userId,
-      stat_date: today,
-      notes_created: 0,
-      quizzes_completed: 0,
-      tasks_added: 0,
-      points_earned: 0,
-      exp_earned: 0,
+      last_reset_date: today,
+      notes_created_today: 0,
+      quizzes_completed_today: 0,
+      planner_updates_today: 0,
+      points_earned_today: 0,
+      exp_earned_today: 0,
       streak_active: false
     });
   }
   
   const updates = {
-    points_earned: dailyStat.points_earned + points
+    points_earned_today: dailyStat.points_earned_today + points,
+    exp_earned_today: dailyStat.exp_earned_today + exp
   };
   
   if (activityType === 'note') {
-    updates.notes_created = dailyStat.notes_created + 1;
+    updates.notes_created_today = dailyStat.notes_created_today + 1;
   }
   
   await dailyStat.update(updates);
@@ -106,6 +112,53 @@ async function checkAchievements(userId) {
   } catch (err) {
     console.log('Achievement service not available');
     return [];
+  }
+}
+
+async function awardPetExp(userId, expAmount) {
+  try {
+    const PetCompanion = (await import('../models/PetCompanion.js')).default;
+    const pet = await PetCompanion.findOne({ where: { user_id: userId } });
+    
+    if (!pet) {
+      return null; // User hasn't adopted a pet yet
+    }
+
+    // Max level is 50
+    if (pet.level >= 50) {
+      return { leveledUp: false, currentLevel: 50, message: 'Pet is at max level!' };
+    }
+
+    let newExp = pet.experience_points + expAmount;
+    let newLevel = pet.level;
+    let levelsGained = 0;
+    
+    // EXP formula: 100 × 1.08^(level-1)
+    const getExpNeeded = (level) => Math.floor(100 * Math.pow(1.08, level - 1));
+    let expNeeded = getExpNeeded(newLevel);
+
+    while (newExp >= expNeeded && newLevel < 50) {
+      newExp -= expNeeded;
+      newLevel++;
+      levelsGained++;
+      expNeeded = getExpNeeded(newLevel);
+    }
+
+    await pet.update({
+      experience_points: newExp,
+      level: newLevel,
+      last_updated: new Date()
+    });
+
+    return {
+      leveledUp: levelsGained > 0,
+      levelsGained,
+      currentLevel: newLevel,
+      expGained: expAmount
+    };
+  } catch (err) {
+    console.error('Failed to award pet EXP:', err);
+    return null;
   }
 }
 
@@ -231,8 +284,10 @@ router.post('/create', requireAuth, async (req, res) => {
 
     // Award points if under daily cap
     let pointsEarned = 0;
+    let expEarned = NOTE_CONFIG.exp.create; // Always award EXP (15)
     let dailyCapReached = false;
     let remainingNotes = 0;
+    let petLevelUp = null;
     
     // Handle case where daily_notes_count might be undefined
     const currentNoteCount = user.daily_notes_count || 0;
@@ -266,8 +321,8 @@ router.post('/create', requireAuth, async (req, res) => {
       // Calculate remaining notes with updated count
       remainingNotes = Math.max(0, NOTE_CONFIG.points.dailyCap - updatedNoteCount);
       
-      // Log daily stats
-      await logDailyStats(userId, 'note', pointsEarned);
+      // Log daily stats with EXP
+      await logDailyStats(userId, 'note', pointsEarned, expEarned);
       
       // Check achievements
       await checkAchievements(userId);
@@ -275,6 +330,9 @@ router.post('/create', requireAuth, async (req, res) => {
       dailyCapReached = true;
       remainingNotes = 0;
     }
+
+    // Award EXP to pet (always, even if points cap reached)
+    petLevelUp = await awardPetExp(userId, expEarned);
 
     // Fetch the note with category info
     const noteWithCategory = await Note.findOne({
@@ -299,11 +357,13 @@ router.post('/create', requireAuth, async (req, res) => {
     res.status(201).json({ 
       note: noteWithExtras,
       pointsEarned,
+      expEarned,
+      petLevelUp,
       dailyCapReached,
       remainingNotes: remainingNotes,
       message: dailyCapReached 
-        ? NOTE_CONFIG.points.capMessage 
-        : `Note created! Earned ${pointsEarned} points!`
+        ? `${NOTE_CONFIG.points.capMessage} (Still earned ${expEarned} EXP!)`
+        : `Note created! Earned ${pointsEarned} points and ${expEarned} EXP!`
     });
   } catch (err) {
     console.error('Failed to create note:', err);

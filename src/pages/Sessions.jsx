@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Video, LogOut, Clock, Copy, Check, RefreshCw, Lock, Globe, Trash2, Eye, EyeOff } from 'lucide-react';
+import ToastContainer from '../components/ToastContainer';
+import { useToast } from '../hooks/useToast';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useConfirm } from '../hooks/useConfirm';
+import { API_URL } from '../config/api.config';
 
 const Sessions = () => {
+  const { toasts, toast, removeToast } = useToast();
+  const { confirmState, confirm, closeConfirm } = useConfirm();
   const [user, setUser] = useState(null);
   const [mySessions, setMySessions] = useState([]);
   const [publicSessions, setPublicSessions] = useState([]);
@@ -25,7 +32,7 @@ const Sessions = () => {
     session_password: ''
   });
 
-  const API_BASE_URL = 'http://localhost:4000/api';
+  const API_BASE_URL = `${API_URL}/api`;
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -33,13 +40,12 @@ const Sessions = () => {
     const error = urlParams.get('error');
     
     if (zoomConnected) {
-      setSuccess('Successfully connected to Zoom!');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Successfully connected to Zoom!');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
     if (error) {
-      setError(`Zoom connection failed: ${error}`);
+      toast.error(`Zoom connection failed: ${error}`);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -109,7 +115,6 @@ const Sessions = () => {
 
   const handleZoomConnect = async () => {
     setLoading(true);
-    setError('');
     
     try {
       const response = await fetch(`${API_BASE_URL}/sessions/zoom/connect`, {
@@ -123,26 +128,34 @@ const Sessions = () => {
       const data = await response.json();
       window.location.href = data.authUrl;
     } catch (err) {
-      setError('Failed to connect to Zoom. Please try again.', err);
+      toast.error('Failed to connect to Zoom. Please try again.');
       setLoading(false);
     }
   };
 
   const handleDisconnectZoom = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/sessions/zoom/disconnect`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        setZoomConnected(false);
-        setSuccess('Zoom disconnected successfully');
-        setTimeout(() => setSuccess(''), 3000);
+    await confirm({
+      title: 'Disconnect Zoom',
+      message: 'Are you sure you want to disconnect from Zoom? You will need to reconnect to create new sessions.',
+      confirmText: 'Disconnect',
+      cancelText: 'Cancel',
+      variant: 'warning',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/sessions/zoom/disconnect`, {
+            method: 'DELETE',
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            setZoomConnected(false);
+            toast.success('Zoom disconnected successfully');
+          }
+        } catch (err) {
+          toast.error('Failed to disconnect Zoom');
+        }
       }
-    } catch (err) {
-      setError('Failed to disconnect Zoom', err);
-    }
+    });
   };
 
   const handleInputChange = (e) => {
@@ -156,7 +169,6 @@ const Sessions = () => {
   const createSession = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       const response = await fetch(`${API_BASE_URL}/sessions/create`, {
@@ -181,7 +193,7 @@ const Sessions = () => {
 
       const data = await response.json();
       
-      setSuccess(data.message);
+      toast.success(data.message);
       
       // Reset form
       setSessionForm({
@@ -197,10 +209,8 @@ const Sessions = () => {
       if (!sessionForm.is_private) {
         await loadPublicSessions();
       }
-      
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -227,45 +237,49 @@ const Sessions = () => {
       setUnlockedSession(data.session);
       setShowPasswordModal(false);
       setPasswordInput('');
-      setSuccess('Session unlocked!');
-      setTimeout(() => setSuccess(''), 2000);
+      toast.success('Session unlocked!');
     } catch (err) {
-      setError(err.message);
-      setTimeout(() => setError(''), 3000);
+      toast.error(err.message);
     }
   };
 
   const handleDeleteSession = async (sessionId) => {
-    if (!confirm('Are you sure you want to delete this session?')) return;
+    await confirm({
+      title: 'Delete Session',
+      message: 'Are you sure you want to delete this session? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+          });
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        setSuccess('Session deleted successfully');
-        await loadMySessions();
-        await loadPublicSessions();
-        setTimeout(() => setSuccess(''), 2000);
+          if (response.ok) {
+            toast.success('Session deleted successfully');
+            await loadMySessions();
+            await loadPublicSessions();
+          }
+        } catch (err) {
+          toast.error('Failed to delete session');
+        }
       }
-    } catch (err) {
-      setError('Failed to delete session', err);
-    }
+    });
   };
 
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
     setCopiedUrl(id);
+    toast.success('Link copied to clipboard!');
     setTimeout(() => setCopiedUrl(''), 2000);
   };
 
   const refreshSessions = async () => {
     await loadMySessions();
     await loadPublicSessions();
-    setSuccess('Sessions refreshed!');
-    setTimeout(() => setSuccess(''), 2000);
+    toast.success('Sessions refreshed!');
   };
 
   const renderSessionCard = (session, isMine = false) => {
@@ -418,6 +432,17 @@ const Sessions = () => {
 
   return (
     <div className="min-h-screen p-4">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        onClose={closeConfirm}
+        onConfirm={confirmState.onConfirm}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+        variant={confirmState.variant}
+      />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
@@ -462,19 +487,6 @@ const Sessions = () => {
             </div>
           </div>
         </div>
-
-        {/* Messages */}
-        {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-            {success}
-          </div>
-        )}
-        
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
-          </div>
-        )}
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Create Session Form */}

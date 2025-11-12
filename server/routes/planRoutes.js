@@ -16,6 +16,10 @@ const PLAN_CONFIG = {
     perTask: 30,
     dailyCap: 3,
     capMessage: "Daily task points limit reached (3/3). You can still complete tasks but won't earn points until tomorrow!"
+  },
+  exp: {
+    perTask: 15,  // EXP for completing a task (unlimited)
+    unlimited: true
   }
 };
 
@@ -123,6 +127,73 @@ async function updateUserStreak(userId) {
   return user.study_streak;
 }
 
+async function awardPetExp(userId, expAmount) {
+  try {
+    // Load PetCompanion model dynamically
+    const { PetCompanion } = await import('../models/PetCompanion.js');
+    
+    const pet = await PetCompanion.findOne({ where: { user_id: userId } });
+    
+    if (!pet) {
+      return null; // No pet adopted
+    }
+    
+    const currentExp = pet.experience || 0;
+    const currentLevel = pet.level || 1;
+    
+    // Calculate EXP needed for next level using formula: 100 * 1.08^(level-1)
+    function expForLevel(level) {
+      return Math.floor(100 * Math.pow(1.08, level - 1));
+    }
+    
+    let newExp = currentExp + expAmount;
+    let newLevel = currentLevel;
+    let levelsGained = 0;
+    
+    // Handle multiple level-ups
+    while (newLevel < 50) {
+      const expNeeded = expForLevel(newLevel);
+      if (newExp >= expNeeded) {
+        newExp -= expNeeded;
+        newLevel++;
+        levelsGained++;
+      } else {
+        break;
+      }
+    }
+    
+    // Cap at level 50
+    if (newLevel > 50) {
+      newLevel = 50;
+      newExp = 0;
+    }
+    
+    await pet.update({
+      experience: newExp,
+      level: newLevel
+    });
+    
+    if (levelsGained > 0) {
+      return {
+        leveledUp: true,
+        levelsGained,
+        currentLevel: newLevel,
+        expGained: expAmount
+      };
+    }
+    
+    return {
+      leveledUp: false,
+      levelsGained: 0,
+      currentLevel: newLevel,
+      expGained: expAmount
+    };
+  } catch (err) {
+    console.error('Error awarding pet EXP:', err);
+    return null;
+  }
+}
+
 // ============================================
 // PLAN ROUTES (Updated with Daily Points Limit)
 // ============================================
@@ -196,6 +267,8 @@ router.put('/:id', requireAuth, async (req, res) => {
     };
 
     let pointsAwarded = 0;
+    let expAwarded = 0;
+    let petLevelUp = null;
     let wasNewlyCompleted = false;
     let dailyCapReached = false;
 
@@ -209,10 +282,13 @@ router.put('/:id', requireAuth, async (req, res) => {
         updateData.completed_at = new Date();
         wasNewlyCompleted = true;
         
+        // Always award EXP (unlimited)
+        expAwarded = PLAN_CONFIG.exp.perTask;
+        
         // CHECK DAILY POINTS LIMIT (but don't block completion)
         if (user.daily_tasks_count >= PLAN_CONFIG.points.dailyCap) {
           dailyCapReached = true;
-          console.log(`[Planner] Plan ${planId} marked as completed - daily limit reached, no points awarded`);
+          console.log(`[Planner] Plan ${planId} marked as completed - daily limit reached, no points awarded (still earned ${expAwarded} EXP)`);
         } else {
           // AWARD POINTS AND UPDATE STATS (only if under daily limit)
           const TASK_POINTS = PLAN_CONFIG.points.perTask;
@@ -227,11 +303,12 @@ router.put('/:id', requireAuth, async (req, res) => {
           // Update user daily task count
           await user.increment('daily_tasks_count', { transaction });
           
-          // Update user_daily_stats
+          // Update user_daily_stats with both points and EXP
           await UserDailyStat.upsert({
             user_id: userId,
             planner_updates_today: sequelize.literal('COALESCE(planner_updates_today, 0) + 1'),
             points_earned_today: sequelize.literal(`COALESCE(points_earned_today, 0) + ${TASK_POINTS}`),
+            exp_earned_today: sequelize.literal(`COALESCE(exp_earned_today, 0) + ${expAwarded}`),
             last_reset_date: new Date().toISOString().split('T')[0]
           }, {
             transaction,
@@ -239,8 +316,11 @@ router.put('/:id', requireAuth, async (req, res) => {
           });
           
           pointsAwarded = TASK_POINTS;
-          console.log(`[Planner] Awarded ${TASK_POINTS} points for completing task (${user.daily_tasks_count + 1}/3 daily)`);
+          console.log(`[Planner] Awarded ${TASK_POINTS} points and ${expAwarded} EXP for completing task (${user.daily_tasks_count + 1}/3 daily)`);
         }
+        
+        // Award EXP to pet (always, even if points cap reached)
+        // Note: Must happen after transaction commit, so we'll do it outside
         
         // Update streak regardless of points limit
         await updateUserStreak(userId);
@@ -253,6 +333,11 @@ router.put('/:id', requireAuth, async (req, res) => {
 
     await plan.update(updateData, { transaction });
     await transaction.commit();
+
+    // Award EXP to pet after transaction (even if points cap reached)
+    if (wasNewlyCompleted && expAwarded > 0) {
+      petLevelUp = await awardPetExp(userId, expAwarded);
+    }
 
     // Check achievements after successful completion (even without points)
     if (wasNewlyCompleted) {
@@ -269,11 +354,13 @@ router.put('/:id', requireAuth, async (req, res) => {
     res.json({ 
       plan,
       points_awarded: pointsAwarded,
+      exp_awarded: expAwarded,
+      petLevelUp,
       dailyCapReached: dailyCapReached,
       message: dailyCapReached 
-        ? PLAN_CONFIG.points.capMessage
+        ? `${PLAN_CONFIG.points.capMessage} (Still earned ${expAwarded} EXP!)`
         : pointsAwarded > 0 
-          ? `Task completed! +${pointsAwarded} points` 
+          ? `Task completed! +${pointsAwarded} points and +${expAwarded} EXP!` 
           : 'Task updated',
       remainingTasks: PLAN_CONFIG.points.dailyCap - updatedUser.daily_tasks_count
     });

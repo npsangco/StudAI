@@ -2,14 +2,21 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Edit3, Trash2 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+import ToastContainer from "../../components/ToastContainer";
+import { useToast } from "../../hooks/useToast";
+import ConfirmDialog from "../../components/ConfirmDialog";
+import { useConfirm } from "../../hooks/useConfirm";
+import { API_URL } from "../../config/api.config";
 
 export default function QuizManagement() {
+    const { toasts, toast, removeToast } = useToast();
+    const { confirmState, confirm, closeConfirm } = useConfirm();
     const [quizzes, setQuizzes] = useState([]);
 
     useEffect(() => {
         const fetchQuizzes = async () => {
             try {
-                const res = await axios.get("http://localhost:4000/api/admin/quizzes", {
+                const res = await axios.get(`${API_URL}/api/admin/quizzes`, {
                     withCredentials: true,
                 });
                 setQuizzes(res.data || []);
@@ -26,19 +33,40 @@ export default function QuizManagement() {
     };
 
     const handleDelete = async (quizId) => {
-        if (!window.confirm("Are you sure you want to delete this quiz?")) return;
-        try {
-            await axios.delete(`http://localhost:4000/api/admin/quizzes/${quizId}`, {
-                withCredentials: true,
-            });
-            setQuizzes((prev) => prev.filter((q) => q.quiz_id !== quizId));
-        } catch (err) {
-            console.error("Failed to delete quiz:", err);
-        }
+        await confirm({
+            title: 'Delete Quiz',
+            message: 'Are you sure you want to delete this quiz? This action cannot be undone.',
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            variant: 'danger',
+            onConfirm: async () => {
+                try {
+                    await axios.delete(`${API_URL}/api/admin/quizzes/${quizId}`, {
+                        withCredentials: true,
+                    });
+                    setQuizzes((prev) => prev.filter((q) => q.quiz_id !== quizId));
+                    toast.success("Quiz deleted successfully!");
+                } catch (err) {
+                    console.error("Failed to delete quiz:", err);
+                    toast.error("Failed to delete quiz. Please try again.");
+                }
+            }
+        });
     };
 
     return (
         <div className="flex min-h-screen bg-gray-100">
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
+            <ConfirmDialog
+                isOpen={confirmState.isOpen}
+                onClose={closeConfirm}
+                onConfirm={confirmState.onConfirm}
+                title={confirmState.title}
+                message={confirmState.message}
+                confirmText={confirmState.confirmText}
+                cancelText={confirmState.cancelText}
+                variant={confirmState.variant}
+            />
             {/* Sidebar */}
             <div className="hidden md:block fixed top-0 left-0 h-screen">
                 <Sidebar />

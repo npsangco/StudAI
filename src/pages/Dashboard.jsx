@@ -3,6 +3,9 @@ import axios from 'axios';
 import TextExtractor from '../components/TextExtractor';
 import PetBuddy from '../components/PetBuddy';
 import AchievementsModal from '../components/AchievementsModal';
+import ToastContainer from '../components/ToastContainer';
+import { useToast } from '../hooks/useToast';
+import { API_URL } from '../config/api.config';
 import { FileText, BookOpen, Trophy, TrendingUp, Clock, Calendar, Target, Zap } from 'lucide-react';
 
 export default function Dashboard() {
@@ -27,11 +30,13 @@ export default function Dashboard() {
     completedQuizzes: 0,
     studyStreak: 0
   });
+  
+  const { toasts, removeToast, toast } = useToast();
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get("http://localhost:4000/api/user/profile", {
+        const res = await axios.get(`${API_URL}/api/user/profile`, {
           withCredentials: true,
         });
         setUser(res.data);
@@ -53,7 +58,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchEquippedAchievement = async () => {
       try {
-        const res = await axios.get("http://localhost:4000/api/achievements", {
+        const res = await axios.get(`${API_URL}/api/achievements`, {
           withCredentials: true,
         });
         
@@ -72,7 +77,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchRecentAchievements = async () => {
       try {
-        const res = await axios.get("http://localhost:4000/api/achievements/unlocked", {
+        const res = await axios.get(`${API_URL}/api/achievements/unlocked`, {
           withCredentials: true,
         });
         
@@ -94,7 +99,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const res = await axios.get("http://localhost:4000/api/plans", { withCredentials: true });
+        const res = await axios.get(`${API_URL}/api/plans`, { withCredentials: true });
         if (Array.isArray(res.data.plans)) {
           const withDueDate = res.data.plans
             .filter(p => p.due_date)
@@ -113,7 +118,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchRecentNotes = async () => {
       try {
-        const res = await axios.get("http://localhost:4000/api/notes", { withCredentials: true });
+        const res = await axios.get(`${API_URL}/api/notes`, { withCredentials: true });
         if (Array.isArray(res.data.notes)) {
           const sortedNotes = res.data.notes
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -132,12 +137,12 @@ export default function Dashboard() {
     const fetchQuizData = async () => {
       try {
         // Fetch available quizzes
-        const quizRes = await axios.get("http://localhost:4000/api/quizzes", { 
+        const quizRes = await axios.get(`${API_URL}/api/quizzes`, { 
           withCredentials: true 
         });
         
         // Fetch actual quiz attempts count
-        const attemptsRes = await axios.get("http://localhost:4000/api/quiz-attempts/count", { 
+        const attemptsRes = await axios.get(`${API_URL}/api/quiz-attempts/count`, { 
           withCredentials: true 
         });
         
@@ -312,12 +317,12 @@ Please format the summary in a clear, organized manner with proper headings and 
 
   const handleUploadAndGenerate = async () => {
     if (uploadedFiles.length === 0) {
-      alert("No file selected!");
+      toast.error("No file selected!");
       return;
     }
 
     if (!extractedContent) {
-      alert("Content extraction incomplete. Please wait.");
+      toast.warning("Content extraction incomplete. Please wait.");
       return;
     }
 
@@ -336,7 +341,7 @@ Please format the summary in a clear, organized manner with proper headings and 
       const formData = new FormData();
       formData.append("myFile", uploadedFiles[0]);
 
-      const uploadRes = await axios.post("http://localhost:4000/api/upload", formData, {
+      const uploadRes = await axios.post(`${API_URL}/api/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
         withCredentials: true
       });
@@ -356,14 +361,14 @@ Please format the summary in a clear, organized manner with proper headings and 
       };
 
       const summaryRes = await axios.post(
-        "http://localhost:4000/api/generate-summary",
+        `${API_URL}/api/generate-summary`,
         payload,
         { withCredentials: true }
       );
 
       console.log("Summary saved to backend:", summaryRes.data);
 
-      alert("Summary generated and saved successfully!");
+      toast.success("Summary generated and saved successfully!");
       
       // Clear the uploaded files and reset state
       setUploadedFiles([]);
@@ -371,7 +376,7 @@ Please format the summary in a clear, organized manner with proper headings and 
       setRestriction({ uploaded: false, openai: false });
 
       // Refresh recent notes
-      const notesRes = await axios.get("http://localhost:4000/api/notes", { withCredentials: true });
+      const notesRes = await axios.get(`${API_URL}/api/notes`, { withCredentials: true });
       if (Array.isArray(notesRes.data.notes)) {
         const sortedNotes = notesRes.data.notes
           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -385,16 +390,16 @@ Please format the summary in a clear, organized manner with proper headings and 
       
       if (err.response) {
         if (err.response.status === 409) {
-          alert("File with the same name already exists. Please rename your file.");
+          toast.error("File with the same name already exists. Please rename your file.");
         } else if (err.response.status === 401) {
-          alert("You must be logged in to upload files.");
+          toast.error("You must be logged in to upload files.");
         } else {
-          alert(`Upload failed: ${err.response.data.error || err.message}`);
+          toast.error(`Upload failed: ${err.response.data.error || err.message}`);
         }
       } else if (err.message.includes("OpenAI")) {
-        alert("AI summarization failed. Please check your API key and try again.");
+        toast.error("AI summarization failed. Please check your API key and try again.");
       } else {
-        alert("Network error, please try again later.");
+        toast.error("Network error, please try again later.");
       }
     } finally {
       setIsGenerating(false);
@@ -491,6 +496,8 @@ Please format the summary in a clear, organized manner with proper headings and 
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+      
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

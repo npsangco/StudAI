@@ -1046,9 +1046,71 @@ app.post("/api/generate-summary", async (req, res) => {
             content: content
         });
 
+        // Award 25 EXP for AI-generated summaries (no points, this doesn't count toward daily cap)
+        const AI_SUMMARY_EXP = 25;
+        let petLevelUp = null;
+
+        try {
+            // Load PetCompanion model dynamically
+            const { PetCompanion } = await import('./models/PetCompanion.js');
+            
+            const pet = await PetCompanion.findOne({ where: { user_id: userId } });
+            
+            if (pet) {
+                const currentExp = pet.experience || 0;
+                const currentLevel = pet.level || 1;
+                
+                // Calculate EXP needed for next level using formula: 100 * 1.08^(level-1)
+                function expForLevel(level) {
+                    return Math.floor(100 * Math.pow(1.08, level - 1));
+                }
+                
+                let newExp = currentExp + AI_SUMMARY_EXP;
+                let newLevel = currentLevel;
+                let levelsGained = 0;
+                
+                // Handle multiple level-ups
+                while (newLevel < 50) {
+                    const expNeeded = expForLevel(newLevel);
+                    if (newExp >= expNeeded) {
+                        newExp -= expNeeded;
+                        newLevel++;
+                        levelsGained++;
+                    } else {
+                        break;
+                    }
+                }
+                
+                // Cap at level 50
+                if (newLevel > 50) {
+                    newLevel = 50;
+                    newExp = 0;
+                }
+                
+                await pet.update({
+                    experience: newExp,
+                    level: newLevel
+                });
+                
+                if (levelsGained > 0) {
+                    petLevelUp = {
+                        leveledUp: true,
+                        levelsGained,
+                        currentLevel: newLevel,
+                        expGained: AI_SUMMARY_EXP
+                    };
+                }
+            }
+        } catch (petError) {
+            console.error('Error awarding pet EXP:', petError);
+            // Don't fail the request if pet EXP fails
+        }
+
         res.json({
             message: "Summary generated successfully",
-            note: newNote
+            note: newNote,
+            expEarned: AI_SUMMARY_EXP,
+            petLevelUp
         });
 
     } catch (err) {
@@ -1078,6 +1140,29 @@ app.get('/api/quiz-attempts/count', async (req, res) => {
         console.error('Error fetching quiz attempts count:', err);
         res.status(500).json({ error: 'Failed to fetch quiz attempts count' });
     }
+});
+
+// ----------------- HEALTH CHECK ENDPOINT -----------------
+app.get('/health', async (req, res) => {
+    const health = {
+        uptime: process.uptime(),
+        timestamp: Date.now(),
+        status: 'OK',
+        environment: process.env.NODE_ENV || 'development'
+    };
+
+    try {
+        // Test database connection
+        await sequelize.authenticate();
+        health.database = 'connected';
+    } catch (error) {
+        health.database = 'disconnected';
+        health.status = 'ERROR';
+        console.error('Health check - Database connection failed:', error);
+    }
+
+    const statusCode = health.status === 'OK' ? 200 : 503;
+    res.status(statusCode).json(health);
 });
 
 // ----------------- START SERVER -----------------

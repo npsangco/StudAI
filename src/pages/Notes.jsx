@@ -8,6 +8,10 @@ import NoteEditor from '../components/NoteEditor';
 import Chatbot from '../components/Chatbot';
 import { notesApi, sharedNotesApi } from '../api/api';
 import { exportNoteToPDF, exportMultipleNotesToPDF } from '../utils/pdfExport';
+import ToastContainer from '../components/ToastContainer';
+import { useToast } from '../hooks/useToast';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useConfirm } from '../hooks/useConfirm';
 
 const Notes = () => {
   const [notes, setNotes] = useState([]);
@@ -34,6 +38,9 @@ const Notes = () => {
   // PDF Export states
   const [exportMode, setExportMode] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState(new Set());
+  
+  const { toasts, removeToast, toast } = useToast();
+  const { confirmState, confirm, closeConfirm } = useConfirm();
 
   useEffect(() => {
     fetchNotesFromDatabase();
@@ -126,7 +133,9 @@ const Notes = () => {
       });
 
       if (result.queued) {
-        alert('📱 Offline: Note will sync when back online');
+        toast.info('📱 Offline: Note will sync when back online');
+      } else {
+        toast.success('Note created successfully!');
       }
       
       setNewNoteTitle('');
@@ -136,7 +145,7 @@ const Notes = () => {
       await fetchNotesFromDatabase();
     } catch (error) {
       console.error('Error creating note:', error);
-      alert('Failed to create note. Please try again.');
+      toast.error('Failed to create note. Please try again.');
     }
   };
 
@@ -148,10 +157,11 @@ const Notes = () => {
         category_id: updatedNote.categoryId || null
       });
       
+      toast.success('Note updated successfully!');
       await fetchNotesFromDatabase();
     } catch (error) {
       console.error('Error updating note:', error);
-      alert('Failed to update note. Please try again.');
+      toast.error('Failed to update note. Please try again.');
     }
   };
 
@@ -184,21 +194,32 @@ const Notes = () => {
       
       await cacheSingleNote(mappedNote);
       
+      toast.success('Category updated successfully!');
       setShowCategoryPicker(null);
     } catch (error) {
       console.error('Error changing category:', error);
-      alert('Failed to change category. Please try again.');
+      toast.error('Failed to change category. Please try again.');
     }
   };
 
   const deleteNote = async (id) => {
-    try {
-      await notesService.deleteNote(id);
-      await fetchNotesFromDatabase();
-    } catch (error) {
-      console.error('Error deleting note:', error);
-      alert('Failed to delete note. Please try again.');
-    }
+    await confirm({
+      title: 'Delete Note',
+      message: 'Are you sure you want to delete this note? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await notesService.deleteNote(id);
+          toast.success('Note deleted successfully!');
+          await fetchNotesFromDatabase();
+        } catch (error) {
+          console.error('Error deleting note:', error);
+          toast.error('Failed to delete note. Please try again.');
+        }
+      }
+    });
   };
 
   const pinNote = async (id) => {
@@ -224,9 +245,10 @@ const Notes = () => {
       );
       
       await cacheSingleNote(updatedNote);
+      toast.success('Note pinned!');
     } catch (error) {
       console.error('Error pinning note:', error);
-      alert('Failed to pin note. Please try again.');
+      toast.error('Failed to pin note. Please try again.');
     }
   };
 
@@ -253,9 +275,10 @@ const Notes = () => {
       );
       
       await cacheSingleNote(updatedNote);
+      toast.success('Note unpinned!');
     } catch (error) {
       console.error('Error unpinning note:', error);
-      alert('Failed to unpin note. Please try again.');
+      toast.error('Failed to unpin note. Please try again.');
     }
   };
 
@@ -264,44 +287,49 @@ const Notes = () => {
       const response = await notesApi.share(id);
 
       navigator.clipboard.writeText(response.data.shareCode)
-        .then(() => alert(`✅ Share code copied: ${response.data.shareCode}\n\nShare this code with others!`))
-        .catch(() => alert(`Share code: ${response.data.shareCode}\n\nCopy this code to share your note.`));
+        .then(() => toast.success(`Share code copied: ${response.data.shareCode}\n\nShare this code with others!`))
+        .catch(() => toast.info(`Share code: ${response.data.shareCode}\n\nCopy this code to share your note.`));
 
       fetchMyShares();
     } catch (error) {
       console.error('Error sharing note:', error);
       const errorMsg = error.response?.data?.error || 'Failed to share note';
-      alert(`❌ ${errorMsg}`);
+      toast.error(errorMsg);
     }
   };
 
   const stopSharing = async (noteId) => {
-    if (!confirm('Stop sharing this note? The share code will no longer work.')) {
-      return;
-    }
-
-    try {
-      await notesApi.stopSharing(noteId);
-      alert('✅ Share deactivated successfully');
-      fetchMyShares();
-    } catch (error) {
-      console.error('Error stopping share:', error);
-      const errorMsg = error.response?.data?.error || 'Unknown error';
-      alert(`❌ Failed to stop sharing: ${errorMsg}`);
-    }
+    await confirm({
+      title: 'Stop Sharing',
+      message: 'Stop sharing this note? The share code will no longer work.',
+      confirmText: 'Stop Sharing',
+      cancelText: 'Cancel',
+      variant: 'warning',
+      onConfirm: async () => {
+        try {
+          await notesApi.stopSharing(noteId);
+          toast.success('Share deactivated successfully');
+          fetchMyShares();
+        } catch (error) {
+          console.error('Error stopping share:', error);
+          const errorMsg = error.response?.data?.error || 'Unknown error';
+          toast.error(`Failed to stop sharing: ${errorMsg}`);
+        }
+      }
+    });
   };
 
   const copyShareCode = (code) => {
     navigator.clipboard.writeText(code)
-      .then(() => alert(`✅ Share code copied: ${code}`))
-      .catch(() => alert(`Share code: ${code}`));
+      .then(() => toast.success(`Share code copied: ${code}`))
+      .catch(() => toast.info(`Share code: ${code}`));
   };
 
   const handleShareLinkSubmit = async () => {
     const code = shareLink.trim().toUpperCase();
     
     if (!code || code.length !== 6) {
-      alert('⚠️ Please enter a valid 6-character share code');
+      toast.warning('Please enter a valid 6-character share code');
       return;
     }
 
@@ -309,18 +337,18 @@ const Notes = () => {
       await sharedNotesApi.retrieve(code);
       
       setShareLink('');
-      alert('✅ Shared note added to your notes!');
+      toast.success('Shared note added to your notes!');
       fetchNotesFromDatabase();
     } catch (error) {
       console.error('Error retrieving shared note:', error);
       const errorMsg = error.response?.data?.error;
       
       if (errorMsg === "You already have this shared note") {
-        alert('You already have this note in your collection.');
+        toast.info('You already have this note in your collection.');
       } else if (errorMsg === "Shared note not found or expired") {
-        alert('Invalid share code. Please check and try again.');
+        toast.error('Invalid share code. Please check and try again.');
       } else {
-        alert(`Error: ${errorMsg || 'Failed to retrieve shared note'}`);
+        toast.error(`Error: ${errorMsg || 'Failed to retrieve shared note'}`);
       }
     }
   };
@@ -360,9 +388,10 @@ const Notes = () => {
       setCategories([...categories, response.data.category]);
       setNewCategoryName('');
       setShowCategoryModal(false);
+      toast.success('Category created successfully!');
     } catch (error) {
       console.error('Error creating category:', error);
-      alert('Failed to create category. It may already exist.');
+      toast.error('Failed to create category. It may already exist.');
     }
   };
 
@@ -391,7 +420,7 @@ const Notes = () => {
 
   const handleExportPDF = () => {
     if (selectedNotes.size === 0) {
-      alert('Please select at least one note to export');
+      toast.warning('Please select at least one note to export');
       return;
     }
 
@@ -400,18 +429,18 @@ const Notes = () => {
     if (notesToExport.length === 1) {
       const result = exportNoteToPDF(notesToExport[0]);
       if (result.success) {
-        alert(`✅ PDF exported successfully!\n\nFile: ${result.fileName}`);
+        toast.success(`PDF exported successfully!\n\nFile: ${result.fileName}`);
         cancelExportMode();
       } else {
-        alert(`❌ Export failed: ${result.error}`);
+        toast.error(`Export failed: ${result.error}`);
       }
     } else {
       const result = exportMultipleNotesToPDF(notesToExport);
       if (result.success) {
-        alert(`✅ ${result.count} notes exported successfully!\n\nFile: ${result.fileName}`);
+        toast.success(`${result.count} notes exported successfully!\n\nFile: ${result.fileName}`);
         cancelExportMode();
       } else {
-        alert(`❌ Export failed: ${result.error}`);
+        toast.error(`Export failed: ${result.error}`);
       }
     }
   };
@@ -749,9 +778,9 @@ const Notes = () => {
         onExport={(note) => {
           const result = exportNoteToPDF(note);
           if (result.success) {
-          alert(`✅ PDF exported successfully!\n\nFile: ${result.fileName}`);
+          toast.success(`PDF exported successfully!\n\nFile: ${result.fileName}`);
           } else {
-          alert(`❌ Export failed: ${result.error}`);
+          toast.error(`Export failed: ${result.error}`);
           }
         }}
       />
@@ -760,6 +789,18 @@ const Notes = () => {
 
   return (
     <div className="min-h-screen p-3 sm:p-4 md:p-6">
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        onClose={closeConfirm}
+        onConfirm={confirmState.onConfirm}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+        variant={confirmState.variant}
+      />
+      
       <div className="max-w-7xl mx-auto">
         {/* Export Mode Banner */}
         {exportMode && (

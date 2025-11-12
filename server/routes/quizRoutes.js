@@ -147,6 +147,73 @@ async function checkAchievements(userId) {
   }
 }
 
+async function awardPetExp(userId, expAmount) {
+  try {
+    // Load PetCompanion model dynamically
+    const { PetCompanion } = await import('../models/PetCompanion.js');
+    
+    const pet = await PetCompanion.findOne({ where: { user_id: userId } });
+    
+    if (!pet) {
+      return null; // No pet adopted
+    }
+    
+    const currentExp = pet.experience || 0;
+    const currentLevel = pet.level || 1;
+    
+    // Calculate EXP needed for next level using formula: 100 * 1.08^(level-1)
+    function expForLevel(level) {
+      return Math.floor(100 * Math.pow(1.08, level - 1));
+    }
+    
+    let newExp = currentExp + expAmount;
+    let newLevel = currentLevel;
+    let levelsGained = 0;
+    
+    // Handle multiple level-ups
+    while (newLevel < 50) {
+      const expNeeded = expForLevel(newLevel);
+      if (newExp >= expNeeded) {
+        newExp -= expNeeded;
+        newLevel++;
+        levelsGained++;
+      } else {
+        break;
+      }
+    }
+    
+    // Cap at level 50
+    if (newLevel > 50) {
+      newLevel = 50;
+      newExp = 0;
+    }
+    
+    await pet.update({
+      experience: newExp,
+      level: newLevel
+    });
+    
+    if (levelsGained > 0) {
+      return {
+        leveledUp: true,
+        levelsGained,
+        currentLevel: newLevel,
+        expGained: expAmount
+      };
+    }
+    
+    return {
+      leveledUp: false,
+      levelsGained: 0,
+      currentLevel: newLevel,
+      expGained: expAmount
+    };
+  } catch (err) {
+    console.error('Error awarding pet EXP:', err);
+    return null;
+  }
+}
+
 // ============================================
 // HELPER: Generate unique share code
 // ============================================
@@ -563,8 +630,9 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
 
     // Check if user has reached daily quiz cap
     if (user.daily_quizzes_count >= QUIZ_CONFIG.points.dailyCap) {
-      // Still allow quiz attempt but no points/exp
+      // Still allow quiz attempt and award EXP (no points though)
       const percentage = total_questions > 0 ? (score / total_questions * 100).toFixed(2) : 0;
+      const exp_earned = QUIZ_CONFIG.exp.formula(score, total_questions);
       
       const attempt = await QuizAttempt.create({
         quiz_id: quizId,
@@ -575,8 +643,11 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
         time_spent: time_spent || '0:00',
         answers: answers || null,
         points_earned: 0,
-        exp_earned: 0
+        exp_earned: exp_earned
       });
+
+      // Award EXP to pet (even though points cap reached)
+      const petLevelUp = await awardPetExp(userId, exp_earned);
 
       // Update quiz stats
       const quiz = await Quiz.findByPk(quizId);
@@ -595,9 +666,10 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       return res.status(200).json({
         attempt,
         points_earned: 0,
-        exp_earned: 0,
+        exp_earned: exp_earned,
+        petLevelUp,
         dailyCapReached: true,
-        message: QUIZ_CONFIG.points.capMessage,
+        message: `${QUIZ_CONFIG.points.capMessage} (Still earned ${exp_earned} EXP!)`,
         study_streak: user.study_streak
       });
     }
@@ -651,10 +723,14 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
     // Check achievements
     await checkAchievements(userId);
 
+    // Award EXP to pet
+    const petLevelUp = await awardPetExp(userId, exp_earned);
+
     res.status(201).json({
       attempt,
       points_earned,
       exp_earned,
+      petLevelUp,
       study_streak: streak,
       dailyCapReached: false,
       remainingQuizzes: QUIZ_CONFIG.points.dailyCap - user.daily_quizzes_count - 1,

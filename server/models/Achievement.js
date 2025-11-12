@@ -27,7 +27,12 @@ const Achievement = sequelize.define('Achievement', {
       'quizzes_completed',
       'battles_won',
       'files_uploaded',
-      'sessions_hosted'
+      'sessions_hosted',
+      'pet_level',
+      'times_fed',
+      'times_played',
+      'times_cleaned',
+      'pet_adopted'
     ),
     allowNull: false
   },

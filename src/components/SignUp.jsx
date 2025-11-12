@@ -2,7 +2,10 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE } from "./api";
+import { API_URL } from "../config/api.config";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import ToastContainer from "./ToastContainer";
+import { useToast } from "../hooks/useToast";
 
 const passwordRegex =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -20,6 +23,8 @@ function Signup() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const navigate = useNavigate();
+    
+    const { toasts, removeToast, toast } = useToast();
 
     const months = [
         { name: "January", value: 1 }, { name: "February", value: 2 },
@@ -47,19 +52,19 @@ function Signup() {
         e.preventDefault();
 
         if (password !== confirmPassword) {
-            alert("Passwords do not match!");
+            toast.error("Passwords do not match!");
             return;
         }
 
         if (!passwordRegex.test(password)) {
-            alert(
+            toast.error(
                 "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character."
             );
             return;
         }
 
         if (!month || !day || !year) {
-            alert("Please select a complete birthday!");
+            toast.warning("Please select a complete birthday!");
             return;
         }
 
@@ -80,22 +85,24 @@ function Signup() {
                 response.data?.message ||
                 "Signup successful. Please check your email to verify your account.";
 
-            alert(successMessage);
+            toast.success(successMessage);
             resetForm();
             navigate("/login");
         } catch (err) {
             const errorMessage = err.response?.data?.error || "Signup failed";
-            alert(errorMessage);
+            toast.error(errorMessage);
         }
 
     };
 
     const handleGoogleSignUp = () => {
-        window.location.href = "http://localhost:4000/auth/google/";
+        window.location.href = `${API_URL}/auth/google/`;
     };
 
     return (
         <div className="h-screen flex overflow-hidden">
+            <ToastContainer toasts={toasts} onDismiss={removeToast} />
+            
             {/* Left Side - StudAI Branding */}
             <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 relative overflow-hidden">
                 <div className="absolute inset-0 flex items-center justify-center p-12">

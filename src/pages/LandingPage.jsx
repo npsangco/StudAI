@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { BookOpen, Trophy, MessageCircle, Users, Calendar, FileText, Video, Brain, Github, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import ToastContainer from "../components/ToastContainer";
+import { useToast } from "../hooks/useToast";
 
 export default function LandingPage() {
+    const { toasts, toast, removeToast } = useToast();
     const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
 
     const scrollToSection = (id) => {
@@ -10,12 +13,13 @@ export default function LandingPage() {
 
     const handleContactSubmit = (e) => {
         e.preventDefault();
-        alert('Thank you for your message! We will get back to you soon.');
+        toast.success('Thank you for your message! We will get back to you soon.');
         setContactForm({ name: '', email: '', message: '' });
     };
 
     return (
         <div className="min-h-screen bg-gray-100">
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
             {/* Hero Section */}
             <section className="pt-20 pb-20 bg-gray-100">
                 <div className="container mx-auto px-6">

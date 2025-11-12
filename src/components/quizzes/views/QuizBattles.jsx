@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { quizApi } from '../../../api/api';
+import { API_URL } from '../../../config/api.config';
 import { addPlayerToBattle } from '../../../firebase/battleOperations';
 
 export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
@@ -19,7 +20,7 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
       // 0️⃣ GET CURRENT USER INFO FIRST
       let currentUser;
       try {
-        const userResponse = await fetch('http://localhost:4000/api/user/profile', {
+        const userResponse = await fetch(`${API_URL}/api/user/profile`, {
           credentials: 'include'
         });
         currentUser = await userResponse.json();

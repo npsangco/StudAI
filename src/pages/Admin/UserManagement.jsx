@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Lock, Unlock } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+import { API_URL } from "../../config/api.config";
 
 export default function UserManagement() {
     const [users, setUsers] = useState([]);
@@ -9,7 +10,7 @@ export default function UserManagement() {
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const res = await axios.get("http://localhost:4000/api/admin/users", {
+                const res = await axios.get(`${API_URL}/api/admin/users`, {
                     withCredentials: true,
                 });
                 setUsers(res.data || []);
@@ -23,7 +24,7 @@ export default function UserManagement() {
     const handleUserAction = async (userId, action) => {
         try {
             await axios.post(
-                `http://localhost:4000/api/admin/users/${userId}/${action}`,
+                `${API_URL}/api/admin/users/${userId}/${action}`,
                 {},
                 { withCredentials: true }
             );

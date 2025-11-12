@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
 import { Copy, Check } from 'lucide-react';
+import { API_URL } from '../../../config/api.config';
 
 // ============================================
 // SHARE TOGGLE COMPONENT
@@ -47,7 +48,7 @@ const ShareToggle = ({ quiz, onPublicStatusChange }) => {
         currentShareCode: shareCode 
       });
 
-      const response = await fetch(`http://localhost:4000/api/quizzes/${quiz.id}/toggle-public`, {
+      const response = await fetch(`${API_URL}/api/quizzes/${quiz.id}/toggle-public`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

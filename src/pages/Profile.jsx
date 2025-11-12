@@ -3,6 +3,8 @@ import { Lock, Eye, EyeOff, Trophy, Camera } from "lucide-react";
 import axios from "axios";
 import { API_BASE } from "../components/api";
 import AchievementsModal from "../components/AchievementsModal";
+import ToastContainer from "../components/ToastContainer";
+import { useToast } from "../hooks/useToast";
 
 export default function Profile() {
     const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +20,8 @@ export default function Profile() {
     const [originalProfile, setOriginalProfile] = useState(null);
     const [showAchievementsModal, setShowAchievementsModal] = useState(false);
     const [isHovering, setIsHovering] = useState(false);
+    
+    const { toasts, removeToast, toast } = useToast();
 
     const fileInputRef = useRef(null);
 
@@ -62,7 +66,7 @@ export default function Profile() {
             })
             .catch((err) => {
                 console.error("Profile fetch error:", err);
-                alert("You must log in to view your profile.");
+                toast.error("You must log in to view your profile.");
             });
     }, []);
 
@@ -80,7 +84,7 @@ export default function Profile() {
                         { newPassword: password },
                         { withCredentials: true }
                     );
-                    alert("A verification email has been sent. Please confirm to update your password.");
+                    toast.info("A verification email has been sent. Please confirm to update your password.");
                 } catch (err) {
                     console.error("Password update error:", err);
 
@@ -107,11 +111,11 @@ export default function Profile() {
             setPassword(""); 
             setPasswordMessage(""); 
 
-            alert("Profile updated.");
+            toast.success("Profile updated.");
             window.dispatchEvent(new CustomEvent("profileUpdated"));
         } catch (err) {
             console.error("Profile update error:", err);
-            alert("Update failed");
+            toast.error("Update failed");
         }
     };
 
@@ -120,7 +124,7 @@ export default function Profile() {
         if (!file) return;
 
         if (file.size > 25 * 1024 * 1024) {
-            alert("File size must be less than 25MB");
+            toast.error("File size must be less than 25MB");
             return;
         }
 
@@ -136,7 +140,7 @@ export default function Profile() {
             setPhoto(res.data.photoUrl);
         } catch (err) {
             console.error("Upload error:", err);
-            alert("Failed to upload photo");
+            toast.error("Failed to upload photo");
         }
     };
 
@@ -151,6 +155,8 @@ export default function Profile() {
 
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+            <ToastContainer toasts={toasts} onDismiss={removeToast} />
+            
             <AchievementsModal 
                 isOpen={showAchievementsModal} 
                 onClose={() => setShowAchievementsModal(false)} 

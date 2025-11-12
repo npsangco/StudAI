@@ -99,7 +99,7 @@ const NoteEditor = ({
     // Only auto-save if there are actual changes
     if (hasChanges && saveNoteRef.current) {
       if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveSaveTimeoutRef.current);
+        clearTimeout(autoSaveTimeoutRef.current);
       }
       
       autoSaveTimeoutRef.current = setTimeout(() => {

@@ -95,7 +95,8 @@ async function calculateUserStats(userId, user) {
     quizzesCount,
     battlesWonCount,
     filesUploadedCount,
-    sessionsHostedCount
+    sessionsHostedCount,
+    pet
   ] = await Promise.all([
     Note.count({ where: { user_id: userId } }),
     QuizAttempt.count({ where: { user_id: userId } }),
@@ -103,7 +104,8 @@ async function calculateUserStats(userId, user) {
       where: { user_id: userId, is_winner: true } 
     }),
     File.count({ where: { user_id: userId } }),
-    Session.count({ where: { user_id: userId } })
+    Session.count({ where: { user_id: userId } }),
+    PetCompanion.findOne({ where: { user_id: userId } })
   ]);
 
   return {
@@ -113,7 +115,12 @@ async function calculateUserStats(userId, user) {
     quizzes_completed: quizzesCount,
     battles_won: battlesWonCount,
     files_uploaded: filesUploadedCount,
-    sessions_hosted: sessionsHostedCount
+    sessions_hosted: sessionsHostedCount,
+    pet_level: pet?.level || 0,
+    times_fed: pet?.times_fed || 0,
+    times_played: pet?.times_played || 0,
+    times_cleaned: pet?.times_cleaned || 0,
+    pet_adopted: pet ? 1 : 0
   };
 }
 

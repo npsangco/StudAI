@@ -1,33 +1,8 @@
-// PetShop.jsx - Optimized Point Reloading with Auto-Dismiss Alerts
+// PetShop.jsx - With Toast Notifications
 import { useState, useEffect } from "react";
 import { petApi } from "../api/api";
-import { X } from "lucide-react";
-
-// Alert
-const Alert = ({ message, onDismiss }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onDismiss();
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [onDismiss]);
-
-  return (
-    <div className="fixed top-4 right-4 z-[60] animate-slide-in">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 shadow-lg flex items-center gap-3 max-w-sm">
-        <div className="flex-1">
-          <p className="text-sm text-blue-800">{message}</p>
-        </div>
-        <button
-          onClick={onDismiss}
-          className="text-blue-600 hover:text-blue-800 transition-colors flex-shrink-0"
-        >
-          <X size={16} />
-        </button>
-      </div>
-    </div>
-  );
-};
+import ToastContainer from "./ToastContainer";
+import { useToast } from "../hooks/useToast";
 
 export default function PetShop({ onClose, onItemPurchase }) {
   const [items, setItems] = useState([]);
@@ -36,16 +11,8 @@ export default function PetShop({ onClose, onItemPurchase }) {
   const [purchasing, setPurchasing] = useState(null);
   const [error, setError] = useState(null);
   const [quantities, setQuantities] = useState({});
-  const [alerts, setAlerts] = useState([]);
-
-  const addAlert = (message) => {
-    const id = Date.now();
-    setAlerts(prev => [...prev, { id, message }]);
-  };
-
-  const removeAlert = (id) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== id));
-  };
+  
+  const { toasts, removeToast, toast } = useToast();
 
   const loadShopData = async () => {
     setLoading(true);
@@ -102,8 +69,7 @@ export default function PetShop({ onClose, onItemPurchase }) {
     const totalCost = item.cost * quantity;
 
     if (userPoints < totalCost) {
-      setAlerts([]);
-      addAlert(`Not enough points! Need ${totalCost}, have ${userPoints}.`);
+      toast.warning(`Not enough points! Need ${totalCost}, have ${userPoints}.`);
       return;
     }
 
@@ -117,13 +83,11 @@ export default function PetShop({ onClose, onItemPurchase }) {
       await loadUserPoints();
       onItemPurchase && onItemPurchase();
       
-      setAlerts([]);
-      addAlert(`Successfully purchased ${quantity}x ${item.item_name}!`);
+      toast.success(`Successfully purchased ${quantity}x ${item.item_name}!`);
       
     } catch (err) {
       const message = err.response?.data?.error || "Purchase failed.";
-      setAlerts([]);
-      addAlert(message);
+      toast.error(message);
     } finally {
       setPurchasing(null);
     }
@@ -157,14 +121,7 @@ export default function PetShop({ onClose, onItemPurchase }) {
 
   return (
     <>
-      {/* Alerts */}
-      {alerts.map(alert => (
-        <Alert 
-          key={alert.id} 
-          message={alert.message} 
-          onDismiss={() => removeAlert(alert.id)}
-        />
-      ))}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">

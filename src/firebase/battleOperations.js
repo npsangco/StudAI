@@ -1,5 +1,6 @@
 import { ref, set, update, remove, onValue, get, serverTimestamp, runTransaction } from 'firebase/database';
 import { realtimeDb } from './config';
+import { API_URL } from '../config/api.config';
 
 // ============================================
 // BATTLE ROOM OPERATIONS
@@ -398,7 +399,7 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
         console.log(`🔄 MySQL sync attempt ${attempt}/${maxRetries}`);
         
         const response = await fetch(
-          `http://localhost:4000/api/quizzes/battle/${gamePin}/sync-results`,
+          `${API_URL}/api/quizzes/battle/${gamePin}/sync-results`,
           {
             method: 'POST',
             headers: { 
@@ -490,7 +491,7 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
         console.log('🔍 Verifying sync in database...');
         try {
           const verifyResponse = await fetch(
-            `http://localhost:4000/api/quizzes/battle/${gamePin}/verify-sync`,
+            `${API_URL}/api/quizzes/battle/${gamePin}/verify-sync`,
             {
               method: 'GET',
               credentials: 'include'

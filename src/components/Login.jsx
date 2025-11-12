@@ -2,13 +2,18 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE } from "./api";
+import { API_URL } from "../config/api.config";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import ToastContainer from "./ToastContainer";
+import { useToast } from "../hooks/useToast";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  
+  const { toasts, removeToast, toast } = useToast();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -18,19 +23,21 @@ function Login() {
         password,
       }, { withCredentials: true });
       localStorage.setItem("token", data.token);
-      alert("Logged in!");
+      toast.success("Logged in!");
       navigate("/dashboard");
     } catch (err) {
-      alert(err.response?.data?.error || "Login failed");
+      toast.error(err.response?.data?.error || "Login failed");
     }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:4000/auth/google/";
+    window.location.href = `${API_URL}/auth/google/`;
   };
 
   return (
     <div className="min-h-screen flex">
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+      
       {/* Left Side - StudAI Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 relative overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center p-12">

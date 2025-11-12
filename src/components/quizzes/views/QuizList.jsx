@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Edit, Play, GripVertical, Trash2 } from 'lucide-react';
 import EmptyQuizState from './EmptyState';
+import { API_URL } from '../../../config/api.config';
 
 // Share Code Input Component
 const ShareCodeInput = ({ onImportQuiz }) => {
@@ -18,7 +19,7 @@ const ShareCodeInput = ({ onImportQuiz }) => {
       setLoading(true);
       setError('');
 
-      const response = await fetch('http://localhost:4000/api/quizzes/import', {
+      const response = await fetch(`${API_URL}/api/quizzes/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
