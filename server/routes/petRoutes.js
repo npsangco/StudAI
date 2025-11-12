@@ -258,7 +258,7 @@ async function checkPetAchievements(userId) {
   // Import achievement checker if available
   // This should be implemented in a separate achievementService.js
   try {
-    const { checkAndUnlockAchievements } = await import('../services/achievementService.js');
+    const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
     return await checkAndUnlockAchievements(userId);
   } catch (err) {
     console.log('Achievement service not available:', err.message);

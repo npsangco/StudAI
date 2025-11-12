@@ -26,10 +26,24 @@ const requireAuth = (req, res, next) => {
 /**
  * GET /api/achievements
  * Get all achievements with progress for the current user
+ * AUTOMATICALLY checks for newly unlocked achievements before returning
  */
 router.get('/', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
+    
+    // Check for newly unlocked achievements before fetching
+    // This ensures achievements are always up-to-date when modal opens
+    try {
+      const newlyUnlocked = await checkAndUnlockAchievements(userId);
+      if (newlyUnlocked && newlyUnlocked.length > 0) {
+        console.log(`🏆 Auto-unlocked ${newlyUnlocked.length} achievement(s) for user ${userId} when opening modal`);
+      }
+    } catch (checkError) {
+      console.error('Error auto-checking achievements:', checkError);
+      // Don't fail the request if achievement check fails
+    }
+    
     const result = await getUserAchievements(userId);
     
     res.json({

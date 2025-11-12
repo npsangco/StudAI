@@ -855,6 +855,18 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
 
         console.log("✅ File saved to DB:", newFile.file_id);
 
+        // Check for file upload achievements
+        try {
+            const { checkAndUnlockAchievements } = await import('./services/achievementServices.js');
+            const unlockedAchievements = await checkAndUnlockAchievements(userId);
+            if (unlockedAchievements && unlockedAchievements.length > 0) {
+                console.log(`🏆 User ${userId} unlocked ${unlockedAchievements.length} achievement(s):`, 
+                    unlockedAchievements.map(a => a.title).join(', '));
+            }
+        } catch (err) {
+            console.error('Achievement check error:', err);
+        }
+
         res.json({
             file_id: newFile.file_id,
             filename: file.filename,
@@ -1051,8 +1063,9 @@ app.post("/api/generate-summary", async (req, res) => {
         let petLevelUp = null;
 
         try {
-            // Load PetCompanion model dynamically
-            const { PetCompanion } = await import('./models/PetCompanion.js');
+            // Load PetCompanion model dynamically (default export)
+            const PetCompanionModule = await import('./models/PetCompanion.js');
+            const PetCompanion = PetCompanionModule.default;
             
             const pet = await PetCompanion.findOne({ where: { user_id: userId } });
             
