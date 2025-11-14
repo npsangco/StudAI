@@ -35,7 +35,8 @@ export function createNewQuestion(type = QUESTION_TYPES.MULTIPLE_CHOICE, existin
   const baseQuestion = {
     id: existingQuestions.length > 0 ? Math.max(...existingQuestions.map(q => q.id)) + 1 : 1,
     question: '',
-    type: type
+    type: type,
+    difficulty: 'medium' // Default to medium difficulty
   };
 
   switch (type) {

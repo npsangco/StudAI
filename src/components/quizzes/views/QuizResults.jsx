@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { Trophy, Clock, RotateCcw, X } from 'lucide-react';
 import { getPerformanceMessage, getPerformanceColor } from '../utils/questionHelpers';
+import { 
+  calculateDifficultyBreakdown, 
+  getDifficultyDisplay,
+  getOverallDifficultyRating,
+  getDifficultyProgressionFeedback 
+} from '../utils/adaptiveDifficultyManager';
 import AnswerReviewModal from './AnswerReviewModal';
 
 const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
@@ -17,6 +23,15 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
   const percentage = Math.round((validScore / validTotal) * 100);
   const pointsEarned = validScore * 10;
   const expEarned = validScore * 5;
+  
+  // Calculate difficulty breakdown (SOLO MODE ONLY)
+  const questions = results?.questions || [];
+  const difficultyBreakdown = mode === 'solo' && questions.length > 0
+    ? calculateDifficultyBreakdown(questions, answers)
+    : null;
+  
+  const overallRating = difficultyBreakdown ? getOverallDifficultyRating(difficultyBreakdown) : null;
+  const progressionFeedback = difficultyBreakdown ? getDifficultyProgressionFeedback(difficultyBreakdown) : null;
 
   return (
     <>
@@ -46,6 +61,45 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
                   {getPerformanceMessage(percentage)}
                 </p>
               </div>
+
+              {/* DIFFICULTY BREAKDOWN (SOLO MODE ONLY) */}
+              {mode === 'solo' && difficultyBreakdown && (
+                <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-lg p-4 mb-4 border border-gray-200">
+                  <div className="text-center mb-3">
+                    <h3 className="text-sm font-bold text-gray-700 mb-1">🎯 Difficulty Breakdown</h3>
+                    <p className="text-xs text-gray-600">{overallRating}</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2">
+                    {['easy', 'medium', 'hard'].map(diff => {
+                      const data = difficultyBreakdown[diff];
+                      const display = getDifficultyDisplay(diff);
+                      if (data.total === 0) return null;
+                      
+                      return (
+                        <div key={diff} className={`${display.bgColor} rounded-lg p-2 border ${display.borderColor}`}>
+                          <div className="text-center">
+                            <div className="text-lg mb-0.5">{display.stars}</div>
+                            <div className={`text-xs font-bold ${display.textColor} mb-1`}>{display.label}</div>
+                            <div className={`text-sm font-bold ${display.textColor}`}>
+                              {data.correct}/{data.total}
+                            </div>
+                            <div className="text-xs text-gray-600 font-semibold">
+                              +{data.points} pts
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {progressionFeedback && (
+                    <p className="text-xs text-center text-gray-600 mt-3 font-medium">
+                      {progressionFeedback}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Time & Rewards Combined */}
               <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-yellow-200">

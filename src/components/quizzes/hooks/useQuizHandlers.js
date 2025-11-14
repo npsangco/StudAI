@@ -310,6 +310,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
   };
 
   const handleUpdateQuestion = (questionId, field, value) => {
+    console.log('🔍 UPDATE QUESTION:', { questionId, field, value });
+    
     setQuestions(questions.map(q => {
       if (q.id === questionId) {
         if (field === 'type' && value !== q.type) {
@@ -317,10 +319,14 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
           return {
             ...newQuestion,
             id: q.id,
-            question: q.question
+            question: q.question,
+            difficulty: q.difficulty || 'medium'
           };
         }
-        return { ...q, [field]: value };
+        
+        const updated = { ...q, [field]: value };
+        console.log('✅ Question updated:', updated);
+        return updated;
       }
       return q;
     }));

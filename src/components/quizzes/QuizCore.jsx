@@ -67,7 +67,7 @@ export const QuizQuestion = ({
 
   return (
     <div className="max-w-5xl mx-auto space-y-4">
-      {/* OVERLAPPING BADGE */}
+      {/* OVERLAPPING BADGE - Question Type Only */}
       <div className="relative">
         {/* Question Type Badge */}
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">

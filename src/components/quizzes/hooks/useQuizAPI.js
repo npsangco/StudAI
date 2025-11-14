@@ -40,7 +40,7 @@ export function useQuizAPI(quizDataHook) {
         questionCount: quiz.total_questions || 0,
         created: new Date(quiz.created_at).toLocaleDateString(),
         isPublic: quiz.is_public,
-        share_code: quiz.share_code, // ✅ Include share_code
+        share_code: quiz.share_code,
         creator: quiz.creator?.username || 'Unknown'
       }));
 
@@ -91,7 +91,8 @@ export function useQuizAPI(quizDataHook) {
           choices: choices,
           correctAnswer: q.correctAnswer || q.correct_answer,
           answer: q.answer,
-          matchingPairs: matchingPairs
+          matchingPairs: matchingPairs,
+          difficulty: q.difficulty || 'medium'
         };
       });
 
@@ -137,7 +138,6 @@ export function useQuizAPI(quizDataHook) {
         console.log('✅ Quiz created with ID:', quizId);
       } else {
         // Update existing quiz metadata
-        // ✅ Ensure is_public is explicitly sent (default to false if undefined)
         await quizApi.update(quizId, {
           title: quizData.editing.title,
           description: quizData.editing.description || '',
@@ -161,6 +161,11 @@ export function useQuizAPI(quizDataHook) {
       // Now insert all questions in the correct order
       for (let i = 0; i < questions.length; i++) {
         const question = questions[i];
+        
+        console.log(`💾 Saving question ${i + 1}:`, {
+          type: question.type,
+          difficulty: question.difficulty
+        });
         
         // Ensure choices and matchingPairs are properly formatted
         let choicesData = question.choices;
@@ -189,7 +194,8 @@ export function useQuizAPI(quizDataHook) {
           correct_answer: question.correctAnswer || null,
           answer: question.answer || null,
           matching_pairs: matchingPairsData || null,
-          points: 1
+          points: 1,
+          difficulty: question.difficulty || 'medium'
         };
 
         // Always add as new question (since we deleted all existing ones)

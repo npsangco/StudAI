@@ -649,6 +649,15 @@ Generate EXACTLY in this format - no variations:
         const validTypes = ['Multiple Choice', 'Fill in the blanks', 'True/False', 'Matching'];
         const questionType = validTypes.includes(questionData.type) ? questionData.type : 'Multiple Choice';
 
+        // Assign difficulty based on question order to create progression
+        // Q1-3: Easy, Q4-7: Medium, Q8-10: Hard
+        let difficulty = 'medium';
+        if (i < 3) {
+          difficulty = 'easy';
+        } else if (i >= 7) {
+          difficulty = 'hard';
+        }
+
         // Ensure correctAnswer is a string, not an array or object
         let correctAnswer = null;
         if (typeof questionData.correctAnswer === 'string') {
@@ -678,7 +687,8 @@ Generate EXACTLY in this format - no variations:
           correct_answer: correctAnswer,
           answer: questionData.answer || null,
           matching_pairs: matchingPairsData,
-          points: 1
+          points: 1,
+          difficulty: difficulty
         });
 
         questions.push(questionRecord);
@@ -867,7 +877,14 @@ router.post('/:id/questions', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
     const quizId = req.params.id;
-    const { type, question, question_order, choices, correct_answer, answer, matching_pairs, points } = req.body;
+    const { type, question, question_order, choices, correct_answer, answer, matching_pairs, points, difficulty } = req.body;
+
+    console.log('📥 ADD QUESTION - Received data:', {
+      quizId,
+      type,
+      difficulty,
+      question: question?.substring(0, 50)
+    });
 
     const quiz = await Quiz.findByPk(quizId);
 
@@ -888,7 +905,13 @@ router.post('/:id/questions', requireAuth, async (req, res) => {
       correct_answer: correct_answer || null,
       answer: answer || null,
       matching_pairs: matching_pairs || null,
-      points: points || 1
+      points: points || 1,
+      difficulty: difficulty || 'medium' 
+    });
+
+    console.log('✅ Question created in DB:', {
+      id: newQuestion.question_id,
+      difficulty: newQuestion.difficulty
     });
 
     // Update quiz total_questions count

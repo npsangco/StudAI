@@ -47,6 +47,11 @@ const Question = sequelize.define('Question', {
     type: DataTypes.INTEGER,
     defaultValue: 1
   },
+  difficulty: {
+    type: DataTypes.ENUM('easy', 'medium', 'hard'),
+    defaultValue: 'medium',
+    allowNull: false
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

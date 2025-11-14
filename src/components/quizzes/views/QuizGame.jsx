@@ -11,6 +11,13 @@ import { realtimeDb } from '../../../firebase/config';
 import { useReconnection } from '../hooks/useReconnection';
 import { ReconnectionModal } from './ReconnectionModal';
 import { QuizBackgroundPattern } from '../utils/QuizPatterns';
+import { 
+  sortQuestionsByDifficulty, 
+  calculateTotalScore, 
+  getMaxScore,
+  getPointsForDifficulty,
+  getDifficultyDisplay 
+} from '../utils/adaptiveDifficultyManager';
 
 const QuizGame = ({ 
   quiz, 
@@ -19,8 +26,18 @@ const QuizGame = ({
   onComplete,
   onPlayerScoreUpdate 
 }) => {
-  const questions = quiz?.questions || [];
+  // ADAPTIVE DIFFICULTY: Sort questions by difficulty in SOLO mode only
+  const rawQuestions = quiz?.questions || [];
+  const questions = mode === 'solo' 
+    ? sortQuestionsByDifficulty(rawQuestions)
+    : rawQuestions;
+  
+  console.log(`🎮 ${mode.toUpperCase()} MODE:`, 
+    mode === 'solo' ? 'Questions sorted Easy→Medium→Hard' : 'Original order'
+  );
+  
   const [isProcessing, setIsProcessing] = useState(false);
+
   // Track all answers for summary
   const [answersHistory, setAnswersHistory] = useState([]);
   const timeoutHandledRef = useRef(false);
@@ -500,11 +517,16 @@ const QuizGame = ({
     setAnswersHistory(newAnswersHistory);
 
     if (isCorrect) {
-      game.updateScore(1);
+      // ADAPTIVE SCORING: Award points based on difficulty
+      const points = mode === 'solo' 
+        ? getPointsForDifficulty(currentQ.difficulty)
+        : 1; // Battle mode: flat 1 point per question
+      
+      game.updateScore(points);
       
       // Update score in Firebase for real-time leaderboard
       if (mode === 'battle' && quiz?.gamePin) {
-        const newScore = game.scoreRef.current + 1;
+        const newScore = game.scoreRef.current; // Already updated above with correct points
         updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
           .catch(err => console.error('Failed to update score:', err));
       }
@@ -560,11 +582,16 @@ const QuizGame = ({
     game.setUserAnswer(actualAnswer + '_submitted');
     
     if (isCorrect) {
-      game.updateScore(1);
+      // ADAPTIVE SCORING: Award points based on difficulty
+      const points = mode === 'solo' 
+        ? getPointsForDifficulty(currentQ.difficulty)
+        : 1; // Battle mode: flat 1 point per question
+      
+      game.updateScore(points);
       
       // Update score in Firebase
       if (mode === 'battle' && quiz?.gamePin) {
-        const newScore = game.scoreRef.current + 1;
+        const newScore = game.scoreRef.current; // Already updated above with correct points
         updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
           .catch(err => console.error('Failed to update score:', err));
       }
@@ -619,11 +646,16 @@ const QuizGame = ({
     setAnswersHistory(newAnswersHistory);
     
     if (isCorrect) {
-      game.updateScore(1);
+      // ADAPTIVE SCORING: Award points based on difficulty
+      const points = mode === 'solo' 
+        ? getPointsForDifficulty(currentQ.difficulty)
+        : 1; // Battle mode: flat 1 point per question
+      
+      game.updateScore(points);
       
       // 🔥 Update score in Firebase
       if (mode === 'battle' && quiz?.gamePin) {
-        const newScore = game.scoreRef.current + 1;
+        const newScore = game.scoreRef.current; // Already updated above with correct points
         updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
           .catch(err => console.error('Failed to update score:', err));
       }
@@ -701,6 +733,7 @@ const QuizGame = ({
       ...game.getResults(),
       quizTitle: quiz.title,
       answers: finalAnswers,
+      questions: questions, // Pass questions for difficulty breakdown
       gamePin: quiz?.gamePin,
       isHost: mode === 'battle' ? (quiz?.isHost || false) : false, 
     };
@@ -772,6 +805,7 @@ const QuizGame = ({
         mode={mode}
         playersCount={allPlayers.length}
         onBack={handleBackOrForfeit}
+        currentQuestionData={currentQ}
       />
 
       {/* Waiting Overlay */}
