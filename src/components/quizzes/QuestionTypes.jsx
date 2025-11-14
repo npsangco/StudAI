@@ -14,6 +14,24 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
   }
   choices = choices || [];
 
+  const MAX_CHOICES = 6;
+  const canAddMore = choices.length < MAX_CHOICES;
+
+  const handleRemoveChoice = (indexToRemove) => {
+    if (choices.length <= 2) return; // Don't allow removing if only 2 choices left
+    
+    const removedChoice = choices[indexToRemove];
+    const newChoices = choices.filter((_, idx) => idx !== indexToRemove);
+    
+    // Update choices
+    onUpdateQuestion(question.id, 'choices', newChoices);
+    
+    // If the removed choice was the correct answer, clear correct answer
+    if (question.correctAnswer === removedChoice) {
+      onUpdateQuestion(question.id, 'correctAnswer', '');
+    }
+  };
+
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -21,46 +39,70 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
           <div
             key={choiceIndex}
             onClick={(e) => {
-              if (e.target === e.currentTarget) {
+              if (e.target === e.currentTarget || e.target.tagName === 'INPUT') {
                 onUpdateQuestion(question.id, 'correctAnswer', choice);
               }
             }}
-            className={`p-2 sm:p-3 rounded border transition-colors cursor-pointer ${
+            className={`p-2 sm:p-3 rounded border transition-all cursor-pointer ${
               question.correctAnswer === choice
                 ? 'bg-green-500 text-white border-green-500'
                 : 'bg-white border-gray-200 hover:border-gray-300'
             }`}
           >
-            <input
-              type="text"
-              value={choice}
-              onChange={(e) => {
-                e.stopPropagation();
-                const newValue = e.target.value;
-                onUpdateChoice(question.id, choiceIndex, newValue);
-                
-                if (question.correctAnswer === choice) {
-                  onUpdateQuestion(question.id, 'correctAnswer', newValue);
-                }
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-              className={`w-full bg-transparent border-0 text-xs sm:text-sm focus:outline-none ${
-                question.correctAnswer === choice ? 'text-white placeholder-green-200' : 'text-gray-800 placeholder-gray-400'
-              }`}
-              placeholder={`Option ${choiceIndex + 1}`}
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={choice}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  const newValue = e.target.value;
+                  onUpdateChoice(question.id, choiceIndex, newValue);
+                  
+                  if (question.correctAnswer === choice) {
+                    onUpdateQuestion(question.id, 'correctAnswer', newValue);
+                  }
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                className={`flex-1 bg-transparent border-0 text-xs sm:text-sm focus:outline-none ${
+                  question.correctAnswer === choice ? 'text-white placeholder-green-200' : 'text-gray-800 placeholder-gray-400'
+                }`}
+                placeholder={`Option ${choiceIndex + 1}`}
+              />
+              
+              {/* Remove Button */}
+              {choices.length > 2 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveChoice(choiceIndex);
+                  }}
+                  className={`flex-shrink-0 p-1 rounded hover:bg-red-100 transition-colors ${
+                    question.correctAnswer === choice ? 'text-white hover:bg-red-400' : 'text-red-500'
+                  }`}
+                  type="button"
+                  title="Remove choice"
+                >
+                  <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>
       <button
         onClick={() => onAddChoice(question.id)}
-        className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-blue-500 hover:bg-blue-50 rounded text-xs sm:text-sm font-medium transition-colors"
+        disabled={!canAddMore}
+        className={`flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-medium transition-colors ${
+          canAddMore 
+            ? 'text-blue-500 hover:bg-blue-50 cursor-pointer' 
+            : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+        }`}
         type="button"
       >
         <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-        Add more choices 
+        {canAddMore ? 'Add more choices' : `Maximum ${MAX_CHOICES} choices reached`}
       </button>
     </div>
   );
@@ -120,6 +162,9 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
   }
   pairs = pairs || [];
 
+  const MAX_PAIRS = 7;
+  const canAddMore = pairs.length < MAX_PAIRS;
+
   return (
     <div className="space-y-3 sm:space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
@@ -165,11 +210,16 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
       
       <button
         onClick={() => onAddMatchingPair(question.id)}
-        className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-blue-500 hover:bg-blue-50 rounded text-xs sm:text-sm font-medium transition-colors"
+        disabled={!canAddMore}
+        className={`flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-medium transition-colors ${
+          canAddMore 
+            ? 'text-blue-500 hover:bg-blue-50 cursor-pointer' 
+            : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+        }`}
         type="button"
       >
         <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-        Add matching pair 
+        {canAddMore ? 'Add matching pair' : `Maximum ${MAX_PAIRS} pairs reached`}
       </button>
     </div>
   );
@@ -193,8 +243,8 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   // Validate matchingPairs exists
   if (!parsedPairs || parsedPairs.length === 0) {
     return (
-      <div className="min-h-screen px-3 sm:px-4 py-4 sm:py-6 flex items-center justify-center bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600">
-        <div className="bg-white rounded-2xl p-6 text-center max-w-md">
+      <div className="max-w-5xl mx-auto space-y-4">
+        <div className="bg-white rounded-2xl p-6 text-center shadow-2xl">
           <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
           <p className="text-gray-700">No matching pairs available for this question.</p>
         </div>
@@ -210,6 +260,10 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   const [showMistakes, setShowMistakes] = useState(false);
   const [leftItems] = useState(parsedPairs.map(p => p.left));
   const [rightItems] = useState([...parsedPairs.map(p => p.right)].sort(() => Math.random() - 0.5));
+
+  // 📱 TOUCH STATE
+  const [touchStartPos, setTouchStartPos] = useState(null);
+  const [isDraggingTouch, setIsDraggingTouch] = useState(false);
 
   const [colorPalette] = useState(() => {
     const colors = [];
@@ -249,6 +303,10 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     return parsedPairs.find(pair => pair[side] === item);
   };
 
+  // ========================================
+  // MOUSE/DESKTOP DRAG HANDLERS
+  // ========================================
+  
   const handleDragStart = (e, item, side) => {
     if (isPaused || isSubmitted) return;
     
@@ -301,6 +359,88 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     setDragOverZone(null);
   };
 
+  // ========================================
+  // 📱 TOUCH/MOBILE DRAG HANDLERS
+  // ========================================
+  
+  const handleTouchStart = (e, item, side) => {
+    if (isPaused || isSubmitted) return;
+    
+    const touch = e.touches[0];
+    setTouchStartPos({ x: touch.clientX, y: touch.clientY });
+    
+    const existingMatch = matches.find(m => m[side] === item);
+    if (existingMatch) {
+      setMatches(prev => prev.filter(m => m[side] !== item));
+    }
+    
+    setDraggedItem({ item, side });
+    setIsDraggingTouch(true);
+  };
+
+  const handleTouchMove = (e, item, side) => {
+    if (isPaused || isSubmitted || !draggedItem || !isDraggingTouch) return;
+    
+    e.preventDefault(); // Prevent scrolling while dragging
+    
+    const touch = e.touches[0];
+    const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+    
+    if (elementUnderTouch) {
+      const dropTarget = elementUnderTouch.closest('[data-drop-item]');
+      
+      if (dropTarget) {
+        const dropItem = dropTarget.getAttribute('data-drop-item');
+        const dropSide = dropTarget.getAttribute('data-drop-side');
+        
+        if (dropSide !== draggedItem.side) {
+          setDragOverZone({ item: dropItem, side: dropSide });
+        } else {
+          setDragOverZone(null);
+        }
+      } else {
+        setDragOverZone(null);
+      }
+    }
+  };
+
+  const handleTouchEnd = (e, currentItem, currentSide) => {
+    if (isPaused || isSubmitted || !draggedItem || !isDraggingTouch) return;
+    
+    const touch = e.changedTouches[0];
+    const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+    
+    if (elementUnderTouch) {
+      const dropTarget = elementUnderTouch.closest('[data-drop-item]');
+      
+      if (dropTarget) {
+        const dropItem = dropTarget.getAttribute('data-drop-item');
+        const dropSide = dropTarget.getAttribute('data-drop-side');
+        
+        // Only create match if dropping on opposite side
+        if (dropSide !== draggedItem.side) {
+          const filteredMatches = matches.filter(m => 
+            m[draggedItem.side] !== draggedItem.item && m[dropSide] !== dropItem
+          );
+
+          const newMatch = {
+            left: draggedItem.side === 'left' ? draggedItem.item : dropItem,
+            right: draggedItem.side === 'right' ? draggedItem.item : dropItem,
+            color: colorPalette[filteredMatches.length]
+          };
+
+          setMatches([...filteredMatches, newMatch]);
+        }
+      }
+    }
+    
+    // Reset states
+    setDraggedItem(null);
+    setDragOverZone(null);
+    setIsDraggingTouch(false);
+    setTouchStartPos(null);
+  };
+
   const handleUnmatch = (item, side) => {
     if (isPaused || isSubmitted) return;
     setMatches(prev => prev.filter(m => m[side] !== item));
@@ -347,254 +487,277 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     return 'Don\'t worry! Review and try again. 💪';
   };
 
+  // Get question type config
+  const config = {
+    gradient: 'from-orange-500 to-red-600',
+    bgPattern: 'from-orange-50 to-red-50',
+    label: 'Matching'
+  };
+
   return (
-    <div className="min-h-screen px-3 sm:px-4 py-4 sm:py-6 relative overflow-hidden">
-      {/* Background gradient */}
-      <div className="fixed inset-0 bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 -z-10" />
-      
-      {/* Animated background shapes */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-10 left-5 w-20 h-20 sm:w-32 sm:h-32 bg-white/10 rounded-full blur-2xl sm:blur-3xl animate-pulse" />
-        <div className="absolute bottom-10 right-5 w-24 h-24 sm:w-48 sm:h-48 bg-black/10 rounded-full blur-2xl sm:blur-3xl animate-pulse" style={{ animationDelay: '700ms' }} />
+    <div className="max-w-5xl mx-auto space-y-4">
+      {/* OVERLAPPING BADGE */}
+      <div className="relative">
+        {/* Question Type Badge */}
+        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${config.gradient} text-white font-bold text-sm shadow-lg`}>
+            <span>{config.label}</span>
+          </div>
+        </div>
+
+        {/* Question Card */}
+        <div className={`bg-gradient-to-br ${config.bgPattern} rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-white/80 relative overflow-hidden pt-10`}>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/30 rounded-full -translate-y-16 translate-x-16" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full translate-y-16 -translate-x-16" />
+          
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight relative z-10 text-center">
+            {question.question}
+          </h2>
+        </div>
       </div>
-
-      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-5">
-        {/* Question */}
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight px-2 drop-shadow-lg">
-          {question.question}
-        </h2>
         
-        {!isSubmitted ? (
-          <>
-            {/* Instructions */}
-            <p className="text-base sm:text-lg text-gray-900 px-2 font-medium">
-              Drag items from one column and drop them on matching items in the other column
-            </p>
+      {!isSubmitted ? (
+        <div className="space-y-4">
+          {/* Instructions */}
+          <p className="text-base sm:text-lg text-gray-900 px-2 font-medium text-center">
+            Drag items from one column and drop them on matching items in the other column
+          </p>
 
-            {/* Matching Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              {/* Left Column */}
-              <div className="space-y-3">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 text-center px-2">
-                  Column A
-                </h3>
-                {leftItems.map((item, index) => {
-                  const match = getItemMatch(item, 'left');
-                  const matched = isMatched(item, 'left');
-                  const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'left';
-                  const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'left' && draggedItem?.side !== 'left';
-                  
-                  return (
-                    <div
-                      key={index}
-                      draggable={!isPaused}
-                      onDragStart={(e) => handleDragStart(e, item, 'left')}
-                      onDragOver={(e) => handleDragOver(e, item, 'left')}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, item, 'left')}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => matched && handleUnmatch(item, 'left')}
-                      className={`
-                        bg-white/90 backdrop-blur-xl border-2 rounded-2xl p-4 sm:p-5
-                        font-semibold text-base sm:text-lg
-                        transition-all duration-300 transform cursor-grab active:cursor-grabbing
-                        hover:scale-102 hover:-translate-y-1 hover:shadow-xl
-                        ${matched ? 'border-2' : 'border-white/50 hover:border-white'}
-                        ${isDraggedItem ? 'opacity-50 scale-95' : ''}
-                        ${isDropZone ? 'border-yellow-400 bg-yellow-50/90 scale-105' : ''}
-                        ${matched ? 'shadow-lg' : 'shadow-md'}
-                      `}
-                      style={matched ? {
-                        backgroundColor: match.color.bg,
-                        borderColor: match.color.border,
-                        color: match.color.text
-                      } : {}}
-                    >
-                      {item}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-3">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 text-center px-2">
-                  Column B
-                </h3>
-                {rightItems.map((item, index) => {
-                  const match = getItemMatch(item, 'right');
-                  const matched = isMatched(item, 'right');
-                  const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'right';
-                  const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'right' && draggedItem?.side !== 'right';
-                  
-                  return (
-                    <div
-                      key={index}
-                      draggable={!isPaused}
-                      onDragStart={(e) => handleDragStart(e, item, 'right')}
-                      onDragOver={(e) => handleDragOver(e, item, 'right')}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, item, 'right')}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => matched && handleUnmatch(item, 'right')}
-                      className={`
-                        bg-white/90 backdrop-blur-xl border-2 rounded-2xl p-4 sm:p-5
-                        font-semibold text-base sm:text-lg
-                        transition-all duration-300 transform cursor-grab active:cursor-grabbing
-                        hover:scale-102 hover:-translate-y-1 hover:shadow-xl
-                        ${matched ? 'border-2' : 'border-white/50 hover:border-white'}
-                        ${isDraggedItem ? 'opacity-50 scale-95' : ''}
-                        ${isDropZone ? 'border-yellow-400 bg-yellow-50/90 scale-105' : ''}
-                        ${matched ? 'shadow-lg' : 'shadow-md'}
-                      `}
-                      style={matched ? {
-                        backgroundColor: match.color.bg,
-                        borderColor: match.color.border,
-                        color: match.color.text
-                      } : {}}
-                    >
-                      {item}
-                    </div>
-                  );
-                })}
-              </div>
+          {/* Matching Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* Left Column */}
+            <div className="space-y-3">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 text-center px-2">
+                Column A
+              </h3>
+              {leftItems.map((item, index) => {
+                const match = getItemMatch(item, 'left');
+                const matched = isMatched(item, 'left');
+                const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'left';
+                const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'left' && draggedItem?.side !== 'left';
+                
+                return (
+                  <div
+                    key={index}
+                    draggable={!isPaused}
+                    data-drop-item={item}
+                    data-drop-side="left"
+                    onDragStart={(e) => handleDragStart(e, item, 'left')}
+                    onDragOver={(e) => handleDragOver(e, item, 'left')}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, item, 'left')}
+                    onDragEnd={handleDragEnd}
+                    onTouchStart={(e) => handleTouchStart(e, item, 'left')}
+                    onTouchMove={(e) => handleTouchMove(e, item, 'left')}
+                    onTouchEnd={(e) => handleTouchEnd(e, item, 'left')}
+                    onClick={() => matched && handleUnmatch(item, 'left')}
+                    className={`
+                      bg-white/90 backdrop-blur-xl border-2 rounded-2xl p-4 sm:p-5
+                      font-semibold text-base sm:text-lg
+                      transition-all duration-300 transform cursor-grab active:cursor-grabbing
+                      hover:scale-102 hover:-translate-y-1 hover:shadow-xl
+                      touch-none select-none
+                      ${matched ? 'border-2' : 'border-white/50 hover:border-white'}
+                      ${isDraggedItem ? 'opacity-50 scale-95' : ''}
+                      ${isDropZone ? 'border-yellow-400 bg-yellow-50/90 scale-105' : ''}
+                      ${matched ? 'shadow-lg' : 'shadow-md'}
+                    `}
+                    style={matched ? {
+                      backgroundColor: match.color.bg,
+                      borderColor: match.color.border,
+                      color: match.color.text
+                    } : {}}
+                  >
+                    {item}
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-center pt-4">
-              <button
-                onClick={handleSubmit}
-                disabled={!canSubmit || isPaused}
-                className="
-                  bg-gradient-to-r from-yellow-400 to-amber-500
-                  hover:from-yellow-500 hover:to-amber-600
-                  disabled:from-gray-300 disabled:to-gray-400
-                  text-black font-bold text-lg sm:text-xl px-10 sm:px-12 py-4 sm:py-5
-                  rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-yellow-500/30
-                  transition-all duration-300 transform hover:scale-105
-                  disabled:cursor-not-allowed disabled:hover:scale-100
-                  border-2 border-yellow-600/30
-                "
-              >
-                {canSubmit ? 'Submit Answers' : 'Match All Pairs to Submit'}
-              </button>
+            {/* Right Column */}
+            <div className="space-y-3">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 text-center px-2">
+                Column B
+              </h3>
+              {rightItems.map((item, index) => {
+                const match = getItemMatch(item, 'right');
+                const matched = isMatched(item, 'right');
+                const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'right';
+                const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'right' && draggedItem?.side !== 'right';
+                
+                return (
+                  <div
+                    key={index}
+                    draggable={!isPaused}
+                    data-drop-item={item}
+                    data-drop-side="right"
+                    onDragStart={(e) => handleDragStart(e, item, 'right')}
+                    onDragOver={(e) => handleDragOver(e, item, 'right')}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, item, 'right')}
+                    onDragEnd={handleDragEnd}
+                    onTouchStart={(e) => handleTouchStart(e, item, 'right')}
+                    onTouchMove={(e) => handleTouchMove(e, item, 'right')}
+                    onTouchEnd={(e) => handleTouchEnd(e, item, 'right')}
+                    onClick={() => matched && handleUnmatch(item, 'right')}
+                    className={`
+                      bg-white/90 backdrop-blur-xl border-2 rounded-2xl p-4 sm:p-5
+                      font-semibold text-base sm:text-lg
+                      transition-all duration-300 transform cursor-grab active:cursor-grabbing
+                      hover:scale-102 hover:-translate-y-1 hover:shadow-xl
+                      touch-none select-none
+                      ${matched ? 'border-2' : 'border-white/50 hover:border-white'}
+                      ${isDraggedItem ? 'opacity-50 scale-95' : ''}
+                      ${isDropZone ? 'border-yellow-400 bg-yellow-50/90 scale-105' : ''}
+                      ${matched ? 'shadow-lg' : 'shadow-md'}
+                    `}
+                    style={matched ? {
+                      backgroundColor: match.color.bg,
+                      borderColor: match.color.border,
+                      color: match.color.text
+                    } : {}}
+                  >
+                    {item}
+                  </div>
+                );
+              })}
             </div>
-          </>
-        ) : (
-          <>
-            {/* Score Card */}
-            <div className={`relative overflow-hidden rounded-2xl shadow-2xl bg-gradient-to-r ${getGradientColors()}`}>
-              <div className="absolute inset-0 bg-white/10"></div>
-              <div className="relative px-5 sm:px-6 py-5 sm:py-6 text-white">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div>
-                    <div className="text-2xl sm:text-3xl font-bold mb-1">
-                      {correctCount}/{totalCount} CORRECT
-                    </div>
-                    <div className="text-sm sm:text-base font-medium opacity-90">
-                      {getMessage()}
-                    </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit || isPaused}
+              className="
+                bg-gradient-to-r from-yellow-400 to-amber-500
+                hover:from-yellow-500 hover:to-amber-600
+                disabled:from-gray-300 disabled:to-gray-400
+                text-black font-bold text-lg sm:text-xl px-10 sm:px-12 py-4 sm:py-5
+                rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-yellow-500/30
+                transition-all duration-300 transform hover:scale-105
+                disabled:cursor-not-allowed disabled:hover:scale-100
+                border-2 border-yellow-600/30
+              "
+            >
+              {canSubmit ? 'Submit Answers' : 'Match All Pairs to Submit'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Score Card */}
+          <div className={`relative overflow-hidden rounded-2xl shadow-2xl bg-gradient-to-r ${getGradientColors()}`}>
+            <div className="absolute inset-0 bg-white/10"></div>
+            <div className="relative px-5 sm:px-6 py-5 sm:py-6 text-white">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div>
+                  <div className="text-2xl sm:text-3xl font-bold mb-1">
+                    {correctCount}/{totalCount} CORRECT
                   </div>
-                  <div className="text-4xl sm:text-5xl font-bold">
-                    {percentage}%
+                  <div className="text-sm sm:text-base font-medium opacity-90">
+                    {getMessage()}
                   </div>
+                </div>
+                <div className="text-4xl sm:text-5xl font-bold">
+                  {percentage}%
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Correct Answers Section */}
-            {correctMatches.length > 0 && (
-              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/50 overflow-hidden">
-                <button
-                  onClick={() => setShowCorrectMatches(!showCorrectMatches)}
-                  className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <Check className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-base sm:text-lg font-bold text-gray-900">
-                      Correct Answers ({correctMatches.length})
-                    </span>
+          {/* Correct Answers Section */}
+          {correctMatches.length > 0 && (
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/50 overflow-hidden">
+              <button
+                onClick={() => setShowCorrectMatches(!showCorrectMatches)}
+                className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <Check className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-gray-700 text-xl font-bold">
-                    {showCorrectMatches ? '▴' : '▾'}
+                  <span className="text-base sm:text-lg font-bold text-gray-900">
+                    Correct Answers ({correctMatches.length})
                   </span>
-                </button>
-                
-                {showCorrectMatches && (
-                  <div className="px-5 pb-4 space-y-2 border-t-2 border-white/50 pt-3">
-                    {correctMatches.map((match, index) => (
-                      <div key={index} className="p-3 bg-green-50 rounded-xl border-2 border-green-200">
-                        <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900">
-                          <span>{match.left}</span>
-                          <span className="text-green-600 font-bold">→</span>
-                          <span>{match.right}</span>
+                </div>
+                <span className="text-gray-700 text-xl font-bold">
+                  {showCorrectMatches ? '▴' : '▾'}
+                </span>
+              </button>
+              
+              {showCorrectMatches && (
+                <div className="px-5 pb-4 space-y-2 border-t-2 border-white/50 pt-3">
+                  {correctMatches.map((match, index) => (
+                    <div key={index} className="p-3 bg-green-50 rounded-xl border-2 border-green-200">
+                      <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900">
+                        <span>{match.left}</span>
+                        <span className="text-green-600 font-bold">→</span>
+                        <span>{match.right}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Mistakes Section */}
+          {incorrectMatches.length > 0 && (
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/50 overflow-hidden">
+              <button
+                onClick={() => setShowMistakes(!showMistakes)}
+                className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                    <X className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-base sm:text-lg font-bold text-gray-900">
+                    Mistakes to Review ({incorrectMatches.length})
+                  </span>
+                </div>
+                <span className="text-gray-700 text-xl font-bold">
+                  {showMistakes ? '▴' : '▾'}
+                </span>
+              </button>
+              
+              {showMistakes && (
+                <div className="px-5 pb-4 space-y-3 border-t-2 border-white/50 pt-3">
+                  {incorrectMatches.map((match, index) => {
+                    const correctLeft = getCorrectMatch(match.left, 'left');
+                    return (
+                      <div key={index} className="p-3 bg-red-50 rounded-xl border-2 border-red-200 space-y-2">
+                        <div>
+                          <div className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1">
+                            Your Answer:
+                          </div>
+                          <div className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+                            <span className="text-gray-900">{match.left}</span>
+                            <span className="text-red-600 font-bold">→</span>
+                            <span className="line-through text-red-600">{match.right}</span>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <div className="text-xs font-bold text-green-700 uppercase tracking-wide mb-1">
+                            Correct Answer:
+                          </div>
+                          <div className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+                            <span className="text-gray-900">{match.left}</span>
+                            <span className="text-green-600 font-bold">→</span>
+                            <span className="text-green-700">{correctLeft.right}</span>
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Mistakes Section */}
-            {incorrectMatches.length > 0 && (
-              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/50 overflow-hidden">
-                <button
-                  onClick={() => setShowMistakes(!showMistakes)}
-                  className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                      <X className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-base sm:text-lg font-bold text-gray-900">
-                      Mistakes to Review ({incorrectMatches.length})
-                    </span>
-                  </div>
-                  <span className="text-gray-700 text-xl font-bold">
-                    {showMistakes ? '▴' : '▾'}
-                  </span>
-                </button>
-                
-                {showMistakes && (
-                  <div className="px-5 pb-4 space-y-3 border-t-2 border-white/50 pt-3">
-                    {incorrectMatches.map((match, index) => {
-                      const correctLeft = getCorrectMatch(match.left, 'left');
-                      return (
-                        <div key={index} className="p-3 bg-red-50 rounded-xl border-2 border-red-200 space-y-2">
-                          <div>
-                            <div className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1">
-                              Your Answer:
-                            </div>
-                            <div className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-                              <span className="text-gray-900">{match.left}</span>
-                              <span className="text-red-600 font-bold">→</span>
-                              <span className="line-through text-red-600">{match.right}</span>
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <div className="text-xs font-bold text-green-700 uppercase tracking-wide mb-1">
-                              Correct Answer:
-                            </div>
-                            <div className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-                              <span className="text-gray-900">{match.left}</span>
-                              <span className="text-green-600 font-bold">→</span>
-                              <span className="text-green-700">{correctLeft.right}</span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

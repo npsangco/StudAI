@@ -151,11 +151,14 @@ export function useQuizAPI(quizDataHook) {
       if (!quizData.editing.isTemp) {
         const currentQuizResponse = await quizApi.getById(quizId);
         existingQuestionIds = currentQuizResponse.data.questions.map(q => q.question_id);
+        
+        // Delete ALL existing questions first to avoid order conflicts
+        for (const existingId of existingQuestionIds) {
+          await quizApi.deleteQuestion(quizId, existingId);
+        }
       }
 
-      // Process questions: add new, update existing, delete removed
-      const updatedQuestionIds = [];
-
+      // Now insert all questions in the correct order
       for (let i = 0; i < questions.length; i++) {
         const question = questions[i];
         
@@ -189,27 +192,8 @@ export function useQuizAPI(quizDataHook) {
           points: 1
         };
 
-        if (question.id && existingQuestionIds.includes(question.id)) {
-          // Update existing question
-          await quizApi.updateQuestion(quizId, question.id, questionData);
-          updatedQuestionIds.push(question.id);
-          console.log('✅ Question updated:', question.id);
-        } else {
-          // Add new question
-          const response = await quizApi.addQuestion(quizId, questionData);
-          updatedQuestionIds.push(response.data.question.question_id);
-          console.log('✅ Question added:', response.data.question.question_id);
-        }
-      }
-
-      // Delete removed questions (only if not temp quiz)
-      if (!quizData.editing.isTemp) {
-        for (const existingId of existingQuestionIds) {
-          if (!updatedQuestionIds.includes(existingId)) {
-            await quizApi.deleteQuestion(quizId, existingId);
-            console.log('✅ Question deleted:', existingId);
-          }
-        }
+        // Always add as new question (since we deleted all existing ones)
+        await quizApi.addQuestion(quizId, questionData);
       }
 
       // Reload quizzes

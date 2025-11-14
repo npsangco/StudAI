@@ -676,13 +676,123 @@ export const QuizEditor = ({
   onUpdatePublicStatus,
   onAddQuestion,
   onDeleteQuestion,
+  onDuplicateQuestion,
   onUpdateQuestion,
   onUpdateChoice,
   onAddChoice,
   onAddMatchingPair,
   onUpdateMatchingPair,
-  onRemoveMatchingPair
+  onRemoveMatchingPair,
+  onReorderQuestions
 }) => {
+  const [draggedQuestionIndex, setDraggedQuestionIndex] = useState(null);
+  const [dragOverQuestionIndex, setDragOverQuestionIndex] = useState(null);
+  const [touchStartY, setTouchStartY] = useState(null);
+  const [touchCurrentY, setTouchCurrentY] = useState(null);
+
+  const handleQuestionDragStart = (e, index) => {
+    setDraggedQuestionIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleQuestionDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedQuestionIndex !== index) {
+      setDragOverQuestionIndex(index);
+    }
+  };
+
+  const handleQuestionDragLeave = () => {
+    setDragOverQuestionIndex(null);
+  };
+
+  const handleQuestionDrop = (e, dropIndex) => {
+    e.preventDefault();
+    
+    if (draggedQuestionIndex === null || draggedQuestionIndex === dropIndex) {
+      setDraggedQuestionIndex(null);
+      setDragOverQuestionIndex(null);
+      return;
+    }
+
+    // Reorder questions
+    const newQuestions = [...questions];
+    const draggedQuestion = newQuestions[draggedQuestionIndex];
+    
+    // Remove from old position
+    newQuestions.splice(draggedQuestionIndex, 1);
+    // Insert at new position
+    newQuestions.splice(dropIndex, 0, draggedQuestion);
+    
+    // Call parent's reorder function if it exists
+    if (onReorderQuestions) {
+      onReorderQuestions(newQuestions);
+    }
+    
+    setDraggedQuestionIndex(null);
+    setDragOverQuestionIndex(null);
+  };
+
+  const handleQuestionDragEnd = () => {
+    setDraggedQuestionIndex(null);
+    setDragOverQuestionIndex(null);
+  };
+
+  // Touch event handlers for mobile
+  const handleTouchStart = (e, index) => {
+    const touch = e.touches[0];
+    setTouchStartY(touch.clientY);
+    setTouchCurrentY(touch.clientY);
+    setDraggedQuestionIndex(index);
+  };
+
+  const handleTouchMove = (e, index) => {
+    if (draggedQuestionIndex === null) return;
+    
+    const touch = e.touches[0];
+    setTouchCurrentY(touch.clientY);
+    
+    // Calculate which question we're over
+    const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+    const questionElement = elements.find(el => el.dataset.questionIndex);
+    
+    if (questionElement) {
+      const overIndex = parseInt(questionElement.dataset.questionIndex);
+      if (overIndex !== draggedQuestionIndex) {
+        setDragOverQuestionIndex(overIndex);
+      }
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (draggedQuestionIndex === null || dragOverQuestionIndex === null) {
+      setDraggedQuestionIndex(null);
+      setDragOverQuestionIndex(null);
+      setTouchStartY(null);
+      setTouchCurrentY(null);
+      return;
+    }
+
+    // Reorder questions
+    const newQuestions = [...questions];
+    const draggedQuestion = newQuestions[draggedQuestionIndex];
+    
+    // Remove from old position
+    newQuestions.splice(draggedQuestionIndex, 1);
+    // Insert at new position
+    newQuestions.splice(dragOverQuestionIndex, 0, draggedQuestion);
+    
+    // Call parent's reorder function
+    if (onReorderQuestions) {
+      onReorderQuestions(newQuestions);
+    }
+    
+    setDraggedQuestionIndex(null);
+    setDragOverQuestionIndex(null);
+    setTouchStartY(null);
+    setTouchCurrentY(null);
+  };
   return (
     <div className="min-h-screen bg-gray-50">
       <QuizControls 
@@ -718,18 +828,33 @@ export const QuizEditor = ({
         ) : (
           <div className="space-y-3 sm:space-y-4">
             {questions.map((question, index) => (
-              <QuestionCard
+              <div
                 key={question.id}
-                question={question}
-                index={index}
-                onUpdateQuestion={onUpdateQuestion}
-                onUpdateChoice={onUpdateChoice}
-                onAddChoice={onAddChoice}
-                onDeleteQuestion={onDeleteQuestion}
-                onAddMatchingPair={onAddMatchingPair}
-                onUpdateMatchingPair={onUpdateMatchingPair}
-                onRemoveMatchingPair={onRemoveMatchingPair}
-              />
+                draggable
+                onDragStart={(e) => handleQuestionDragStart(e, index)}
+                onDragOver={(e) => handleQuestionDragOver(e, index)}
+                onDragLeave={handleQuestionDragLeave}
+                onDrop={(e) => handleQuestionDrop(e, index)}
+                onDragEnd={handleQuestionDragEnd}
+                className={`transition-all ${
+                  draggedQuestionIndex === index ? 'opacity-50 scale-95' : ''
+                } ${
+                  dragOverQuestionIndex === index && draggedQuestionIndex !== index ? 'scale-105 border-2 border-blue-400 rounded-lg' : ''
+                }`}
+              >
+                <QuestionCard
+                  question={question}
+                  index={index}
+                  onUpdateQuestion={onUpdateQuestion}
+                  onUpdateChoice={onUpdateChoice}
+                  onAddChoice={onAddChoice}
+                  onDeleteQuestion={onDeleteQuestion}
+                  onDuplicateQuestion={onDuplicateQuestion}
+                  onAddMatchingPair={onAddMatchingPair}
+                  onUpdateMatchingPair={onUpdateMatchingPair}
+                  onRemoveMatchingPair={onRemoveMatchingPair}
+                />
+              </div>
             ))}
           </div>
         )}

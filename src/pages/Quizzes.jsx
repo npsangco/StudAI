@@ -547,6 +547,8 @@ function QuizzesPage() {
           onUpdatePublicStatus={handlers.handleUpdatePublicStatus}
           onAddQuestion={handlers.handleAddQuestion}
           onDeleteQuestion={handlers.handleDeleteQuestion}
+          onDuplicateQuestion={handlers.handleDuplicateQuestion}
+          onReorderQuestions={handlers.handleReorderQuestions}
           onUpdateQuestion={handlers.handleUpdateQuestion}
           onUpdateChoice={handlers.handleUpdateChoice}
           onAddChoice={handlers.handleAddChoice}

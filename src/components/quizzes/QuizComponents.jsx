@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Copy } from 'lucide-react';
 import {
   MultipleChoiceQuestion,
   FillInBlanksQuestion,
@@ -15,6 +15,7 @@ export const QuestionCard = ({
   onUpdateChoice, 
   onAddChoice, 
   onDeleteQuestion,
+  onDuplicateQuestion,
   onAddMatchingPair,
   onUpdateMatchingPair,
   onRemoveMatchingPair
@@ -37,12 +38,22 @@ export const QuestionCard = ({
           <option>Matching</option>
         </select>
       </div>
-      <button 
-        onClick={() => onDeleteQuestion(question.id)}
-        className="p-1 sm:p-1.5 text-red-500 hover:bg-red-50 rounded flex-shrink-0"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <button 
+          onClick={() => onDuplicateQuestion && onDuplicateQuestion(question.id)}
+          className="p-1 sm:p-1.5 text-blue-500 hover:bg-blue-50 rounded flex-shrink-0"
+          title="Duplicate question"
+        >
+          <Copy className="w-4 h-4" />
+        </button>
+        <button 
+          onClick={() => onDeleteQuestion(question.id)}
+          className="p-1 sm:p-1.5 text-red-500 hover:bg-red-50 rounded flex-shrink-0"
+          title="Delete question"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
     </div>
 
     {/* Question Text */}

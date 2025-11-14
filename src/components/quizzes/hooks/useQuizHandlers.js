@@ -276,6 +276,39 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
     setQuestions(questions.filter(q => q.id !== questionId));
   };
 
+  const handleDuplicateQuestion = (questionId) => {
+    const questionToDuplicate = questions.find(q => q.id === questionId);
+    if (!questionToDuplicate) return;
+
+    // Create a deep copy of the question with a new ID
+    const duplicatedQuestion = {
+      ...questionToDuplicate,
+      id: `question-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      // Deep copy choices if they exist
+      choices: questionToDuplicate.choices ? [...questionToDuplicate.choices] : undefined,
+      // Deep copy matching pairs if they exist
+      matchingPairs: questionToDuplicate.matchingPairs 
+        ? questionToDuplicate.matchingPairs.map(pair => ({ ...pair })) 
+        : undefined
+    };
+
+    // Find the index of the original question
+    const originalIndex = questions.findIndex(q => q.id === questionId);
+    
+    // Insert the duplicated question right after the original
+    const newQuestions = [
+      ...questions.slice(0, originalIndex + 1),
+      duplicatedQuestion,
+      ...questions.slice(originalIndex + 1)
+    ];
+
+    setQuestions(newQuestions);
+  };
+
+  const handleReorderQuestions = (reorderedQuestions) => {
+    setQuestions(reorderedQuestions);
+  };
+
   const handleUpdateQuestion = (questionId, field, value) => {
     setQuestions(questions.map(q => {
       if (q.id === questionId) {
@@ -461,6 +494,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
     // Questions
     handleAddQuestion,
     handleDeleteQuestion,
+    handleDuplicateQuestion,
+    handleReorderQuestions,
     handleUpdateQuestion,
     handleUpdateChoice,
     handleAddChoice,

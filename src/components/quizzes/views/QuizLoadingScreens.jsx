@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, Users } from 'lucide-react';
 import { PHYSICS_UPDATE_INTERVAL, PLAYER_RADIUS } from '../utils/constants';
+import { DefaultQuizPattern } from '../utils/QuizPatterns';
 
 // Animations
 const styles = `
@@ -75,36 +76,7 @@ export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
     <>
       <style>{styles}</style>
       <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(8)].map((_, i) => (
-            <div
-              key={`q-${i}`}
-              className="absolute text-6xl opacity-20 animate-float"
-              style={{
-                left: `${(i * 15) % 100}%`,
-                top: `${(i * 20) % 100}%`,
-                animationDuration: `${3 + (i % 3)}s`
-              }}
-            >
-              ?
-            </div>
-          ))}
-          
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={`circle-${i}`}
-              className="absolute rounded-full bg-white opacity-10"
-              style={{
-                width: `${100 + i * 50}px`,
-                height: `${100 + i * 50}px`,
-                left: `${20 + i * 15}%`,
-                top: `${30 + i * 10}%`,
-                animation: `pulse-glow ${2 + i * 0.5}s ease-in-out infinite`,
-                animationDelay: `${i * 0.3}s`
-              }}
-            />
-          ))}
-        </div>
+        <DefaultQuizPattern />
 
         <div className="text-center animate-fade-in z-10 relative px-4">
           <div className="mb-6 relative">
@@ -319,36 +291,7 @@ export const BattleLobbyScreen = ({
     <>
       <style>{styles}</style>
       <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(8)].map((_, i) => (
-            <div
-              key={`q-${i}`}
-              className="absolute text-6xl opacity-20 animate-float"
-              style={{
-                left: `${(i * 15) % 100}%`,
-                top: `${(i * 20) % 100}%`,
-                animationDuration: `${3 + (i % 3)}s`
-              }}
-            >
-              ?
-            </div>
-          ))}
-          
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={`circle-${i}`}
-              className="absolute rounded-full bg-white opacity-10"
-              style={{
-                width: `${100 + i * 50}px`,
-                height: `${100 + i * 50}px`,
-                left: `${20 + i * 15}%`,
-                top: `${30 + i * 10}%`,
-                animation: `pulse-glow ${2 + i * 0.5}s ease-in-out infinite`,
-                animationDelay: `${i * 0.3}s`
-              }}
-            />
-          ))}
-        </div>
+        <DefaultQuizPattern />
 
         {/* Game PIN Display at Top */}
         <div className="absolute top-4 left-0 right-0 z-10 px-4">

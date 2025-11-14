@@ -10,6 +10,7 @@ import { ref, update, get } from 'firebase/database';
 import { realtimeDb } from '../../../firebase/config';
 import { useReconnection } from '../hooks/useReconnection';
 import { ReconnectionModal } from './ReconnectionModal';
+import { QuizBackgroundPattern } from '../utils/QuizPatterns';
 
 const QuizGame = ({ 
   quiz, 
@@ -745,10 +746,10 @@ const QuizGame = ({
   
   if (!currentQ) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 flex items-center justify-center">
+        <div className="text-center bg-white rounded-2xl p-8 shadow-2xl">
           <h2 className="text-2xl font-bold text-black mb-4">No questions available</h2>
-          <button onClick={onBack} className="bg-black text-white px-6 py-3 rounded-lg">
+          <button onClick={onBack} className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors">
             Go Back
           </button>
         </div>
@@ -757,15 +758,9 @@ const QuizGame = ({
   }
   
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Yellow Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 -z-10" />
-      
-      {/* Animated background shapes*/}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-10 left-5 w-20 h-20 sm:w-32 sm:h-32 bg-white/10 rounded-full blur-2xl sm:blur-3xl animate-pulse" />
-        <div className="absolute bottom-10 right-5 w-24 h-24 sm:w-48 sm:h-48 bg-black/10 rounded-full blur-2xl sm:blur-3xl animate-pulse" style={{ animationDelay: '700ms' }} />
-      </div>
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600">
+      {/* DYNAMIC PATTERNS based on question type */}
+      <QuizBackgroundPattern questionType={currentQ?.type} />
 
       {/* Header */}
       <QuizGameHeader

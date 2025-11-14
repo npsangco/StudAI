@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Clock } from 'lucide-react';
+import { ArrowLeft, Clock, Target, Trophy, Zap } from 'lucide-react';
 
 const ExitConfirmationModal = ({ isOpen, onClose, onConfirm, mode, currentScore, totalQuestions }) => {
   if (!isOpen) return null;
@@ -104,17 +104,27 @@ export const QuizGameHeader = ({
     onBack();
   };
 
+  // Calculate accuracy percentage
+  const accuracy = currentQuestion > 0 ? Math.round((displayScore / currentQuestion) * 100) : 0;
+  
+  // Timer color based on time left
+  const getTimerColor = () => {
+    if (timeLeft <= 5) return 'text-red-600';
+    if (timeLeft <= 10) return 'text-orange-600';
+    return 'text-green-600';
+  };
+
   return (
     <>
-      <div className="bg-yellow-400 shadow-sm sticky top-0 z-40">
+      <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 shadow-lg sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6">
           {/* Mobile Layout (< 640px) */}
-          <div className="sm:hidden py-3">
+          <div className="sm:hidden py-3 space-y-3">
             {/* Row 1: Back button + Quiz title */}
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3">
               <button
                 onClick={handleBackClick}
-                className="p-2 hover:bg-yellow-500 hover:bg-opacity-30 rounded-lg transition-colors flex-shrink-0"
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
                 title="Leave Quiz"
               >
                 <ArrowLeft className="w-5 h-5 text-black" />
@@ -124,64 +134,151 @@ export const QuizGameHeader = ({
               </h1>
             </div>
 
-            {/* Row 2: Question progress, Timer, Score */}
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-black font-medium">
-                Q{currentQuestion + 1}/{totalQuestions}
-              </span>
-              
-              <div className="flex items-center gap-3">
-                {/* Timer */}
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-orange-600" />
-                  <span className="font-semibold text-black">{timeLeft}s</span>
+            {/* Row 2: Stats Cards */}
+            <div className="grid grid-cols-3 gap-2">
+              {/* Question Progress - Soft Blue */}
+              <div className="bg-blue-50/90 backdrop-blur-sm rounded-lg p-2 text-center border border-blue-200/50">
+                <div className="flex items-center justify-center gap-1 mb-0.5">
+                  <Target className="w-3 h-3 text-blue-600" />
                 </div>
-                
-                {/* Score label */}
-                <span className="text-sm text-gray-700">
-                  Score: {displayScore}/{totalQuestions}
-                </span>
+                <div className="text-xs font-bold text-blue-900">
+                  {currentQuestion + 1}/{totalQuestions}
+                </div>
+                <div className="text-[10px] text-blue-700">Question</div>
+              </div>
+              
+              {/* Timer - colors based on time */}
+              <div className={`backdrop-blur-sm rounded-lg p-2 text-center border ${
+                timeLeft <= 5 ? 'bg-red-50/90 border-red-200/50' :
+                timeLeft <= 10 ? 'bg-orange-50/90 border-orange-200/50' :
+                'bg-green-50/90 border-green-200/50'
+              }`}>
+                <div className="flex items-center justify-center gap-1 mb-0.5">
+                  <Clock className={`w-3 h-3 ${getTimerColor()}`} />
+                </div>
+                <div className={`text-xs font-bold ${getTimerColor()}`}>
+                  {timeLeft}s
+                </div>
+                <div className={`text-[10px] ${
+                  timeLeft <= 5 ? 'text-red-700' :
+                  timeLeft <= 10 ? 'text-orange-700' :
+                  'text-green-700'
+                }`}>Time Left</div>
+              </div>
+              
+              {/* Score */}
+              <div className="bg-amber-50/90 backdrop-blur-sm rounded-lg p-2 text-center border border-amber-200/50">
+                <div className="flex items-center justify-center gap-1 mb-0.5">
+                  <Trophy className="w-3 h-3 text-amber-600" />
+                </div>
+                <div className="text-xs font-bold text-amber-900">
+                  {displayScore}/{totalQuestions}
+                </div>
+                <div className="text-[10px] text-amber-700">Score</div>
               </div>
             </div>
+
+            {/* Accuracy bar (if answered at least 1 question) */}
+            {currentQuestion > 0 && (
+              <div className="bg-purple-50/90 backdrop-blur-sm rounded-lg p-2 border border-purple-200/50">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-purple-900 flex items-center gap-1">
+                    <Zap className="w-3 h-3" />
+                    Accuracy
+                  </span>
+                  <span className="text-xs font-bold text-purple-900">{accuracy}%</span>
+                </div>
+                <div className="bg-purple-200/50 rounded-full h-1.5 overflow-hidden">
+                  <div 
+                    className="bg-purple-500 h-full transition-all duration-300"
+                    style={{ width: `${accuracy}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Tablet & Desktop Layout (≥ 640px) */}
-          <div className="hidden sm:flex items-center justify-between py-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={handleBackClick}
-                className="p-2 hover:bg-yellow-500 hover:bg-opacity-30 rounded-lg transition-colors"
-                title="Leave Quiz"
-              >
-                <ArrowLeft className="w-5 h-5 text-black" />
-              </button>
-              <div>
-                <h1 className="text-lg md:text-xl font-bold text-black truncate max-w-[300px] md:max-w-none">
-                  {quiz.title}
-                </h1>
-                <p className="text-sm text-gray-700">
-                  Question {currentQuestion + 1} of {totalQuestions}
-                  {mode === 'battle' && ` • ${playersCount} Players`}
-                </p>
+          <div className="hidden sm:block py-4">
+            <div className="flex items-center justify-between mb-3">
+              {/* Left: Back + Title */}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  title="Leave Quiz"
+                >
+                  <ArrowLeft className="w-5 h-5 text-black" />
+                </button>
+                <div>
+                  <h1 className="text-lg md:text-xl font-bold text-black truncate max-w-[300px] md:max-w-none">
+                    {quiz.title}
+                  </h1>
+                  <p className="text-sm text-black/70 flex items-center gap-2">
+                    <span>Question {currentQuestion + 1} of {totalQuestions}</span>
+                    {mode === 'battle' && (
+                      <>
+                        <span>•</span>
+                        <span>{playersCount} Players</span>
+                      </>
+                    )}
+                  </p>
+                </div>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-4 flex-shrink-0">
-              <div className="flex items-center gap-2 text-orange-600">
-                <Clock className="w-5 h-5" />
-                <span className="font-semibold text-black">{timeLeft}s</span>
-              </div>
-              <div className="text-sm text-gray-700">
-                Score: {displayScore}/{totalQuestions}
+              
+              {/* Right: Stats Cards */}
+              <div className="flex items-center gap-3">
+                {/* Timer Card */}
+                <div className={`backdrop-blur-sm rounded-xl px-4 py-2 shadow-md border ${
+                  timeLeft <= 5 ? 'bg-red-50/90 border-red-200/50' :
+                  timeLeft <= 10 ? 'bg-orange-50/90 border-orange-200/50' :
+                  'bg-green-50/90 border-green-200/50'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <Clock className={`w-5 h-5 ${getTimerColor()}`} />
+                    <div>
+                      <div className={`text-sm font-bold ${getTimerColor()}`}>{timeLeft}s</div>
+                      <div className={`text-xs ${
+                        timeLeft <= 5 ? 'text-red-700' :
+                        timeLeft <= 10 ? 'text-orange-700' :
+                        'text-green-700'
+                      }`}>Time Left</div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Score Card */}
+                <div className="bg-amber-50/90 backdrop-blur-sm rounded-xl px-4 py-2 shadow-md border border-amber-200/50">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-amber-600" />
+                    <div>
+                      <div className="text-sm font-bold text-amber-900">{displayScore}/{totalQuestions}</div>
+                      <div className="text-xs text-amber-700">Score</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Accuracy Card (if answered at least 1 question) */}
+                {currentQuestion > 0 && (
+                  <div className="bg-purple-50/90 backdrop-blur-sm rounded-xl px-4 py-2 shadow-md border border-purple-200/50">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-purple-600" />
+                      <div>
+                        <div className="text-sm font-bold text-purple-900">{accuracy}%</div>
+                        <div className="text-xs text-purple-700">Accuracy</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
         
         {/* Progress bar */}
-        <div className="bg-gray-200 h-2">
+        <div className="bg-black/10 h-2">
           <div
-            className="bg-green-500 h-2 transition-all duration-300"
+            className="bg-green-500 h-2 transition-all duration-300 shadow-lg shadow-green-500/50"
             style={{ width: `${((currentQuestion + 1) / totalQuestions) * 100}%` }}
           />
         </div>
