@@ -367,13 +367,13 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
-    const { title, description, is_public } = req.body;
+    const { title, description, is_public, timer_per_question } = req.body;
 
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    // ✅ FIX: Default is PRIVATE, share code generated only when toggled to PUBLIC
+    // Default is PRIVATE, share code generated only when toggled to PUBLIC
     const isPublic = is_public !== undefined ? is_public : false;
     let shareCode = null;
     
@@ -381,12 +381,16 @@ router.post('/', requireAuth, async (req, res) => {
       shareCode = await generateUniqueShareCode();
     }
 
+    // Handle timer - default to 30 if not provided
+    const timerValue = timer_per_question !== undefined ? timer_per_question : 30;
+
     const newQuiz = await Quiz.create({
       title: title.trim(),
       description: description || '',
       created_by: userId,
       is_public: isPublic,
-      share_code: shareCode, // ✅ Set share code on creation
+      share_code: shareCode, // Set share code on creation
+      timer_per_question: timerValue,
       total_questions: 0,
       total_attempts: 0,
       average_score: 0
@@ -433,6 +437,7 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
       description: `AI-generated quiz from "${noteTitle}"`,
       created_by: userId,
       is_public: false,
+      timer_per_question: 30,
       total_questions: 0,
       total_attempts: 0,
       average_score: 0
@@ -764,7 +769,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
     const quizId = req.params.id;
-    const { title, description, is_public } = req.body;
+    const { title, description, is_public, timer_per_question } = req.body;
 
     const quiz = await Quiz.findByPk(quizId);
 
@@ -776,7 +781,7 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to edit this quiz' });
     }
 
-    // ✅ Only update is_public if explicitly provided
+    // Only update is_public if explicitly provided
     const updateData = {
       title: title || quiz.title,
       description: description !== undefined ? description : quiz.description,
@@ -788,6 +793,11 @@ router.put('/:id', requireAuth, async (req, res) => {
       updateData.is_public = is_public;
     }
     
+    // Update timer if provided
+    if (timer_per_question !== undefined) {
+      updateData.timer_per_question = timer_per_question;
+    }
+
     await quiz.update(updateData);
 
     res.json({ quiz });
@@ -1252,7 +1262,7 @@ router.post('/battle/join', requireAuth, async (req, res) => {
       include: [{
         model: Quiz,
         as: 'quiz',
-        attributes: ['quiz_id', 'title', 'total_questions']
+        attributes: ['quiz_id', 'title', 'total_questions', 'timer_per_question']
       }]
     });
     
@@ -1290,13 +1300,14 @@ router.post('/battle/join', requireAuth, async (req, res) => {
       current_players: battle.current_players + 1
     });
     
-    res.json({ 
+    res.json({
       battle: {
         battle_id: battle.battle_id,
         quiz_id: battle.quiz_id,
         game_pin: battle.game_pin,
         quiz_title: battle.quiz.title,
         total_questions: battle.quiz.total_questions,
+        timer_per_question: battle.quiz.timer_per_question,
         status: battle.status,
         current_players: battle.current_players,
         max_players: battle.max_players
@@ -1324,7 +1335,7 @@ router.get('/battle/:gamePin', requireAuth, async (req, res) => {
         {
           model: Quiz,
           as: 'quiz',
-          attributes: ['quiz_id', 'title', 'total_questions']
+          attributes: ['quiz_id', 'title', 'total_questions', 'timer_per_question']
         },
         {
           model: User,
@@ -1348,13 +1359,14 @@ router.get('/battle/:gamePin', requireAuth, async (req, res) => {
       order: [['joined_at', 'ASC']]
     });
     
-    res.json({ 
+    res.json({
       battle: {
         battle_id: battle.battle_id,
         quiz_id: battle.quiz_id,
         game_pin: battle.game_pin,
         quiz_title: battle.quiz.title,
         total_questions: battle.quiz.total_questions,
+        timer_per_question: battle.quiz.timer_per_question,
         host_id: battle.host_id,
         host_username: battle.host.username,
         status: battle.status,

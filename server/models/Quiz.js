@@ -44,6 +44,11 @@ const Quiz = sequelize.define('Quiz', {
     type: DataTypes.STRING(255),
     allowNull: true
   },
+  timer_per_question: {
+    type: DataTypes.INTEGER,
+    defaultValue: 30,
+    allowNull: true
+  },
   total_questions: {
     type: DataTypes.INTEGER,
     defaultValue: 0

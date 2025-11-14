@@ -3,7 +3,7 @@ import { ArrowLeft, Clock, Target, Trophy, Zap } from 'lucide-react';
 import { getPointsForDifficulty } from './utils/adaptiveDifficultyManager';
 import './QuizGameHeader.css';
 
-const ExitConfirmationModal = ({ isOpen, onClose, onConfirm, mode, currentScore, totalQuestions }) => {
+const ExitConfirmationModal = ({ isOpen, onClose, onConfirm, mode, currentScore, maxPossibleScore }) => {
   if (!isOpen) return null;
 
   return (
@@ -40,7 +40,7 @@ const ExitConfirmationModal = ({ isOpen, onClose, onConfirm, mode, currentScore,
           {currentScore > 0 && (
             <div className="mt-4 p-4 bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-200 rounded-2xl">
               <p className="text-sm text-yellow-800">
-                <span className="font-semibold">Current Score:</span> {currentScore}/{totalQuestions}
+                <span className="font-semibold">Current Score:</span> {currentScore}/{maxPossibleScore}
               </p>
             </div>
           )}
@@ -69,13 +69,16 @@ const ExitConfirmationModal = ({ isOpen, onClose, onConfirm, mode, currentScore,
 };
 
 // Simple Timer Component
-const SimpleTimer = ({ timeLeft }) => {
+const SimpleTimer = ({ timeLeft, timeLimit }) => {
+  // Don't render timer if timeLimit is 0 (No Limit mode)
+  if (timeLimit === 0) return null;
+
   const getTimerColor = () => {
     if (timeLeft <= 5) return 'text-red-600';
     if (timeLeft <= 10) return 'text-orange-600';
     return 'text-green-600';
   };
-  
+
   return (
     <div className={`stat-card ${timeLeft <= 5 ? 'animate-pulse-timer' : ''}`}>
       <div className="flex items-center gap-2">
@@ -166,13 +169,14 @@ const DifficultySlotCard = ({ difficulty, points, currentQuestion }) => {
 };
 
 // Quiz Game Header Component
-export const QuizGameHeader = ({ 
-  quiz, 
-  currentQuestion, 
-  totalQuestions, 
-  timeLeft, 
-  displayScore, 
-  mode, 
+export const QuizGameHeader = ({
+  quiz,
+  currentQuestion,
+  totalQuestions,
+  timeLeft,
+  timeLimit = 30, // Original time limit (0 = no limit)
+  displayScore,
+  mode,
   playersCount = 0,
   onBack,
   currentQuestionData,
@@ -220,8 +224,8 @@ export const QuizGameHeader = ({
               </h1>
             </div>
 
-            {/* Stats Row - 5 cards, Timer at end */}
-            <div className={`grid ${mode === 'battle' ? 'grid-cols-4' : 'grid-cols-5'} gap-1.5`}>
+            {/* Stats Row - 4-5 cards, Timer at end (if enabled) */}
+            <div className={`grid ${timeLimit === 0 ? (mode === 'battle' ? 'grid-cols-3' : 'grid-cols-4') : (mode === 'battle' ? 'grid-cols-4' : 'grid-cols-5')} gap-1.5`}>
               {/* Question */}
               <div className="stat-card">
                 <div className="flex flex-col items-center gap-0.5">
@@ -264,14 +268,16 @@ export const QuizGameHeader = ({
                 </div>
               </div>
 
-              {/* Timer */}
-              <div className="stat-card">
-                <div className="flex flex-col items-center gap-0.5">
-                  <Clock className={`w-4 h-4 ${timeLeft <= 5 ? 'text-red-600' : timeLeft <= 10 ? 'text-orange-600' : 'text-green-600'}`} />
-                  <div className={`text-xs font-bold ${timeLeft <= 5 ? 'text-red-600' : timeLeft <= 10 ? 'text-orange-600' : 'text-green-600'}`}>{timeLeft}s</div>
-                  <div className="text-[9px] text-gray-700">Time</div>
+              {/* Timer - Only show if timeLimit is not 0 */}
+              {timeLimit !== 0 && (
+                <div className="stat-card">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <Clock className={`w-4 h-4 ${timeLeft <= 5 ? 'text-red-600' : timeLeft <= 10 ? 'text-orange-600' : 'text-green-600'}`} />
+                    <div className={`text-xs font-bold ${timeLeft <= 5 ? 'text-red-600' : timeLeft <= 10 ? 'text-orange-600' : 'text-green-600'}`}>{timeLeft}s</div>
+                    <div className="text-[9px] text-gray-700">Time</div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -330,8 +336,8 @@ export const QuizGameHeader = ({
                   iconColor="text-purple-600"
                 />
 
-                {/* Timer */}
-                <SimpleTimer timeLeft={timeLeft} />
+                {/* Timer - Only show if timeLimit is not 0 */}
+                <SimpleTimer timeLeft={timeLeft} timeLimit={timeLimit} />
               </div>
             </div>
           </div>
@@ -363,7 +369,7 @@ export const QuizGameHeader = ({
         onConfirm={handleConfirmExit}
         mode={mode}
         currentScore={displayScore}
-        totalQuestions={totalQuestions}
+        maxPossibleScore={maxPossibleScore}
       />
     </>
   );

@@ -64,13 +64,20 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
   const handleSoloQuiz = async () => {
     // Load questions before starting
     const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
-    
+
     if (!data || !data.questions || data.questions.length === 0) {
       setError('This quiz has no questions yet. Please add questions before starting.');
       updateUiState({ showModal: false });
       return;
     }
-    
+
+    // Update selected quiz with fresh data including timer_per_question
+    updateQuizData({
+      selected: {
+        ...quizData.selected,
+        ...data.quiz
+      }
+    });
     setQuestions(data.questions);
     updateUiState({ showModal: false, currentView: VIEWS.LOADING });
     countdown.start();
@@ -79,34 +86,41 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
   const handleQuizBattle = async () => {
     // Load questions
     const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
-    
+
     if (!data || !data.questions || data.questions.length === 0) {
       setError('This quiz has no questions yet. Please add questions before starting a battle.');
       updateUiState({ showModal: false });
       return;
     }
-    
+
+    // Update selected quiz with fresh data including timer_per_question
+    updateQuizData({
+      selected: {
+        ...quizData.selected,
+        ...data.quiz
+      }
+    });
     setQuestions(data.questions);
-    
+
     // 1️⃣ Create battle in MySQL (existing API call)
     const battleData = await quizAPI.createBattle(quizData.selected.id);
-    
+
     if (battleData) {
       const { battle, gamePin } = battleData;
-      
+
       // 2️⃣ Create battle room in Firebase
       try {
         await createBattleRoom(gamePin, {
           battleId: battle.battle_id,
           quizId: quizData.selected.id,
           quizTitle: quizData.selected.title,
-          hostId: currentUser.id, 
+          hostId: currentUser.id,
           totalQuestions: data.questions.length
         });
-        
+
         // 3️⃣ Add host as first player
         await addPlayerToBattle(gamePin, {
-          userId: currentUser.id, 
+          userId: currentUser.id,
           name: currentUser.username,
           initial: currentUser.initial
         });
@@ -116,7 +130,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
 
         // Continue...
         updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
-        
+
       } catch (firebaseError) {
         console.error('Firebase error:', firebaseError);
         setError('Failed to create battle room. Please try again.');
@@ -127,28 +141,29 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
   const handleJoinSuccess = async (battle, participant) => {
     console.log('✅ Successfully joined battle:', battle);
     console.log('✅ Participant info:', participant);
-    
+
     // Set the battle data
-    updateGameState({ 
+    updateGameState({
       gamePin: battle.game_pin,
       battleId: battle.battle_id,
       isHost: false,
       currentUserId: participant.user_id // Store current user ID
     });
-    
+
     // Don't try to load questions from MySQL!
     // Just set basic quiz info - questions will come from Firebase
-    updateQuizData({ 
+    updateQuizData({
       selected: {
         id: battle.quiz_id,
         title: battle.quiz_title,
-        questionCount: battle.total_questions
+        questionCount: battle.total_questions,
+        timer_per_question: battle.timer_per_question ?? 30
       }
     });
-    
+
     // ✅ Go directly to lobby WITHOUT loading questions
     updateUiState({ currentView: VIEWS.LOBBY });
-    
+
     console.log('🎮 Joined lobby successfully!');
   };
 
@@ -193,7 +208,13 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
   const handleEditQuiz = async (quiz) => {
     const data = await quizAPI.loadQuizWithQuestions(quiz.id);
     if (data) {
-      updateQuizData({ editing: quiz });
+      // Use the fresh quiz data from API which includes timer_per_question
+      const editingQuiz = {
+        ...quiz,
+        ...data.quiz, // Merge fresh data from API
+        id: quiz.id // Keep the ID consistent
+      };
+      updateQuizData({ editing: editingQuiz });
       setQuestions(data.questions);
       updateUiState({ currentView: VIEWS.EDITING });
     }
@@ -207,6 +228,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
       questionCount: 0,
       created: 'Just now',
       isPublic: false,
+      timer_per_question: 30, 
       isTemp: true
     };
 
@@ -244,6 +266,18 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
       };
       updateQuizData({ editing: updatedQuiz });
       console.log('✅ Quiz public status updated in state:', { isPublic, shareCode });
+    }
+  };
+
+  // Timer handler
+  const handleUpdateQuizTimer = (timerValue) => {
+    if (quizData.editing) {
+      const updatedQuiz = { 
+        ...quizData.editing, 
+        timer_per_question: timerValue
+      };
+      updateQuizData({ editing: updatedQuiz });
+      console.log('⏱️ Quiz timer updated in state:', timerValue);
     }
   };
 
@@ -495,6 +529,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
     handleConfirmDelete,
     handleUpdateQuizTitle,
     handleUpdatePublicStatus,
+    handleUpdateQuizTimer, 
     handleSaveQuiz,
 
     // Questions

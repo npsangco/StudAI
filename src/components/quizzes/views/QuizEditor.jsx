@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Clock } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 
 // ============================================
@@ -9,29 +9,27 @@ import { API_URL } from '../../../config/api.config';
 // ============================================
 
 const ShareToggle = ({ quiz, onPublicStatusChange }) => {
-  // ✅ Check both camelCase and snake_case, default to false (private)
+  // Check both camelCase and snake_case, default to false (private)
   const initialIsPublic = quiz.isPublic ?? quiz.is_public ?? false;
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [shareCode, setShareCode] = useState(quiz.share_code || null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // ✅ Check if this is a temp quiz (not saved yet)
+  // Check if this is a temp quiz (not saved yet)
   const isTempQuiz = quiz.isTemp || quiz.id?.toString().startsWith('temp-');
 
-  // ✅ Update state when quiz prop changes (important for editor refresh)
+  // Update state when quiz prop changes (important for editor refresh)
   React.useEffect(() => {
     const updatedIsPublic = quiz.isPublic ?? quiz.is_public ?? false;
     const updatedShareCode = quiz.share_code || null;
     
-    console.log('📋 ShareToggle useEffect:', { updatedIsPublic, updatedShareCode, isTempQuiz });
-    
     setIsPublic(updatedIsPublic);
     setShareCode(updatedShareCode);
-  }, [quiz.isPublic, quiz.is_public, quiz.share_code, isTempQuiz]);
+  }, [quiz.isPublic, quiz.is_public, quiz.share_code]);
 
   const handleToggle = async () => {
-    // ✅ Prevent toggle for unsaved quizzes
+    // Prevent toggle for unsaved quizzes
     if (isTempQuiz) {
       alert('⚠️ Please save the quiz first before changing visibility settings.');
       return;
@@ -40,13 +38,6 @@ const ShareToggle = ({ quiz, onPublicStatusChange }) => {
     try {
       setLoading(true);
       const newIsPublic = !isPublic;
-
-      console.log('🔄 Toggling quiz visibility:', { 
-        quizId: quiz.id, 
-        currentPublic: isPublic, 
-        newPublic: newIsPublic,
-        currentShareCode: shareCode 
-      });
 
       const response = await fetch(`${API_URL}/api/quizzes/${quiz.id}/toggle-public`, {
         method: 'POST',
@@ -58,24 +49,17 @@ const ShareToggle = ({ quiz, onPublicStatusChange }) => {
       const data = await response.json();
 
       if (response.ok) {
-        console.log('✅ Toggle successful:', data);
-        const newShareCode = data.share_code || shareCode; // Keep existing code if not in response
-        
+        const newShareCode = data.share_code || shareCode;
         setIsPublic(newIsPublic);
         setShareCode(newShareCode);
         
-        console.log('✅ State updated:', { newIsPublic, newShareCode });
-        
-        // ✅ Notify parent component of the change (pass shareCode too)
         if (onPublicStatusChange) {
           onPublicStatusChange(newIsPublic, newShareCode);
         }
       } else {
-        console.error('❌ Toggle failed:', data);
         alert(data.error || 'Failed to update quiz sharing');
       }
     } catch (error) {
-      console.error('❌ Toggle error:', error);
       alert('Failed to update quiz sharing');
     } finally {
       setLoading(false);
@@ -140,6 +124,69 @@ const ShareToggle = ({ quiz, onPublicStatusChange }) => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// ============================================
+// TIMER SELECTOR COMPONENT ⏱️
+// ============================================
+
+const TimerSelector = ({ quiz, onTimerChange }) => {
+  const initialTimer = quiz.timer_per_question ?? quiz.timerPerQuestion ?? 30;
+  const [timerValue, setTimerValue] = useState(initialTimer);
+
+  React.useEffect(() => {
+    const updatedTimer = quiz.timer_per_question ?? quiz.timerPerQuestion ?? 30;
+    setTimerValue(updatedTimer);
+  }, [quiz.timer_per_question, quiz.timerPerQuestion]);
+
+  const timerOptions = [
+    { value: 15, label: '15s', emoji: '⚡' },
+    { value: 30, label: '30s', emoji: '⏱️' },
+    { value: 45, label: '45s', emoji: '🕐' },
+    { value: 60, label: '60s', emoji: '⏰' },
+    { value: 0, label: 'No Limit', emoji: '∞' }
+  ];
+
+  const handleTimerChange = (newTimer) => {
+    setTimerValue(newTimer);
+    if (onTimerChange) {
+      onTimerChange(newTimer);
+    }
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="flex items-center gap-2">
+        <Clock className="w-4 h-4 text-gray-600" />
+        <span className="text-sm font-medium text-gray-700">
+          Time per question:
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        {timerOptions.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => handleTimerChange(option.value)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              timerValue === option.value
+                ? 'bg-yellow-500 text-white shadow-md'
+                : 'bg-white text-gray-700 border border-gray-300 hover:border-yellow-500 hover:bg-yellow-50'
+            }`}
+          >
+            <span className="mr-1">{option.emoji}</span>
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="text-xs text-gray-500 italic">
+        {timerValue === 0 
+          ? 'Players have unlimited time' 
+          : `${timerValue}s per question`}
+      </div>
     </div>
   );
 };
@@ -344,10 +391,7 @@ const validateMatching = (question, questionNumber, errors) => {
     });
   }
 
-  const leftItems = pairs
-    .map(p => p.left)
-    .filter(item => item && item.trim() !== '');
-  
+  const leftItems = pairs.map(p => p.left).filter(item => item && item.trim() !== '');
   const leftDuplicates = findDuplicates(leftItems);
   
   if (leftDuplicates.length > 0) {
@@ -358,10 +402,7 @@ const validateMatching = (question, questionNumber, errors) => {
     });
   }
 
-  const rightItems = pairs
-    .map(p => p.right)
-    .filter(item => item && item.trim() !== '');
-  
+  const rightItems = pairs.map(p => p.right).filter(item => item && item.trim() !== '');
   const rightDuplicates = findDuplicates(rightItems);
   
   if (rightDuplicates.length > 0) {
@@ -393,7 +434,7 @@ const findDuplicates = (arr) => {
 // QUIZ CONTROLS COMPONENT - RESPONSIVE
 // ============================================
 
-const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, onUpdatePublicStatus, questions }) => {
+const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, onUpdatePublicStatus, onUpdateTimer, questions }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempTitle, setTempTitle] = useState(quiz.title);
   const [showEmptyWarning, setShowEmptyWarning] = useState(false);
@@ -468,7 +509,7 @@ const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, onUp
       <div className="sticky top-0 z-50 bg-white shadow-md">
         <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
           <div className="max-w-4xl mx-auto">
-            {/* Mobile Layout - Stacked */}
+            {/* Mobile Layout */}
             <div className="flex flex-col gap-3 sm:hidden">
               {/* Title Row */}
               <div className="flex items-center justify-between">
@@ -517,6 +558,7 @@ const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, onUp
 
               {/* Share Toggle Row */}
               <ShareToggle quiz={quiz} onPublicStatusChange={onUpdatePublicStatus} />
+              <TimerSelector quiz={quiz} onTimerChange={onUpdateTimer} />
 
               {/* Actions Row */}
               <div className="flex gap-2">
@@ -637,6 +679,7 @@ const QuizControls = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, onUp
 
               {/* Share Toggle Row - Full width on desktop */}
               <ShareToggle quiz={quiz} onPublicStatusChange={onUpdatePublicStatus} />
+              <TimerSelector quiz={quiz} onTimerChange={onUpdateTimer} />
             </div>
           </div>
         </div>
@@ -674,6 +717,7 @@ export const QuizEditor = ({
   onSave, 
   onUpdateTitle,
   onUpdatePublicStatus,
+  onUpdateTimer,
   onAddQuestion,
   onDeleteQuestion,
   onDuplicateQuestion,
@@ -793,6 +837,7 @@ export const QuizEditor = ({
     setTouchStartY(null);
     setTouchCurrentY(null);
   };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <QuizControls 
@@ -803,6 +848,7 @@ export const QuizEditor = ({
         onSave={onSave}
         onUpdateTitle={onUpdateTitle}
         onUpdatePublicStatus={onUpdatePublicStatus}
+        onUpdateTimer={onUpdateTimer}
       />
       
       <div className="max-w-4xl mx-auto p-3 sm:p-4 md:p-6">

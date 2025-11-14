@@ -41,6 +41,7 @@ export function useQuizAPI(quizDataHook) {
         created: new Date(quiz.created_at).toLocaleDateString(),
         isPublic: quiz.is_public,
         share_code: quiz.share_code,
+        timer_per_question: quiz.timer_per_question ?? 30,
         creator: quiz.creator?.username || 'Unknown'
       }));
 
@@ -132,7 +133,8 @@ export function useQuizAPI(quizDataHook) {
         const response = await quizApi.create({
           title: quizData.editing.title,
           description: quizData.editing.description || '',
-          is_public: quizData.editing.isPublic
+          is_public: quizData.editing.isPublic,
+          timer_per_question: quizData.editing.timer_per_question ?? 30
         });
         quizId = response.data.quiz.quiz_id;
         console.log('✅ Quiz created with ID:', quizId);
@@ -141,7 +143,8 @@ export function useQuizAPI(quizDataHook) {
         await quizApi.update(quizId, {
           title: quizData.editing.title,
           description: quizData.editing.description || '',
-          is_public: quizData.editing.isPublic !== undefined ? quizData.editing.isPublic : false
+          is_public: quizData.editing.isPublic !== undefined ? quizData.editing.isPublic : false,
+          timer_per_question: quizData.editing.timer_per_question ?? 30
         });
         console.log('✅ Quiz updated:', quizId);
       }

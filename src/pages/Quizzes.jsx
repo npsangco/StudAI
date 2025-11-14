@@ -154,7 +154,7 @@ function QuizzesPage() {
     quizDataHook.updateUiState({ currentView: targetView });
   });
 
-  // 🔄 RECONNECTION STATE
+  // RECONNECTION STATE
   const [reconnectionOpportunity, setReconnectionOpportunity] = useState(null);
 
   // Fetch current user on mount
@@ -223,7 +223,7 @@ function QuizzesPage() {
       if (result.success) {
         console.log('✅ Rejoined battle via banner:', result.playerData);
         
-        // ✅ SIMPLIFIED: All data is now in result.playerData
+        // All data is now in result.playerData
         const { quizId, battleId, quizTitle, gamePin } = result.playerData;
         
         if (!quizId) {
@@ -344,7 +344,7 @@ function QuizzesPage() {
     return () => document.body.classList.remove('hide-navbar');
   }, [quizDataHook.uiState.currentView]);
 
-  // 📚 SYNC QUESTIONS: Listen for questions from Firebase (NON-HOST players)
+  // SYNC QUESTIONS: Listen for questions from Firebase (NON-HOST players)
   useEffect(() => {
     if (
       quizDataHook.uiState.currentView === VIEWS.LOBBY && 
@@ -372,7 +372,7 @@ function QuizzesPage() {
     quizDataHook.gameState.gamePin
   ]);
 
-  // 🚀 LISTEN TO BATTLE STATUS: When host starts, all players transition
+  // LISTEN TO BATTLE STATUS: When host starts, all players transition
   useEffect(() => {
     if (
       quizDataHook.uiState.currentView === VIEWS.LOBBY && 
@@ -501,7 +501,7 @@ function QuizzesPage() {
     return (
       <>
         <style>{styles}</style>
-        {/* 🔄 RECONNECTION BANNER - Only show when not in active game */}
+        {/* RECONNECTION BANNER - Only show when not in active game */}
         <ReconnectionBanner
           opportunity={reconnectionOpportunity}
           onReconnect={handleBannerReconnect}
@@ -545,6 +545,7 @@ function QuizzesPage() {
           onSave={handlers.handleSaveQuiz}
           onUpdateTitle={handlers.handleUpdateQuizTitle}
           onUpdatePublicStatus={handlers.handleUpdatePublicStatus}
+          onUpdateTimer={handlers.handleUpdateQuizTimer}
           onAddQuestion={handlers.handleAddQuestion}
           onDeleteQuestion={handlers.handleDeleteQuestion}
           onDuplicateQuestion={handlers.handleDuplicateQuestion}
@@ -570,7 +571,7 @@ function QuizzesPage() {
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       <style>{styles}</style>
       
-      {/* 🔄 RECONNECTION BANNER - Show on landing page too */}
+      {/* RECONNECTION BANNER - Show on landing page too */}
       <ReconnectionBanner
         opportunity={reconnectionOpportunity}
         onReconnect={handleBannerReconnect}

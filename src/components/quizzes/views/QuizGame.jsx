@@ -51,7 +51,22 @@ const QuizGame = ({
     ? questions.length 
     : getMaxScore(questions);
   
-  const game = useQuizGame(questions, 30);
+  // Get quiz timer with battle mode enforcement
+  // Battle mode: Minimum 15s timer (no "No Limit" allowed for sync)
+  // Solo mode: Allow any timer including 0 (No Limit)
+  const rawTimer = quiz?.timer_per_question ?? quiz?.timerPerQuestion ?? 30;
+  const quizTimer = mode === 'battle'
+    ? Math.max(rawTimer, 15) // Enforce minimum 15s for battles
+    : rawTimer; // Allow 0 (No Limit) for solo
+
+  if (mode === 'battle' && rawTimer === 0) {
+    console.log('⚠️ Battle mode: No Limit timer not allowed. Using 30s default.');
+  } else if (mode === 'battle' && rawTimer < 15) {
+    console.log(`⚠️ Battle mode: Timer too short (${rawTimer}s). Using minimum 15s.`);
+  }
+  console.log(`⏱️ Quiz timer (${mode} mode):`, quizTimer, 'seconds');
+  
+  const game = useQuizGame(questions, quizTimer);
   const [userPlayer] = useState({ id: 'user', name: 'You', initial: 'Y', score: 0 });
 
   // GET REAL PLAYERS from props
@@ -173,7 +188,7 @@ const QuizGame = ({
 
   const currentQ = game.currentQuestion;
 
-  const { timeLeft, resetTimer } = useQuizTimer(30, game.isPaused, () => {
+  const { timeLeft, resetTimer } = useQuizTimer(quizTimer, game.isPaused, () => {
     const hasAnswer = game.selectedAnswer || 
                       game.userAnswer?.includes('_submitted') || 
                       game.isMatchingSubmitted;
@@ -284,7 +299,7 @@ const QuizGame = ({
                 await updatePlayerProgress(quiz.gamePin, quiz.currentUserId, targetQuestion);
                 
                 // Reset timer for this question
-                resetTimer(30);
+                resetTimer(quizTimer);
               } else if (targetQuestion >= questions.length) {
                 console.log('⚠️ Other players finished, using saved progress');
                 const savedQuestion = result.playerData.currentQuestion || 0;
@@ -494,7 +509,7 @@ const QuizGame = ({
       setTimeout(() => {
         if (game.currentQuestionIndex < questions.length - 1) {
           game.nextQuestion();
-          resetTimer(30);
+          resetTimer(quizTimer);
           timeoutHandledRef.current = false;
           game.isProcessingRef.current = false;
         } else {
@@ -710,7 +725,7 @@ const QuizGame = ({
 
     if (game.currentQuestionIndex < questions.length - 1) {
       game.nextQuestion();
-      resetTimer(30);
+      resetTimer(quizTimer);
     } else {
       finishQuiz();
     }
@@ -819,6 +834,7 @@ const QuizGame = ({
         currentQuestion={game.currentQuestionIndex}
         totalQuestions={questions.length}
         timeLeft={timeLeft}
+        timeLimit={quizTimer}
         displayScore={game.displayScore}
         mode={mode}
         playersCount={allPlayers.length}
