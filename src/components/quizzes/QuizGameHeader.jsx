@@ -113,8 +113,8 @@ const DifficultySlotCard = ({ difficulty, points, currentQuestion }) => {
   
   const displays = {
     easy: { label: 'EASY', points: 1 },
-    medium: { label: 'MEDIUM', points: 5 },
-    hard: { label: 'HARD', points: 10 }
+    medium: { label: 'MEDIUM', points: 3 },
+    hard: { label: 'HARD', points: 5 }
   };
   
   const difficultyInfo = displays[difficulty] || displays.medium;
@@ -175,7 +175,9 @@ export const QuizGameHeader = ({
   mode, 
   playersCount = 0,
   onBack,
-  currentQuestionData
+  currentQuestionData,
+  correctAnswersCount = 0, // New prop to track correct answers
+  maxPossibleScore = totalQuestions // New prop for max score calculation
 }) => {
   const [showExitModal, setShowExitModal] = useState(false);
 
@@ -188,7 +190,11 @@ export const QuizGameHeader = ({
     onBack();
   };
 
-  const accuracy = currentQuestion > 0 ? Math.round((displayScore / currentQuestion) * 100) : 0;
+  // Accuracy is based on correct answers out of total answered questions
+  // Clamp to 100% max to prevent overflow
+  const accuracy = currentQuestion > 0 
+    ? Math.min(100, Math.round((correctAnswersCount / currentQuestion) * 100)) 
+    : 0;
   const progress = ((currentQuestion + 1) / totalQuestions) * 100;
 
   const difficulty = currentQuestionData?.difficulty || 'medium';
@@ -215,7 +221,7 @@ export const QuizGameHeader = ({
             </div>
 
             {/* Stats Row - 5 cards, Timer at end */}
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className={`grid ${mode === 'battle' ? 'grid-cols-4' : 'grid-cols-5'} gap-1.5`}>
               {/* Question */}
               <div className="stat-card">
                 <div className="flex flex-col items-center gap-0.5">
@@ -225,24 +231,26 @@ export const QuizGameHeader = ({
                 </div>
               </div>
 
-              {/* Difficulty */}
-              <div className="stat-card">
-                <div className="flex flex-col items-center gap-0.5">
-                  <div className="flex items-center gap-0.5">
-                    {Array.from({ length: difficulty === 'easy' ? 1 : difficulty === 'medium' ? 2 : 3 }).map((_, idx) => (
-                      <span key={idx} className="text-base">⭐</span>
-                    ))}
+              {/* Difficulty - SOLO MODE ONLY */}
+              {mode === 'solo' && (
+                <div className="stat-card">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="flex items-center gap-0.5">
+                      {Array.from({ length: difficulty === 'easy' ? 1 : difficulty === 'medium' ? 2 : 3 }).map((_, idx) => (
+                        <span key={idx} className="text-base">⭐</span>
+                      ))}
+                    </div>
+                    <div className="text-xs font-bold text-gray-900">+{points}</div>
+                    <div className="text-[9px] text-gray-700">{difficulty.toUpperCase()}</div>
                   </div>
-                  <div className="text-xs font-bold text-gray-900">+{points}</div>
-                  <div className="text-[9px] text-gray-700">{difficulty.toUpperCase()}</div>
                 </div>
-              </div>
+              )}
 
               {/* Score */}
               <div className="stat-card">
                 <div className="flex flex-col items-center gap-0.5">
                   <Trophy className="w-4 h-4 text-amber-600" />
-                  <div className="text-xs font-bold text-gray-900">{displayScore}/{totalQuestions}</div>
+                  <div className="text-xs font-bold text-gray-900">{displayScore}/{maxPossibleScore}</div>
                   <div className="text-[9px] text-gray-700">Score</div>
                 </div>
               </div>
@@ -297,17 +305,19 @@ export const QuizGameHeader = ({
 
               {/* Right: Stats - Timer */}
               <div className="flex items-center gap-3">
-                {/* Difficulty with Slot Animation */}
-                <DifficultySlotCard 
-                  difficulty={difficulty} 
-                  points={points}
-                  currentQuestion={currentQuestion}
-                />
+                {/* Difficulty with Slot Animation - SOLO MODE ONLY */}
+                {mode === 'solo' && (
+                  <DifficultySlotCard 
+                    difficulty={difficulty} 
+                    points={points}
+                    currentQuestion={currentQuestion}
+                  />
+                )}
 
                 {/* Score */}
                 <StatCard
                   icon={Trophy}
-                  value={`${displayScore}/${totalQuestions}`}
+                  value={`${displayScore}/${maxPossibleScore}`}
                   label="Score"
                   iconColor="text-amber-600"
                 />

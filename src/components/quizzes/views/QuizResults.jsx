@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { Trophy, Clock, RotateCcw, X } from 'lucide-react';
-import { getPerformanceMessage, getPerformanceColor } from '../utils/questionHelpers';
+import { Trophy, RotateCcw, X } from 'lucide-react';
 import { 
   calculateDifficultyBreakdown, 
   getDifficultyDisplay,
-  getOverallDifficultyRating,
-  getDifficultyProgressionFeedback 
+  getMaxScore
 } from '../utils/adaptiveDifficultyManager';
 import AnswerReviewModal from './AnswerReviewModal';
 
@@ -16,170 +14,195 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
 
   const validScore = typeof results?.score === 'number' ? results.score : 0;
   const validTotal = typeof results?.totalQuestions === 'number' ? results.totalQuestions : 1;
-  const validTime = results?.timeSpent || '0:00';
   const validTitle = results?.quizTitle || 'Quiz';
   const answers = results?.answers || [];
+  const questions = results?.questions || [];
 
-  const percentage = Math.round((validScore / validTotal) * 100);
+  // Calculate correct answers count (not score)
+  const correctCount = answers.filter(a => a?.isCorrect).length;
+  const answeredCount = answers.length;
+  const accuracy = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
+  
+  // Calculate max possible score
+  const maxScore = mode === 'solo' && questions.length > 0 
+    ? getMaxScore(questions) 
+    : validTotal;
+  
+  // Points earned (score * 10)
   const pointsEarned = validScore * 10;
-  const expEarned = validScore * 5;
   
   // Calculate difficulty breakdown (SOLO MODE ONLY)
-  const questions = results?.questions || [];
   const difficultyBreakdown = mode === 'solo' && questions.length > 0
     ? calculateDifficultyBreakdown(questions, answers)
     : null;
-  
-  const overallRating = difficultyBreakdown ? getOverallDifficultyRating(difficultyBreakdown) : null;
-  const progressionFeedback = difficultyBreakdown ? getDifficultyProgressionFeedback(difficultyBreakdown) : null;
 
   return (
     <>
-      <div className="fixed inset-0 bg-[rgba(107,114,128,0.6)] flex items-center justify-center z-50 p-3 sm:p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-[95%] sm:max-w-md mx-auto">
-          <div className="p-4 sm:p-6 md:p-8">
-            <div className="text-center">
-              {/* Header - Responsive */}
-              <div className="mb-4 sm:mb-6">
-                <h2 className="text-2xl sm:text-3xl font-bold text-black mb-2">
-                  Quiz Complete! 🎉
-                </h2>
-                <p className="text-sm sm:text-base text-gray-600">{validTitle}</p>
-              </div>
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md mx-auto overflow-hidden">
+          
+          {/* Content */}
+          <div className="p-5 sm:p-6">
+            
+            {/* Header */}
+            <div className="text-center mb-4">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                ✨ Quiz Completed! ✨
+              </h2>
+            </div>
 
-              {/* Score Section */}
-              <div className="bg-gray-50 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
-                <div className="mb-3">
-                  <div className={`text-3xl sm:text-4xl font-bold mb-1 ${getPerformanceColor(percentage)}`}>
-                    {validScore}/{validTotal}
-                  </div>
-                  <div className={`text-xl sm:text-2xl font-semibold ${getPerformanceColor(percentage)}`}>
-                    {percentage}%
-                  </div>
+            {/* Hero Score Card */}
+            <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-4 sm:p-5 mb-4 border-2 border-yellow-200 shadow-sm">
+              <div className="text-center space-y-1">
+                {/* Main Score - Large */}
+                <div className="text-3xl sm:text-4xl font-bold text-gray-900">
+                  {validScore}<span className="text-xl sm:text-2xl text-gray-500">/{maxScore}</span>
                 </div>
-                <p className="text-sm sm:text-base text-gray-600 font-medium">
-                  {getPerformanceMessage(percentage)}
-                </p>
-              </div>
-
-              {/* DIFFICULTY BREAKDOWN (SOLO MODE ONLY) */}
-              {mode === 'solo' && difficultyBreakdown && (
-                <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-lg p-4 mb-4 border border-gray-200">
-                  <div className="text-center mb-3">
-                    <h3 className="text-sm font-bold text-gray-700 mb-1">🎯 Difficulty Breakdown</h3>
-                    <p className="text-xs text-gray-600">{overallRating}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2">
-                    {['easy', 'medium', 'hard'].map(diff => {
-                      const data = difficultyBreakdown[diff];
-                      const display = getDifficultyDisplay(diff);
-                      if (data.total === 0) return null;
-                      
-                      return (
-                        <div key={diff} className={`${display.bgColor} rounded-lg p-2 border ${display.borderColor}`}>
-                          <div className="text-center">
-                            <div className="text-lg mb-0.5">{display.stars}</div>
-                            <div className={`text-xs font-bold ${display.textColor} mb-1`}>{display.label}</div>
-                            <div className={`text-sm font-bold ${display.textColor}`}>
-                              {data.correct}/{data.total}
-                            </div>
-                            <div className="text-xs text-gray-600 font-semibold">
-                              +{data.points} pts
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
-                  {progressionFeedback && (
-                    <p className="text-xs text-center text-gray-600 mt-3 font-medium">
-                      {progressionFeedback}
-                    </p>
-                  )}
+                <div className="text-sm sm:text-base font-semibold text-gray-700">
+                  Points
                 </div>
-              )}
-
-              {/* Time & Rewards Combined */}
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-yellow-200">
-                <div className="flex items-center justify-center gap-3 sm:gap-4 mb-2">
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
-                    <span className="text-sm sm:text-base font-semibold">{validTime}</span>
-                  </div>
+                
+                {/* Divider */}
+                <div className="py-1">
+                  <div className="w-10 h-0.5 bg-yellow-300 mx-auto rounded-full"></div>
                 </div>
-                <div className="flex items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm flex-wrap">
-                  <div className="flex items-center gap-1">
-                    <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-600" />
-                    <span className="font-bold text-yellow-700">+{pointsEarned} Points</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-base sm:text-lg">⭐</span>
-                    <span className="font-bold text-blue-700">+{expEarned} EXP</span>
-                  </div>
+                
+                {/* Correct Answers & Accuracy */}
+                <div className="text-xs sm:text-sm text-gray-700 font-medium">
+                  {correctCount} out of {validTotal} correct
                 </div>
-              </div>
-
-              {/* Action Buttons*/}
-              <div className="space-y-2 sm:space-y-3">
-                {/* View Answer Summary Button */}
-                {answers.length > 0 && (
-                  <button
-                    onClick={() => setShowAnswerReview(true)}
-                    className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 sm:py-3 rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all shadow-md flex items-center justify-center gap-2 text-sm sm:text-base"
-                  >
-                    <span>📝</span>
-                    Review Answers
-                  </button>
-                )}
-
-                {/* Desktop/Tablet: Side by side buttons */}
-                <div className="hidden sm:flex gap-3">
-                  <button 
-                    onClick={onClose}
-                    className="flex-1 bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <X className="w-4 h-4" />
-                    Exit
-                  </button>
-                  {mode === 'solo' && (
-                    <button 
-                      onClick={onRetry}
-                      className="flex-1 bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      Try Again
-                    </button>
-                  )}
-                </div>
-
-                {/* Mobile: Stacked buttons */}
-                <div className="flex sm:hidden flex-col gap-2">
-                  <button 
-                    onClick={onClose}
-                    className="w-full bg-gray-600 text-white py-2.5 rounded-lg font-semibold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 text-sm"
-                  >
-                    <X className="w-4 h-4" />
-                    Exit
-                  </button>
-                  {mode === 'solo' && (
-                    <button 
-                      onClick={onRetry}
-                      className="w-full bg-black text-white py-2.5 rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 text-sm"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      Try Again
-                    </button>
-                  )}
+                <div className="text-xl sm:text-2xl font-bold text-yellow-600">
+                  {accuracy}%
                 </div>
               </div>
             </div>
+
+            {/* DIFFICULTY BREAKDOWN - SOLO MODE ONLY */}
+            {mode === 'solo' && difficultyBreakdown && (
+              <div className="bg-gray-50 rounded-xl p-3 mb-4 border border-gray-200">
+                <h3 className="text-xs font-bold text-gray-700 mb-2.5 text-center">
+                  📊 Performance Breakdown
+                </h3>
+                
+                {/* Desktop/Tablet: Grid */}
+                <div className="hidden sm:grid grid-cols-3 gap-2">
+                  {['easy', 'medium', 'hard'].map(diff => {
+                    const data = difficultyBreakdown[diff];
+                    const display = getDifficultyDisplay(diff);
+                    if (data.total === 0) return null;
+                    
+                    return (
+                      <div key={diff} className="bg-white rounded-lg p-2 border-2 border-gray-200 hover:border-yellow-300 transition-colors">
+                        <div className="text-center space-y-0.5">
+                          <div className="text-base">{display.stars}</div>
+                          <div className="text-[10px] font-bold text-gray-600 uppercase">{display.label}</div>
+                          <div className="text-lg font-bold text-gray-900">
+                            {data.correct}/{data.total}
+                          </div>
+                          <div className={`text-[10px] font-semibold ${display.textColor}`}>
+                            +{data.points} pts
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Mobile: Stacked Cards */}
+                <div className="sm:hidden space-y-1.5">
+                  {['easy', 'medium', 'hard'].map(diff => {
+                    const data = difficultyBreakdown[diff];
+                    const display = getDifficultyDisplay(diff);
+                    if (data.total === 0) return null;
+                    
+                    return (
+                      <div key={diff} className="bg-white rounded-lg p-2 border-2 border-gray-200 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="text-base">{display.stars}</div>
+                          <div>
+                            <div className="text-[10px] font-bold text-gray-600 uppercase">{display.label}</div>
+                            <div className="text-sm font-bold text-gray-900">
+                              {data.correct}/{data.total}
+                            </div>
+                          </div>
+                        </div>
+                        <div className={`text-[10px] font-semibold ${display.textColor}`}>
+                          +{data.points} pts
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Points Earned */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-2.5 mb-4 border border-green-200 text-center">
+              <div className="flex items-center justify-center gap-1.5 text-green-700">
+                <span className="text-lg">🎁</span>
+                <span className="text-sm font-bold">Earned: +{pointsEarned} Points</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2">
+              {/* Review Answers - Primary CTA */}
+              {answers.length > 0 && (
+                <button
+                  onClick={() => setShowAnswerReview(true)}
+                  className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-sm"
+                >
+                  <span>📝</span>
+                  Review Answers
+                </button>
+              )}
+
+              {/* Desktop/Tablet: Side by side */}
+              <div className="hidden sm:grid sm:grid-cols-2 gap-2">
+                {mode === 'solo' && (
+                  <button 
+                    onClick={onRetry}
+                    className="bg-gray-700 hover:bg-gray-800 text-white py-2.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-1.5 text-xs"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Try Again
+                  </button>
+                )}
+                <button 
+                  onClick={onClose}
+                  className="bg-gray-500 hover:bg-gray-600 text-white py-2.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-1.5 text-xs"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Exit
+                </button>
+              </div>
+
+              {/* Mobile: Stacked */}
+              <div className="sm:hidden space-y-1.5">
+                {mode === 'solo' && (
+                  <button 
+                    onClick={onRetry}
+                    className="w-full bg-gray-700 hover:bg-gray-800 text-white py-2.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-1.5 text-xs"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Try Again
+                  </button>
+                )}
+                <button 
+                  onClick={onClose}
+                  className="w-full bg-gray-500 hover:bg-gray-600 text-white py-2.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-1.5 text-xs"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Exit
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
 
-      {/* Separate Answer Review Modal */}
+      {/* Answer Review Modal */}
       <AnswerReviewModal
         isOpen={showAnswerReview}
         onClose={() => setShowAnswerReview(false)}

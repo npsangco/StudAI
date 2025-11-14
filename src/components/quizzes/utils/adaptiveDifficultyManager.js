@@ -71,8 +71,8 @@ export const getNextRecommendedDifficulty = (recentAnswers, currentDifficulty = 
 export const getPointsForDifficulty = (difficulty) => {
   const pointsMap = {
     easy: 1,
-    medium: 2,
-    hard: 3
+    medium: 3,
+    hard: 5
   };
   
   const normalizedDifficulty = difficulty?.toLowerCase() || 'medium';
@@ -104,7 +104,7 @@ export const getDifficultyDisplay = (difficulty) => {
       stars: '⭐⭐', 
       color: 'yellow', 
       label: 'Medium', 
-      points: 2,
+      points: 3,
       bgColor: 'bg-yellow-50',
       borderColor: 'border-yellow-300',
       textColor: 'text-yellow-700',
@@ -115,7 +115,7 @@ export const getDifficultyDisplay = (difficulty) => {
       stars: '⭐⭐⭐', 
       color: 'red', 
       label: 'Hard', 
-      points: 3,
+      points: 5,
       bgColor: 'bg-red-50',
       borderColor: 'border-red-300',
       textColor: 'text-red-700',

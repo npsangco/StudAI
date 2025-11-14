@@ -66,11 +66,11 @@ export const QuizQuestion = ({
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4">
+    <div className="max-w-5xl mx-auto space-y-4 mt-6">
       {/* OVERLAPPING BADGE - Question Type Only */}
-      <div className="relative">
+      <div className="relative z-20">
         {/* Question Type Badge */}
-        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
           <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${config.gradient} text-white font-bold text-sm shadow-lg`}>
             <span>{config.label}</span>
           </div>

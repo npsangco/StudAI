@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Trophy, X, GripVertical } from 'lucide-react';
 
-export const LiveLeaderboard = ({ players, currentPlayerName = 'You', mode = 'desktop' }) => {
+export const LiveLeaderboard = ({ players, currentPlayerName = 'You', currentUserId, mode = 'desktop' }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Draggable state for mobile
@@ -101,7 +101,8 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', mode = 'de
         <div className="p-3 space-y-2">
           {sortedPlayers.map((player, index) => {
             const rank = index + 1;
-            const isCurrentUser = player.name === currentPlayerName;
+            // Identify current user by userId
+            const isCurrentUser = String(player.id) === String(currentUserId) || player.name === currentPlayerName;
             
             return (
               <div
@@ -147,11 +148,15 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', mode = 'de
 
   // Tablet - Light Mode Yellow/Black Bottom Panel
   if (mode === 'tablet') {
-    // Calculate current user rank
-    const currentUserPlayer = sortedPlayers.find(p => p.name === currentPlayerName);
+    // Calculate current user rank - find by userId instead of name
+    const currentUserPlayer = sortedPlayers.find(p => 
+      String(p.id) === String(currentUserId) || 
+      p.name === currentPlayerName
+    ) || sortedPlayers[0]; // Fallback to first player if not found
+    
     const currentUserRank = currentUserPlayer 
-      ? sortedPlayers.findIndex(p => p.userId === currentUserPlayer.userId) + 1 
-      : 0;
+      ? sortedPlayers.findIndex(p => p.id === currentUserPlayer.id) + 1 
+      : 1;
     const currentUserScore = currentUserPlayer?.score || 0;
     
     return (
@@ -184,7 +189,8 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', mode = 'de
           <div className="bg-white border-t-2 border-yellow-400 px-4 py-3 space-y-2 max-h-[45vh] overflow-y-auto">
             {sortedPlayers.map((player, index) => {
               const rank = index + 1;
-              const isCurrentUser = player.name === currentPlayerName;
+              // Identify current user by userId
+              const isCurrentUser = String(player.id) === String(currentUserId) || player.name === currentPlayerName;
               
               return (
                 <div
@@ -251,8 +257,9 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', mode = 'de
           
           <div className="space-y-1.5 min-w-[130px]">
             {topPlayers.map((player, index) => {
-              const rank = index + 1;
-              const isCurrentUser = player.name === currentPlayerName;
+            const rank = index + 1;
+            // Identify current user by userId
+                const isCurrentUser = String(player.id) === String(currentUserId) || player.name === currentPlayerName;
               
               return (
                 <div
@@ -307,7 +314,8 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', mode = 'de
               <div className="p-4 space-y-2 overflow-y-auto max-h-[65vh]">
                 {sortedPlayers.map((player, index) => {
                   const rank = index + 1;
-                  const isCurrentUser = player.name === currentPlayerName;
+                  // Identify current user by userId
+                  const isCurrentUser = String(player.id) === String(currentUserId) || player.name === currentPlayerName;
                   
                   return (
                     <div

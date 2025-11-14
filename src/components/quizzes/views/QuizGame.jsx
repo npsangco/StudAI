@@ -42,6 +42,15 @@ const QuizGame = ({
   const [answersHistory, setAnswersHistory] = useState([]);
   const timeoutHandledRef = useRef(false);
   
+  // Track correct answers for accurate accuracy calculation
+  const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
+  
+  // Calculate max possible score based on mode
+  // Battle: 1 point per question, Solo: adaptive scoring based on difficulty
+  const maxPossibleScore = mode === 'battle' 
+    ? questions.length 
+    : getMaxScore(questions);
+  
   const game = useQuizGame(questions, 30);
   const [userPlayer] = useState({ id: 'user', name: 'You', initial: 'Y', score: 0 });
 
@@ -517,6 +526,9 @@ const QuizGame = ({
     setAnswersHistory(newAnswersHistory);
 
     if (isCorrect) {
+      // Track correct answers
+      setCorrectAnswersCount(prev => prev + 1);
+      
       // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo' 
         ? getPointsForDifficulty(currentQ.difficulty)
@@ -582,6 +594,9 @@ const QuizGame = ({
     game.setUserAnswer(actualAnswer + '_submitted');
     
     if (isCorrect) {
+      // Track correct answers
+      setCorrectAnswersCount(prev => prev + 1);
+      
       // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo' 
         ? getPointsForDifficulty(currentQ.difficulty)
@@ -646,6 +661,9 @@ const QuizGame = ({
     setAnswersHistory(newAnswersHistory);
     
     if (isCorrect) {
+      // Track correct answers
+      setCorrectAnswersCount(prev => prev + 1);
+      
       // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo' 
         ? getPointsForDifficulty(currentQ.difficulty)
@@ -806,6 +824,8 @@ const QuizGame = ({
         playersCount={allPlayers.length}
         onBack={handleBackOrForfeit}
         currentQuestionData={currentQ}
+        correctAnswersCount={correctAnswersCount}
+        maxPossibleScore={maxPossibleScore}
       />
 
       {/* Waiting Overlay */}
@@ -853,6 +873,7 @@ const QuizGame = ({
                 <LiveLeaderboard 
                   players={allPlayers} 
                   currentPlayerName="You"
+                  currentUserId={quiz?.currentUserId}
                   mode="desktop"
                 />
               </div>
@@ -881,6 +902,7 @@ const QuizGame = ({
                 <LiveLeaderboard 
                   players={allPlayers} 
                   currentPlayerName="You"
+                  currentUserId={quiz?.currentUserId}
                   mode="tablet"
                 />
               </div>
@@ -908,6 +930,7 @@ const QuizGame = ({
               <LiveLeaderboard 
                 players={allPlayers} 
                 currentPlayerName="You"
+                currentUserId={quiz?.currentUserId}
                 mode="mobile"
               />
             </>
