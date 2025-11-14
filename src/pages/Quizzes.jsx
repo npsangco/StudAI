@@ -66,11 +66,6 @@ const styles = `
     }
   }
 
-  /* Prevent page scroll */
-  body.quiz-page-active {
-    overflow: hidden;
-  }
-
   /* Tablet/Mobile Navigation Pills */
   .nav-pill {
     transition: all 0.2s ease;

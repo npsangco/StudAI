@@ -19,13 +19,13 @@ export const QuizLandingView = ({
   onQuizImported
 }) => {
   return (
-    <div className="min-h-screen bg-gray-50">
-      
-      {/* DESKTOP VIEW (lg and up) - 2 Column Grid */}
+    <div className="bg-gray-50 pb-16">
+
+      {/* DESKTOP VIEW (lg and up) - 2 Column Grid (70/30 Split) */}
       <div className="hidden lg:flex items-start justify-center p-4 lg:p-6 pt-4 lg:pt-6">
-        <div className="w-full max-w-7xl h-[calc(100vh-7rem)] grid grid-cols-2 gap-4 lg:gap-6">
-          {/* Left Container - Quiz List */}
-          <div className="h-full overflow-hidden quiz-container">
+        <div className="w-full max-w-7xl grid gap-4 lg:gap-6" style={{ gridTemplateColumns: '2fr 1fr' }}>
+          {/* Left Container - Quiz List (70%) */}
+          <div className="overflow-hidden quiz-container">
             <QuizList
               quizzes={quizData.list}
               draggedIndex={quizData.draggedIndex}
@@ -40,8 +40,8 @@ export const QuizLandingView = ({
             />
           </div>
 
-          {/* Right Container - Quiz Battles */}
-          <div className="h-full overflow-hidden quiz-container">
+          {/* Right Container - Quiz Battles (30%) */}
+          <div className="overflow-hidden quiz-container">
             <QuizBattles
               gamePin={gamePin}
               setGamePin={setGamePin}
