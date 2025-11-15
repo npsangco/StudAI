@@ -1,0 +1,90 @@
+name: studai
+region: sgp
+services:
+  - name: web
+    github:
+      repo: npsangco/StudAI
+      branch: main
+      deploy_on_push: true
+    build_command: npm install && npm run build
+    run_command: node server/server.js
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 3000
+    routes:
+      - path: /
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: DB_HOST
+        scope: RUN_TIME
+        type: SECRET
+      - key: DB_USER
+        scope: RUN_TIME
+        type: SECRET
+      - key: DB_PASSWORD
+        scope: RUN_TIME
+        type: SECRET
+      - key: DB_NAME
+        scope: RUN_TIME
+        type: SECRET
+      - key: DB_PORT
+        value: "25060"
+      - key: SESSION_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: JWT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: FRONTEND_URL
+        value: "https://studai-9eah7.ondigitalocean.app"
+      - key: EMAIL_USER
+        scope: RUN_TIME
+        type: SECRET
+      - key: EMAIL_PASS
+        scope: RUN_TIME
+        type: SECRET
+      - key: ZOOM_CLIENT_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: ZOOM_CLIENT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: ZOOM_REDIRECT_URI
+        value: "https://studai-9eah7.ondigitalocean.app/api/zoom/callback"
+      - key: ZOOM_WEBHOOK_SECRET_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+      - key: FIREBASE_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: FIREBASE_AUTH_DOMAIN
+        scope: RUN_TIME
+        type: SECRET
+      - key: FIREBASE_PROJECT_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: FIREBASE_STORAGE_BUCKET
+        scope: RUN_TIME
+        type: SECRET
+      - key: FIREBASE_MESSAGING_SENDER_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: FIREBASE_APP_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: FIREBASE_MEASUREMENT_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: GOOGLE_CLIENT_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: GOOGLE_CLIENT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: CA_CERT
+        scope: RUN_TIME
+        type: SECRET

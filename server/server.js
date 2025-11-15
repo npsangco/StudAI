@@ -913,7 +913,7 @@ app.post("/api/user/request-password-update", async (req, res) => {
             { expiresIn: "10m" }
         );
 
-        const confirmLink = `http://localhost:4000/api/user/confirm-password-update?token=${token}`;
+        const confirmLink = `${SERVER_URL}/api/user/confirm-password-update?token=${token}`;
 
         await transporter.sendMail({
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
@@ -931,7 +931,7 @@ app.post("/api/user/request-password-update", async (req, res) => {
 
 app.get("/api/user/confirm-password-update", async (req, res) => {
     const { token } = req.query;
-    if (!token) return res.redirect("http://localhost:5173/password-link-expired");
+    if (!token) return res.redirect(`${CLIENT_URL}/password-link-expired`);
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -941,10 +941,10 @@ app.get("/api/user/confirm-password-update", async (req, res) => {
             { where: { user_id: decoded.userId } }
         );
 
-        res.redirect("http://localhost:5173/password-updated");
+        res.redirect(`${CLIENT_URL}/password-updated`);
     } catch (err) {
         console.error("Password confirm error:", err);
-        res.redirect("http://localhost:5173/password-link-expired");
+        res.redirect(`${CLIENT_URL}/password-link-expired`);
     }
 });
 

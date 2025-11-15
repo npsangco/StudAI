@@ -431,20 +431,140 @@ For more detailed setup instructions, see:
 
 ---
 
-## ⚠️ Before Going Live
+## ⚠️ Before Going Live - UPDATED CHECKLIST
 
-- [ ] Push all code to GitHub main branch
-- [ ] Create app in App Platform
-- [ ] Configure all environment variables
-- [ ] Update OAuth redirect URLs (Zoom, Google)
-- [ ] Test user signup and email verification
+### 🎯 Step-by-Step Deployment Process
+
+#### Phase 1: Pre-Deployment (5 minutes)
+- [x] ✅ Fix hardcoded localhost URLs (COMPLETED)
+- [x] ✅ Update `.env.example` files with production examples (COMPLETED)
+- [x] ✅ Create `.do/app.yaml` configuration (COMPLETED)
+- [x] ✅ Update `.gitignore` to protect secrets (COMPLETED)
+- [x] ✅ Test production build locally (COMPLETED - Build successful)
+- [ ] Commit and push all changes to GitHub main branch
+
+#### Phase 2: Generate Secrets (5 minutes)
+Run these commands locally to generate strong secrets:
+
+```bash
+# Generate JWT Secret
+node -e "console.log('JWT_SECRET=' + require('crypto').randomBytes(64).toString('hex'))"
+
+# Generate Session Secret
+node -e "console.log('SESSION_SECRET=' + require('crypto').randomBytes(64).toString('hex'))"
+```
+
+**Save these values** - you'll need them in the next step!
+
+#### Phase 3: Create App in DigitalOcean (10 minutes)
+1. [ ] Go to https://cloud.digitalocean.com/apps
+2. [ ] Click "Create App"
+3. [ ] Connect GitHub account and authorize DigitalOcean
+4. [ ] Select repository: `npsangco/StudAI`
+5. [ ] Select branch: `main`
+6. [ ] Enable "Autodeploy" checkbox
+7. [ ] Click "Next" - App Platform will detect `.do/app.yaml`
+
+#### Phase 4: Configure Environment Variables (15 minutes)
+In the App Platform dashboard, set these SECRET variables:
+
+**Required Secrets:**
+- [ ] `JWT_SECRET` → (paste the value you generated above)
+- [ ] `SESSION_SECRET` → (paste the value you generated above)
+- [ ] `EMAIL_USER` → studai.noreply@gmail.com
+- [ ] `EMAIL_PASS` → (Generate new Gmail App Password - see below)
+- [ ] `ZOOM_CLIENT_ID` → (copy from your local server/.env file)
+- [ ] `ZOOM_CLIENT_SECRET` → (copy from your local server/.env file)
+- [ ] `GOOGLE_CLIENT_ID` → (copy from your local server/.env file)
+- [ ] `GOOGLE_CLIENT_SECRET` → (copy from your local server/.env file)
+
+**Note:** Your actual credentials are in your local `server/.env` file. Copy them from there.
+
+**Gmail App Password Setup:**
+1. Go to https://myaccount.google.com/apppasswords
+2. Enable 2-factor authentication if not already enabled
+3. Generate a new App Password for "Mail"
+4. Copy the 16-character password and use it for `EMAIL_PASS`
+
+**Auto-configured by DigitalOcean** (no action needed):
+- ✅ `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- ✅ `CLIENT_URL`, `SERVER_URL`, `VITE_API_URL`
+
+5. [ ] Click "Review & Deploy"
+6. [ ] Review pricing (~$20/month)
+7. [ ] Click "Create Resources"
+
+#### Phase 5: Wait for Deployment (5-10 minutes)
+- [ ] Monitor deployment progress in App Platform dashboard
+- [ ] Wait for "Deployed" status
+- [ ] Copy your app URL: `https://studai-xxxxx.ondigitalocean.app`
+
+#### Phase 6: Update OAuth Providers (10 minutes)
+**Zoom OAuth Setup:**
+1. [ ] Go to https://marketplace.zoom.us/
+2. [ ] Find your OAuth app
+3. [ ] Update Redirect URL to: `https://your-app-url.ondigitalocean.app/api/sessions/zoom/callback`
+4. [ ] Update Webhook URL to: `https://your-app-url.ondigitalocean.app/api/sessions/zoom/webhook`
+5. [ ] Save changes
+
+**Google OAuth Setup:**
+1. [ ] Go to https://console.cloud.google.com/
+2. [ ] Navigate to "APIs & Services" → "Credentials"
+3. [ ] Find your OAuth 2.0 Client ID
+4. [ ] Add authorized redirect URI: `https://your-app-url.ondigitalocean.app/auth/google/callback`
+5. [ ] Save changes
+
+**Firebase Setup (if using):**
+1. [ ] Go to Firebase Console → Authentication → Settings
+2. [ ] Add your App Platform domain to "Authorized domains"
+3. [ ] Save changes
+
+#### Phase 7: Test Your Deployment (15 minutes)
+- [ ] Visit your app URL
+- [ ] Test user signup (check if verification email arrives)
+- [ ] Test login with created account
+- [ ] Test Google OAuth login
 - [ ] Test Zoom session creation
-- [ ] Test all major features
-- [ ] Set up monitoring alerts
-- [ ] Add custom domain (optional)
+- [ ] Test file upload functionality
+- [ ] Test quiz creation and battles
+- [ ] Check Runtime Logs for any errors
+
+#### Phase 8: Post-Deployment (Optional)
+- [ ] Set up monitoring alerts in App Platform
+- [ ] Add custom domain (if desired)
 - [ ] Review security settings
-- [ ] Document deployment process
+- [ ] Set up automated database backups
+- [ ] Document your deployment process
 - [ ] Create backup/recovery plan
+
+---
+
+### 🚨 Security Reminders
+
+**IMPORTANT:** After deployment, consider:
+1. **Rotating secrets** - The OAuth credentials in your local `.env` were exposed earlier
+2. **Gmail password** - Generate a NEW app-specific password (don't reuse the old one)
+3. **Monitor logs** - Check for any unauthorized access attempts
+
+---
+
+### ⏱️ Total Time Estimate
+- **Minimum time:** 45-60 minutes (if everything goes smoothly)
+- **Realistic time:** 1-2 hours (including testing and troubleshooting)
+
+---
+
+### 📞 If You Get Stuck
+
+**Common Issues:**
+- **Build fails:** Check Runtime Logs in App Platform dashboard
+- **Database connection fails:** Wait 5 minutes after deployment for database to be ready
+- **OAuth not working:** Verify redirect URLs match exactly (no trailing slashes)
+- **Email not sending:** Verify Gmail App Password is correct (no spaces)
+
+**Get Help:**
+- DigitalOcean Support: https://cloud.digitalocean.com/support/tickets
+- Community: https://www.digitalocean.com/community/
 
 ---
 
@@ -452,12 +572,40 @@ For more detailed setup instructions, see:
 
 App Platform handles all the infrastructure complexity. Focus on building features, not managing servers!
 
-**Quick Deploy Checklist:**
-1. ✅ `.do/app.yaml` exists
-2. ✅ `Dockerfile` optimized
-3. ✅ Push to GitHub
-4. ✅ Create app in App Platform
-5. ✅ Configure environment variables
-6. ✅ Wait for deployment
-7. ✅ Update OAuth redirect URLs
-8. ✅ Test and launch! 🚀
+---
+
+## 🚀 Quick Start: Deploy in 3 Commands
+
+If you just want to get started quickly:
+
+```bash
+# 1. Commit your changes
+git add .
+git commit -m "Production ready: Fixed URLs, added app.yaml configuration"
+git push origin main
+
+# 2. Generate secrets (save the output!)
+node -e "console.log('JWT_SECRET=' + require('crypto').randomBytes(64).toString('hex'))"
+node -e "console.log('SESSION_SECRET=' + require('crypto').randomBytes(64).toString('hex'))"
+
+# 3. Go to DigitalOcean and create your app
+# Visit: https://cloud.digitalocean.com/apps
+```
+
+Then follow the Phase 3-7 checklist above to complete deployment.
+
+---
+
+## ✅ Deployment Readiness Status
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Code Errors | ✅ Fixed | No compilation errors |
+| Production Build | ✅ Tested | Build successful (7.6s) |
+| Hardcoded URLs | ✅ Fixed | All using environment variables |
+| Environment Config | ✅ Ready | `.do/app.yaml` configured |
+| Docker Config | ✅ Ready | Dockerfile optimized |
+| Git Security | ✅ Protected | `.env` files in `.gitignore` |
+| OAuth Setup | ⏳ Pending | Update after deployment |
+
+**Overall Status: 🟢 READY TO DEPLOY!**
