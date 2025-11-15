@@ -346,10 +346,15 @@ User.hasMany(UserAchievement, {
 
 // ----------------- DB Connection -----------------
 sequelize.authenticate()
-    .then(() => {
+    .then(async () => {
         console.log("✅ Database connected");
-        return Promise.all([
-            User.sync({ force: false }),
+        
+        // Sync parent tables first
+        await User.sync({ force: false });
+        await Achievement.sync({ force: false });
+        
+        // Then sync tables with foreign keys
+        await Promise.all([
             File.sync({ force: false }),
             Note ? Note.sync({ force: false }) : Promise.resolve(),
             SharedNote.sync({ force: false }),
@@ -360,13 +365,11 @@ sequelize.authenticate()
             QuizBattle.sync({ force: false }),
             BattleParticipant.sync({ force: false }),
             Session.sync({ force: false }),
-            ZoomToken.sync({ force: false }), // ← ADDED TO SYNC
-            Achievement.sync({ force: false }), // ← ADD THIS
-            UserAchievement.sync({ force: false }), // ← ADD THIS
-            UserDailyStat.sync({ force: false }) // ← ADD THIS
+            ZoomToken.sync({ force: false }),
+            UserAchievement.sync({ force: false }),
+            UserDailyStat.sync({ force: false })
         ]);
-    })
-    .then(async () => {
+        
         console.log("✅ All models synced");
         
         // Initialize default achievements if they don't exist
