@@ -6,7 +6,9 @@ WORKDIR /app
 
 # Copy frontend package files
 COPY package*.json ./
-RUN npm ci --only=production
+
+# Remove package-lock and install fresh
+RUN rm -f package-lock.json && npm install --legacy-peer-deps
 
 # Copy frontend source
 COPY . .
@@ -21,7 +23,9 @@ WORKDIR /app/server
 
 # Copy server package files
 COPY server/package*.json ./
-RUN npm ci --only=production
+
+# Remove package-lock and install fresh
+RUN rm -f package-lock.json && npm install --only=production --legacy-peer-deps
 
 # Stage 3: Production image
 FROM node:20-alpine
