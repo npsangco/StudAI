@@ -1367,5 +1367,14 @@ app.get('/api/health', async (req, res) => {
     res.status(statusCode).json(health);
 });
 
+// ----------------- SERVE FRONTEND -----------------
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Handle React routing - return all requests to React app
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+});
+
 // ----------------- START SERVER -----------------
 app.listen(PORT, () => console.log(`🚀 Server running on ${SERVER_URL}`));
