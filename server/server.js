@@ -61,6 +61,7 @@ import UserAchievement from "./models/UserAchievement.js"; // ← ADD THIS
 import UserDailyStat from "./models/UserDailyStat.js";
 import { Op } from "sequelize";
 import { auditMiddleware } from "./auditMiddleware.js";
+import { sessionLockCheck } from "./sessionLockCheck.js";
 
 // Emails
 import { startEmailReminders } from "./services/emailScheduler.js";
@@ -93,6 +94,7 @@ import planRoutes from "./routes/planRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
 import achievementRoutes from "./routes/achievementRoutes.js"
+import adminRoutes from "./routes/adminRoutes.js";
 
 // Import validation middleware
 import {
@@ -286,6 +288,9 @@ async function checkStreakMilestones(userId, streak) {
 Session.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasMany(Session, { foreignKey: 'user_id', as: 'sessions' });
 
+Session.belongsTo(User, { foreignKey: 'user_id', as: 'host' });
+User.hasMany(Session, { foreignKey: 'user_id', as: 'hostedSessions' });
+
 // Your existing associations
 Quiz.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
 User.hasMany(Quiz, { foreignKey: 'created_by', as: 'quizzes' });
@@ -446,13 +451,14 @@ passport.deserializeUser(async (id, done) => {
 });
 
 // ----------------- ROUTE REGISTRATION -----------------
-app.use("/api/pet", petRoutes);
-app.use("/api/notes", noteRoutes);
-app.use("/api/plans", planRoutes);
-app.use("/api/quizzes", quizRoutes);
-app.use("/api/sessions", sessionRoutes);
+app.use("/api/pet", sessionLockCheck, petRoutes);
+app.use("/api/notes", sessionLockCheck, noteRoutes);
+app.use("/api/plans", sessionLockCheck, planRoutes);
+app.use("/api/quizzes", sessionLockCheck, quizRoutes);
+app.use("/api/sessions", sessionLockCheck, sessionRoutes);
 app.use("/api/admin", auditRoutes);
-app.use("/api/achievements", achievementRoutes);
+app.use("/api/achievements", sessionLockCheck, achievementRoutes);
+app.use("/api/admin", adminRoutes);
 
 // ----------------- AUTH ROUTES -----------------
 app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
@@ -462,6 +468,20 @@ app.get(
     passport.authenticate("google", { failureRedirect: `${CLIENT_URL}/` }),
     async (req, res) => {
         try {
+            const user = req.user;
+            
+            // Check if account is locked
+            if (user.status === "locked" || user.status === "Locked") {
+                console.log(`🚫 Locked user attempted Google login: ${user.email}`);
+                return res.redirect(`${CLIENT_URL}/?error=account_locked`);
+            }
+
+            // Check if account is not active
+            if (user.status !== "active" && user.status !== "Active") {
+                console.log(`🚫 Inactive user attempted Google login: ${user.email}`);
+                return res.redirect(`${CLIENT_URL}/?error=account_inactive`);
+            }
+            
             console.log("📍 Google callback hit");
             console.log("📍 User from passport:", req.user);
             console.log("📍 CLIENT_URL:", CLIENT_URL);
@@ -693,16 +713,37 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
-        // Block unverified accounts
-        if (user.status !== "active") {
-            return res.status(403).json({ error: "Please verify your email before logging in." });
+        // Check if account is locked 
+        if (user.status === "locked" || user.status === "Locked") {
+            return res.status(403).json({ 
+                error: "Your account has been locked by an administrator. Please contact support.",
+                locked: true 
+            });
         }
 
+        // Check if account is verified
+        if (user.status === "pending") {
+            return res.status(403).json({ 
+                error: "Please verify your email before logging in.",
+                pending: true 
+            });
+        }
+
+        // Check if account is active
+        if (user.status !== "active" && user.status !== "Active") {
+            return res.status(403).json({ 
+                error: "Your account is not active. Please contact support.",
+                inactive: true 
+            });
+        }
+
+        // Verify password
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
+        // Set session
         req.session.userId = user.user_id;
         req.session.email = user.email;
         req.session.username = user.username;
@@ -746,7 +787,7 @@ app.post("/api/auth/logout", (req, res) => {
 });
 
 // ----------------- PROFILE ROUTES -----------------
-app.get("/api/user/profile", async (req, res) => {
+app.get("/api/user/profile", sessionLockCheck, async (req, res) => {
     if (!req.session || !req.session.userId) {
         return res.status(401).json({ error: "Not logged in" });
     }
@@ -769,7 +810,7 @@ app.get("/api/user/profile", async (req, res) => {
     }
 });
 
-app.put("/api/user/profile", validateProfileUpdate, async (req, res) => {
+app.put("/api/user/profile", sessionLockCheck, validateProfileUpdate, async (req, res) => {
     if (!req.session || !req.session.userId) {
         return res.status(401).json({ error: "Not logged in" });
     }
@@ -807,7 +848,7 @@ app.put("/api/user/profile", validateProfileUpdate, async (req, res) => {
 });
 
 // Get user streak info
-app.get("/api/user/streak", async (req, res) => {
+app.get("/api/user/streak", sessionLockCheck, async (req, res) => {
     if (!req.session || !req.session.userId) {
         return res.status(401).json({ error: "Not logged in" });
     }
