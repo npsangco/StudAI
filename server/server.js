@@ -365,16 +365,16 @@ sequelize.authenticate()
 if (sessionStore) {
     app.use(
         session({
-            secret: process.env.JWT_SECRET || "fallback-secret",
+            secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
             resave: false,
             saveUninitialized: false,
             store: sessionStore,
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: false,
+                secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
                 maxAge: 1000 * 60 * 60 * 24,
-                sameSite: "lax",
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' needed for cross-site in production
             },
             rolling: true,
         })
