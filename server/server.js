@@ -349,25 +349,27 @@ sequelize.authenticate()
     .then(async () => {
         console.log("✅ Database connected");
         
-        // Sync parent tables first
+        // Sync parent tables first (no foreign keys)
         await User.sync({ force: false });
         await Achievement.sync({ force: false });
+        await Quiz.sync({ force: false });
+        await QuizBattle.sync({ force: false });
         
-        // Then sync tables with foreign keys
+        // Then sync tables with User foreign keys
+        await File.sync({ force: false });
+        await Plan.sync({ force: false });
+        await Session.sync({ force: false });
+        await ZoomToken.sync({ force: false });
+        await UserAchievement.sync({ force: false });
+        await UserDailyStat.sync({ force: false });
+        
+        // Then sync remaining tables
         await Promise.all([
-            File.sync({ force: false }),
             Note ? Note.sync({ force: false }) : Promise.resolve(),
             SharedNote.sync({ force: false }),
-            Plan.sync({ force: false }),
-            Quiz.sync({ force: false }),
             Question.sync({ force: false }),
             QuizAttempt.sync({ force: false }),
-            QuizBattle.sync({ force: false }),
-            BattleParticipant.sync({ force: false }),
-            Session.sync({ force: false }),
-            ZoomToken.sync({ force: false }),
-            UserAchievement.sync({ force: false }),
-            UserDailyStat.sync({ force: false })
+            BattleParticipant.sync({ force: false })
         ]);
         
         console.log("✅ All models synced");
