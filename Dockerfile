@@ -1,6 +1,6 @@
 # Multi-stage build for StudAI
 # Stage 1: Build frontend
-FROM node:20-alpine AS frontend-builder
+FROM node:20-slim AS frontend-builder
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Setup backend
-FROM node:20-alpine AS backend-builder
+FROM node:20-slim AS backend-builder
 
 WORKDIR /app/server
 
@@ -28,7 +28,7 @@ COPY server/package*.json ./
 RUN rm -f package-lock.json && npm install --only=production --legacy-peer-deps
 
 # Stage 3: Production image
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
