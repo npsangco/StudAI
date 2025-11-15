@@ -1372,7 +1372,7 @@ app.get('/api/health', async (req, res) => {
 app.use(express.static(path.join(__dirname, '../dist')));
 
 // Handle React routing - return all requests to React app
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
     res.sendFile(path.join(__dirname, '../dist', 'index.html'));
 });
 
