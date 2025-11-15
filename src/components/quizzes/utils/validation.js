@@ -124,7 +124,7 @@ export function validateAllQuestions(questions) {
   }
 
   const allErrors = [];
-  
+
   questions.forEach((question, index) => {
     const questionErrors = validateQuestion(question, index);
     allErrors.push(...questionErrors);
@@ -133,5 +133,36 @@ export function validateAllQuestions(questions) {
   return {
     isValid: allErrors.length === 0,
     errors: allErrors
+  };
+}
+
+/**
+ * Checks if quiz meets requirements for adaptive difficulty mode
+ */
+export function validateAdaptiveRequirements(questions) {
+  const MIN_QUESTIONS = 5;
+
+  if (!questions || questions.length < MIN_QUESTIONS) {
+    return {
+      canUseAdaptive: false,
+      warning: `Adaptive difficulty requires at least ${MIN_QUESTIONS} questions. Current: ${questions?.length || 0}`
+    };
+  }
+
+  // Check if quiz has at least 2 different difficulty levels
+  const difficulties = new Set(
+    questions.map(q => q.difficulty?.toLowerCase() || 'medium')
+  );
+
+  if (difficulties.size < 2) {
+    return {
+      canUseAdaptive: false,
+      warning: 'Adaptive difficulty requires questions from at least 2 difficulty levels'
+    };
+  }
+
+  return {
+    canUseAdaptive: true,
+    message: `✓ Adaptive difficulty enabled (${questions.length} questions)`
   };
 }

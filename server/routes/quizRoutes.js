@@ -994,11 +994,17 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
     const quizId = req.params.id;
-    const { score, total_questions, time_spent, answers } = req.body;
+    const { score, total_questions, time_spent, answers, adaptiveJourney } = req.body;
 
     if (score === undefined || total_questions === undefined) {
       return res.status(400).json({ error: 'Score and total_questions are required' });
     }
+
+    // Prepare answers data with adaptive journey if provided
+    const answersData = answers ? {
+      answers: Array.isArray(answers) ? answers : [],
+      adaptiveJourney: adaptiveJourney || null
+    } : null;
 
     // Get or create daily stats
     const today = new Date().toISOString().split('T')[0];
@@ -1031,7 +1037,7 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
         total_questions,
         percentage,
         time_spent: time_spent || '0:00',
-        answers: answers || null,
+        answers: answersData,
         points_earned: 0,
         exp_earned: exp_earned
       });
@@ -1065,7 +1071,7 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       total_questions,
       percentage,
       time_spent: time_spent || '0:00',
-      answers: answers || null,
+      answers: answersData,
       points_earned,
       exp_earned
     });
