@@ -28,9 +28,6 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install PM2 globally
-RUN npm install -g pm2
-
 # Copy backend files and dependencies
 COPY --from=backend-builder /app/server/node_modules ./server/node_modules
 COPY server ./server
@@ -38,21 +35,15 @@ COPY server ./server
 # Copy built frontend
 COPY --from=frontend-builder /app/dist ./dist
 
-# Copy ecosystem config
-COPY ecosystem.config.js ./
-
 # Create uploads directory
 RUN mkdir -p ./server/uploads/profile_pictures
-
-# Create logs directory
-RUN mkdir -p ./logs
 
 # Expose port
 EXPOSE 4000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "require('http').get('http://localhost:4000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application with PM2
-CMD ["pm2-runtime", "start", "ecosystem.config.js"]
+# Start the application directly
+CMD ["node", "server/server.js"]

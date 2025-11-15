@@ -141,6 +141,8 @@ const Notes = () => {
         toast.info('📱 Offline: Note will sync when back online');
       } else {
         toast.success('Note created successfully!');
+        // Trigger quest refresh
+        window.dispatchEvent(new Event('questActivity'));
       }
       
       setNewNoteTitle('');

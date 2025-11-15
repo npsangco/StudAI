@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, Plus, Trash2, Info, X, Calendar, Check } from "lucide-react";
 import { plannerService } from "../utils/syncService";
 import ToastContainer from "../components/ToastContainer";
+import AppLoader from "../components/AppLoader";
 import { useToast } from "../hooks/useToast";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useConfirm } from "../hooks/useConfirm";
@@ -164,6 +165,8 @@ export default function Planner() {
           toast.info('📱 Offline: Plan will sync when back online');
         } else {
           toast.success('Task created successfully!');
+          // Trigger quest refresh
+          window.dispatchEvent(new Event('questActivity'));
         }
 
         setTitle("");
@@ -212,6 +215,8 @@ export default function Planner() {
               toast.info('📱 Offline: Completion will sync when back online');
             } else {
               toast.success('Task marked as completed!');
+              // Trigger quest refresh
+              window.dispatchEvent(new Event('questActivity'));
             }
           } else {
             if (result.error) {
@@ -674,11 +679,7 @@ export default function Planner() {
         cancelText={confirmState.cancelText}
         variant={confirmState.variant}
       />
-      {loading && (
-        <div className="fixed top-4 right-4 bg-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl shadow-2xl border-2 border-indigo-200 text-sm sm:text-base font-semibold text-gray-700 z-50 animate-pulse">
-          Loading...
-        </div>
-      )}
+      {loading && <AppLoader message="Loading your planner" />}
       
       {!selectedYear && renderYearSelection()}
       {selectedYear && selectedMonth === null && renderMonthSelection()}

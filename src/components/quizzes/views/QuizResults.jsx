@@ -28,8 +28,9 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
     ? getMaxScore(questions) 
     : validTotal;
   
-  // Points earned (score * 10)
-  const pointsEarned = validScore * 10;
+  // Points and EXP earned - ALWAYS use server values (server calculates correctly)
+  const pointsEarned = results?.points_earned ?? 0;
+  const expEarned = results?.exp_earned ?? 0;
   
   // Calculate difficulty breakdown (SOLO MODE ONLY)
   const difficultyBreakdown = mode === 'solo' && questions.length > 0
@@ -136,11 +137,18 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
               </div>
             )}
 
-            {/* Points Earned */}
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-2.5 mb-4 border border-green-200 text-center">
-              <div className="flex items-center justify-center gap-1.5 text-green-700">
-                <span className="text-lg">🎁</span>
-                <span className="text-sm font-bold">Earned: +{pointsEarned} Points</span>
+            {/* Points & EXP Earned */}
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-3 mb-4 border-2 border-yellow-200">
+              <div className="flex items-center justify-center gap-4 text-sm">
+                <div className="flex items-center gap-1.5">
+                  <Trophy className="w-4 h-4 text-yellow-600" />
+                  <span className="font-bold text-yellow-700">+{pointsEarned} Points</span>
+                </div>
+                <div className="w-px h-4 bg-yellow-300"></div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">⭐</span>
+                  <span className="font-bold text-blue-700">+{expEarned} EXP</span>
+                </div>
               </div>
             </div>
 

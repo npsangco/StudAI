@@ -5,6 +5,7 @@ import SharedNote from '../models/SharedNote.js';
 import NoteCategory from '../models/NoteCategory.js';
 import User from '../models/User.js';
 import UserDailyStat from '../models/UserDailyStat.js';
+import { validateNoteRequest, validateTitle, validateNumericId } from '../middleware/validationMiddleware.js';
 
 const router = express.Router();
 
@@ -56,20 +57,27 @@ function generateShareCode() {
   return code;
 }
 
-async function checkAndResetDailyCaps(userId) {
-  const user = await User.findByPk(userId);
+async function getDailyStats(userId) {
   const today = new Date().toISOString().split('T')[0];
   
-  if (!user.daily_reset_date || user.daily_reset_date !== today) {
-    await user.update({
-      daily_notes_count: 0,
-      daily_quizzes_count: 0,
-      daily_tasks_count: 0,
-      daily_reset_date: today
+  let dailyStat = await UserDailyStat.findOne({
+    where: { user_id: userId, last_reset_date: today }
+  });
+  
+  if (!dailyStat) {
+    dailyStat = await UserDailyStat.create({
+      user_id: userId,
+      last_reset_date: today,
+      notes_created_today: 0,
+      quizzes_completed_today: 0,
+      planner_updates_today: 0,
+      points_earned_today: 0,
+      exp_earned_today: 0,
+      streak_active: false
     });
   }
   
-  return user;
+  return dailyStat;
 }
 
 async function logDailyStats(userId, activityType, points, exp = 0) {
@@ -102,6 +110,7 @@ async function logDailyStats(userId, activityType, points, exp = 0) {
   }
   
   await dailyStat.update(updates);
+  await dailyStat.reload(); // Refresh to get updated values
   return dailyStat;
 }
 
@@ -256,8 +265,8 @@ router.post('/create', requireAuth, async (req, res) => {
     const userId = req.session.userId;
     const { title, content, file_id, category_id } = req.body;
     
-    // Check and reset daily caps
-    const user = await checkAndResetDailyCaps(userId);
+    // Get daily stats
+    const dailyStats = await getDailyStats(userId);
     
     // Validate category if provided
     if (category_id) {
@@ -289,9 +298,9 @@ router.post('/create', requireAuth, async (req, res) => {
     let remainingNotes = 0;
     let petLevelUp = null;
     
-    // Handle case where daily_notes_count might be undefined
-    const currentNoteCount = user.daily_notes_count || 0;
-    console.log('Before increment - daily_notes_count:', currentNoteCount);
+    // Check if under daily cap
+    const currentNoteCount = dailyStats.notes_created_today;
+    console.log('Before increment - notes_created_today:', currentNoteCount);
     
     if (currentNoteCount < NOTE_CONFIG.points.dailyCap) {
       pointsEarned = NOTE_CONFIG.points.amount;
@@ -302,33 +311,22 @@ router.post('/create', requireAuth, async (req, res) => {
         where: { user_id: userId }
       });
       
-      // Increment daily count - handle both cases (field exists or not)
-      if (user.daily_notes_count !== undefined) {
-        await user.increment('daily_notes_count');
-      } else {
-        // If field doesn't exist, set it to 1
-        await User.update(
-          { daily_notes_count: 1 },
-          { where: { user_id: userId } }
-        );
-      }
+      // Log daily stats (increments notes_created_today and adds points/EXP)
+      const updatedStats = await logDailyStats(userId, 'note', pointsEarned, expEarned);
       
-      const updatedUser = await User.findByPk(userId); // ⬅️ REFRESH USER
-      
-      const updatedNoteCount = updatedUser.daily_notes_count || 1;
-      console.log('After increment - daily_notes_count:', updatedNoteCount);
+      console.log('After increment - notes_created_today:', updatedStats.notes_created_today);
       
       // Calculate remaining notes with updated count
-      remainingNotes = Math.max(0, NOTE_CONFIG.points.dailyCap - updatedNoteCount);
-      
-      // Log daily stats with EXP
-      await logDailyStats(userId, 'note', pointsEarned, expEarned);
+      remainingNotes = Math.max(0, NOTE_CONFIG.points.dailyCap - updatedStats.notes_created_today);
       
       // Check achievements
       await checkAchievements(userId);
     } else {
       dailyCapReached = true;
       remainingNotes = 0;
+      
+      // Still log EXP even if no points (for daily stats tracking)
+      await logDailyStats(userId, 'note', 0, expEarned);
     }
 
     // Award EXP to pet (always, even if points cap reached)

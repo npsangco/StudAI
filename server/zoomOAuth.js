@@ -385,6 +385,199 @@ class ZoomOAuth {
       return { connected: false, error: error.message };
     }
   }
+
+  /**
+   * Get real-time meeting status from Zoom API
+   * @param {number} userId - The user ID
+   * @param {string} meetingId - The Zoom meeting ID
+   * @returns {Object} Meeting status and details
+   */
+  async getMeetingStatus(userId, meetingId) {
+    try {
+      const tokens = await this.getUserTokens(userId);
+      if (!tokens) {
+        return { success: false, error: 'User not connected to Zoom' };
+      }
+
+      const response = await axios.get(
+        `${this.apiBaseUrl}/meetings/${meetingId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${tokens.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      return {
+        success: true,
+        meeting: {
+          id: response.data.id,
+          topic: response.data.topic,
+          type: response.data.type,
+          status: response.data.status,
+          start_time: response.data.start_time,
+          duration: response.data.duration,
+          timezone: response.data.timezone,
+          join_url: response.data.join_url,
+          host_id: response.data.host_id
+        }
+      };
+    } catch (error) {
+      console.error('❌ Failed to get meeting status:', error.response?.data || error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || error.message 
+      };
+    }
+  }
+
+  /**
+   * Get past meeting details and metrics
+   * @param {number} userId - The user ID
+   * @param {string} meetingId - The Zoom meeting ID
+   * @returns {Object} Past meeting metrics
+   */
+  async getPastMeetingMetrics(userId, meetingId) {
+    try {
+      const tokens = await this.getUserTokens(userId);
+      if (!tokens) {
+        return { success: false, error: 'User not connected to Zoom' };
+      }
+
+      const response = await axios.get(
+        `${this.apiBaseUrl}/past_meetings/${meetingId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${tokens.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      return {
+        success: true,
+        metrics: {
+          uuid: response.data.uuid,
+          id: response.data.id,
+          topic: response.data.topic,
+          start_time: response.data.start_time,
+          end_time: response.data.end_time,
+          duration: response.data.duration,
+          total_minutes: response.data.total_minutes,
+          participants_count: response.data.participants_count
+        }
+      };
+    } catch (error) {
+      console.error('❌ Failed to get past meeting metrics:', error.response?.data || error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || error.message 
+      };
+    }
+  }
+
+  /**
+   * Get active meeting participants
+   * @param {number} userId - The user ID
+   * @param {string} meetingId - The Zoom meeting ID
+   * @returns {Object} List of participants
+   */
+  async getActiveMeetingParticipants(userId, meetingId) {
+    try {
+      const tokens = await this.getUserTokens(userId);
+      if (!tokens) {
+        return { success: false, error: 'User not connected to Zoom' };
+      }
+
+      const response = await axios.get(
+        `${this.apiBaseUrl}/metrics/meetings/${meetingId}/participants`,
+        {
+          headers: {
+            'Authorization': `Bearer ${tokens.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          params: {
+            type: 'live',
+            page_size: 300
+          }
+        }
+      );
+
+      return {
+        success: true,
+        participants: response.data.participants.map(p => ({
+          id: p.id,
+          user_id: p.user_id,
+          name: p.name,
+          user_email: p.user_email,
+          join_time: p.join_time,
+          leave_time: p.leave_time,
+          duration: p.duration,
+          status: p.status
+        })),
+        page_count: response.data.page_count,
+        page_size: response.data.page_size,
+        total_records: response.data.total_records
+      };
+    } catch (error) {
+      console.error('❌ Failed to get meeting participants:', error.response?.data || error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || error.message 
+      };
+    }
+  }
+
+  /**
+   * Get past meeting participants
+   * @param {number} userId - The user ID
+   * @param {string} meetingId - The Zoom meeting ID
+   * @returns {Object} List of past participants
+   */
+  async getPastMeetingParticipants(userId, meetingId) {
+    try {
+      const tokens = await this.getUserTokens(userId);
+      if (!tokens) {
+        return { success: false, error: 'User not connected to Zoom' };
+      }
+
+      const response = await axios.get(
+        `${this.apiBaseUrl}/past_meetings/${meetingId}/participants`,
+        {
+          headers: {
+            'Authorization': `Bearer ${tokens.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          params: {
+            page_size: 300
+          }
+        }
+      );
+
+      return {
+        success: true,
+        participants: response.data.participants.map(p => ({
+          id: p.id,
+          user_id: p.user_id,
+          name: p.name,
+          user_email: p.user_email,
+          join_time: p.join_time,
+          leave_time: p.leave_time,
+          duration: p.duration
+        })),
+        page_count: response.data.page_count,
+        page_size: response.data.page_size,
+        total_records: response.data.total_records
+      };
+    } catch (error) {
+      console.error('❌ Failed to get past meeting participants:', error.response?.data || error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || error.message 
+      };
+    }
+  }
 }
 
 export const zoomOAuth = new ZoomOAuth();

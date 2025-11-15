@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Target } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { API_BASE } from './api'
 import ToastContainer from './ToastContainer'
 import { useToast } from '../hooks/useToast'
+import DailyQuests from './DailyQuests'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard' },
@@ -24,6 +26,8 @@ export default function Navigation() {
   const navigate = useNavigate()
   const { toasts, toast, removeToast } = useToast()
   const [userPhoto, setUserPhoto] = useState(null)
+  const [showQuests, setShowQuests] = useState(false)
+  const questsRef = useRef(null)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -47,10 +51,19 @@ export default function Navigation() {
     const handleProfileUpdate = () => fetchUser();
     window.addEventListener("profileUpdated", handleProfileUpdate);
 
+    // 🎯 Listen for quest activity events (refresh daily stats)
+    const handleQuestActivity = () => {
+      if (questsRef.current && showQuests) {
+        questsRef.current.refresh();
+      }
+    };
+    window.addEventListener("questActivity", handleQuestActivity);
+
     return () => {
       window.removeEventListener("profileUpdated", handleProfileUpdate);
+      window.removeEventListener("questActivity", handleQuestActivity);
     };
-  }, []);
+  }, [showQuests]);
 
 
   const handleLogout = async () => {
@@ -87,8 +100,13 @@ export default function Navigation() {
             <div className="flex shrink-0 items-center">
               <Link
                 to="/dashboard"
-                className="text-2xl font-bold tracking-tight text-black hover:text-white transition-colors"
+                className="flex items-center text-2xl font-bold tracking-tight text-black hover:text-white transition-colors"
               >
+                <img 
+                  src="/StudAI_Logo-black.png" 
+                  alt="StudAI Logo" 
+                  className="w-8 h-8"
+                />
                 Stud<span className="text-indigo-500">AI</span>
               </Link>
             </div>
@@ -116,28 +134,40 @@ export default function Navigation() {
             </div>
           </div>
 
-          {/* Profile dropdown */}
-          <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
-            <Menu as="div" className="relative ml-3">
-              <MenuButton className="relative flex rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+          {/* Quest Icon & Profile dropdown */}
+          <div className="absolute inset-y-0 right-0 flex items-center gap-2 pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
+            {/* Daily Quest Button */}
+            <button
+              onClick={() => setShowQuests(true)}
+              className="relative p-2 rounded-lg bg-black to-orange-500 hover:from-yellow-500 hover:to-orange-600 transition-all shadow-md hover:shadow-lg group"
+              title="Daily Quests"
+            >
+              <Target className="w-5 h-5 text-white" />
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
+                !
+              </span>
+            </button>
+
+            <Menu as="div" className="relative ml-1">
+              <MenuButton className="relative flex rounded-full ring-2 ring-black/20 hover:ring-black/40 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white shadow-lg hover:shadow-xl hover:scale-110 transform duration-200">
                 <span className="absolute -inset-1.5" />
                 <span className="sr-only">Open user menu</span>
                 <img
                   alt=""
                   src={userPhoto || `${API_BASE}/uploads/profile_pictures/default-avatar.png`}
-                  className="size-8 rounded-full bg-gray-800 object-cover"
+                  className="size-10 rounded-full bg-gray-800 object-cover border-2 border-white"
                 />
 
               </MenuButton>
 
               <MenuItems
                 transition
-                className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-gray-800 py-1 outline -outline-offset-1 outline-white/10 transition data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in"
+                className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-2xl border border-gray-200 py-1 transition data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in"
               >
                 <MenuItem>
                   <Link
                     to="/profile"
-                    className="block px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:outline-hidden"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 font-medium transition-colors"
                   >
                     Your profile
                   </Link>
@@ -145,7 +175,7 @@ export default function Navigation() {
                 <MenuItem>
                   <button
                     onClick={handleLogout}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:outline-hidden"
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium transition-colors"
                   >
                     Sign out
                   </button>
@@ -180,6 +210,9 @@ export default function Navigation() {
         </div>
       </DisclosurePanel>
     </Disclosure>
+
+    {/* Daily Quests Modal */}
+    <DailyQuests ref={questsRef} isOpen={showQuests} onClose={() => setShowQuests(false)} />
     </>
   )
 }

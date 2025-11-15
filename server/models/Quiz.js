@@ -51,15 +51,18 @@ const Quiz = sequelize.define('Quiz', {
   },
   total_questions: {
     type: DataTypes.INTEGER,
-    defaultValue: 0
+    defaultValue: 0,
+    allowNull: true
   },
   total_attempts: {
     type: DataTypes.INTEGER,
-    defaultValue: 0
+    defaultValue: 0,
+    allowNull: true
   },
   average_score: {
     type: DataTypes.DECIMAL(5, 2),
-    defaultValue: 0.00
+    defaultValue: 0.00,
+    allowNull: true
   },
   created_at: {
     type: DataTypes.DATE,
