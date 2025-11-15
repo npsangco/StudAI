@@ -92,8 +92,8 @@ function App() {
         </Routes>
       </div>
 
-      {/* Show footer on all pages except login/signup */}
-      {!shouldHideFooter && <Footer />}
+      {/* Show footer on all pages except login/signup and during quiz games */}
+      {!shouldHideFooter && !hideNavbar && <Footer />}
     </div>
   );
 }

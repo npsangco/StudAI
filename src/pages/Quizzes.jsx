@@ -340,14 +340,17 @@ function QuizzesPage() {
   }, [quizDataHook.uiState.currentView]);
 
   // SYNC QUESTIONS: Listen for questions from Firebase (NON-HOST players)
+  // 🔥 FIX: Listen in LOBBY, LOADING_BATTLE, and BATTLE views to ensure questions are available
   useEffect(() => {
+    const battleViews = [VIEWS.LOBBY, VIEWS.LOADING_BATTLE, VIEWS.BATTLE];
+
     if (
-      quizDataHook.uiState.currentView === VIEWS.LOBBY && 
+      battleViews.includes(quizDataHook.uiState.currentView) &&
       !quizDataHook.gameState.isHost &&
       quizDataHook.gameState.gamePin
     ) {
       console.log('👂 Listening for quiz questions from Firebase...');
-      
+
       const unsubscribe = listenToQuizQuestions(
         quizDataHook.gameState.gamePin,
         (firebaseQuestions) => {
@@ -355,15 +358,15 @@ function QuizzesPage() {
           quizDataHook.setQuestions(firebaseQuestions);
         }
       );
-      
+
       return () => {
         console.log('🔇 Stopped listening for questions');
         unsubscribe();
       };
     }
   }, [
-    quizDataHook.uiState.currentView, 
-    quizDataHook.gameState.isHost, 
+    quizDataHook.uiState.currentView,
+    quizDataHook.gameState.isHost,
     quizDataHook.gameState.gamePin
   ]);
 

@@ -194,10 +194,13 @@ export const QuizGameHeader = ({
     onBack();
   };
 
-  // Accuracy is based on correct answers out of total answered questions
-  // Clamp to 100% max to prevent overflow
-  const accuracy = currentQuestion > 0 
-    ? Math.min(100, Math.round((correctAnswersCount / currentQuestion) * 100)) 
+  // Accuracy is based on correct answers out of completed questions
+  // currentQuestion = current question INDEX (0-based)
+  // On Q1 (index 0): no questions completed yet, show 0%
+  // On Q2 (index 1): 1 question completed, calculate correctAnswersCount / 1
+  const questionsCompleted = currentQuestion; // Questions BEFORE current one
+  const accuracy = questionsCompleted > 0
+    ? Math.min(100, Math.round((correctAnswersCount / questionsCompleted) * 100))
     : 0;
   const progress = ((currentQuestion + 1) / totalQuestions) * 100;
 

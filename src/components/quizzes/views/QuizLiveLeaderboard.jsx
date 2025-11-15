@@ -1,7 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Trophy, X, GripVertical } from 'lucide-react';
 
-export const LiveLeaderboard = ({ players, currentPlayerName = 'You', currentUserId, mode = 'desktop' }) => {
+export const LiveLeaderboard = ({
+  players,
+  currentPlayerName = 'You',
+  currentUserId,
+  mode = 'desktop',
+  totalQuestions = 0, 
+  recentAnswers = [] 
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Draggable state for mobile
@@ -11,6 +18,20 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', currentUse
   const draggableRef = useRef(null);
   
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+
+  // Calculate streaks (3+ correct answers is a streak)
+  const getStreakIcon = (player) => {
+    // If player has score of 3+, show fire icon
+    if (player.score >= 3 && !player.forfeited) {
+      return <span className="text-sm" title="On fire!">🔥</span>;
+    }
+    return null;
+  };
+
+  // Check if player just answered (for pulse effect)
+  const justAnswered = (playerId) => {
+    return recentAnswers && recentAnswers.includes(playerId);
+  };
   
   // Get rank emoji
   const getRankEmoji = (rank) => {
@@ -97,8 +118,8 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', currentUse
           </div>
         </div>
 
-        {/* Player List - Auto height */}
-        <div className="p-3 space-y-2">
+        {/* Player List - Auto height, scrollable if too many players */}
+        <div className="p-3 space-y-2 max-h-[calc(100vh-12rem)] overflow-y-auto">
           {sortedPlayers.map((player, index) => {
             const rank = index + 1;
             // Identify current user by userId
@@ -108,13 +129,14 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', currentUse
               <div
                 key={player.id}
                 className={`
-                  flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200
-                  ${isCurrentUser 
-                    ? 'bg-yellow-400 text-black border-2 border-yellow-500' 
+                  flex flex-col px-3 py-2.5 rounded-lg transition-all duration-200
+                  ${isCurrentUser
+                    ? 'bg-yellow-400 text-black border-2 border-yellow-500'
                     : 'bg-gray-50 text-gray-900 border border-gray-200 hover:border-yellow-400 hover:bg-gray-100'
                   }
+                  ${justAnswered(player.id) ? 'animate-pulse ring-2 ring-yellow-500' : ''}
                 `}
-              >
+              ><div className="flex items-center justify-between mb-1">
                 {/* Rank & Name */}
                 <div className="flex items-center gap-3 flex-1">
                   <span className={`
@@ -123,11 +145,14 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', currentUse
                   `}>
                     {getRankEmoji(rank)}
                   </span>
-                  
+
                   <div className="flex-1">
-                    <p className={`font-bold text-sm ${isCurrentUser ? 'text-black' : 'text-gray-900'}`}>
-                      {isCurrentUser ? 'You' : player.name}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className={`font-bold text-sm ${isCurrentUser ? 'text-black' : 'text-gray-900'}`}>
+                        {isCurrentUser ? 'You' : player.name}
+                      </p>
+                      {getStreakIcon(player)}
+                    </div>
                     <p className={`text-xs ${isCurrentUser ? 'text-black/70' : 'text-gray-500'}`}>
                       {rank}{getRankSuffix(rank)} place
                     </p>
@@ -138,6 +163,27 @@ export const LiveLeaderboard = ({ players, currentPlayerName = 'You', currentUse
                 <span className={`text-lg font-bold ${isCurrentUser ? 'text-black' : 'text-gray-900'}`}>
                   {player.score}pts
                 </span>
+                </div>
+
+                {/* Progress Bar */}
+                {totalQuestions > 0 && player.currentQuestion !== undefined && (
+                  <div className="mt-2">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className={isCurrentUser ? 'text-black/70' : 'text-gray-500'}>
+                        Progress: {player.currentQuestion}/{totalQuestions}
+                      </span>
+                      <span className={isCurrentUser ? 'text-black/70' : 'text-gray-500'}>
+                        {Math.round((player.currentQuestion / totalQuestions) * 100)}%
+                      </span>
+                    </div>
+                    <div className={`h-1.5 rounded-full ${isCurrentUser ? 'bg-black/20' : 'bg-gray-200'} overflow-hidden`}>
+                      <div
+                        className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-500 ease-out"
+                        style={{ width: `${(player.currentQuestion / totalQuestions) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

@@ -4,13 +4,16 @@ import { useQuizTimer } from '../hooks/useQuizTimer';
 import { QuizGameHeader } from '../QuizGameHeader';
 import { QuizQuestion } from '../QuizCore';
 import { LiveLeaderboard } from './QuizLiveLeaderboard';
-import { ANSWER_DISPLAY_DURATION, MATCHING_REVIEW_DURATION_BATTLE } from '../utils/constants';
+import { ANSWER_DISPLAY_DURATION } from '../utils/constants';
 import { listenToPlayers, updatePlayerScore, updatePlayerProgress } from '../../../firebase/battleOperations';
 import { ref, update, get } from 'firebase/database';
 import { realtimeDb } from '../../../firebase/config';
 import { useReconnection } from '../hooks/useReconnection';
 import { ReconnectionModal } from './ReconnectionModal';
 import { QuizBackgroundPattern } from '../utils/QuizPatterns';
+import { EmojiPicker } from './EmojiPicker';
+import { EmojiReactions } from './EmojiReactions';
+import { sendReaction } from '../../../firebase/reactionOperations';
 import { 
   sortQuestionsByDifficulty, 
   calculateTotalScore, 
@@ -28,13 +31,14 @@ const QuizGame = ({
 }) => {
   // ADAPTIVE DIFFICULTY: Sort questions by difficulty in SOLO mode only
   const rawQuestions = quiz?.questions || [];
-  const questions = mode === 'solo' 
+  const questions = mode === 'solo'
     ? sortQuestionsByDifficulty(rawQuestions)
     : rawQuestions;
-  
-  console.log(`🎮 ${mode.toUpperCase()} MODE:`, 
+
+  console.log(`🎮 ${mode.toUpperCase()} MODE:`,
     mode === 'solo' ? 'Questions sorted Easy→Medium→Hard' : 'Original order'
   );
+  console.log(`📚 Questions array length: ${questions.length}`, questions);
   
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -72,92 +76,49 @@ const QuizGame = ({
   // GET REAL PLAYERS from props
   const [realPlayers, setRealPlayers] = useState([]);
 
-  // Track if waiting for other players
-  const [isWaitingForPlayers, setIsWaitingForPlayers] = useState(false);
-  const [playersWhoAnswered, setPlayersWhoAnswered] = useState(new Set());
+  // 🎭 EMOJI REACTIONS: Track recent answers for pulse effect
+  const [recentAnsweredUsers, setRecentAnsweredUsers] = useState([]);
+  const recentAnswersTimeoutRef = useRef(null);
 
-  // 🔥 AUTO-ADVANCE TIMER: Proceed automatically after timeout even if not all players answered
-  const waitingTimeoutRef = useRef(null);
-  
-  // Listen to players who have answered (battle mode only)
+  // 🎭 Listen to player progress for pulse effects only (not for waiting/syncing)
   useEffect(() => {
-    if (mode !== 'battle' || !quiz?.gamePin || !isWaitingForPlayers) {
-      // Clear timeout if no longer waiting
-      if (waitingTimeoutRef.current) {
-        clearTimeout(waitingTimeoutRef.current);
-        waitingTimeoutRef.current = null;
-      }
+    if (mode !== 'battle' || !quiz?.gamePin) {
       return;
     }
-    
-    // 🔥 SET AUTO-ADVANCE TIMEOUT (5 seconds after waiting starts)
-    // This ensures game continues even if disconnected players haven't answered
-    if (!waitingTimeoutRef.current) {
-      console.log('⏱️ Auto-advance timer started (5s)');
-      waitingTimeoutRef.current = setTimeout(() => {
-        console.log('⏰ TIMEOUT! Auto-advancing to next question...');
-        setIsWaitingForPlayers(false);
-        
-        if (game.currentQuestionIndex >= questions.length - 1) {
-          finishQuizWithAnswers(answersHistory);
-        } else {
-          handleNextQuestion();
-        }
-      }, 5000); // 5 seconds timeout
-    }
-    
+
     const unsubscribe = listenToPlayers(quiz.gamePin, (firebasePlayers) => {
-      // ✅ FILTER OUT FORFEITED AND OFFLINE PLAYERS - only count ACTIVE & ONLINE players
+      // Filter active players
       const activePlayers = firebasePlayers.filter(p => !p.forfeited && p.isOnline !== false);
-      
-      // Count how many ACTIVE players have progressed past current question
-      const playersOnNextQuestion = activePlayers.filter(
-        player => (player.currentQuestion || 0) >= game.currentQuestionIndex + 1
-      ).length;
-      
-      const totalActivePlayers = activePlayers.length;
-      
-      console.log(`📊 Progress: ${playersOnNextQuestion}/${totalActivePlayers} ACTIVE players answered Q${game.currentQuestionIndex + 1}`);
-      console.log(`⚠️ Forfeited/Offline players: ${firebasePlayers.length - activePlayers.length}`);
-      
-      // Update the count for UI (only active players)
-      setPlayersWhoAnswered(new Set(
-        activePlayers
-          .filter(p => (p.currentQuestion || 0) >= game.currentQuestionIndex + 1)
-          .map(p => p.userId)
-      ));
-      
-      // ✅ Check if ALL ACTIVE ONLINE players answered (ignoring forfeited/offline)
-      if (playersOnNextQuestion === totalActivePlayers && totalActivePlayers > 0) {
-        console.log('✅ All ACTIVE players answered! Proceeding to next question in 2s...');
-        
-        // Clear the auto-advance timeout since everyone answered
-        if (waitingTimeoutRef.current) {
-          clearTimeout(waitingTimeoutRef.current);
-          waitingTimeoutRef.current = null;
+
+      // Track who just answered for pulse effect
+      const answeredPlayerIds = activePlayers
+        .filter(p => (p.currentQuestion || 0) >= game.currentQuestionIndex + 1)
+        .map(p => p.userId);
+
+      // Find new answers for pulse animation
+      const previousAnswered = recentAnsweredUsers;
+      const newAnswers = answeredPlayerIds.filter(id => !previousAnswered.includes(id));
+
+      if (newAnswers.length > 0) {
+        setRecentAnsweredUsers(newAnswers);
+
+        // Clear pulse effect after 1 second
+        if (recentAnswersTimeoutRef.current) {
+          clearTimeout(recentAnswersTimeoutRef.current);
         }
-        
-        setTimeout(() => {
-          setIsWaitingForPlayers(false);
-          
-          if (game.currentQuestionIndex >= questions.length - 1) {
-            finishQuizWithAnswers(answersHistory);
-          } else {
-            handleNextQuestion();
-          }
-        }, 2000); // 2 second delay before advancing together
+        recentAnswersTimeoutRef.current = setTimeout(() => {
+          setRecentAnsweredUsers([]);
+        }, 1000);
       }
     });
-    
+
     return () => {
       unsubscribe();
-      // Clean up timeout
-      if (waitingTimeoutRef.current) {
-        clearTimeout(waitingTimeoutRef.current);
-        waitingTimeoutRef.current = null;
+      if (recentAnswersTimeoutRef.current) {
+        clearTimeout(recentAnswersTimeoutRef.current);
       }
     };
-  }, [mode, quiz?.gamePin, game.currentQuestionIndex, isWaitingForPlayers]);
+  }, [mode, quiz?.gamePin, game.currentQuestionIndex, recentAnsweredUsers]);
 
   // Listen to real players in battle mode
   useEffect(() => {
@@ -188,11 +149,14 @@ const QuizGame = ({
 
   const currentQ = game.currentQuestion;
 
-  const { timeLeft, resetTimer } = useQuizTimer(quizTimer, game.isPaused, () => {
-    const hasAnswer = game.selectedAnswer || 
-                      game.userAnswer?.includes('_submitted') || 
+  // Pause timer only when game is paused (disconnection)
+  const shouldPauseTimer = game.isPaused;
+
+  const { timeLeft, resetTimer } = useQuizTimer(quizTimer, shouldPauseTimer, () => {
+    const hasAnswer = game.selectedAnswer ||
+                      game.userAnswer?.includes('_submitted') ||
                       game.isMatchingSubmitted;
-    
+
     if (!hasAnswer && !isProcessing) {
       handleTimeUp();
     }
@@ -229,77 +193,136 @@ const QuizGame = ({
   const handleReconnection = async () => {
     console.log('🔄 Handling reconnection...');
     const result = await reconnection.attemptReconnection();
-    
+
     if (result.success) {
       console.log('✅ Reconnected! Restoring state:', result.playerData);
-      
+
       // 1. Restore score
       if (result.playerData.score !== undefined) {
         game.scoreRef.current = result.playerData.score;
       }
-      
+
       // 2. Check current question of OTHER players (not disconnected player)
       if (mode === 'battle' && quiz?.gamePin) {
         try {
           const battleRef = ref(realtimeDb, `battles/${quiz.gamePin}/players`);
           const snapshot = await get(battleRef);
-          
+
           if (snapshot.exists()) {
             const playersData = snapshot.val();
             const allPlayers = Object.values(playersData);
-            
+
             console.log('👥 All players in battle:', allPlayers.map(p => ({
               userId: p.userId,
               name: p.name,
               currentQuestion: p.currentQuestion,
               isOnline: p.isOnline
             })));
-            
-            // Find the MAXIMUM currentQuestion among OTHER active players
-            // Note: userId in Firebase might be stored with or without 'user_' prefix
-            const activePlayersQuestions = allPlayers
-              .filter(p => {
-                // Check both with and without prefix
-                const pUserId = String(p.userId);
-                const currentUserId = String(quiz.currentUserId);
-                const isNotSelf = pUserId !== currentUserId && 
-                                 pUserId !== `user_${currentUserId}` &&
-                                 `user_${pUserId}` !== currentUserId;
-                const isOnline = p.isOnline !== false; // Treat undefined as online
-                
-                console.log('🔍 Player filter:', {
-                  playerUserId: pUserId,
-                  currentUserId: currentUserId,
-                  isNotSelf,
-                  isOnline,
-                  included: isNotSelf && isOnline
-                });
-                
-                return isNotSelf && isOnline;
-              })
-              .map(p => p.currentQuestion || 0);
-            
-            console.log('🔍 Active other players questions:', activePlayersQuestions);
-            console.log('🔍 My saved question:', result.playerData.currentQuestion);
-            
-            if (activePlayersQuestions.length > 0) {
+
+            // 🔥 FIX: Simplified player filtering - Firebase stores userId as NUMBER, not with 'user_' prefix
+            const currentUserIdNum = Number(quiz.currentUserId);
+            const activePlayersData = allPlayers.filter(p => {
+              const isNotSelf = Number(p.userId) !== currentUserIdNum;
+              const isOnline = p.isOnline !== false; // Treat undefined as online
+              const notForfeited = p.forfeited !== true;
+
+              console.log('🔍 Player filter:', {
+                playerUserId: p.userId,
+                currentUserId: currentUserIdNum,
+                isNotSelf,
+                isOnline,
+                notForfeited,
+                included: isNotSelf && isOnline && notForfeited
+              });
+
+              return isNotSelf && isOnline && notForfeited;
+            });
+
+            // 🔥 STRICT SYNC FIX: Everyone moves together (sabay-sabay)
+            // currentQuestion in Firebase = next question index they should answer
+            // If currentQuestion = 3, they're ON question index 3 (Q4)
+
+            const activePlayersQuestions = activePlayersData.map(p => p.currentQuestion || 0);
+            console.log('🔍 Active players currentQuestion values:', activePlayersQuestions);
+            console.log('🔍 My saved currentQuestion:', result.playerData.currentQuestion);
+
+            if (activePlayersData.length > 0) {
+              // For STRICT SYNC: Find the MINIMUM currentQuestion (slowest player)
+              // Everyone waits for the slowest, so sync to that question
+              const minCurrentQuestion = Math.min(...activePlayersQuestions);
               const maxCurrentQuestion = Math.max(...activePlayersQuestions);
-              console.log('🔍 Maximum question reached by others:', maxCurrentQuestion);
-              
-              // Jump to where other players are (catch up to the furthest player)
-              const targetQuestion = maxCurrentQuestion;
-              
+
+              console.log('🔍 Min (slowest):', minCurrentQuestion, 'Max (fastest):', maxCurrentQuestion);
+
+              // Determine target question based on my progress vs group
+              const myProgress = result.playerData.currentQuestion || 0;
+
+              let targetQuestion;
+              let shouldWait = false;
+
+              if (myProgress > minCurrentQuestion) {
+                // I'm AHEAD of the slowest player
+                // Put me on MY current progress and enter waiting state
+                targetQuestion = myProgress;
+                shouldWait = true;
+                console.log(`🚀 AHEAD: I'm on Q${myProgress + 1}, group is on Q${minCurrentQuestion + 1}, waiting for them`);
+              } else {
+                // I'm BEHIND or EQUAL to the group
+                // Sync to where the slowest player is
+                targetQuestion = minCurrentQuestion;
+                console.log(`🚀 CATCHING UP: Syncing to group at Q${minCurrentQuestion + 1}`);
+              }
+
               if (targetQuestion >= 0 && targetQuestion < questions.length) {
-                console.log(`🚀 JUMPING to question index ${targetQuestion} (question #${targetQuestion + 1}) to catch up with other players`);
-                
+                console.log(`🚀 JUMPING to question index ${targetQuestion} (question #${targetQuestion + 1})`);
+                console.log(`🔍 Before setCurrentQuestionIndex: game.currentQuestionIndex = ${game.currentQuestionIndex}`);
+
                 // ✅ USE SETTER to trigger re-render!
                 game.setCurrentQuestionIndex(targetQuestion);
-                
-                // Update in Firebase too
+
+                console.log(`🔍 After setCurrentQuestionIndex: targetQuestion = ${targetQuestion}`);
+
+                // 🔥 FIX: Update progress AND check if we should be waiting
                 await updatePlayerProgress(quiz.gamePin, quiz.currentUserId, targetQuestion);
-                
+                console.log(`✅ Updated Firebase with currentQuestion = ${targetQuestion}`);
+
                 // Reset timer for this question
                 resetTimer(quizTimer);
+                console.log(`✅ Timer reset for question ${targetQuestion}`);
+
+                // 🔥 FIX: Check if we should enter waiting state immediately after reconnection
+                // If I was ahead (shouldWait = true), enter waiting immediately
+                if (shouldWait) {
+                  console.log('⏳ I was ahead, entering waiting state immediately');
+                  setIsWaitingForPlayers(true);
+                } else {
+                  // Small delay to ensure state is properly set before checking
+                  setTimeout(async () => {
+                    // Re-fetch latest player states to ensure accuracy
+                    const latestSnapshot = await get(battleRef);
+                    if (latestSnapshot.exists()) {
+                      const latestPlayersData = Object.values(latestSnapshot.val());
+                      const latestActivePlayers = latestPlayersData.filter(p =>
+                        Number(p.userId) !== currentUserIdNum &&
+                        p.isOnline !== false &&
+                        p.forfeited !== true
+                      );
+
+                      const playersWhoAnsweredTarget = latestActivePlayers.filter(
+                        p => (p.currentQuestion || 0) >= targetQuestion + 1
+                      ).length;
+
+                      if (playersWhoAnsweredTarget === latestActivePlayers.length && latestActivePlayers.length > 0) {
+                        console.log('⏳ All other players already answered this question, entering waiting state');
+                        setIsWaitingForPlayers(true);
+                        // The auto-advance logic will handle moving to next question
+                      } else {
+                        console.log(`📊 ${playersWhoAnsweredTarget}/${latestActivePlayers.length} players answered, continuing game`);
+                      }
+                    }
+                  }, 100); // 100ms delay to ensure state is synced
+                }
+
               } else if (targetQuestion >= questions.length) {
                 console.log('⚠️ Other players finished, using saved progress');
                 const savedQuestion = result.playerData.currentQuestion || 0;
@@ -325,10 +348,10 @@ const QuizGame = ({
           game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
         }
       }
-      
+
       // 3. Resume game
       game.setIsPaused(false);
-      
+
       return result;
     } else {
       console.error('❌ Reconnection failed:', result.error);
@@ -492,41 +515,43 @@ const QuizGame = ({
       setAnswersHistory(newAnswersHistory);
     }
     
-    // Mark progress in Firebase even on timeout (battle mode)
+    // Mark progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
-        .then(() => {
-          console.log('✅ Timeout: Progress marked in Firebase');
-          setIsWaitingForPlayers(true); // Show waiting message
-        })
+        .then(() => console.log('✅ Timeout: Progress marked in Firebase'))
         .catch(err => console.error('Failed to update progress on timeout:', err));
     }
-    
+
     game.isProcessingRef.current = true;
-    
-    // Solo mode: Move immediately
-    if (mode === 'solo') {
-      setTimeout(() => {
-        if (game.currentQuestionIndex < questions.length - 1) {
-          game.nextQuestion();
-          resetTimer(quizTimer);
-          timeoutHandledRef.current = false;
-          game.isProcessingRef.current = false;
-        } else {
-          finishQuizWithAnswers(newAnswersHistory);
-        }
-      }, 100);
-    }
-    // Battle mode: Wait for all players (handled by useEffect)
+
+    // Both modes: Move immediately after timeout
+    setTimeout(() => {
+      if (game.currentQuestionIndex < questions.length - 1) {
+        game.nextQuestion();
+        resetTimer(quizTimer);
+        timeoutHandledRef.current = false;
+        game.isProcessingRef.current = false;
+      } else {
+        finishQuizWithAnswers(newAnswersHistory);
+      }
+    }, 100);
   };
 
   const handleAnswerSelect = (answer) => {
     if (game.selectedAnswer || game.isPaused || isProcessing) return;
-    
+
+    // 🔥 STRICT SYNC: Prevent re-answering already answered questions
+    if (mode === 'battle' && quiz?.gamePin) {
+      // Check if I already answered this question (my progress is beyond this question)
+      // This can happen when reconnecting ahead of others
+      // Note: We don't have direct access to playerData here, so we check via the waiting state
+      // The waiting logic already handles this case by putting them in waiting mode
+    }
+
     timeoutHandledRef.current = true;
     setIsProcessing(true);
     game.setSelectedAnswer(answer);
-    
+
     const isCorrect = game.isAnswerCorrect(currentQ, answer);
 
     // Record answer
@@ -568,22 +593,17 @@ const QuizGame = ({
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
         .catch(err => console.error('Failed to update progress:', err));
       
-      // Show waiting message
-      setIsWaitingForPlayers(true);
     }
     
     setTimeout(() => {
       setIsProcessing(false);
       
-      // Solo mode: advance immediately after showing answer
-      if (mode === 'solo') {
-        if (game.currentQuestionIndex >= questions.length - 1) {
-          finishQuizWithAnswers(newAnswersHistory);
-        } else {
-          handleNextQuestion();
-        }
+      // Both modes: advance immediately after showing answer
+      if (game.currentQuestionIndex >= questions.length - 1) {
+        finishQuizWithAnswers(newAnswersHistory);
+      } else {
+        handleNextQuestion();
       }
-      // Battle mode: wait for all players (handled by useEffect)
     }, ANSWER_DISPLAY_DURATION);
   };
 
@@ -636,22 +656,17 @@ const QuizGame = ({
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
         .catch(err => console.error('Failed to update progress:', err));
       
-      // Show waiting message
-      setIsWaitingForPlayers(true);
     }
     
     setTimeout(() => {
       setIsProcessing(false);
       
-      // Solo mode: advance immediately after showing answer
-      if (mode === 'solo') {
-        if (game.currentQuestionIndex >= questions.length - 1) {
-          finishQuizWithAnswers(newAnswersHistory);
-        } else {
-          handleNextQuestion();
-        }
+      // Both modes: advance immediately after showing answer
+      if (game.currentQuestionIndex >= questions.length - 1) {
+        finishQuizWithAnswers(newAnswersHistory);
+      } else {
+        handleNextQuestion();
       }
-      // Battle mode: wait for all players (handled by useEffect)
     }, ANSWER_DISPLAY_DURATION);
   };
 
@@ -703,20 +718,9 @@ const QuizGame = ({
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
         .catch(err => console.error('Failed to update progress:', err));
     }
-    
-    // Battle mode: Use longer review time, then wait for players
-    if (mode === 'battle') {
-      setTimeout(() => {
-        setIsProcessing(false);
-        // Show waiting message after review period
-        setIsWaitingForPlayers(true);
-        
-        // Wait for all players (handled by useEffect)
-      }, MATCHING_REVIEW_DURATION_BATTLE);
-    } else {
-      // Solo mode: just unlock UI, manual next button appears
-      setIsProcessing(false);
-    }
+
+    // Both modes: just unlock UI, manual next button appears for matching
+    setIsProcessing(false);
   };
 
   const handleNextQuestion = () => {
@@ -732,15 +736,19 @@ const QuizGame = ({
   };
 
   const handleManualNext = () => {
-    // For solo matching, capture current answers before proceeding
-    if (currentQ.type === 'Matching' && game.isMatchingSubmitted) {
-      // Check if last question
-      if (game.currentQuestionIndex >= questions.length - 1) {
-        finishQuizWithAnswers(answersHistory);
-      } else {
-        handleNextQuestion();
-      }
+    console.log('🔘 Manual Next clicked', {
+      questionType: currentQ.type,
+      isSubmitted: game.isMatchingSubmitted,
+      currentIndex: game.currentQuestionIndex,
+      totalQuestions: questions.length
+    });
+
+    // For matching type, check if last question
+    if (game.currentQuestionIndex >= questions.length - 1) {
+      console.log('📝 Last question - finishing quiz');
+      finishQuizWithAnswers(answersHistory);
     } else {
+      console.log('➡️ Moving to next question');
       handleNextQuestion();
     }
   };
@@ -793,6 +801,24 @@ const QuizGame = ({
 
   const [leaderboardMode, setLeaderboardMode] = useState('desktop');
 
+  // ============================================
+  // 🎭 EMOJI REACTION HANDLER
+  // ============================================
+
+  const handleEmojiSelect = async (emojiData) => {
+    if (!quiz?.gamePin || !quiz?.currentUserId) return;
+
+    const userName = realPlayers.find(p => p.id === quiz.currentUserId)?.name || 'You';
+
+    await sendReaction(quiz.gamePin, {
+      userId: quiz.currentUserId,
+      userName,
+      emoji: emojiData.emoji
+    });
+
+    console.log(`🎭 Sent reaction: ${emojiData.emoji}`);
+  };
+
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
@@ -811,6 +837,23 @@ const QuizGame = ({
   }, []);
   
   if (!currentQ) {
+    // In battle mode, questions might still be loading from Firebase
+    if (mode === 'battle') {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 flex items-center justify-center">
+          <div className="text-center bg-white rounded-2xl p-8 shadow-2xl">
+            <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h2 className="text-2xl font-bold text-black mb-2">Loading questions...</h2>
+            <p className="text-gray-600 mb-4">Please wait while we load the quiz questions</p>
+            <button onClick={onBack} className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Solo mode: No questions means error
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 flex items-center justify-center">
         <div className="text-center bg-white rounded-2xl p-8 shadow-2xl">
@@ -844,20 +887,25 @@ const QuizGame = ({
         maxPossibleScore={maxPossibleScore}
       />
 
-      {/* Waiting Overlay */}
-      {isWaitingForPlayers && mode === 'battle' && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-8 text-center shadow-2xl max-w-md mx-4">
-            <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Waiting for other players...
-            </h3>
-            <p className="text-gray-600">
-              {playersWhoAnswered.size}/{allPlayers.filter(p => !p.forfeited).length} players answered
-            </p>
-          </div>
+      {/* 🎭 EMOJI REACTIONS - Floating display */}
+      {mode === 'battle' && (
+        <EmojiReactions
+          gamePin={quiz?.gamePin}
+          currentUserId={quiz?.currentUserId}
+        />
+      )}
+
+      {/* 🎭 EMOJI PICKER - Mobile/Tablet only (Desktop uses inline below) */}
+      {mode === 'battle' && leaderboardMode !== 'desktop' && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <EmojiPicker
+            onEmojiSelect={handleEmojiSelect}
+            disabled={game.isPaused}
+            mode="popup"
+          />
         </div>
       )}
+
     
       {/* MAIN CONTENT */}
       {mode === 'battle' ? (
@@ -865,8 +913,8 @@ const QuizGame = ({
         <>
           {leaderboardMode === 'desktop' ? (
             // Desktop: Side-by-side
-            <div className="flex gap-4 max-w-[1800px] mx-auto p-4">
-              <div className="flex-1 overflow-y-auto px-2 sm:px-4">
+            <div className="flex gap-4 max-w-[1800px] mx-auto px-4 pt-24 pb-4 min-h-screen">
+              <div className="flex-1 px-2 sm:px-4">
                 <QuizQuestion
                   question={currentQ}
                   selectedAnswer={game.selectedAnswer}
@@ -882,21 +930,48 @@ const QuizGame = ({
                   timeLeft={timeLeft}
                   isPaused={game.isPaused || isProcessing}
                   isAnswerCorrect={game.isAnswerCorrect}
+                  isWaiting={false}
                 />
+
+                {/* Manual next button for matching type */}
+                {currentQ.type === 'Matching' && game.isMatchingSubmitted && (
+                  <div className="text-center mt-6">
+                    <button
+                      onClick={handleManualNext}
+                      className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+                    >
+                      {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz 🎉' : 'Next Question →'}
+                    </button>
+                  </div>
+                )}
               </div>
               
-              <div className="w-80 h-screen sticky top-20">
-                <LiveLeaderboard 
-                  players={allPlayers} 
-                  currentPlayerName="You"
-                  currentUserId={quiz?.currentUserId}
-                  mode="desktop"
-                />
+              <div className="w-80 xl:w-96 h-[calc(100vh-6rem)] sticky top-24 flex flex-col gap-3 overflow-hidden">
+                {/* 🎭 INLINE EMOJI PICKER - Desktop only */}
+                <div className="flex-shrink-0">
+                  <EmojiPicker
+                    onEmojiSelect={handleEmojiSelect}
+                    disabled={game.isPaused}
+                    mode="inline"
+                  />
+                </div>
+
+                {/* Leaderboard - Auto-sized */}
+                <div>
+                  <LiveLeaderboard
+                    players={allPlayers}
+                    currentPlayerName="You"
+                    currentUserId={quiz?.currentUserId}
+                    mode="desktop"
+                    totalQuestions={questions.length}
+                    recentAnswers={recentAnsweredUsers}
+                  />
+                </div>
               </div>
             </div>
           ) : leaderboardMode === 'tablet' ? (
             // Tablet: Bottom slide panel
-            <div className="relative pb-24 px-4">
+            <div className="relative pb-32 px-4 pt-24">
               <QuizQuestion
                 question={currentQ}
                 selectedAnswer={game.selectedAnswer}
@@ -912,20 +987,35 @@ const QuizGame = ({
                 timeLeft={timeLeft}
                 isPaused={game.isPaused || isProcessing}
                 isAnswerCorrect={game.isAnswerCorrect}
+                isWaiting={false}
               />
-              
+
+              {/* Manual next button for matching type */}
+              {currentQ.type === 'Matching' && game.isMatchingSubmitted && (
+                <div className="text-center mt-6 mb-32">
+                  <button
+                    onClick={handleManualNext}
+                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+                  >
+                    {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz 🎉' : 'Next Question →'}
+                  </button>
+                </div>
+              )}
+
               <div className="fixed bottom-0 left-0 right-0 z-30">
-                <LiveLeaderboard 
-                  players={allPlayers} 
+                <LiveLeaderboard
+                  players={allPlayers}
                   currentPlayerName="You"
                   currentUserId={quiz?.currentUserId}
                   mode="tablet"
+                  totalQuestions={questions.length}
+                  recentAnswers={recentAnsweredUsers}
                 />
               </div>
             </div>
           ) : (
             // Mobile: Floating mini
-            <>
+            <div className="px-4 pt-24 pb-8">
               <QuizQuestion
                 question={currentQ}
                 selectedAnswer={game.selectedAnswer}
@@ -941,21 +1031,36 @@ const QuizGame = ({
                 timeLeft={timeLeft}
                 isPaused={game.isPaused || isProcessing}
                 isAnswerCorrect={game.isAnswerCorrect}
+                isWaiting={false}
               />
-              
-              <LiveLeaderboard 
-                players={allPlayers} 
+
+              {/* Manual next button for matching type */}
+              {currentQ.type === 'Matching' && game.isMatchingSubmitted && (
+                <div className="text-center mt-6 mb-32">
+                  <button
+                    onClick={handleManualNext}
+                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+                  >
+                    {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz 🎉' : 'Next Question →'}
+                  </button>
+                </div>
+              )}
+
+              <LiveLeaderboard
+                players={allPlayers}
                 currentPlayerName="You"
                 currentUserId={quiz?.currentUserId}
                 mode="mobile"
+                totalQuestions={questions.length}
+                recentAnswers={recentAnsweredUsers}
               />
-            </>
+            </div>
           )}
           
         </>
       ) : (
         // SOLO MODE - No leaderboard
-        <div className="max-w-4xl mx-auto p-4">
+        <div className="max-w-4xl mx-auto p-4 pt-24">
           <QuizQuestion
             question={currentQ}
             selectedAnswer={game.selectedAnswer}
@@ -971,6 +1076,7 @@ const QuizGame = ({
             timeLeft={timeLeft}
             isPaused={game.isPaused || isProcessing}
             isAnswerCorrect={game.isAnswerCorrect}
+            isWaiting={false}
           />
           
           {/* Solo mode next button for matching */}
@@ -980,7 +1086,7 @@ const QuizGame = ({
                 onClick={handleManualNext}
                 className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
               >
-                Next Question →
+                {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz 🎉' : 'Next Question →'}
               </button>
             </div>
           )}

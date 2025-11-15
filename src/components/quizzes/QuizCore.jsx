@@ -1,10 +1,10 @@
 import React from 'react';
 import { MatchingQuizPlayer } from './QuestionTypes';
 
-export const QuizQuestion = ({ 
-  question, 
-  selectedAnswer, 
-  userAnswer, 
+export const QuizQuestion = ({
+  question,
+  selectedAnswer,
+  userAnswer,
   userMatches,
   isMatchingSubmitted,
   mode = 'solo',
@@ -16,6 +16,7 @@ export const QuizQuestion = ({
   timeLeft,
   isPaused = false,
   isAnswerCorrect,
+  isWaiting = false,
 }) => {
   const currentQ = question;
 
@@ -56,11 +57,12 @@ export const QuizQuestion = ({
 
   if (currentQ.type === 'Matching') {
     return (
-      <MatchingQuizPlayer 
+      <MatchingQuizPlayer
         question={currentQ}
         onSubmit={onMatchingSubmit}
         timeLeft={timeLeft}
         isPaused={isPaused}
+        isWaiting={isWaiting}
       />
     );
   }
@@ -77,11 +79,11 @@ export const QuizQuestion = ({
         </div>
 
         {/* Main Question Card */}
-        <div className={`bg-gradient-to-br ${config.bgPattern} rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-white/80 relative overflow-hidden pt-10`}>
+        <div className={`bg-gradient-to-br ${config.bgPattern} rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-white/80 relative overflow-hidden pt-10 transition-all duration-300 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`}>
           {/* Decorative corner elements */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/30 rounded-full -translate-y-16 translate-x-16" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full translate-y-16 -translate-x-16" />
-          
+
           {/* Question Text */}
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight relative z-10 text-center">
             {currentQ.question}
