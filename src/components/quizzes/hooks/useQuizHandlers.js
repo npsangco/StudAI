@@ -8,7 +8,7 @@ import { createBattleRoom, addPlayerToBattle, markPlayerReady, storeQuizQuestion
  * 
  * FIX: Corrected handleStartBattle to properly use gamePin from gameState
  */
-export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
+export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, toast) {
   const {
     updateQuizData,
     updateUiState,
@@ -464,13 +464,24 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser) {
     const attemptData = await quizAPI.submitAttempt(quizData.selected.id, results);
 
     if (attemptData) {
+      const pointsEarned = attemptData.points_earned || 0;
+      const expEarned = attemptData.exp_earned || 0;
+      
       updateGameState({
         results: {
           ...results,
-          points_earned: attemptData.points_earned,
-          exp_earned: attemptData.exp_earned
+          points_earned: pointsEarned,
+          exp_earned: expEarned
         }
       });
+
+      // Show toast notification for rewards
+      if (toast && (pointsEarned > 0 || expEarned > 0)) {
+        toast.reward('Quiz completed!', pointsEarned, expEarned);
+      }
+
+      // Trigger quest refresh
+      window.dispatchEvent(new Event('questActivity'));
     } else {
       updateGameState({ results });
     }

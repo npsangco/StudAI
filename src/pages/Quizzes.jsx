@@ -177,8 +177,8 @@ function QuizzesPage() {
     fetchCurrentUser();
   }, []);
 
-  // Pass currentUser to handlers
-  const handlers = useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser);
+  // Pass currentUser and toast to handlers
+  const handlers = useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, toast);
 
   const lobby = useLobby(
     quizDataHook.uiState.currentView === VIEWS.LOBBY,

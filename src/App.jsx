@@ -2,6 +2,7 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Navigation from "./components/Navigation";
 import LandingNavigation from "./components/LandingNavigation";
+import AppLoader from "./components/AppLoader";
 import Login from "./components/Login";
 import SignUp from "./components/SignUp";
 import ResetPassword from "./components/ResetPassword";

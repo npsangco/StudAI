@@ -71,6 +71,7 @@ The Pet Buddy system now uses an **unlimited activity-based EXP system** where E
 | **Note Creation** | 15 EXP | Yes (3/day, 50 pts each) | ❌ No |
 | **AI Summary Generation** | 25 EXP | N/A (no points) | ❌ No |
 | **Quiz Completion** | 0-30 EXP (score-based) | Yes (3/day, 10-50 pts) | ❌ No |
+| **Plan Creation** | 10 EXP | Yes (3/day, 10 pts each) | ❌ No |
 | **Task Completion** | 15 EXP | Yes (3/day, 30 pts each) | ❌ No |
 | **Using Items** | 4 EXP | Limited by points | ❌ No |
 
@@ -120,30 +121,33 @@ EXP_Needed = 100 × 1.08^(level - 1)
 - 10 notes created (150 EXP)
 - 2 AI summaries (50 EXP)
 - 3 quizzes @ 80% avg (72 EXP)
+- 3 plans created (30 EXP)
 - 5 tasks completed (75 EXP)
 
-**Total Daily EXP**: ~347 EXP  
-**Estimated Timeline**: **8-12 months** ✅
+**Total Daily EXP**: ~377 EXP  
+**Estimated Timeline**: **6-10 months** ✅
 
 #### Regular User (Regularly using, 1.5-2 years) 📚
 **Daily Activities:**
 - 5 notes created (75 EXP)
 - 1 AI summary (25 EXP)
 - 2 quizzes @ 70% avg (42 EXP)
+- 2 plans created (20 EXP)
 - 3 tasks completed (45 EXP)
 
-**Total Daily EXP**: ~187 EXP  
-**Estimated Timeline**: **12-18 months** ✅
+**Total Daily EXP**: ~207 EXP  
+**Estimated Timeline**: **10-15 months** ✅
 
 #### Casual User (Often using, 2.5-4 years) 📖
 **Daily Activities:**
 - 2 notes created (30 EXP)
 - 0-1 AI summary (12.5 EXP avg)
 - 1 quiz @ 60% avg (18 EXP)
+- 1 plan created (10 EXP)
 - 1 task completed (15 EXP)
 
-**Total Daily EXP**: ~75 EXP  
-**Estimated Timeline**: **2.5-3.5 years** ✅
+**Total Daily EXP**: ~85 EXP  
+**Estimated Timeline**: **2-3 years** ✅
 
 ### How to Gain EXP
 
@@ -151,6 +155,7 @@ EXP_Needed = 100 × 1.08^(level - 1)
 - Create notes → 15 EXP each
 - Generate AI summaries → 25 EXP each
 - Complete quizzes → 0-30 EXP based on score
+- Create plans → 10 EXP each
 - Mark tasks as done → 15 EXP each
 
 **Secondary Source** (Item-based):
@@ -160,9 +165,10 @@ EXP_Needed = 100 × 1.08^(level - 1)
 **Example Daily Flow:**
 1. Create 3 notes (45 EXP) + earn 150 points
 2. Complete 2 quizzes @ 90% (54 EXP) + earn 80 points
-3. Mark 3 tasks done (45 EXP) + earn 90 points
-4. Use 5 items on pet (20 EXP)
-5. **Total**: 164 EXP + 320 points earned
+3. Create 2 plans (20 EXP) + earn 20 points
+4. Mark 3 tasks done (45 EXP) + earn 90 points
+5. Use 5 items on pet (20 EXP)
+6. **Total**: 184 EXP + 340 points earned
 
 ### Level-Up Notifications
 
@@ -203,6 +209,7 @@ When you earn EXP, the system returns:
 | **Quiz (60-79%)** | 30 | 3 quizzes/day | |
 | **Quiz (40-59%)** | 20 | 3 quizzes/day | |
 | **Quiz (<40%)** | 10 | 3 quizzes/day | Participation reward |
+| **Plan Creation** | 10 | 3 plans/day | Max 30 points/day |
 | **Task Completion** | 30 | 3 tasks/day | Max 90 points/day |
 | **Study Streak (7 days)** | 50 | Once | Milestone bonus |
 | **Study Streak (30 days)** | 200 | Once | |
@@ -214,14 +221,16 @@ When you earn EXP, the system returns:
 **Maximum Daily Points:**
 - 3 notes: 150 points
 - 3 perfect quizzes (100%): 150 points
+- 3 plans created: 30 points
 - 3 tasks completed: 90 points
-- **Total possible**: 390 points/day (not including streaks)
+- **Total possible**: 420 points/day (not including streaks)
 
 **Realistic Daily Points:**
 - 2-3 notes: 100-150 points
 - 2-3 good quizzes (70-80%): 80-120 points
+- 1-2 plans: 10-20 points
 - 2-3 tasks: 60-90 points
-- **Average**: 240-360 points/day
+- **Average**: 250-380 points/day
 
 ### Points vs EXP
 
@@ -292,9 +301,9 @@ You can reach daily points cap but continue earning EXP through activities!
 
 | Activity | Daily Limit | Purpose |
 |----------|------------|---------|
-| Notes Created | Tracked | For achievements |
+| Notes Created | 3 (for points) | Prevent farming |
 | Quizzes Completed | 3 (for points) | Prevent farming |
-| Tasks Completed | Tracked | For achievements |
+| Plans Created/Completed | 3 (for points) | Prevent farming |
 | Pet Actions | 15/minute | Rate limiting |
 | Shop Purchases | 10/minute | Rate limiting |
 
@@ -329,9 +338,9 @@ You can reach daily points cap but continue earning EXP through activities!
 
 | User Type | Daily EXP | Timeline to Level 50 | Status |
 |-----------|-----------|---------------------|---------|
-| **Heavy User** | 300-400 EXP | 8-12 months | ✅ Achievable |
-| **Regular User** | 150-200 EXP | 12-18 months | ✅ Sustainable |
-| **Casual User** | 60-80 EXP | 2.5-3.5 years | ✅ Long-term |
+| **Heavy User** | 350-450 EXP | 6-10 months | ✅ Achievable |
+| **Regular User** | 180-230 EXP | 10-15 months | ✅ Sustainable |
+| **Casual User** | 75-95 EXP | 2-3 years | ✅ Long-term |
 
 ### Why This Works
 

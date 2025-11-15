@@ -21,6 +21,11 @@ if (!process.env.ZOOM_CLIENT_ID || !process.env.ZOOM_CLIENT_SECRET) {
     console.error('   Using direct credentials as fallback...');
 }
 
+// 🌐 Environment variable constants
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const SERVER_URL = process.env.SERVER_URL || 'http://localhost:4000';
+const PORT = process.env.PORT || 4000;
+
 // 📦 Core modules
 import fs from "fs";
 import path from "path";
@@ -34,6 +39,7 @@ import cors from "cors";
 // 🗄️ Database + Models
 import sequelize from "./db.js";
 import User from "./models/User.js";
+import PendingUser from "./models/PendingUser.js";
 import File from "./models/File.js";
 import sessionStore from "./sessionStore.js";
 import Plan from "./models/Plan.js";
@@ -81,6 +87,13 @@ import planRoutes from "./routes/planRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
 import achievementRoutes from "./routes/achievementRoutes.js"
+
+// Import validation middleware
+import {
+    validateSignupRequest,
+    validateLoginRequest,
+    validateProfileUpdate
+} from "./middleware/validationMiddleware.js";
 
 const app = express();
 
@@ -162,11 +175,9 @@ async function initializeDefaultAchievements() {
 
 // ----------- CORS -----------------
 app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:3000",
-    ],
+    origin: process.env.NODE_ENV === 'production' 
+        ? [CLIENT_URL]
+        : [CLIENT_URL, "http://localhost:5174", "http://localhost:3000"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -458,7 +469,7 @@ app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "em
 
 app.get(
     "/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: "http://localhost:5173/" }),
+    passport.authenticate("google", { failureRedirect: `${CLIENT_URL}/` }),
     async (req, res) => {
         try {
             req.session.userId = req.user.user_id;
@@ -469,10 +480,10 @@ app.get(
             // await updateUserStreak(req.user.user_id);
 
             console.log("✅ Google login session set:", req.session);
-            res.redirect("http://localhost:5173/dashboard");
+            res.redirect(`${CLIENT_URL}/dashboard`);
         } catch (err) {
             console.error("Google login session error:", err);
-            res.redirect("http://localhost:5173/");
+            res.redirect(`${CLIENT_URL}/`);
         }
     }
 );
@@ -484,56 +495,59 @@ app.get("/api/ping", (req, res) => {
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
 // Signup
-app.post("/api/auth/signup", async (req, res) => {
-    const { email, username, password, birthday } = req.body;
-    if (!email || !username || !password) {
-        return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        return res.status(400).json({ error: "Invalid email format." });
-    }
-
-    if (!passwordRegex.test(password)) {
-        return res.status(400).json({
-            error:
-                "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
-        });
-    }
+app.post("/api/auth/signup", validateSignupRequest, async (req, res) => {
+    const { email, username, password, birthday } = req.validatedData;
 
     try {
-        if (await User.findOne({ where: { email } }))
+        // Check if email exists in actual users
+        const existingEmail = await User.findOne({ where: { email } });
+        if (existingEmail) {
             return res.status(400).json({ error: "Email already exists" });
-        if (await User.findOne({ where: { username } }))
+        }
+
+        // Check if username exists in actual users
+        const existingUsername = await User.findOne({ where: { username } });
+        if (existingUsername) {
             return res.status(400).json({ error: "Username already exists" });
+        }
+
+        // Check if email is already pending verification
+        const existingPending = await PendingUser.findOne({ where: { email } });
+        if (existingPending) {
+            // Delete old pending entry and create new one
+            await existingPending.destroy();
+        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const newUser = await User.create({
+        // Create token for verification
+        const token = jwt.sign({ email, username }, process.env.JWT_SECRET, {
+            expiresIn: "5m", // 5 minutes to verify
+        });
+
+        // Store in pending_users table
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+        
+        await PendingUser.create({
             email,
             username,
             password: hashedPassword,
             birthday,
-            status: "pending",
+            verification_token: token,
+            expires_at: expiresAt,
         });
 
-        const token = jwt.sign({ userId: newUser.user_id }, process.env.JWT_SECRET, {
-            expiresIn: "30m",
-        });
-
-        const verifyLink = `http://localhost:4000/api/auth/verify-email?token=${token}`;
+        const verifyLink = `${SERVER_URL}/api/auth/verify-email?token=${token}`;
 
         await transporter.sendMail({
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: "Verify Your Email",
-            html:VerificationEmail(username, verifyLink),
+            html: VerificationEmail(username, verifyLink),
         });
 
         res.status(201).json({
-            message:
-                "Signup successful. Please check your email to verify your account.",
+            message: "Verification email sent. Please verify your email within 5 minutes.",
         });
     } catch (err) {
         console.error("Signup error:", err.message);
@@ -542,61 +556,120 @@ app.post("/api/auth/signup", async (req, res) => {
 });
 
 
-// ----------------- AUTO-DELETE UNVERIFIED USERS AFTER 30 MIN -----------------
+// ----------------- AUTO-DELETE EXPIRED PENDING USERS -----------------
 setInterval(async () => {
     try {
-        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-        const unverifiedUsers = await User.findAll({
+        const now = new Date();
+        const expiredPendingUsers = await PendingUser.findAll({
             where: {
-                status: "pending",
-                createdAt: { [Op.lt]: thirtyMinutesAgo }
+                expires_at: { [Op.lt]: now }
             }
         });
 
-        if (unverifiedUsers.length > 0) {
-            const ids = unverifiedUsers.map(u => u.user_id);
-            await User.destroy({ where: { user_id: ids } });
-            console.log(`🧹 Removed ${ids.length} unverified user(s):`, ids);
+        if (expiredPendingUsers.length > 0) {
+            const ids = expiredPendingUsers.map(u => u.pending_id);
+            await PendingUser.destroy({ where: { pending_id: ids } });
+            console.log(`🧹 Removed ${ids.length} expired pending user(s)`);
         }
     } catch (err) {
-        console.error("❌ Auto-delete unverified users failed:", err);
+        console.error("❌ Auto-delete expired pending users failed:", err);
     }
-}, 5 * 60 * 1000);
+}, 1 * 60 * 1000); // Check every minute
 
 
 app.get("/api/auth/verify-email", async (req, res) => {
     const { token } = req.query;
-    if (!token) return res.redirect("http://localhost:5173/verify-status?type=error");
+    if (!token) return res.redirect(`${CLIENT_URL}/verify-status?type=error`);
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findByPk(decoded.userId);
+        
+        // Find pending user
+        const pendingUser = await PendingUser.findOne({ 
+            where: { 
+                email: decoded.email,
+                verification_token: token 
+            } 
+        });
 
-        if (!user) return res.redirect("http://localhost:5173/verify-status?type=error");
-
-        if (user.status === "active") {
-            return res.redirect("http://localhost:5173/verify-status?type=already");
+        if (!pendingUser) {
+            return res.redirect(`${CLIENT_URL}/verify-status?type=error`);
         }
 
-        user.status = "active";
-        await user.save();
+        // Check if token expired
+        if (new Date() > pendingUser.expires_at) {
+            await pendingUser.destroy();
+            return res.redirect(`${CLIENT_URL}/verify-status?type=expired`);
+        }
 
-        res.redirect("http://localhost:5173/verify-status?type=verified");
+        // Check if user already exists (shouldn't happen, but safety check)
+        const existingUser = await User.findOne({ where: { email: decoded.email } });
+        if (existingUser) {
+            await pendingUser.destroy();
+            return res.redirect(`${CLIENT_URL}/verify-status?type=already`);
+        }
+
+        // Create actual user account
+        await User.create({
+            email: pendingUser.email,
+            username: pendingUser.username,
+            password: pendingUser.password,
+            birthday: pendingUser.birthday,
+            status: "active",
+        });
+
+        // Delete pending user
+        await pendingUser.destroy();
+
+        res.redirect(`${CLIENT_URL}/verify-status?type=verified`);
     } catch (err) {
         console.error("Verification error:", err.message);
-        res.redirect("http://localhost:5173/verify-status?type=error");
+        res.redirect(`${CLIENT_URL}/verify-status?type=error`);
+    }
+});
+
+// Check verification status (for polling)
+app.get("/api/auth/check-verification", async (req, res) => {
+    const { email } = req.query;
+
+    if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+    }
+
+    try {
+        // Check if user has been created (verified)
+        const user = await User.findOne({ where: { email, status: "active" } });
+        
+        if (user) {
+            return res.json({ verified: true });
+        }
+
+        // Check if still pending
+        const pending = await PendingUser.findOne({ where: { email } });
+        
+        if (!pending) {
+            // Neither pending nor verified - expired or doesn't exist
+            return res.json({ verified: false, expired: true });
+        }
+
+        // Still pending
+        return res.json({ verified: false, expired: false });
+    } catch (err) {
+        console.error("Check verification error:", err.message);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 
 
 // Login
-app.post("/api/auth/login", async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: "Email and password are required" });
+app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
+    const { email, password } = req.validatedData;
 
     try {
         const user = await User.findOne({ where: { email } });
-        if (!user) return res.status(401).json({ error: "Invalid credentials" });
+        if (!user) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
 
         // Block unverified accounts
         if (user.status !== "active") {
@@ -604,7 +677,9 @@ app.post("/api/auth/login", async (req, res) => {
         }
 
         const valid = await bcrypt.compare(password, user.password);
-        if (!valid) return res.status(401).json({ error: "Invalid credentials" });
+        if (!valid) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
 
         req.session.userId = user.user_id;
         req.session.email = user.email;
@@ -672,14 +747,18 @@ app.get("/api/user/profile", async (req, res) => {
     }
 });
 
-app.put("/api/user/profile", async (req, res) => {
+app.put("/api/user/profile", validateProfileUpdate, async (req, res) => {
     if (!req.session || !req.session.userId) {
         return res.status(401).json({ error: "Not logged in" });
     }
 
     try {
-        const { username, password, birthday, profile_picture } = req.body;
-        const updates = { username, birthday, profile_picture };
+        const { username, password, birthday, profile_picture } = req.validatedData || req.body;
+        const updates = {};
+
+        if (username) updates.username = username;
+        if (birthday) updates.birthday = birthday;
+        if (profile_picture) updates.profile_picture = profile_picture;
 
         if (password) {
             if (!passwordRegex.test(password)) {
@@ -725,6 +804,48 @@ app.get("/api/user/streak", async (req, res) => {
         });
     } catch (err) {
         console.error("Streak fetch error:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Get user daily stats for quests
+app.get("/api/user/daily-stats", async (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Not logged in" });
+    }
+
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        
+        let dailyStats = await UserDailyStat.findOne({
+            where: { 
+                user_id: req.session.userId,
+                last_reset_date: today
+            }
+        });
+
+        // Create daily stats if they don't exist for today
+        if (!dailyStats) {
+            dailyStats = await UserDailyStat.create({
+                user_id: req.session.userId,
+                notes_created_today: 0,
+                quizzes_completed_today: 0,
+                planner_updates_today: 0,
+                points_earned_today: 0,
+                exp_earned_today: 0,
+                last_reset_date: today
+            });
+        }
+
+        res.json({
+            notes_created_today: dailyStats.notes_created_today || 0,
+            quizzes_completed_today: dailyStats.quizzes_completed_today || 0,
+            planner_updates_today: dailyStats.planner_updates_today || 0,
+            points_earned_today: dailyStats.points_earned_today || 0,
+            exp_earned_today: dailyStats.exp_earned_today || 0
+        });
+    } catch (err) {
+        console.error("Daily stats fetch error:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -792,7 +913,7 @@ app.post("/api/user/request-password-update", async (req, res) => {
             { expiresIn: "10m" }
         );
 
-        const confirmLink = `http://localhost:4000/api/user/confirm-password-update?token=${token}`;
+        const confirmLink = `${SERVER_URL}/api/user/confirm-password-update?token=${token}`;
 
         await transporter.sendMail({
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
@@ -810,7 +931,7 @@ app.post("/api/user/request-password-update", async (req, res) => {
 
 app.get("/api/user/confirm-password-update", async (req, res) => {
     const { token } = req.query;
-    if (!token) return res.redirect("http://localhost:5173/password-link-expired");
+    if (!token) return res.redirect(`${CLIENT_URL}/password-link-expired`);
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -820,10 +941,10 @@ app.get("/api/user/confirm-password-update", async (req, res) => {
             { where: { user_id: decoded.userId } }
         );
 
-        res.redirect("http://localhost:5173/password-updated");
+        res.redirect(`${CLIENT_URL}/password-updated`);
     } catch (err) {
         console.error("Password confirm error:", err);
-        res.redirect("http://localhost:5173/password-link-expired");
+        res.redirect(`${CLIENT_URL}/password-link-expired`);
     }
 });
 
@@ -842,7 +963,9 @@ app.post("/api/auth/reset-request", async (req, res) => {
 
         const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, { expiresIn: "10m" });
 
-        const resetLink = `http://localhost:5173/passwordrecovery?token=${token}`;
+                await user.save();
+
+        const resetLink = `${CLIENT_URL}/passwordrecovery?token=${token}`;
 
         await transporter.sendMail({
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
@@ -1240,7 +1363,8 @@ app.get('/api/quiz-attempts/count', async (req, res) => {
 });
 
 // ----------------- HEALTH CHECK ENDPOINT -----------------
-app.get('/health', async (req, res) => {
+// Health check endpoint for App Platform
+app.get('/api/health', async (req, res) => {
     const health = {
         uptime: process.uptime(),
         timestamp: Date.now(),
@@ -1263,5 +1387,4 @@ app.get('/health', async (req, res) => {
 });
 
 // ----------------- START SERVER -----------------
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on ${SERVER_URL}`));

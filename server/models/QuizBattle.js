@@ -36,10 +36,6 @@ const QuizBattle = sequelize.define('QuizBattle', {
     type: DataTypes.INTEGER,
     defaultValue: 8
   },
-  current_players: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
-  },
   winner_id: {
     type: DataTypes.INTEGER,
     allowNull: true,

@@ -4,6 +4,7 @@ import TextExtractor from '../components/TextExtractor';
 import PetBuddy from '../components/PetBuddy';
 import AchievementsModal from '../components/AchievementsModal';
 import ToastContainer from '../components/ToastContainer';
+import AppLoader from '../components/AppLoader';
 import { useToast } from '../hooks/useToast';
 import { API_URL } from '../config/api.config';
 import { FileText, BookOpen, Trophy, TrendingUp, Clock, Calendar, Target, Zap } from 'lucide-react';
@@ -936,22 +937,7 @@ Please format the summary in a clear, organized manner with proper headings and 
           )}
 
       {/* Loading Overlay */}
-      {isGenerating && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex flex-col items-center">
-              <svg className="animate-spin h-12 w-12 text-indigo-600 mb-4" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Generating Summary</h3>
-              <p className="text-gray-600 text-center">
-                AI is analyzing your content and creating a comprehensive summary...
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {isGenerating && <AppLoader message="Generating AI Summary" />}
     </div>
   );
 }

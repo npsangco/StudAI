@@ -44,6 +44,16 @@ const Session = sequelize.define("Session", {
         type: DataTypes.DATE,
         allowNull: true,
     },
+    actual_start: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Actual meeting start time from Zoom webhook'
+    },
+    actual_end: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Actual meeting end time from Zoom webhook'
+    },
     status: {
         type: DataTypes.STRING,
         defaultValue: "scheduled",
@@ -78,6 +88,15 @@ Session.prototype.isActive = function() {
     if (!this.scheduled_start || !this.scheduled_end) return false;
     const now = new Date();
     return now >= new Date(this.scheduled_start) && now <= new Date(this.scheduled_end);
+};
+
+// Method to get actual duration in minutes
+Session.prototype.getActualDuration = function() {
+    if (this.actual_start && this.actual_end) {
+        const durationMs = new Date(this.actual_end) - new Date(this.actual_start);
+        return Math.round(durationMs / 60000); // Convert to minutes
+    }
+    return null;
 };
 
 export default Session;

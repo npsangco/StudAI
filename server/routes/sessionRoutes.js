@@ -3,9 +3,11 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import { zoomOAuth } from '../zoomOAuth.js';
 import Session from '../models/Session.js';
+import SessionParticipant from '../models/SessionParticipant.js';
 import { Op } from 'sequelize';
 
 const router = express.Router();
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 // Start Zoom OAuth flow
 router.get('/zoom/connect', async (req, res) => {
@@ -36,17 +38,17 @@ router.get('/zoom/callback', async (req, res) => {
     
     if (zoomError) {
       console.error('❌ Zoom OAuth error:', zoomError);
-      return res.redirect('http://localhost:5173/sessions?error=zoom_oauth_failed');
+      return res.redirect(`${CLIENT_URL}/sessions?error=zoom_oauth_failed`);
     }
     
     if (!code) {
       console.error('❌ No authorization code received');
-      return res.redirect('http://localhost:5173/sessions?error=no_authorization_code');
+      return res.redirect(`${CLIENT_URL}/sessions?error=no_authorization_code`);
     }
 
     if (!req.session.userId) {
       console.error('❌ No user session found');
-      return res.redirect('http://localhost:5173/sessions?error=no_user_session');
+      return res.redirect(`${CLIENT_URL}/sessions?error=no_user_session`);
     }
 
     console.log('🔄 Exchanging authorization code for access token...');
@@ -54,21 +56,21 @@ router.get('/zoom/callback', async (req, res) => {
     
     if (!tokenResult.success) {
       console.error('❌ Token exchange failed:', tokenResult.error);
-      return res.redirect(`http://localhost:5173/sessions?error=token_exchange_failed&details=${encodeURIComponent(tokenResult.error)}`);
+      return res.redirect(`${CLIENT_URL}/sessions?error=token_exchange_failed&details=${encodeURIComponent(tokenResult.error)}`);
     }
 
     // Store tokens for this specific user
     const storeResult = await zoomOAuth.storeUserTokens(req.session.userId, tokenResult);
     if (!storeResult.success) {
       console.error('❌ Failed to store tokens:', storeResult.error);
-      return res.redirect('http://localhost:5173/sessions?error=token_storage_failed');
+      return res.redirect(`${CLIENT_URL}/sessions?error=token_storage_failed`);
     }
 
     console.log('✅ Zoom OAuth completed successfully for user:', req.session.userId);
-    res.redirect('http://localhost:5173/sessions?zoom_connected=true');
+    res.redirect(`${CLIENT_URL}/sessions?zoom_connected=true`);
   } catch (error) {
     console.error('💥 Zoom callback error:', error);
-    res.redirect('http://localhost:5173/sessions?error=callback_exception');
+    res.redirect(`${CLIENT_URL}/sessions?error=callback_exception`);
   }
 });
 
@@ -376,5 +378,265 @@ router.delete('/:session_id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete session' });
   }
 });
+
+// Get real-time meeting status
+router.get('/:session_id/status', async (req, res) => {
+  console.log('📊 Getting meeting status for session:', req.params.session_id);
+  
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Not logged in' });
+  }
+
+  try {
+    const session = await Session.findOne({
+      where: {
+        session_id: req.params.session_id,
+        user_id: req.session.userId
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found or unauthorized' });
+    }
+
+    if (!session.zoom_meeting_id) {
+      return res.status(400).json({ error: 'Session does not have a Zoom meeting' });
+    }
+
+    const result = await zoomOAuth.getMeetingStatus(req.session.userId, session.zoom_meeting_id);
+    
+    if (result.success) {
+      res.json(result.meeting);
+    } else {
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error) {
+    console.error('❌ Get meeting status error:', error);
+    res.status(500).json({ error: 'Failed to get meeting status' });
+  }
+});
+
+// Get meeting participants (live or past)
+router.get('/:session_id/participants', async (req, res) => {
+  console.log('👥 Getting participants for session:', req.params.session_id);
+  
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Not logged in' });
+  }
+
+  try {
+    const session = await Session.findOne({
+      where: {
+        session_id: req.params.session_id,
+        user_id: req.session.userId
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found or unauthorized' });
+    }
+
+    if (!session.zoom_meeting_id) {
+      return res.status(400).json({ error: 'Session does not have a Zoom meeting' });
+    }
+
+    const type = req.query.type || 'past'; // 'live' or 'past'
+    
+    let result;
+    if (type === 'live') {
+      result = await zoomOAuth.getActiveMeetingParticipants(req.session.userId, session.zoom_meeting_id);
+    } else {
+      result = await zoomOAuth.getPastMeetingParticipants(req.session.userId, session.zoom_meeting_id);
+    }
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error) {
+    console.error('❌ Get participants error:', error);
+    res.status(500).json({ error: 'Failed to get participants' });
+  }
+});
+
+// Get past meeting metrics
+router.get('/:session_id/metrics', async (req, res) => {
+  console.log('📈 Getting metrics for session:', req.params.session_id);
+  
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Not logged in' });
+  }
+
+  try {
+    const session = await Session.findOne({
+      where: {
+        session_id: req.params.session_id,
+        user_id: req.session.userId
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found or unauthorized' });
+    }
+
+    if (!session.zoom_meeting_id) {
+      return res.status(400).json({ error: 'Session does not have a Zoom meeting' });
+    }
+
+    const result = await zoomOAuth.getPastMeetingMetrics(req.session.userId, session.zoom_meeting_id);
+    
+    if (result.success) {
+      res.json(result.metrics);
+    } else {
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error) {
+    console.error('❌ Get metrics error:', error);
+    res.status(500).json({ error: 'Failed to get metrics' });
+  }
+});
+
+// Zoom webhook endpoint for meeting events
+router.post('/zoom/webhook', express.json(), async (req, res) => {
+  console.log('🔔 Zoom webhook received:', req.body.event);
+
+  try {
+    const { event, payload } = req.body;
+
+    // Verify webhook (Zoom sends verification request)
+    if (event === 'endpoint.url_validation') {
+      const crypto = await import('crypto');
+      const hashForValidate = crypto
+        .createHmac('sha256', process.env.ZOOM_WEBHOOK_SECRET_TOKEN || '')
+        .update(payload.plainToken)
+        .digest('hex');
+      
+      return res.json({
+        plainToken: payload.plainToken,
+        encryptedToken: hashForValidate
+      });
+    }
+
+    // Handle meeting events
+    switch (event) {
+      case 'meeting.started':
+        await handleMeetingStarted(payload);
+        break;
+      
+      case 'meeting.ended':
+        await handleMeetingEnded(payload);
+        break;
+      
+      case 'meeting.participant_joined':
+        await handleParticipantJoined(payload);
+        break;
+      
+      case 'meeting.participant_left':
+        await handleParticipantLeft(payload);
+        break;
+      
+      default:
+        console.log('ℹ️ Unhandled webhook event:', event);
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('❌ Webhook error:', error);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
+
+// Webhook handlers
+async function handleMeetingStarted(payload) {
+  console.log('🟢 Meeting started:', payload.object.id);
+  
+  try {
+    const session = await Session.findOne({
+      where: { zoom_meeting_id: payload.object.id.toString() }
+    });
+
+    if (session) {
+      session.status = 'active';
+      session.actual_start = new Date(payload.object.start_time);
+      await session.save();
+      console.log('✅ Session status updated to active');
+    }
+  } catch (error) {
+    console.error('❌ Error handling meeting started:', error);
+  }
+}
+
+async function handleMeetingEnded(payload) {
+  console.log('🔴 Meeting ended:', payload.object.id);
+  
+  try {
+    const session = await Session.findOne({
+      where: { zoom_meeting_id: payload.object.id.toString() }
+    });
+
+    if (session) {
+      session.status = 'completed';
+      session.actual_end = new Date(payload.object.end_time);
+      await session.save();
+      console.log('✅ Session status updated to completed');
+    }
+  } catch (error) {
+    console.error('❌ Error handling meeting ended:', error);
+  }
+}
+
+async function handleParticipantJoined(payload) {
+  console.log('👤 Participant joined:', payload.object.participant.user_name);
+  
+  try {
+    const session = await Session.findOne({
+      where: { zoom_meeting_id: payload.object.id.toString() }
+    });
+
+    if (session) {
+      await SessionParticipant.create({
+        session_id: session.session_id,
+        zoom_participant_id: payload.object.participant.id,
+        participant_name: payload.object.participant.user_name,
+        participant_email: payload.object.participant.email || null,
+        join_time: new Date(payload.object.participant.join_time),
+        status: 'in_meeting'
+      });
+      console.log('✅ Participant record created');
+    }
+  } catch (error) {
+    console.error('❌ Error storing participant:', error);
+  }
+}
+
+async function handleParticipantLeft(payload) {
+  console.log('👋 Participant left:', payload.object.participant.user_name);
+  
+  try {
+    const session = await Session.findOne({
+      where: { zoom_meeting_id: payload.object.id.toString() }
+    });
+
+    if (session) {
+      const participant = await SessionParticipant.findOne({
+        where: {
+          session_id: session.session_id,
+          zoom_participant_id: payload.object.participant.id
+        }
+      });
+
+      if (participant) {
+        participant.leave_time = new Date(payload.object.participant.leave_time);
+        participant.status = 'left';
+        participant.calculateDuration();
+        await participant.save();
+        console.log('✅ Participant leave time updated');
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error updating participant:', error);
+  }
+}
 
 export default router;

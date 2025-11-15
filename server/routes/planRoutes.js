@@ -36,20 +36,27 @@ const requireAuth = (req, res, next) => {
 };
 
 // Check and reset daily caps (same as quiz routes)
-async function checkAndResetDailyCaps(userId) {
-  const user = await User.findByPk(userId);
+async function getDailyStats(userId) {
   const today = new Date().toISOString().split('T')[0];
   
-  if (!user.daily_reset_date || user.daily_reset_date !== today) {
-    await user.update({
-      daily_notes_count: 0,
-      daily_quizzes_count: 0,
-      daily_tasks_count: 0,
-      daily_reset_date: today
+  let dailyStat = await UserDailyStat.findOne({
+    where: { user_id: userId, last_reset_date: today }
+  });
+  
+  if (!dailyStat) {
+    dailyStat = await UserDailyStat.create({
+      user_id: userId,
+      last_reset_date: today,
+      notes_created_today: 0,
+      quizzes_completed_today: 0,
+      planner_updates_today: 0,
+      points_earned_today: 0,
+      exp_earned_today: 0,
+      streak_active: false
     });
   }
   
-  return user;
+  return dailyStat;
 }
 
 // Log daily stats (consistent with quiz routes)
@@ -83,6 +90,7 @@ async function logDailyStats(userId, activityType, points, exp = 0) {
   }
   
   await dailyStat.update(updates);
+  await dailyStat.reload(); // Refresh to get updated values
   return dailyStat;
 }
 
@@ -214,17 +222,18 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// Create a new plan - NO DAILY LIMIT ON CREATION
+// Create a new plan - Count towards daily quest but award smaller rewards
 router.post('/', requireAuth, async (req, res) => {
   try {
     const { title, description, due_date, completed } = req.body;
+    const userId = req.session.userId;
     
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
     }
 
     const newPlan = await Plan.create({
-      user_id: req.session.userId,
+      user_id: userId,
       title,
       description: description || null,
       due_date: due_date || null,
@@ -232,7 +241,40 @@ router.post('/', requireAuth, async (req, res) => {
       created_at: new Date()
     });
 
-    res.status(201).json({ plan: newPlan });
+    // Get daily stats
+    const dailyStats = await getDailyStats(userId);
+    
+    let pointsAwarded = 0;
+    let expAwarded = 10; // Award 10 EXP for creating plan
+    let dailyCapReached = false;
+
+    // Check if under daily cap
+    if (dailyStats.planner_updates_today < PLAN_CONFIG.points.dailyCap) {
+      pointsAwarded = 10; // 10 points for creation (vs 30 for completion)
+      
+      // Award points
+      await User.increment('points', {
+        by: pointsAwarded,
+        where: { user_id: userId }
+      });
+    } else {
+      dailyCapReached = true;
+    }
+
+    // Log daily stats (increments planner_updates_today)
+    const updatedStats = await logDailyStats(userId, 'task', pointsAwarded, expAwarded);
+
+    // Award EXP to pet
+    const petLevelUp = await awardPetExp(userId, expAwarded);
+
+    res.status(201).json({ 
+      plan: newPlan,
+      points_awarded: pointsAwarded,
+      exp_awarded: expAwarded,
+      petLevelUp,
+      dailyCapReached,
+      remainingTasks: PLAN_CONFIG.points.dailyCap - updatedStats.planner_updates_today
+    });
   } catch (err) {
     console.error('Failed to create plan:', err);
     res.status(500).json({ error: 'Failed to create plan' });
@@ -277,8 +319,8 @@ router.put('/:id', requireAuth, async (req, res) => {
     if (completed !== undefined) {
       updateData.completed = completed;
       if (completed && !plan.completed) {
-        // Check and reset daily caps
-        const user = await checkAndResetDailyCaps(userId);
+        // Get daily stats
+        const dailyStats = await getDailyStats(userId);
         
         updateData.completed_at = new Date();
         wasNewlyCompleted = true;
@@ -287,9 +329,12 @@ router.put('/:id', requireAuth, async (req, res) => {
         expAwarded = PLAN_CONFIG.exp.perTask;
         
         // CHECK DAILY POINTS LIMIT (but don't block completion)
-        if (user.daily_tasks_count >= PLAN_CONFIG.points.dailyCap) {
+        if (dailyStats.planner_updates_today >= PLAN_CONFIG.points.dailyCap) {
           dailyCapReached = true;
           console.log(`[Planner] Plan ${planId} marked as completed - daily limit reached, no points awarded (still earned ${expAwarded} EXP)`);
+          
+          // Still log stats for tracking (no points though)
+          await logDailyStats(userId, 'task', 0, expAwarded);
         } else {
           // AWARD POINTS AND UPDATE STATS (only if under daily limit)
           const TASK_POINTS = PLAN_CONFIG.points.perTask;
@@ -301,23 +346,11 @@ router.put('/:id', requireAuth, async (req, res) => {
             transaction
           });
           
-          // Update user daily task count
-          await user.increment('daily_tasks_count', { transaction });
-          
-          // Update user_daily_stats with both points and EXP
-          await UserDailyStat.upsert({
-            user_id: userId,
-            planner_updates_today: sequelize.literal('COALESCE(planner_updates_today, 0) + 1'),
-            points_earned_today: sequelize.literal(`COALESCE(points_earned_today, 0) + ${TASK_POINTS}`),
-            exp_earned_today: sequelize.literal(`COALESCE(exp_earned_today, 0) + ${expAwarded}`),
-            last_reset_date: new Date().toISOString().split('T')[0]
-          }, {
-            transaction,
-            conflictFields: ['user_id', 'last_reset_date']
-          });
+          // Log daily stats (increments planner_updates_today)
+          await logDailyStats(userId, 'task', TASK_POINTS, expAwarded);
           
           pointsAwarded = TASK_POINTS;
-          console.log(`[Planner] Awarded ${TASK_POINTS} points and ${expAwarded} EXP for completing task (${user.daily_tasks_count + 1}/3 daily)`);
+          console.log(`[Planner] Awarded ${TASK_POINTS} points and ${expAwarded} EXP for completing task (${dailyStats.planner_updates_today + 1}/3 daily)`);
         }
         
         // Award EXP to pet (always, even if points cap reached)
@@ -350,7 +383,7 @@ router.put('/:id', requireAuth, async (req, res) => {
       }
     }
 
-    const updatedUser = await checkAndResetDailyCaps(userId);
+    const updatedStats = await getDailyStats(userId);
     
     res.json({ 
       plan,
@@ -363,7 +396,7 @@ router.put('/:id', requireAuth, async (req, res) => {
         : pointsAwarded > 0 
           ? `Task completed! +${pointsAwarded} points and +${expAwarded} EXP!` 
           : 'Task updated',
-      remainingTasks: PLAN_CONFIG.points.dailyCap - updatedUser.daily_tasks_count
+      remainingTasks: PLAN_CONFIG.points.dailyCap - updatedStats.planner_updates_today
     });
 
   } catch (err) {
@@ -400,16 +433,20 @@ router.delete('/:id', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Task already completed' });
     }
 
-    // Check and reset daily caps
-    const user = await checkAndResetDailyCaps(userId);
+    // Get daily stats
+    const dailyStats = await getDailyStats(userId);
     
     let pointsAwarded = 0;
+    let expAwarded = PLAN_CONFIG.exp.perTask; // Always award EXP
     let dailyCapReached = false;
 
     // CHECK DAILY POINTS LIMIT (but don't block completion)
-    if (user.daily_tasks_count >= PLAN_CONFIG.points.dailyCap) {
+    if (dailyStats.planner_updates_today >= PLAN_CONFIG.points.dailyCap) {
       dailyCapReached = true;
-      console.log(`[Planner] Plan ${planId} marked as completed via DELETE - daily limit reached, no points awarded`);
+      console.log(`[Planner] Plan ${planId} marked as completed via DELETE - daily limit reached, no points awarded (still earned ${expAwarded} EXP)`);
+      
+      // Still log stats for tracking (no points though)
+      await logDailyStats(userId, 'task', 0, expAwarded);
     } else {
       // AWARD POINTS AND UPDATE STATS (only if under daily limit)
       const TASK_POINTS = PLAN_CONFIG.points.perTask;
@@ -421,22 +458,11 @@ router.delete('/:id', requireAuth, async (req, res) => {
         transaction
       });
       
-      // Update user daily task count
-      await user.increment('daily_tasks_count', { transaction });
-      
-      // Update user_daily_stats
-      await UserDailyStat.upsert({
-        user_id: userId,
-        planner_updates_today: sequelize.literal('COALESCE(planner_updates_today, 0) + 1'),
-        points_earned_today: sequelize.literal(`COALESCE(points_earned_today, 0) + ${TASK_POINTS}`),
-        last_reset_date: new Date().toISOString().split('T')[0]
-      }, {
-        transaction,
-        conflictFields: ['user_id', 'last_reset_date']
-      });
+      // Log daily stats (increments planner_updates_today)
+      await logDailyStats(userId, 'task', TASK_POINTS, expAwarded);
 
       pointsAwarded = TASK_POINTS;
-      console.log(`[Planner] Plan ${planId} marked as completed via DELETE - +${TASK_POINTS} points awarded (${user.daily_tasks_count + 1}/3 daily)`);
+      console.log(`[Planner] Plan ${planId} marked as completed via DELETE - +${TASK_POINTS} points awarded (${dailyStats.planner_updates_today + 1}/3 daily)`);
     }
 
     // Update streak regardless of points limit
@@ -457,7 +483,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
       console.error('Error checking achievements:', achievementError);
     }
 
-    const updatedUser = await checkAndResetDailyCaps(userId);
+    const updatedStats = await getDailyStats(userId);
     
     res.json({ 
       message: dailyCapReached 
@@ -465,8 +491,9 @@ router.delete('/:id', requireAuth, async (req, res) => {
         : 'Task marked as completed', 
       plan,
       points_awarded: pointsAwarded,
+      exp_awarded: expAwarded,
       dailyCapReached: dailyCapReached,
-      remainingTasks: PLAN_CONFIG.points.dailyCap - updatedUser.daily_tasks_count
+      remainingTasks: PLAN_CONFIG.points.dailyCap - updatedStats.planner_updates_today
     });
   } catch (err) {
     await transaction.rollback();

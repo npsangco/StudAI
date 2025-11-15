@@ -7,6 +7,7 @@ import UserDailyStat from '../models/UserDailyStat.js';
 import QuizBattle from '../models/QuizBattle.js';
 import BattleParticipant from '../models/BattleParticipant.js';
 import sequelize from '../db.js';
+import { validateQuizRequest, validateTitle, validateNumericId } from '../middleware/validationMiddleware.js';
 
 const router = express.Router();
 
@@ -48,22 +49,6 @@ const requireAuth = (req, res, next) => {
   next();
 };
 
-async function checkAndResetDailyCaps(userId) {
-  const user = await User.findByPk(userId);
-  const today = new Date().toISOString().split('T')[0];
-  
-  if (!user.daily_reset_date || user.daily_reset_date !== today) {
-    await user.update({
-      daily_notes_count: 0,
-      daily_quizzes_count: 0,
-      daily_tasks_count: 0,
-      daily_reset_date: today
-    });
-  }
-  
-  return user;
-}
-
 async function logDailyStats(userId, activityType, points, exp) {
   const today = new Date().toISOString().split('T')[0];
   
@@ -94,6 +79,7 @@ async function logDailyStats(userId, activityType, points, exp) {
   }
   
   await dailyStat.update(updates);
+  await dailyStat.reload(); // Refresh to get updated values
   return dailyStat;
 }
 
@@ -924,9 +910,8 @@ router.post('/:id/questions', requireAuth, async (req, res) => {
       difficulty: newQuestion.difficulty
     });
 
-    // Update quiz total_questions count
+    // Update quiz timestamp
     await quiz.update({
-      total_questions: quiz.total_questions + 1,
       updated_at: new Date()
     });
 
@@ -989,9 +974,8 @@ router.delete('/:quizId/questions/:questionId', requireAuth, async (req, res) =>
 
     await question.destroy();
 
-    // Update quiz total_questions count
+    // Update quiz timestamp
     await quiz.update({
-      total_questions: Math.max(0, quiz.total_questions - 1),
       updated_at: new Date()
     });
 
@@ -1022,11 +1006,26 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       adaptiveJourney: adaptiveJourney || null
     } : null;
 
-    // Check and reset daily caps
-    const user = await checkAndResetDailyCaps(userId);
+    // Get or create daily stats
+    const today = new Date().toISOString().split('T')[0];
+    let dailyStats = await UserDailyStat.findOne({
+      where: { user_id: userId, last_reset_date: today }
+    });
+
+    if (!dailyStats) {
+      dailyStats = await UserDailyStat.create({
+        user_id: userId,
+        notes_created_today: 0,
+        quizzes_completed_today: 0,
+        planner_updates_today: 0,
+        points_earned_today: 0,
+        exp_earned_today: 0,
+        last_reset_date: today
+      });
+    }
 
     // Check if user has reached daily quiz cap
-    if (user.daily_quizzes_count >= QUIZ_CONFIG.points.dailyCap) {
+    if (dailyStats.quizzes_completed_today >= QUIZ_CONFIG.points.dailyCap) {
       // Still allow quiz attempt and award EXP (no points though)
       const percentage = total_questions > 0 ? (score / total_questions * 100).toFixed(2) : 0;
       const exp_earned = QUIZ_CONFIG.exp.formula(score, total_questions);
@@ -1046,19 +1045,8 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       // Award EXP to pet (even though points cap reached)
       const petLevelUp = await awardPetExp(userId, exp_earned);
 
-      // Update quiz stats
-      const quiz = await Quiz.findByPk(quizId);
-      if (quiz) {
-        const newTotalAttempts = quiz.total_attempts + 1;
-        const newAverageScore = (
-          (quiz.average_score * quiz.total_attempts + parseFloat(percentage)) / newTotalAttempts
-        ).toFixed(2);
-
-        await quiz.update({
-          total_attempts: newTotalAttempts,
-          average_score: newAverageScore
-        });
-      }
+      // Log EXP to daily stats (even though no points)
+      await logDailyStats(userId, 'quiz', 0, exp_earned);
 
       return res.status(200).json({
         attempt,
@@ -1097,25 +1085,8 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       where: { user_id: userId }
     });
 
-    // Increment daily quiz count
-    await user.increment('daily_quizzes_count');
-
     // Log daily stats - FIXED: Now uses correct column names
-    await logDailyStats(userId, 'quiz', points_earned, exp_earned);
-
-    // Update quiz statistics
-    const quiz = await Quiz.findByPk(quizId);
-    if (quiz) {
-      const newTotalAttempts = quiz.total_attempts + 1;
-      const newAverageScore = (
-        (quiz.average_score * quiz.total_attempts + parseFloat(percentage)) / newTotalAttempts
-      ).toFixed(2);
-
-      await quiz.update({
-        total_attempts: newTotalAttempts,
-        average_score: newAverageScore
-      });
-    }
+    const updatedStats = await logDailyStats(userId, 'quiz', points_earned, exp_earned);
 
     // Check achievements
     await checkAchievements(userId);
@@ -1130,7 +1101,7 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       petLevelUp,
       study_streak: streak,
       dailyCapReached: false,
-      remainingQuizzes: QUIZ_CONFIG.points.dailyCap - user.daily_quizzes_count - 1,
+      remainingQuizzes: QUIZ_CONFIG.points.dailyCap - updatedStats.quizzes_completed_today,
       message: `Quiz completed! Earned ${points_earned} points and ${exp_earned} EXP!`
     });
   } catch (err) {
@@ -1219,8 +1190,7 @@ router.post('/:id/battle/create', requireAuth, async (req, res) => {
       game_pin: gamePin,
       host_id: userId,
       status: 'waiting',
-      max_players: 5, 
-      current_players: 1
+      max_players: 5
     });
     
     // Add host as participant
@@ -1233,6 +1203,11 @@ router.post('/:id/battle/create', requireAuth, async (req, res) => {
       is_ready: false
     });
     
+    // Get current player count
+    const currentPlayers = await BattleParticipant.count({
+      where: { battle_id: battle.battle_id }
+    });
+    
     res.json({ 
       battle: {
         battle_id: battle.battle_id,
@@ -1240,7 +1215,7 @@ router.post('/:id/battle/create', requireAuth, async (req, res) => {
         game_pin: battle.game_pin,
         status: battle.status,
         max_players: battle.max_players,
-        current_players: battle.current_players
+        current_players: currentPlayers
       },
       gamePin 
     });
@@ -1276,7 +1251,12 @@ router.post('/battle/join', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Battle not found or already started' });
     }
     
-    if (battle.current_players >= battle.max_players) {
+    // Get current player count
+    const currentPlayers = await BattleParticipant.count({
+      where: { battle_id: battle.battle_id }
+    });
+    
+    if (currentPlayers >= battle.max_players) {
       return res.status(400).json({ error: 'Battle is full' });
     }
     
@@ -1301,10 +1281,13 @@ router.post('/battle/join', requireAuth, async (req, res) => {
       is_ready: false
     });
     
-    // Update player count
-    await battle.update({
-      current_players: battle.current_players + 1
+    // Get updated player count
+    const updatedPlayerCount = await BattleParticipant.count({
+      where: { battle_id: battle.battle_id }
     });
+    
+    // Get question count dynamically
+    const questionCount = await Question.count({ where: { quiz_id: battle.quiz_id } });
     
     res.json({
       battle: {
@@ -1312,10 +1295,10 @@ router.post('/battle/join', requireAuth, async (req, res) => {
         quiz_id: battle.quiz_id,
         game_pin: battle.game_pin,
         quiz_title: battle.quiz.title,
-        total_questions: battle.quiz.total_questions,
+        total_questions: questionCount,
         timer_per_question: battle.quiz.timer_per_question,
         status: battle.status,
-        current_players: battle.current_players,
+        current_players: updatedPlayerCount,
         max_players: battle.max_players
       },
       participant: {
@@ -1365,18 +1348,24 @@ router.get('/battle/:gamePin', requireAuth, async (req, res) => {
       order: [['joined_at', 'ASC']]
     });
     
+    // Get question count dynamically
+    const questionCount = await Question.count({ where: { quiz_id: battle.quiz_id } });
+    
+    // Get current player count
+    const currentPlayers = participants.length;
+    
     res.json({
       battle: {
         battle_id: battle.battle_id,
         quiz_id: battle.quiz_id,
         game_pin: battle.game_pin,
         quiz_title: battle.quiz.title,
-        total_questions: battle.quiz.total_questions,
+        total_questions: questionCount,
         timer_per_question: battle.quiz.timer_per_question,
         host_id: battle.host_id,
         host_username: battle.host.username,
         status: battle.status,
-        current_players: battle.current_players,
+        current_players: currentPlayers,
         max_players: battle.max_players
       },
       participants: participants.map(p => ({
@@ -1696,6 +1685,12 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     // 3. IDEMPOTENCY: CHECK IF ALREADY SYNCED
     // ============================================
     
+    // Get total players count
+    const totalPlayers = await BattleParticipant.count({
+      where: { battle_id: battle.battle_id },
+      transaction
+    });
+    
     if (battle.status === 'completed' && battle.winner_id) {
       await transaction.rollback();
       console.log('⏭️ Battle already synced:', gamePin);
@@ -1706,7 +1701,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         battleId: battle.battle_id,
         winnerId: battle.winner_id,
         winnerIds: winnerIds,
-        totalPlayers: battle.current_players
+        totalPlayers: totalPlayers
       });
     }
     
