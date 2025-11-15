@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Clock, Target, Trophy, Zap } from 'lucide-react';
 import { getPointsForDifficulty } from './utils/adaptiveDifficultyManager';
 import './QuizGameHeader.css';
@@ -181,7 +181,8 @@ export const QuizGameHeader = ({
   onBack,
   currentQuestionData,
   correctAnswersCount = 0, // New prop to track correct answers
-  maxPossibleScore = totalQuestions // New prop for max score calculation
+  maxPossibleScore = totalQuestions, // New prop for max score calculation
+  adaptiveMode = false // Adaptive difficulty enabled
 }) => {
   const [showExitModal, setShowExitModal] = useState(false);
 
@@ -306,6 +307,12 @@ export const QuizGameHeader = ({
                       <>
                         <span>•</span>
                         <span>{playersCount} Players</span>
+                      </>
+                    )}
+                    {adaptiveMode && (
+                      <>
+                        <span>•</span>
+                        <span className="text-purple-700 font-semibold">🎯 Adaptive Mode</span>
                       </>
                     )}
                   </p>

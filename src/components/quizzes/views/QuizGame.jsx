@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuizGame } from '../hooks/useQuizGame';
 import { useQuizTimer } from '../hooks/useQuizTimer';
 import { QuizGameHeader } from '../QuizGameHeader';
@@ -14,46 +14,103 @@ import { QuizBackgroundPattern } from '../utils/QuizPatterns';
 import { EmojiPicker } from './EmojiPicker';
 import { EmojiReactions } from './EmojiReactions';
 import { sendReaction } from '../../../firebase/reactionOperations';
-import { 
-  sortQuestionsByDifficulty, 
-  calculateTotalScore, 
+import {
+  sortQuestionsByDifficulty,
   getMaxScore,
-  getPointsForDifficulty,
-  getDifficultyDisplay 
+  getPointsForDifficulty
 } from '../utils/adaptiveDifficultyManager';
+import {
+  canUseAdaptiveMode,
+  buildAdaptiveJourney
+} from '../utils/adaptiveDifficultyEngine';
+import {
+  initializeAdaptiveQueue,
+  performAdaptiveCheck
+} from '../utils/adaptiveQuizManager';
+import { AdaptiveFeedback } from '../components/AdaptiveFeedback';
 
-const QuizGame = ({ 
-  quiz, 
-  mode = 'solo', 
-  onBack, 
+const QuizGame = ({
+  quiz,
+  mode = 'solo',
+  onBack,
   onComplete,
-  onPlayerScoreUpdate 
+  onPlayerScoreUpdate
 }) => {
-  // ADAPTIVE DIFFICULTY: Sort questions by difficulty in SOLO mode only
   const rawQuestions = quiz?.questions || [];
-  const questions = mode === 'solo'
-    ? sortQuestionsByDifficulty(rawQuestions)
-    : rawQuestions;
 
-  console.log(`🎮 ${mode.toUpperCase()} MODE:`,
-    mode === 'solo' ? 'Questions sorted Easy→Medium→Hard' : 'Original order'
-  );
-  console.log(`📚 Questions array length: ${questions.length}`, questions);
-  
+  // ADAPTIVE DIFFICULTY: Check if adaptive mode can be used
+  const adaptiveCheck = mode === 'solo' ? canUseAdaptiveMode(rawQuestions) : { enabled: false };
+  const useAdaptiveMode = adaptiveCheck.enabled;
+
+  // 🔥 OPTION 1: Load ALL questions upfront with adaptive ordering
+  const [questions, setQuestions] = useState(() => {
+    if (useAdaptiveMode) {
+      // Initialize adaptive queue with ALL questions in optimal order
+      const { orderedQuestions, startingDifficulty } = initializeAdaptiveQueue(rawQuestions);
+
+      console.log(`🎯 OPTION 1 INITIALIZED: ${orderedQuestions.length} questions loaded (Starting: ${startingDifficulty})`);
+      console.log(`📊 Student will see: "Question 1 of ${orderedQuestions.length}"`);
+
+      return orderedQuestions;
+    }
+    // Classic mode: sort by difficulty or use original order
+    return mode === 'solo' ? sortQuestionsByDifficulty(rawQuestions) : rawQuestions;
+  });
+
+  // Adaptive state tracking
+  const [adaptiveState, setAdaptiveState] = useState(() => {
+    if (mode === 'solo' && useAdaptiveMode) {
+      // 🔥 OPTION 1: Get starting difficulty from initialization
+      const { startingDifficulty } = initializeAdaptiveQueue(rawQuestions);
+
+      console.log(`🎯 ADAPTIVE MODE ENABLED - Starting difficulty: ${startingDifficulty}`);
+      return {
+        currentDifficulty: startingDifficulty,
+        difficultyHistory: [{
+          afterQuestion: 0,
+          difficulty: startingDifficulty,
+          action: 'INITIAL'
+        }]
+      };
+    }
+    return null;
+  });
+  const [adaptiveFeedbackMessage, setAdaptiveFeedbackMessage] = useState(null);
+  const [adaptiveFeedbackAction, setAdaptiveFeedbackAction] = useState(null);
+  const isShowingFeedbackRef = useRef(false); // 🔥 Prevent overlapping feedback
+  const feedbackTimeoutRef = useRef(null); // 🔥 Track feedback timeout for cleanup
+
+  console.log(`📚 Questions loaded: ${questions.length}`);
+
+  // 🔥 BULLETPROOF: Cleanup feedback on component unmount
+  useEffect(() => {
+    return () => {
+      // Clear feedback timeout
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+      // Force clear feedback state
+      setAdaptiveFeedbackMessage(null);
+      setAdaptiveFeedbackAction(null);
+      isShowingFeedbackRef.current = false;
+    };
+  }, []);
+
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Track all answers for summary
   const [answersHistory, setAnswersHistory] = useState([]);
   const timeoutHandledRef = useRef(false);
-  
+
   // Track correct answers for accurate accuracy calculation
   const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
   
   // Calculate max possible score based on mode
   // Battle: 1 point per question, Solo: adaptive scoring based on difficulty
-  const maxPossibleScore = mode === 'battle' 
-    ? questions.length 
-    : getMaxScore(questions);
+  // Adaptive mode: Use all raw questions for max score calculation
+  const maxPossibleScore = mode === 'battle'
+    ? rawQuestions.length
+    : (useAdaptiveMode ? getMaxScore(rawQuestions) : getMaxScore(questions));
   
   // Get quiz timer with battle mode enforcement
   // Battle mode: Minimum 15s timer (no "No Limit" allowed for sync)
@@ -724,15 +781,132 @@ const QuizGame = ({
   };
 
   const handleNextQuestion = () => {
+    // 🔥 EDGE CASE 1: Skip adaptive check if feedback is already showing
+    if (isShowingFeedbackRef.current) {
+      console.log('⏭️ EDGE CASE: Skipping adaptive check - feedback already showing');
+      // Just proceed with normal transition
+      setIsProcessing(false);
+      timeoutHandledRef.current = false;
+
+      if (game.currentQuestionIndex < questions.length - 1) {
+        game.nextQuestion();
+        resetTimer(quizTimer);
+      } else {
+        finishQuiz();
+      }
+      return;
+    }
+
+    // 🔥 OPTION 1: Adaptive reordering logic
+    let shouldShowFeedback = false;
+
+    // 🔥 EDGE CASE 2: Only run adaptive check if we have valid state and enough answers
+    if (useAdaptiveMode && adaptiveState && answersHistory.length >= 2) {
+      const result = performAdaptiveCheck({
+        questionsAnswered: game.currentQuestionIndex + 1,
+        allQuestions: questions,
+        answersHistory,
+        currentDifficulty: adaptiveState.currentDifficulty
+      });
+
+      // Update adaptive state if difficulty changed
+      if (result.newDifficulty !== adaptiveState.currentDifficulty || result.action !== 'MAINTAIN') {
+        const updatedAdaptiveState = {
+          currentDifficulty: result.newDifficulty,
+          difficultyHistory: [
+            ...adaptiveState.difficultyHistory,
+            {
+              afterQuestion: game.currentQuestionIndex + 1,
+              fromDifficulty: adaptiveState.currentDifficulty,
+              toDifficulty: result.newDifficulty,
+              action: result.action
+            }
+          ]
+        };
+        setAdaptiveState(updatedAdaptiveState);
+      }
+
+      // 🔥 REORDER questions if needed
+      if (result.shouldReorder && result.reorderedQuestions.length > 0) {
+        setQuestions(result.reorderedQuestions);
+        console.log(`🔄 Questions reordered! Total: ${result.reorderedQuestions.length}`);
+      }
+
+      // Show feedback if we have a message
+      // 🔥 EDGE CASE 3: Only show feedback for actual difficulty changes or staying messages
+      if (result.messageKey) {
+        // 🔥 BULLETPROOF: Clear any existing feedback timeout first
+        if (feedbackTimeoutRef.current) {
+          clearTimeout(feedbackTimeoutRef.current);
+          feedbackTimeoutRef.current = null;
+        }
+
+        // 🔥 BULLETPROOF: Force clear previous feedback immediately
+        setAdaptiveFeedbackMessage(null);
+        setAdaptiveFeedbackAction(null);
+        isShowingFeedbackRef.current = false;
+
+        const messages = {
+          easy_to_medium: ["You're crushing it! Moving to Medium difficulty!", "Nice work! Let's step it up a notch!"],
+          medium_to_hard: ["On fire! Time for Hard mode!", "Beast mode activated! Hard questions incoming!"],
+          staying_hard: ["Maintaining excellence! Keep it up!", "Peak performance! You're unstoppable!"],
+          hard_to_medium: ["Let's review some fundamentals!", "Building a stronger foundation!"],
+          medium_to_easy: ["Back to basics - you've got this!", "Let's master the fundamentals first!"],
+          staying_easy: ["Practice makes perfect!", "Keep learning at your pace!"]
+        };
+        const messageArray = messages[result.messageKey] || [];
+
+        // 🔥 EDGE CASE 4: Validate message exists before showing
+        if (messageArray.length > 0) {
+          const randomMessage = messageArray[Math.floor(Math.random() * messageArray.length)];
+
+          // 🔥 BULLETPROOF: Small delay to ensure state clears, then show new feedback
+          setTimeout(() => {
+            setAdaptiveFeedbackMessage(randomMessage);
+            setAdaptiveFeedbackAction(result.action);
+            shouldShowFeedback = true;
+            isShowingFeedbackRef.current = true;
+
+            // 🔥 BULLETPROOF: Force clear feedback after max duration (failsafe)
+            feedbackTimeoutRef.current = setTimeout(() => {
+              setAdaptiveFeedbackMessage(null);
+              setAdaptiveFeedbackAction(null);
+              isShowingFeedbackRef.current = false;
+              feedbackTimeoutRef.current = null;
+            }, 3000); // Extra 500ms buffer for safety
+          }, 50);
+        }
+      }
+    }
+
+    // Now proceed with question transition
     setIsProcessing(false);
     timeoutHandledRef.current = false;
 
-    if (game.currentQuestionIndex < questions.length - 1) {
-      game.nextQuestion();
-      resetTimer(quizTimer);
-    } else {
-      finishQuiz();
-    }
+    // 🔥 EDGE CASE: If showing adaptive feedback, delay question transition
+    // Shorter delay (2.5s total) for faster flow while ensuring feedback completes
+    const transitionDelay = shouldShowFeedback ? 2500 : 0;
+
+    setTimeout(() => {
+      // 🔥 EDGE CASE 5: Ensure questions array is valid before transitioning
+      if (!questions || questions.length === 0) {
+        console.error('❌ EDGE CASE: No questions available');
+        finishQuiz();
+        return;
+      }
+
+      if (game.currentQuestionIndex < questions.length - 1) {
+        game.nextQuestion();
+        resetTimer(quizTimer);
+      } else {
+        finishQuiz();
+      }
+
+      // 🔥 EDGE CASE 6: Reset feedback flag after transition completes
+      if (shouldShowFeedback) {
+        isShowingFeedbackRef.current = false;
+      }
+    }, transitionDelay);
   };
 
   const handleManualNext = () => {
@@ -766,24 +940,33 @@ const QuizGame = ({
 
   const finishQuizWithAnswers = (finalAnswers) => {
     console.log('🏁 Finishing quiz with answers:', finalAnswers);
-    
+
     console.log('🔍 DEBUG - quiz.isHost:', quiz?.isHost);
     console.log('🔍 DEBUG - mode:', mode);
-    
+
     const results = {
       ...game.getResults(),
       quizTitle: quiz.title,
       answers: finalAnswers,
       questions: questions, // Pass questions for difficulty breakdown
       gamePin: quiz?.gamePin,
-      isHost: mode === 'battle' ? (quiz?.isHost || false) : false, 
+      isHost: mode === 'battle' ? (quiz?.isHost || false) : false,
     };
-    
+
+    // ADAPTIVE DIFFICULTY: Add journey data if adaptive mode was used
+    if (useAdaptiveMode && adaptiveState) {
+      results.adaptiveJourney = buildAdaptiveJourney(
+        adaptiveState.difficultyHistory,
+        finalAnswers
+      );
+      console.log('🎯 Adaptive Journey:', results.adaptiveJourney);
+    }
+
     console.log('🔍 DEBUG - results.isHost:', results.isHost);
-    
+
     if (mode === 'battle') {
-      results.players = allPlayers.map(player => 
-        player.name === 'You' 
+      results.players = allPlayers.map(player =>
+        player.name === 'You'
           ? { ...player, score: game.scoreRef.current } 
           : player
       );
@@ -885,7 +1068,26 @@ const QuizGame = ({
         currentQuestionData={currentQ}
         correctAnswersCount={correctAnswersCount}
         maxPossibleScore={maxPossibleScore}
+        adaptiveMode={useAdaptiveMode}
       />
+
+      {/* ADAPTIVE DIFFICULTY FEEDBACK */}
+      {useAdaptiveMode && adaptiveFeedbackMessage && (
+        <AdaptiveFeedback
+          message={adaptiveFeedbackMessage}
+          action={adaptiveFeedbackAction}
+          onComplete={() => {
+            // 🔥 BULLETPROOF: Force clear all feedback state
+            setAdaptiveFeedbackMessage(null);
+            setAdaptiveFeedbackAction(null);
+            isShowingFeedbackRef.current = false;
+            if (feedbackTimeoutRef.current) {
+              clearTimeout(feedbackTimeoutRef.current);
+              feedbackTimeoutRef.current = null;
+            }
+          }}
+        />
+      )}
 
       {/* 🎭 EMOJI REACTIONS - Floating display */}
       {mode === 'battle' && (

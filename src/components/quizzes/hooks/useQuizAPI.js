@@ -310,12 +310,19 @@ export function useQuizAPI(quizDataHook) {
    */
   const submitAttempt = async (quizId, results) => {
     try {
-      const response = await quizApi.submitAttempt(quizId, {
+      const requestData = {
         score: results.score,
         total_questions: results.totalQuestions,
         time_spent: results.timeSpent,
-        answers: []
-      });
+        answers: results.answers || []
+      };
+
+      // Include adaptive journey if available
+      if (results.adaptiveJourney) {
+        requestData.adaptiveJourney = results.adaptiveJourney;
+      }
+
+      const response = await quizApi.submitAttempt(quizId, requestData);
 
       return response.data;
     } catch (err) {

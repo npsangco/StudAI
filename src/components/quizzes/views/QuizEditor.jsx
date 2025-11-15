@@ -3,6 +3,7 @@ import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
 import { Copy, Check, Clock, ChevronDown, ArrowLeft } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
+import { validateAdaptiveRequirements } from '../utils/validation';
 
 // ============================================
 // COMPACT SETTINGS BAR COMPONENT
@@ -515,6 +516,31 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               }`}>
                 {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
               </span>
+
+              {/* Adaptive Mode Indicator */}
+              {(() => {
+                const adaptiveCheck = validateAdaptiveRequirements(questions);
+                if (adaptiveCheck.canUseAdaptive) {
+                  return (
+                    <span
+                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1.5"
+                      title="Adaptive difficulty enabled for solo mode"
+                    >
+                      🎯 Adaptive Mode
+                    </span>
+                  );
+                } else if (questionCount > 0 && questionCount < 5) {
+                  return (
+                    <span
+                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-gray-100 text-gray-600 flex items-center gap-1.5"
+                      title={adaptiveCheck.warning}
+                    >
+                      ⚪ Classic Mode
+                    </span>
+                  );
+                }
+                return null;
+              })()}
 
               {/* Error Badge */}
               {hasErrors && (
