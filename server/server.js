@@ -1371,9 +1371,13 @@ app.get('/api/health', async (req, res) => {
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dist')));
 
-// Handle React routing - return all requests to React app
-app.get('/*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+// Handle React routing - return all non-API requests to React app
+app.use((req, res, next) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/auth') && !req.path.startsWith('/uploads')) {
+        res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+    } else {
+        next();
+    }
 });
 
 // ----------------- START SERVER -----------------
