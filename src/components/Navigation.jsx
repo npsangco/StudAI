@@ -134,20 +134,8 @@ export default function Navigation() {
             </div>
           </div>
 
-          {/* Quest Icon & Profile dropdown */}
+          {/* Profile dropdown */}
           <div className="absolute inset-y-0 right-0 flex items-center gap-2 pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
-            {/* Daily Quest Button */}
-            <button
-              onClick={() => setShowQuests(true)}
-              className="relative p-2 rounded-lg bg-black to-orange-500 hover:from-yellow-500 hover:to-orange-600 transition-all shadow-md hover:shadow-lg group"
-              title="Daily Quests"
-            >
-              <Target className="w-5 h-5 text-white" />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
-                !
-              </span>
-            </button>
-
             <Menu as="div" className="relative ml-1">
               <MenuButton className="relative flex rounded-full ring-2 ring-black/20 hover:ring-black/40 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white shadow-lg hover:shadow-xl hover:scale-110 transform duration-200">
                 <span className="absolute -inset-1.5" />
@@ -210,6 +198,18 @@ export default function Navigation() {
         </div>
       </DisclosurePanel>
     </Disclosure>
+
+    {/* Floating Daily Quest Button */}
+    <button
+      onClick={() => setShowQuests(true)}
+      className="fixed bottom-24 right-6 z-50 p-4 rounded-full bg-black transition-all shadow-lg hover:shadow-2xl group animate-bounce"
+      title="Daily Quests"
+    >
+      <Target className="w-6 h-6 text-white" />
+      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+        !
+      </span>
+    </button>
 
     {/* Daily Quests Modal */}
     <DailyQuests ref={questsRef} isOpen={showQuests} onClose={() => setShowQuests(false)} />

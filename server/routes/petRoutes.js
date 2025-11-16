@@ -226,19 +226,18 @@ async function logDailyStats(userId, activityType, points, exp) {
   if (!dailyStat) {
     dailyStat = await UserDailyStat.create({
       user_id: userId,
-      stat_date: today,
-      notes_created: 0,
-      quizzes_completed: 0,
-      tasks_added: 0,
-      points_earned: 0,
-      exp_earned: 0,
-      streak_active: false
+      last_reset_date: today,
+      notes_created_today: 0,
+      quizzes_completed_today: 0,
+      planner_updates_today: 0,
+      points_earned_today: 0,
+      exp_earned_today: 0
     });
   }
   
   const updates = {
-    points_earned: dailyStat.points_earned + points,
-    exp_earned: dailyStat.exp_earned + exp
+    points_earned_today: dailyStat.points_earned_today + points,
+    exp_earned_today: dailyStat.exp_earned_today + exp
   };
   
   switch(activityType) {
@@ -246,7 +245,7 @@ async function logDailyStats(userId, activityType, points, exp) {
       // Track pet actions
       break;
     case 'quiz':
-      updates.quizzes_completed = dailyStat.quizzes_completed + 1;
+      updates.quizzes_completed_today = dailyStat.quizzes_completed_today + 1;
       break;
   }
   

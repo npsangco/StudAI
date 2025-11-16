@@ -39,6 +39,10 @@ services:
       - key: JWT_SECRET
         scope: RUN_TIME
         type: SECRET
+      - key: CLIENT_URL
+        value: "https://walrus-app-umg67.ondigitalocean.app"
+      - key: SERVER_URL
+        value: "https://walrus-app-umg67.ondigitalocean.app"
       - key: FRONTEND_URL
         value: "https://studai-9eah7.ondigitalocean.app"
       - key: EMAIL_USER
@@ -82,9 +86,17 @@ services:
       - key: GOOGLE_CLIENT_ID
         scope: RUN_TIME
         type: SECRET
+      - key: GOOGLE_ID
+        scope: RUN_TIME
+        type: SECRET
       - key: GOOGLE_CLIENT_SECRET
         scope: RUN_TIME
         type: SECRET
+      - key: GOOGLE_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: GOOGLE_CALLBACK_URL
+        value: "https://walrus-app-umg67.ondigitalocean.app/auth/google/callback"
       - key: CA_CERT
         scope: RUN_TIME
         type: SECRET
