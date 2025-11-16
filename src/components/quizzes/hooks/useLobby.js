@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { 
-  listenToPlayers, 
-  markPlayerReady, 
-  removePlayerFromBattle 
+import {
+  listenToPlayers,
+  markPlayerReady,
+  markPlayerUnready,
+  removePlayerFromBattle
 } from '../../../firebase/battleOperations';
 import { PLAYER_RADIUS } from '../utils/constants';
 
@@ -19,18 +20,23 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
     // Listen to Firebase players
     const unsubscribe = listenToPlayers(gamePin, (firebasePlayers) => {
       console.log('📡 Players updated:', firebasePlayers);
-      
+
       // Transform Firebase data to match your existing format
-      const transformedPlayers = firebasePlayers.map(p => ({
-        id: `user_${p.userId}`,
-        name: p.name,
-        initial: p.initial,
-        isReady: p.isReady,
-        score: p.score || 0,
-        isOnline: p.isOnline,
-        userId: p.userId // Keep original userId for comparison
-      }));
-      
+      const transformedPlayers = firebasePlayers.map(p => {
+        console.log(`👤 Player ${p.name} - profilePicture:`, p.profilePicture);
+        return {
+          id: `user_${p.userId}`,
+          name: p.name,
+          initial: p.initial,
+          profilePicture: p.profilePicture || null,
+          isReady: p.isReady,
+          score: p.score || 0,
+          isOnline: p.isOnline,
+          userId: p.userId // Keep original userId for comparison
+        };
+      });
+
+      console.log('🎭 Transformed players:', transformedPlayers);
       setPlayers(transformedPlayers);
     });
     
@@ -44,7 +50,7 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
   // Mark current user as ready
   const markUserReady = async () => {
     if (!gamePin || !currentUserId) return;
-    
+
     try {
       await markPlayerReady(gamePin, currentUserId);
       console.log('✅ Marked self as ready');
@@ -53,9 +59,21 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
     }
   };
 
+  // Mark current user as unready
+  const markUserUnready = async () => {
+    if (!gamePin || !currentUserId) return;
+
+    try {
+      await markPlayerUnready(gamePin, currentUserId);
+      console.log('✅ Marked self as unready');
+    } catch (error) {
+      console.error('❌ Error marking unready:', error);
+    }
+  };
+
   // Get current user player object
   const userPlayer = players.find(p => p.userId === currentUserId);
-  
+
   // Check if all players are ready
   const readyCount = players.filter(p => p.isReady).length;
   const allReady = players.length > 1 && players.every(p => p.isReady);
@@ -108,6 +126,7 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
     playerPositions,
     setPlayerPositions,
     markUserReady,
+    markUserUnready,
     allReady,
     userPlayer,
     readyCount

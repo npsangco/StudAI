@@ -739,7 +739,10 @@ app.put("/api/user/profile", validateProfileUpdate, async (req, res) => {
 
         if (username) updates.username = username;
         if (birthday) updates.birthday = birthday;
-        if (profile_picture) updates.profile_picture = profile_picture;
+        if (profile_picture) {
+            updates.profile_picture = profile_picture;
+            console.log(`📸 Updating profile picture for user ${req.session.userId}: ${profile_picture}`);
+        }
 
         if (password) {
             if (!passwordRegex.test(password)) {
@@ -757,8 +760,20 @@ app.put("/api/user/profile", validateProfileUpdate, async (req, res) => {
             updates.password = await bcrypt.hash(password, 10);
         }
 
+        console.log(`🔄 Profile update for user ${req.session.userId}:`, Object.keys(updates));
         await User.update(updates, { where: { user_id: req.session.userId } });
-        res.json({ message: "Profile updated successfully" });
+
+        // Fetch and return updated profile data
+        const updatedUser = await User.findByPk(req.session.userId, {
+            attributes: ["user_id", "email", "username", "birthday", "role", "points", "profile_picture", "study_streak", "longest_streak"]
+        });
+
+        console.log(`✅ Profile updated successfully. New profile_picture: ${updatedUser.profile_picture}`);
+
+        res.json({
+            message: "Profile updated successfully",
+            user: updatedUser
+        });
     } catch (err) {
         console.error("Profile update error:", err);
         res.status(500).json({ error: "Internal server error" });

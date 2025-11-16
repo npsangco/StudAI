@@ -1,6 +1,7 @@
 import { VIEWS } from '../utils/constants';
 import { createNewQuestion } from '../utils/questionHelpers';
 import { createBattleRoom, addPlayerToBattle, markPlayerReady, storeQuizQuestions, updateBattleStatus } from '../../../firebase/battleOperations';
+import { API_URL } from '../../../config/api.config';
 
 /**
  * Custom hook for all quiz-related event handlers
@@ -119,10 +120,19 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         });
 
         // 3️⃣ Add host as first player
+        // Convert relative profile picture path to full URL
+        let profilePictureUrl = null;
+        if (currentUser.profile_picture) {
+          profilePictureUrl = currentUser.profile_picture.startsWith('http')
+            ? currentUser.profile_picture
+            : `${API_URL}${currentUser.profile_picture}`;
+        }
+
         await addPlayerToBattle(gamePin, {
           userId: currentUser.id,
           name: currentUser.username,
-          initial: currentUser.initial
+          initial: currentUser.initial,
+          profilePicture: profilePictureUrl
         });
         // 🔥 Auto-mark host as ready!
         await markPlayerReady(gamePin, currentUser.id);
