@@ -1,4 +1,4 @@
-import AuditLog from "./models/AuditLog.js";
+import AuditLog from "../models/AuditLog.js";
 
 const actionMap = {
     // Notes
@@ -71,6 +71,20 @@ const actionMap = {
     "PUT /api/sessions/:id": { action: "Update Study Session", target: "Study Session" },
     "DELETE /api/sessions/:id": { action: "Delete Study Session", target: "Study Session" },
     "POST /api/sessions/:id/complete": { action: "Complete Study Session", target: "Study Session" },
+
+    // === AUTHENTICATION ===
+    "POST /api/auth/signup": { action: "Sign Up", target: "User" },
+    "POST /api/auth/login": { action: "Login", target: "User" },
+    "POST /api/auth/logout": { action: "Logout", target: "User" },
+    "GET /api/auth/verify-email": { action: "Verify Email", target: "User" },
+    "POST /api/auth/reset-request": { action: "Request Password Reset", target: "User" },
+    "POST /api/auth/reset-password": { action: "Reset Password", target: "User" },
+
+    // === USER PROFILE ROUTES ===
+    "GET /api/user/confirm-password-update": { action: "Confirm Password Update", target: "User" },
+
+    // === ACHIEVEMENTS ===
+    "POST /api/achievements/equip": { action: "Equip Achievement", target: "Achievement" },
 };
 
 export async function auditMiddleware(req, res, next) {

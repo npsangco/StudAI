@@ -55,7 +55,7 @@ function Login() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${VITE_API_URL}/auth/google/`;
+    window.location.href = `${API_URL}/auth/google/`;
   };
 
   return (

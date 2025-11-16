@@ -37,11 +37,20 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
       
       console.log('✅ Joined MySQL battle:', battle);
       
-      // 2️⃣ Add player to Firebase room 
+      // 2️⃣ Add player to Firebase room
+      // Convert relative profile picture path to full URL
+      let profilePictureUrl = null;
+      if (currentUser.profile_picture) {
+        profilePictureUrl = currentUser.profile_picture.startsWith('http')
+          ? currentUser.profile_picture
+          : `${API_URL}${currentUser.profile_picture}`;
+      }
+
       await addPlayerToBattle(gamePin, {
-        userId: currentUser.user_id, 
-        name: currentUser.username,  
-        initial: currentUser.username[0].toUpperCase() 
+        userId: currentUser.user_id,
+        name: currentUser.username,
+        initial: currentUser.username[0].toUpperCase(),
+        profilePicture: profilePictureUrl
       });
       
       console.log('✅ Added to Firebase room');

@@ -290,8 +290,8 @@ export const validateQuizRequest = (req, res, next) => {
 
 // Middleware: Validate profile update
 export const validateProfileUpdate = (req, res, next) => {
-  const { username, password, birthday } = req.body;
-  
+  const { username, password, birthday, profile_picture } = req.body;
+
   if (username) {
     const usernameValidation = validateUsername(username);
     if (!usernameValidation.isValid) {
@@ -299,7 +299,7 @@ export const validateProfileUpdate = (req, res, next) => {
     }
     req.validatedData = { ...req.validatedData, username: usernameValidation.sanitized };
   }
-  
+
   if (password) {
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.isValid) {
@@ -307,7 +307,7 @@ export const validateProfileUpdate = (req, res, next) => {
     }
     req.validatedData = { ...req.validatedData, password };
   }
-  
+
   if (birthday) {
     const birthdayValidation = validateBirthday(birthday);
     if (!birthdayValidation.isValid) {
@@ -315,7 +315,20 @@ export const validateProfileUpdate = (req, res, next) => {
     }
     req.validatedData = { ...req.validatedData, birthday: birthdayValidation.sanitized };
   }
-  
+
+  if (profile_picture) {
+    // Validate profile picture is a string path
+    if (typeof profile_picture !== 'string' || profile_picture.trim().length === 0) {
+      return res.status(400).json({ error: 'Invalid profile picture' });
+    }
+    // Basic validation: should start with / or http
+    const trimmed = profile_picture.trim();
+    if (!trimmed.startsWith('/') && !trimmed.startsWith('http')) {
+      return res.status(400).json({ error: 'Invalid profile picture URL' });
+    }
+    req.validatedData = { ...req.validatedData, profile_picture: trimmed };
+  }
+
   next();
 };
 

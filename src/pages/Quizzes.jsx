@@ -160,14 +160,15 @@ function QuizzesPage() {
           credentials: 'include'
         });
         const userData = await response.json();
-        
+
         setCurrentUser({
           id: userData.user_id,
           username: userData.username,
           email: userData.email,
-          initial: userData.username[0].toUpperCase()
+          initial: userData.username[0].toUpperCase(),
+          profile_picture: userData.profile_picture || null
         });
-        
+
         console.log('✅ Current user loaded:', userData.username);
       } catch (error) {
         console.error('❌ Failed to fetch user:', error);
@@ -175,6 +176,18 @@ function QuizzesPage() {
     };
 
     fetchCurrentUser();
+
+    // Listen for profile updates from Profile page
+    const handleProfileUpdate = () => {
+      console.log('🔄 Profile updated, refetching user data...');
+      fetchCurrentUser();
+    };
+
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, []);
 
   // Pass currentUser and toast to handlers
@@ -454,12 +467,13 @@ function QuizzesPage() {
         lobbyPlayers={lobby.players}
         playerPositions={lobby.playerPositions}
         quizTitle={quizDataHook.quizData.selected?.title}
-        gamePin={quizDataHook.gameState.gamePin} 
-        isHost={quizDataHook.gameState.isHost}  
-        currentUserId={currentUser?.id}           
+        gamePin={quizDataHook.gameState.gamePin}
+        isHost={quizDataHook.gameState.isHost}
+        currentUserId={currentUser?.id}
         onUserReady={lobby.markUserReady}
+        onUserUnready={lobby.markUserUnready}
         onLeave={handlers.handleBackToList}
-        onStartBattle={handlers.handleStartBattle}     
+        onStartBattle={handlers.handleStartBattle}
         setPlayerPositions={lobby.setPlayerPositions}
       />
     );

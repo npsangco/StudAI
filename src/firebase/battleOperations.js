@@ -45,17 +45,18 @@ export const createBattleRoom = async (gamePin, battleData) => {
 export const addPlayerToBattle = async (gamePin, playerData) => {
   try {
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${playerData.userId}`);
-    
+
     await set(playerRef, {
       userId: playerData.userId,
       name: playerData.name,
       initial: playerData.initial,
+      profilePicture: playerData.profilePicture || null,
       isReady: false,
       score: 0,
       isOnline: true,
       joinedAt: Date.now()
     });
-    
+
     console.log('✅ Player added to Firebase:', playerData.name);
     return true;
   } catch (error) {
@@ -74,6 +75,20 @@ export const markPlayerReady = async (gamePin, userId) => {
     console.log('✅ Player marked ready:', userId);
   } catch (error) {
     console.error('❌ Error marking ready:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mark player as unready
+ */
+export const markPlayerUnready = async (gamePin, userId) => {
+  try {
+    const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
+    await update(playerRef, { isReady: false });
+    console.log('✅ Player marked unready:', userId);
+  } catch (error) {
+    console.error('❌ Error marking unready:', error);
     throw error;
   }
 };
