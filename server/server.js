@@ -346,28 +346,9 @@ User.hasMany(UserAchievement, {
 
 // ----------------- DB Connection -----------------
 sequelize.authenticate()
-    .then(() => {
-        console.log("✅ Database connected");
-        return Promise.all([
-            User.sync({ force: false }),
-            File.sync({ force: false }),
-            Note ? Note.sync({ force: false }) : Promise.resolve(),
-            SharedNote.sync({ force: false }),
-            Plan.sync({ force: false }),
-            Quiz.sync({ force: false }),
-            Question.sync({ force: false }),
-            QuizAttempt.sync({ force: false }),
-            QuizBattle.sync({ force: false }),
-            BattleParticipant.sync({ force: false }),
-            Session.sync({ force: false }),
-            ZoomToken.sync({ force: false }), // ← ADDED TO SYNC
-            Achievement.sync({ force: false }), // ← ADD THIS
-            UserAchievement.sync({ force: false }), // ← ADD THIS
-            UserDailyStat.sync({ force: false }) // ← ADD THIS
-        ]);
-    })
     .then(async () => {
-        console.log("✅ All models synced");
+        console.log("✅ Database connected");
+        console.log("✅ Using existing database schema");
         
         // Initialize default achievements if they don't exist
         await initializeDefaultAchievements();
@@ -384,16 +365,16 @@ sequelize.authenticate()
 if (sessionStore) {
     app.use(
         session({
-            secret: process.env.JWT_SECRET || "fallback-secret",
+            secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
             resave: false,
             saveUninitialized: false,
             store: sessionStore,
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: false,
+                secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
                 maxAge: 1000 * 60 * 60 * 24,
-                sameSite: "lax",
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' needed for cross-site in production
             },
             rolling: true,
         })
@@ -1384,6 +1365,19 @@ app.get('/api/health', async (req, res) => {
 
     const statusCode = health.status === 'OK' ? 200 : 503;
     res.status(statusCode).json(health);
+});
+
+// ----------------- SERVE FRONTEND -----------------
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Handle React routing - return all non-API requests to React app
+app.use((req, res, next) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/auth') && !req.path.startsWith('/uploads')) {
+        res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+    } else {
+        next();
+    }
 });
 
 // ----------------- START SERVER -----------------
