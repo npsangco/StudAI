@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, AlertTriangle, Trash2, AlertCircle } from 'lucide-react';
+import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy } from 'lucide-react';
 
 // ============================================
 // QUIZ MODE SELECTION MODAL
@@ -8,38 +8,121 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   if (!isOpen || !quiz) return null;
 
   return (
-    <div className="fixed inset-0 bg-[rgba(107,114,128,0.6)] flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 relative shadow-xl">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
+      <div className="bg-white rounded-xl sm:rounded-2xl max-w-lg w-full mx-auto relative shadow-2xl animate-scale-in overflow-hidden">
+        {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 p-1.5 sm:p-2 hover:bg-white/20 hover:backdrop-blur-sm rounded-full transition-colors group"
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5 text-white/80 group-hover:text-white" />
         </button>
-        
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-black mb-2">QUIZ</h2>
-          <p className="text-gray-600 mb-6">How would you want to take your quiz?</p>
-          
-          <div className="space-y-4">
-            <button
-              onClick={onSoloQuiz}
-              className="w-full bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
-            >
-              <h3 className="font-semibold text-black mb-1">Solo Quiz</h3>
-              <p className="text-sm text-gray-500">By yourself</p>
-            </button>
-            
-            <button
-              onClick={onQuizBattle}
-              className="w-full bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
-            >
-              <h3 className="font-semibold text-black mb-1">Quiz Battle</h3>
-              <p className="text-sm text-gray-500">With your friends</p>
-            </button>
+
+        {/* Header Section - Minified */}
+        <div className="relative bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 pt-5 sm:pt-6 pb-6 sm:pb-8 px-4 sm:px-6 text-center overflow-hidden">
+          {/* Decorative elements - smaller */}
+          <div className="absolute top-0 left-0 w-20 sm:w-24 h-20 sm:h-24 bg-white/10 rounded-full -translate-x-10 sm:-translate-x-12 -translate-y-10 sm:-translate-y-12"></div>
+          <div className="absolute bottom-0 right-0 w-24 sm:w-28 h-24 sm:h-28 bg-white/10 rounded-full translate-x-12 sm:translate-x-14 translate-y-12 sm:translate-y-14"></div>
+
+          <div className="relative">
+            <div className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl mb-1.5 sm:mb-2 shadow-lg">
+              <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-0.5 sm:mb-1">Ready to Quiz?</h2>
+            <p className="text-white/90 text-[10px] sm:text-xs font-medium">Choose your challenge mode</p>
           </div>
         </div>
+
+        {/* Quiz Info - Minified */}
+        <div className="px-4 sm:px-6 mt-3 mb-3">
+          <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg sm:rounded-xl shadow-lg p-2.5 sm:p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 backdrop-blur-sm rounded-md flex items-center justify-center flex-shrink-0">
+                <span className="text-sm sm:text-base">📝</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-white text-[11px] sm:text-xs line-clamp-1" title={quiz.title}>{quiz.title}</h3>
+                <p className="text-[9px] sm:text-[10px] text-white/80">{quiz.questionCount} questions</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mode Selection */}
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-2.5 sm:space-y-3">
+          {/* Solo Mode */}
+          <button
+            onClick={onSoloQuiz}
+            className="group w-full bg-gradient-to-br from-yellow-50 to-orange-50 hover:from-yellow-100 hover:to-orange-100 border-2 border-yellow-200 hover:border-yellow-400 rounded-lg sm:rounded-xl p-3.5 sm:p-5 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+          >
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
+                <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="font-bold text-gray-900 mb-0.5 sm:mb-1 flex items-center gap-2 flex-wrap text-sm sm:text-base">
+                  Solo Quiz
+                  <span className="text-[10px] sm:text-xs bg-yellow-200 text-yellow-800 px-1.5 sm:px-2 py-0.5 rounded-full font-semibold">Focus</span>
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-600 leading-tight sm:leading-relaxed">
+                  Challenge yourself at your own pace - perfect for focused practice and mastering concepts
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Battle Mode */}
+          <button
+            onClick={onQuizBattle}
+            className="group w-full bg-gradient-to-br from-orange-50 to-red-50 hover:from-orange-100 hover:to-red-100 border-2 border-orange-200 hover:border-orange-400 rounded-lg sm:rounded-xl p-3.5 sm:p-5 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+          >
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="font-bold text-gray-900 mb-0.5 sm:mb-1 flex items-center gap-2 flex-wrap text-sm sm:text-base">
+                  Quiz Battle
+                  <span className="text-[10px] sm:text-xs bg-orange-200 text-orange-800 px-1.5 sm:px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                    <Trophy className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    Competitive
+                  </span>
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-600 leading-tight sm:leading-relaxed">
+                  Compete with up to 5 friends in real-time - race to the top of the leaderboard!
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
       </div>
+
+      <style>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        @keyframes scale-in {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+        .animate-scale-in {
+          animation: scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+      `}</style>
     </div>
   );
 };
@@ -128,7 +211,7 @@ export const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, itemName, 
 };
 
 // ============================================
-// VALIDATION ERROR MODAL - REDESIGNED ✨
+// VALIDATION ERROR MODAL
 // ============================================
 export const ValidationErrorModal = ({ isOpen, onClose, errors }) => {
   if (!isOpen) return null;
