@@ -112,7 +112,7 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
                   : 'bg-gray-300 cursor-not-allowed'
               }`}
             >
-              {loading ? 'Joining...' : '⚡ Join Battle'}
+              {loading ? 'Joining...' : '👑 Join Battle'}
             </button>
           </div>
 

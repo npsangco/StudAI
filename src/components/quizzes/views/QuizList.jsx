@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Edit, Play, GripVertical, Trash2, MoreVertical, Share2 } from 'lucide-react';
-import EmptyQuizState from './EmptyState';
+import { Edit, Play, GripVertical, Trash2, MoreVertical, Share2, Plus, Sparkles, BookOpen, Users, Trophy } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 
 // Utility: Get quiz accent color based on quiz ID
@@ -67,14 +66,12 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false }) => {
 
   if (asTopCard) {
     return (
-      <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl border-2 border-dashed border-yellow-300 p-5 hover:border-yellow-400 transition-all">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center shadow-sm">
-            <span className="text-lg">✨</span>
-          </div>
-          <h3 className="text-base font-semibold text-gray-900">Import Quiz</h3>
+      <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg sm:rounded-xl border-2 border-dashed border-yellow-300 p-3 sm:p-5 hover:border-yellow-400 transition-all">
+        <div className="flex items-center gap-2 sm:gap-2 mb-2 sm:mb-3">
+            <span className="text-base sm:text-lg">🔗</span>
+          <h3 className="text-sm sm:text-base font-semibold text-gray-900">Import Quiz</h3>
         </div>
-        <p className="text-xs text-gray-600 mb-3">Have a share code? Import a quiz from a friend</p>
+        <p className="text-[10px] sm:text-xs text-gray-600 mb-2 sm:mb-3">Have a share code? Import a quiz from a friend</p>
         <div className="flex gap-2">
           <input
             type="text"
@@ -83,13 +80,13 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false }) => {
             maxLength={6}
             value={shareCode}
             onChange={(e) => handleChange(e.target.value)}
-            className="flex-1 px-4 py-2.5 text-center text-lg font-mono tracking-widest border-2 border-yellow-300 rounded-xl focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all bg-white"
+            className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-center text-base sm:text-lg font-mono tracking-widest border-2 border-yellow-300 rounded-lg sm:rounded-xl focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all bg-white"
             disabled={loading}
           />
           <button
             onClick={handleImport}
             disabled={shareCode.length !== 6 || loading}
-            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all whitespace-nowrap ${
               shareCode.length === 6 && !loading
                 ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-sm hover:shadow-md'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -99,7 +96,7 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false }) => {
           </button>
         </div>
         {error && (
-          <p className="mt-2 text-xs text-red-600 font-medium">{error}</p>
+          <p className="mt-2 text-[10px] sm:text-xs text-red-600 font-medium">{error}</p>
         )}
       </div>
     );
@@ -410,90 +407,168 @@ export const QuizList = ({
     setError('');
   };
 
-  // If no quizzes, show empty state with import option
-  if (quizzes.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)] px-6">
-        <div className="w-full max-w-4xl space-y-4">
-          {/* Import Quiz Card - Compact */}
-          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl border-2 border-dashed border-yellow-300 p-4 hover:border-yellow-400 transition-all">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center shadow-sm">
-                <span className="text-base">✨</span>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900">Import Quiz</h3>
-                <p className="text-[10px] text-gray-600">Have a share code from a friend?</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="000000"
-                maxLength={6}
-                value={shareCode}
-                onChange={(e) => handleChange(e.target.value)}
-                className="flex-1 px-3 py-2 text-center text-base font-mono tracking-widest border-2 border-yellow-300 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all bg-white"
-                disabled={loading}
-              />
-              <button
-                onClick={handleImport}
-                disabled={shareCode.length !== 6 || loading}
-                className={`px-4 py-2 rounded-lg font-semibold text-xs transition-all ${
-                  shareCode.length === 6 && !loading
-                    ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-sm hover:shadow-md'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {loading ? 'Importing...' : 'Import'}
-              </button>
-            </div>
-            {error && (
-              <p className="mt-2 text-[10px] text-red-600 font-medium">{error}</p>
-            )}
-          </div>
-
-          {/* Empty State */}
-          <EmptyQuizState onCreateQuiz={onCreateQuiz} />
-        </div>
-      </div>
-    );
-  }
-
-  // Quiz list with internal scroll
+  // Single container for both empty and list states
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col max-h-[calc(100vh-7rem)]">
-      {/* Header - Fixed */}
-      <div className="flex-shrink-0 p-6 pb-4 border-b border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-900">My Quizzes</h2>
-      </div>
+      {quizzes.length === 0 ? (
+        /* ============================================ */
+        /* EMPTY STATE - No Header, Import at Top */
+        /* ============================================ */
+        <>
+          {/* Import Quiz Section - Replaces Header - Responsive */}
+          <div className="flex-shrink-0 p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-100">
+            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg sm:rounded-xl border-2 border-dashed border-yellow-300 p-3 sm:p-5 hover:border-yellow-400 transition-all">
+              <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                  <span className="text-lg sm:text-xl">✨</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate">Import Quiz</h3>
+                  <p className="text-[10px] sm:text-xs text-gray-600 truncate">Got a 6-digit code? Import a quiz from a friend</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000000"
+                  maxLength={6}
+                  value={shareCode}
+                  onChange={(e) => handleChange(e.target.value)}
+                  className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-center text-base sm:text-lg font-mono tracking-widest border-2 border-yellow-300 rounded-lg sm:rounded-xl focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all bg-white"
+                  disabled={loading}
+                />
+                <button
+                  onClick={handleImport}
+                  disabled={shareCode.length !== 6 || loading}
+                  className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap ${
+                    shareCode.length === 6 && !loading
+                      ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {loading ? 'Importing...' : 'Import'}
+                </button>
+              </div>
+              {error && (
+                <p className="mt-2 text-[10px] sm:text-xs text-red-600 font-medium">{error}</p>
+              )}
+            </div>
+          </div>
 
-      {/* Quiz List - Scrollable */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-        {/* Import Card - Top Position */}
-        <ShareCodeInput onImportQuiz={onImportQuiz} asTopCard={true} />
+          {/* Empty State Content - Ultra Compact for Desktop */}
+          <div className="flex-1 overflow-y-auto px-6 py-3">
+            <div className="flex items-center justify-center min-h-full">
+              <div className="w-full max-w-2xl">
+                <div className="flex flex-col items-center justify-center text-center mb-3">
+                  {/* Animated Icon - Ultra Compact */}
+                  <div className="relative mb-2">
+                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center shadow-md">
+                      <BookOpen className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+                      <Sparkles className="w-2.5 h-2.5 text-white" />
+                    </div>
+                  </div>
 
-        {/* Quiz Cards */}
-        <div className="space-y-4">
-          {quizzes.map((quiz, index) => (
-            <QuizItem
-              key={quiz.id}
-              quiz={quiz}
-              index={index}
-              draggedIndex={draggedIndex}
-              onDragStart={onDragStart}
-              onDragOver={onDragOver}
-              onDrop={onDrop}
-              onEdit={onEditQuiz}
-              onSelect={onQuizSelect}
-              onDelete={onDeleteQuiz}
-            />
-          ))}
-        </div>
-      </div>
+                  {/* Main Message - Ultra Compact */}
+                  <h2 className="text-base font-bold text-gray-900 mb-1">
+                    Your Quiz Library Awaits
+                  </h2>
+                  <p className="text-[11px] text-gray-600 max-w-md leading-tight">
+                    Start creating interactive quizzes, challenge friends in real-time battles, and earn rewards as you study!
+                  </p>
+                </div>
 
-      {/* Bottom Section - Create Button */}
+                {/* Enhanced Feature Cards - 2x2 Grid - Ultra Compact */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  {/* Feature 1 - Question Types */}
+                  <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-3 border border-indigo-200 hover:shadow-md transition-all">
+                    <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
+                      <BookOpen className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-[11px] mb-0.5">4 Question Types</h3>
+                    <p className="text-[9px] text-gray-600 leading-tight">
+                      Multiple choice, fill-in-the-blanks, true/false, and matching pairs - mix and match for maximum engagement
+                    </p>
+                  </div>
+
+                  {/* Feature 2 - Battle Mode */}
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3 border border-purple-200 hover:shadow-md transition-all">
+                    <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
+                      <Users className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-[11px] mb-0.5">Live Quiz Battles</h3>
+                    <p className="text-[9px] text-gray-600 leading-tight">
+                      Challenge up to 5 players in real-time PvP battles with instant leaderboards and competitive scoring
+                    </p>
+                  </div>
+
+                  {/* Feature 3 - Rewards */}
+                  <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-3 border border-yellow-200 hover:shadow-md transition-all">
+                    <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
+                      <Trophy className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-[11px] mb-0.5">Points & Rewards</h3>
+                    <p className="text-[9px] text-gray-600 leading-tight">
+                      Earn points and EXP with every quiz - level up your pet buddy and track your study streaks
+                    </p>
+                  </div>
+
+                  {/* Feature 4 - Import & Collaborate */}
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border border-green-200 hover:shadow-md transition-all">
+                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
+                      <Share2 className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-[11px] mb-0.5">Import & Collaborate</h3>
+                    <p className="text-[9px] text-gray-600 leading-tight">
+                      Import quizzes from classmates using 6-digit codes - study together and share knowledge effortlessly
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* ============================================ */
+        /* QUIZ LIST STATE - With Header */
+        /* ============================================ */
+        <>
+          {/* Header - Fixed */}
+          <div className="flex-shrink-0 p-6 pb-4 border-b border-gray-100">
+            <h2 className="text-2xl font-bold text-gray-900">My Quizzes</h2>
+          </div>
+
+          {/* Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="space-y-4">
+              {/* Import Card - Top Position */}
+              <ShareCodeInput onImportQuiz={onImportQuiz} asTopCard={true} />
+
+              {/* Quiz Cards */}
+              <div className="space-y-4">
+                {quizzes.map((quiz, index) => (
+                  <QuizItem
+                    key={quiz.id}
+                    quiz={quiz}
+                    index={index}
+                    draggedIndex={draggedIndex}
+                    onDragStart={onDragStart}
+                    onDragOver={onDragOver}
+                    onDrop={onDrop}
+                    onEdit={onEditQuiz}
+                    onSelect={onQuizSelect}
+                    onDelete={onDeleteQuiz}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Bottom Section - Create Button (always visible) */}
       <div className="flex-shrink-0 p-6 pt-4 border-t border-gray-100 bg-white">
         <button
           onClick={onCreateQuiz}

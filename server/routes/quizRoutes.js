@@ -910,9 +910,11 @@ router.post('/:id/questions', requireAuth, async (req, res) => {
       difficulty: newQuestion.difficulty
     });
 
-    // Update quiz timestamp
+    // Update quiz timestamp AND total_questions count
+    const questionCount = await Question.count({ where: { quiz_id: quizId } });
     await quiz.update({
-      updated_at: new Date()
+      updated_at: new Date(),
+      total_questions: questionCount
     });
 
     res.status(201).json({ question: newQuestion });
@@ -974,9 +976,11 @@ router.delete('/:quizId/questions/:questionId', requireAuth, async (req, res) =>
 
     await question.destroy();
 
-    // Update quiz timestamp
+    // Update quiz timestamp AND total_questions count
+    const questionCount = await Question.count({ where: { quiz_id: quizId } });
     await quiz.update({
-      updated_at: new Date()
+      updated_at: new Date(),
+      total_questions: questionCount
     });
 
     res.json({ message: 'Question deleted successfully' });
