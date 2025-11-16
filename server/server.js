@@ -22,9 +22,15 @@ if (!process.env.ZOOM_CLIENT_ID || !process.env.ZOOM_CLIENT_SECRET) {
 }
 
 // 🌐 Environment variable constants
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const CLIENT_URL = process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
 const SERVER_URL = process.env.SERVER_URL || 'http://localhost:4000';
 const PORT = process.env.PORT || 4000;
+
+// Log important URLs for debugging
+console.log('🌐 URLs Configuration:');
+console.log('   CLIENT_URL:', CLIENT_URL);
+console.log('   SERVER_URL:', SERVER_URL);
+console.log('   PORT:', PORT);
 
 // 📦 Core modules
 import fs from "fs";
