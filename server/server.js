@@ -463,7 +463,7 @@ app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "em
 
 app.get(
     "/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: "http://localhost:5173/" }),
+    passport.authenticate("google", { failureRedirect: "https://walrus-app-umg67.ondigitalocean.app/login" }),
     async (req, res) => {
         try {
             req.session.userId = req.user.user_id;
@@ -474,10 +474,10 @@ app.get(
             // await updateUserStreak(req.user.user_id);
 
             console.log("✅ Google login session set:", req.session);
-            res.redirect("http://localhost:5173/dashboard");
+            res.redirect("https://walrus-app-umg67.ondigitalocean.app/dashboard");
         } catch (err) {
             console.error("Google login session error:", err);
-            res.redirect("http://localhost:5173/");
+            res.redirect("https://walrus-app-umg67.ondigitalocean.app/login");
         }
     }
 );
