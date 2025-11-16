@@ -1250,21 +1250,23 @@ var upload = multer({ storage: storage })
 
 app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
     try {
-        console.log("Incoming file upload...");
+        console.log("📤 [Server] Incoming file upload...");
 
         const file = req.file;
         if (!file) {
-            console.log("❌ No file uploaded");
+            console.log("❌ [Server] No file uploaded");
             return res.status(400).json({ error: "Please upload a file" });
         }
 
         const userId = req.session.userId;
+        console.log("📤 [Server] User ID:", userId);
+        
         if (!userId) {
-            console.log("❌ No session / not logged in");
+            console.log("❌ [Server] No session / not logged in");
             return res.status(401).json({ error: "Not logged in" });
         }
 
-        console.log("✅ File received:", file);
+        console.log("✅ [Server] File received:", file.filename, "Size:", file.size);
 
         const existingFile = await File.findOne({
             where: {
@@ -1285,27 +1287,29 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
             upload_date: new Date(),
         });
 
-        console.log("✅ File saved to DB:", newFile.file_id);
+        console.log("✅ [Server] File saved to DB with ID:", newFile.file_id);
 
         // Check for file upload achievements
         try {
             const { checkAndUnlockAchievements } = await import('./services/achievementServices.js');
             const unlockedAchievements = await checkAndUnlockAchievements(userId);
             if (unlockedAchievements && unlockedAchievements.length > 0) {
-                console.log(`🏆 User ${userId} unlocked ${unlockedAchievements.length} achievement(s):`, 
+                console.log(`🏆 [Server] User ${userId} unlocked ${unlockedAchievements.length} achievement(s):`, 
                     unlockedAchievements.map(a => a.title).join(', '));
             }
         } catch (err) {
-            console.error('Achievement check error:', err);
+            console.error('❌ [Server] Achievement check error:', err);
         }
 
+        console.log("✅ [Server] File upload completed successfully");
         res.json({
             file_id: newFile.file_id,
             filename: file.filename,
             url: `/uploads/${file.filename}`
         });
     } catch (err) {
-        console.error("❌ Upload DB error:", err);
+        console.error("❌ [Server] Upload DB error:", err);
+        console.error("❌ [Server] Error stack:", err.stack);
         res.status(500).json({ error: err.message || "Failed to save file to database" });
     }
 });
@@ -1468,27 +1472,37 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
 // ----------------- SUMMARY GENERATION -----------------
 app.post("/api/generate-summary", async (req, res) => {
     try {
+        console.log('📝 [Server] Generate summary request received');
+        
         const userId = req.session.userId;
+        console.log('📝 [Server] User ID:', userId);
+        
         if (!userId) {
+            console.error('❌ [Server] User not logged in');
             return res.status(401).json({ error: "Not logged in" });
         }
 
         if (!Note) {
+            console.error('❌ [Server] Note model not available');
             return res.status(503).json({ error: "Notes feature not available" });
         }
 
         const { content, title, restrictions, metadata } = req.body;
+        console.log('📝 [Server] Request data:', { title, contentLength: content?.length, restrictions, metadata });
 
         if (!content || !title) {
+            console.error('❌ [Server] Missing required fields');
             return res.status(400).json({ error: "Missing required fields" });
         }
 
+        console.log('📝 [Server] Creating note in database...');
         const newNote = await Note.create({
             user_id: userId,
             file_id: null,
             title: title,
             content: content
         });
+        console.log('✅ [Server] Note created successfully, ID:', newNote.note_id);
 
         // Award 25 EXP for AI-generated summaries (no points, this doesn't count toward daily cap)
         const AI_SUMMARY_EXP = 25;
@@ -1551,6 +1565,7 @@ app.post("/api/generate-summary", async (req, res) => {
             // Don't fail the request if pet EXP fails
         }
 
+        console.log('✅ [Server] Summary generation completed successfully');
         res.json({
             message: "Summary generated successfully",
             note: newNote,
@@ -1559,8 +1574,9 @@ app.post("/api/generate-summary", async (req, res) => {
         });
 
     } catch (err) {
-        console.error("❌ Summary generation error:", err);
-        res.status(500).json({ error: "Failed to generate summary" });
+        console.error("❌ [Server] Summary generation error:", err);
+        console.error("❌ [Server] Error stack:", err.stack);
+        res.status(500).json({ error: "Failed to generate summary", details: err.message });
     }
 });
 

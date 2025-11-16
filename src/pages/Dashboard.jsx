@@ -320,14 +320,15 @@ Please format the summary in a clear, organized manner with proper headings and 
     setShowModal(false);
 
     try {
-      console.log("Generating AI summary...");
+      console.log("📝 [Upload Process] Step 1: Generating AI summary...");
       const aiSummary = await generateAISummary(
         extractedContent.content,
         extractedContent.title
       );
 
-      console.log("AI Summary generated:", aiSummary);
+      console.log("✅ [Upload Process] Step 1 Complete - AI Summary generated, length:", aiSummary.length);
 
+      console.log("📤 [Upload Process] Step 2: Uploading file...");
       const formData = new FormData();
       formData.append("myFile", uploadedFiles[0]);
 
@@ -336,8 +337,9 @@ Please format the summary in a clear, organized manner with proper headings and 
         withCredentials: true
       });
 
-      console.log("File uploaded:", uploadRes.data.filename);
+      console.log("✅ [Upload Process] Step 2 Complete - File uploaded:", uploadRes.data.filename);
 
+      console.log("💾 [Upload Process] Step 3: Saving summary to database...");
       const payload = {
         content: aiSummary,
         title: extractedContent.title,
@@ -349,6 +351,11 @@ Please format the summary in a clear, organized manner with proper headings and 
           originalContent: extractedContent.content.substring(0, 500) + "..."
         }
       };
+      console.log("💾 [Upload Process] Payload:", { 
+        title: payload.title, 
+        contentLength: payload.content.length,
+        restrictions: payload.restrictions 
+      });
 
       const summaryRes = await axios.post(
         `${API_URL}/api/generate-summary`,
@@ -356,7 +363,7 @@ Please format the summary in a clear, organized manner with proper headings and 
         { withCredentials: true }
       );
 
-      console.log("Summary saved to backend:", summaryRes.data);
+      console.log("✅ [Upload Process] Step 3 Complete - Summary saved:", summaryRes.data);
 
       toast.success("Summary generated and saved successfully!");
       
@@ -376,19 +383,25 @@ Please format the summary in a clear, organized manner with proper headings and 
       }
 
     } catch (err) {
-      console.error("Error in upload and generate process:", err);
+      console.error("❌ [Upload Process] Error in upload and generate process:", err);
       
       if (err.response) {
+        console.error("❌ [Upload Process] Response status:", err.response.status);
+        console.error("❌ [Upload Process] Response data:", err.response.data);
+        
         if (err.response.status === 409) {
           toast.error("File with the same name already exists. Please rename your file.");
         } else if (err.response.status === 401) {
           toast.error("You must be logged in to upload files.");
+        } else if (err.response.status === 500) {
+          toast.error(`Server error: ${err.response.data.error || err.response.data.details || "Unknown error"}`);
         } else {
           toast.error(`Upload failed: ${err.response.data.error || err.message}`);
         }
       } else if (err.message.includes("OpenAI")) {
         toast.error("AI summarization failed. Please check your API key and try again.");
       } else {
+        console.error("❌ [Upload Process] Network error:", err.message);
         toast.error("Network error, please try again later.");
       }
     } finally {
