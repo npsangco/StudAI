@@ -217,7 +217,7 @@ export default function Dashboard() {
     setIsExtracting(true);
   };
 
-  // AI Summarization using OpenAI
+  // AI Summarization using OpenAI (via backend)
   const generateAISummary = async (content, title) => {
     try {
       let systemPrompt = "You are an expert educational assistant that creates comprehensive, well-structured study notes and summaries.";
@@ -244,46 +244,22 @@ ${content}
 
 Please format the summary in a clear, organized manner with proper headings and bullet points where appropriate.`;
 
-      const APIBody = {
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: userPrompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-        top_p: 1.0,
-        frequency_penalty: 0.3,
-        presence_penalty: 0.3
-      };
-
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+      const response = await axios.post(
+        `${API_URL}/api/openai/summarize`,
+        {
+          text: userPrompt,
+          systemPrompt: systemPrompt
         },
-        body: JSON.stringify(APIBody)
-      });
+        {
+          withCredentials: true
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const summary = data.choices[0]?.message?.content?.trim();
-
-      if (!summary) {
+      if (!response.data || !response.data.summary) {
         throw new Error("No summary generated");
       }
 
-      return summary;
+      return response.data.summary;
     } catch (error) {
       console.error("Error generating AI summary:", error);
       throw error;

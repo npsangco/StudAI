@@ -465,6 +465,130 @@ app.use("/api/admin", auditRoutes);
 app.use("/api/achievements", sessionLockCheck, achievementRoutes);
 app.use("/api/admin", adminRoutes);
 
+// ----------------- OPENAI API ROUTES -----------------
+// AI Summarization endpoint
+app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
+    try {
+        const { text, systemPrompt } = req.body;
+
+        if (!text) {
+            return res.status(400).json({ error: "Text content is required" });
+        }
+
+        const openAiApiKey = process.env.OPENAI_API_KEY;
+        if (!openAiApiKey) {
+            return res.status(500).json({ error: "OpenAI API key not configured" });
+        }
+
+        const defaultSystemPrompt = "You are a helpful assistant that creates concise, well-structured summaries of educational content. Focus on key concepts, main ideas, and important details.";
+
+        const APIBody = {
+            model: "gpt-3.5-turbo",
+            messages: [
+                {
+                    role: "system",
+                    content: systemPrompt || defaultSystemPrompt
+                },
+                {
+                    role: "user",
+                    content: text
+                }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,
+            top_p: 1.0,
+            frequency_penalty: 0.3,
+            presence_penalty: 0.3
+        };
+
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${openAiApiKey}`
+            },
+            body: JSON.stringify(APIBody)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error("OpenAI API error:", response.status, errorData);
+            return res.status(response.status).json({ 
+                error: `OpenAI API error: ${response.status}`,
+                details: errorData
+            });
+        }
+
+        const data = await response.json();
+        const summary = data.choices[0]?.message?.content?.trim();
+
+        if (!summary) {
+            return res.status(500).json({ error: "Failed to generate summary" });
+        }
+
+        res.json({ summary });
+    } catch (err) {
+        console.error("Error in AI summarization:", err);
+        res.status(500).json({ error: "Failed to generate summary" });
+    }
+});
+
+// AI Chatbot endpoint
+app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
+    try {
+        const { messages } = req.body;
+
+        if (!messages || !Array.isArray(messages)) {
+            return res.status(400).json({ error: "Messages array is required" });
+        }
+
+        const openAiApiKey = process.env.OPENAI_API_KEY;
+        if (!openAiApiKey) {
+            return res.status(500).json({ error: "OpenAI API key not configured" });
+        }
+
+        const APIBody = {
+            model: "gpt-3.5-turbo",
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 1000,
+            top_p: 1.0,
+            frequency_penalty: 0.3,
+            presence_penalty: 0.3
+        };
+
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${openAiApiKey}`
+            },
+            body: JSON.stringify(APIBody)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error("OpenAI API error:", response.status, errorData);
+            return res.status(response.status).json({ 
+                error: `OpenAI API error: ${response.status}`,
+                details: errorData
+            });
+        }
+
+        const data = await response.json();
+        const reply = data.choices[0]?.message?.content?.trim();
+
+        if (!reply) {
+            return res.status(500).json({ error: "Failed to generate response" });
+        }
+
+        res.json({ reply });
+    } catch (err) {
+        console.error("Error in AI chat:", err);
+        res.status(500).json({ error: "Failed to generate response" });
+    }
+});
+
 // ----------------- AUTH ROUTES -----------------
 app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 

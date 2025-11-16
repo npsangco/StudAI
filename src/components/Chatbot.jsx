@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Send, MessageCircle, FileText, Bot, User, Copy, ThumbsUp, ThumbsDown, MoreVertical, Menu, X } from 'lucide-react';
+import axios from 'axios';
+import { API_URL } from '../config/api.config';
 const Chatbot = ({ currentNote, notes = [], onBack }) => {
   const [messages, setMessages] = useState([
     {
@@ -92,58 +94,46 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
-  async function callOpenAIAPI(userQuestion) {
-    try {
-      const APIBody = {
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: `You are a helpful assistant that answers questions about the following note: "${selectedNote?.content || ''}"`
-          },
-          {
-            role: "user",
-            content: userQuestion
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-        top_p: 1.0,
-        frequency_penalty: 0.5,
-        presence_penalty: 0.5
-      };
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
-        },
-        body: JSON.stringify(APIBody)
-      });
-      const data = await response.json();
-      const botReply = data.choices[0]?.message?.content?.trim() || "Sorry, I couldn't generate a response.";
-      const botMessage = {
-        id: Date.now() + Math.random(),
-        type: 'bot',
-        content: botReply,
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      console.error("Error calling OpenAI API:", error);
-      const errorMessage = {
-        id: Date.now() + Math.random(),
-        type: 'bot',
-        content: "Oops! Something went wrong while contacting the AI service.",
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsTyping(false);
-    }
-  }
-  
-return (
+  async function callOpenAIAPI(userQuestion) {
+    try {
+      const messages = [
+        {
+          role: "system",
+          content: `You are a helpful assistant that answers questions about the following note: "${selectedNote?.content || ''}"`
+        },
+        {
+          role: "user",
+          content: userQuestion
+        }
+      ];
+
+      const response = await axios.post(
+        `${API_URL}/api/openai/chat`,
+        { messages },
+        { withCredentials: true }
+      );
+
+      const botReply = response.data?.reply || "Sorry, I couldn't generate a response.";
+      const botMessage = {
+        id: Date.now() + Math.random(),
+        type: 'bot',
+        content: botReply,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Error calling OpenAI API:", error);
+      const errorMessage = {
+        id: Date.now() + Math.random(),
+        type: 'bot',
+        content: "Oops! Something went wrong while contacting the AI service.",
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  }return (
     <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex relative">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
