@@ -453,24 +453,56 @@ app.get(
     passport.authenticate("google", { failureRedirect: `${CLIENT_URL}/` }),
     async (req, res) => {
         try {
+            console.log("📍 Google callback hit");
+            console.log("📍 User from passport:", req.user);
+            console.log("📍 CLIENT_URL:", CLIENT_URL);
+            
+            if (!req.user) {
+                console.error("❌ No user object from passport");
+                return res.redirect(`${CLIENT_URL}/?error=auth_failed`);
+            }
+
             req.session.userId = req.user.user_id;
             req.session.email = req.user.email;
             req.session.username = req.user.username;
             req.session.role = req.user.role;
 
-            // await updateUserStreak(req.user.user_id);
-
-            console.log("✅ Google login session set:", req.session);
-            res.redirect(`${CLIENT_URL}/dashboard`);
+            // Force session save before redirect
+            req.session.save((err) => {
+                if (err) {
+                    console.error("❌ Session save error:", err);
+                    return res.redirect(`${CLIENT_URL}/?error=session_failed`);
+                }
+                
+                console.log("✅ Google login session saved:", {
+                    userId: req.session.userId,
+                    email: req.session.email,
+                    username: req.session.username
+                });
+                
+                res.redirect(`${CLIENT_URL}/dashboard`);
+            });
         } catch (err) {
-            console.error("Google login session error:", err);
-            res.redirect(`${CLIENT_URL}/`);
+            console.error("❌ Google login error:", err);
+            res.redirect(`${CLIENT_URL}/?error=server_error`);
         }
     }
 );
 
 app.get("/api/ping", (req, res) => {
     res.json({ message: "Server running fine ✅" });
+});
+
+app.get("/api/health", (req, res) => {
+    res.json({
+        status: "ok",
+        environment: process.env.NODE_ENV,
+        clientUrl: process.env.CLIENT_URL,
+        serverUrl: process.env.SERVER_URL,
+        googleConfigured: !!(process.env.GOOGLE_ID && process.env.GOOGLE_SECRET && process.env.GOOGLE_CALLBACK_URL),
+        databaseConnected: sequelize.connectionManager.pool._factory ? true : false,
+        timestamp: new Date().toISOString()
+    });
 });
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
