@@ -2,16 +2,44 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE } from "./api";
-import { PowerIcon } from "@heroicons/react/24/outline";
+import {
+    LayoutDashboard,
+    Users,
+    FileQuestion,
+    Clock,
+    FileText,
+    LogOut,
+    User
+} from "lucide-react";
 import ToastContainer from "./ToastContainer";
 import { useToast } from "../hooks/useToast";
 
 const navigation = [
-    { name: "Dashboard", href: "/admin/dashboard" },
-    { name: "User Management", href: "/admin/users" },
-    { name: "Quiz Management", href: "/admin/quizzes" },
-    { name: "Study Sessions", href: "/admin/sessions" },
-    { name: "Audit Logs", href: "/admin/logs" },
+    {
+        name: "Dashboard",
+        href: "/admin/dashboard",
+        icon: LayoutDashboard
+    },
+    {
+        name: "User Management",
+        href: "/admin/users",
+        icon: Users
+    },
+    {
+        name: "Quiz Management",
+        href: "/admin/quizzes",
+        icon: FileQuestion
+    },
+    {
+        name: "Study Sessions",
+        href: "/admin/sessions",
+        icon: Clock
+    },
+    {
+        name: "Audit Logs",
+        href: "/admin/logs",
+        icon: FileText
+    },
 ];
 
 function classNames(...classes) {
@@ -22,8 +50,9 @@ export default function Sidebar() {
     const location = useLocation();
     const navigate = useNavigate();
     const [userPhoto, setUserPhoto] = useState(null);
-    const [collapsed, setCollapsed] = useState(false);
-    
+    const [userName, setUserName] = useState("");
+    const [userRole, setUserRole] = useState("");
+
     const { toasts, removeToast, toast } = useToast();
 
     useEffect(() => {
@@ -38,6 +67,8 @@ export default function Sidebar() {
                 } else {
                     setUserPhoto(null);
                 }
+                setUserName(res.data?.username || "Admin");
+                setUserRole(res.data?.role || "Administrator");
             } catch (err) {
                 console.error("Failed to fetch user:", err);
                 setUserPhoto(null);
@@ -64,79 +95,99 @@ export default function Sidebar() {
     return (
         <>
             <ToastContainer toasts={toasts} onDismiss={removeToast} />
-            
-            <div
-                className={classNames(
-                    "flex flex-col h-screen bg-yellow-300 text-black transition-all duration-300",
-                    collapsed ? "w-20" : "w-64"
-                )}
-            >
-            {/* Logo */}
-            <div className="flex items-center justify-between px-4 py-4 border-b border-black/20">
-                <Link
-                    to="/admin/dashboard"
-                    className="text-2xl font-bold tracking-tight text-black hover:text-white transition-colors"
-                >
-                    {collapsed ? (
-                        <span className="text-indigo-500">A</span>
-                    ) : (
-                        <>
-                            Stud<span className="text-indigo-500">AI</span>
-                        </>
-                    )}
-                </Link>
-                <button
-                    onClick={() => setCollapsed(!collapsed)}
-                    className="text-gray-700 hover:text-black focus:outline-none"
-                >
-                    {collapsed ? "»" : "«"}
-                </button>
-            </div>
 
-            {/* Navigation links */}
-            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-                {navigation.map((item) => {
-                    const isCurrent = location.pathname === item.href;
-                    return (
-                        <Link
-                            key={item.name}
-                            to={item.href}
-                            className={classNames(
-                                isCurrent
-                                    ? "bg-gray-950/50 text-white"
-                                    : "text-black hover:bg-white/10 hover:text-white",
-                                "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors"
-                            )}
-                        >
-                            {!collapsed && item.name}
-                            {collapsed && (
-                                <span className="mx-auto text-lg" title={item.name}>
-                                    {item.name.charAt(0)}
-                                </span>
-                            )}
-                        </Link>
-                    );
-                })}
-            </nav>
-
-            {/* User + Logout */}
-            <div className="border-t border-white/20 p-4 flex flex-col items-center">
-                <img
-                    src={userPhoto || `${API_BASE}/uploads/profile_pictures/default-avatar.png`}
-                    alt=""
-                    className="w-10 h-10 rounded-full object-cover mb-2"
-                />
-                {!collapsed && (
-                    <button
-                        onClick={handleLogout}
-                        className="mt-2 flex items-center text-sm text-gray-800 hover:text-red-600 transition-colors"
+            <div className="flex flex-col h-screen w-64 bg-gradient-to-b from-yellow-400 via-yellow-500 to-yellow-600 text-black shadow-xl">
+                {/* Logo Section */}
+                <div className="px-6 py-6 border-b border-black/10">
+                    <Link
+                        to="/admin/dashboard"
+                        className="flex items-center justify-center group"
                     >
-                        <PowerIcon className="w-4 h-4 mr-1" />
-                        Logout
-                    </button>
-                )}
+                        <img
+                            src="/StudAI_Logo-black.png"
+                            alt="StudAI Logo"
+                            className="h-16 w-auto drop-shadow-lg group-hover:scale-105 transition-transform duration-200"
+                        />
+                    </Link>
+                    <div className="mt-4 text-center">
+                        <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+                            Admin Panel
+                        </h2>
+                    </div>
+                </div>
+
+                {/* Navigation Links */}
+                <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
+                    {navigation.map((item) => {
+                        const isCurrent = location.pathname === item.href;
+                        const Icon = item.icon;
+
+                        return (
+                            <Link
+                                key={item.name}
+                                to={item.href}
+                                className={classNames(
+                                    isCurrent
+                                        ? "bg-black text-white shadow-lg"
+                                        : "text-gray-900 hover:bg-white/30 hover:text-black",
+                                    "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-200 group"
+                                )}
+                            >
+                                <Icon className={classNames(
+                                    isCurrent ? "text-yellow-400" : "text-gray-700",
+                                    "w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform"
+                                )} />
+                                <span>{item.name}</span>
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                {/* User Section */}
+                <div className="border-t border-black/10 p-4">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 mb-3">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="relative">
+                                {userPhoto ? (
+                                    <img
+                                        src={userPhoto}
+                                        alt="Profile"
+                                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"
+                                    />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center border-2 border-white shadow-md">
+                                        <User className="w-6 h-6 text-white" />
+                                    </div>
+                                )}
+                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-gray-900 truncate">
+                                    {userName}
+                                </p>
+                                <p className="text-xs text-gray-700 truncate">
+                                    {userRole}
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
+                        >
+                            <LogOut className="w-4 h-4" />
+                            <span>Logout</span>
+                        </button>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="text-center">
+                        <p className="text-xs text-gray-800 opacity-70">
+                            © 2025 StudAI
+                        </p>
+                    </div>
+                </div>
             </div>
-        </div>
         </>
     );
 }
