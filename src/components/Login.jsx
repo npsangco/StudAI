@@ -43,9 +43,13 @@ function Login() {
         password,
       }, { withCredentials: true });
       
-      localStorage.setItem("token", data.token);
+      // Session is stored in cookies, no need for localStorage token
       toast.success("Logged in successfully!");
-      navigate("/dashboard");
+      
+      // Small delay to ensure cookie is set before navigation
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 100);
     } catch (err) {
       const errorMessage = err.response?.data?.error || "Login failed. Please try again.";
       toast.error(errorMessage);
