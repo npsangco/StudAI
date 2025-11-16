@@ -220,6 +220,10 @@ export default function Dashboard() {
   // AI Summarization using OpenAI (via backend)
   const generateAISummary = async (content, title) => {
     try {
+      console.log('🤖 [AI Summary] Starting AI summarization via backend...');
+      console.log('🤖 [AI Summary] API URL:', API_URL);
+      console.log('🤖 [AI Summary] Endpoint:', `${API_URL}/api/openai/summarize`);
+      
       let systemPrompt = "You are an expert educational assistant that creates comprehensive, well-structured study notes and summaries.";
       
       if (restriction.uploaded && !restriction.openai) {
@@ -244,6 +248,7 @@ ${content}
 
 Please format the summary in a clear, organized manner with proper headings and bullet points where appropriate.`;
 
+      console.log('🤖 [AI Summary] Calling backend endpoint...');
       const response = await axios.post(
         `${API_URL}/api/openai/summarize`,
         {
@@ -255,13 +260,21 @@ Please format the summary in a clear, organized manner with proper headings and 
         }
       );
 
+      console.log('🤖 [AI Summary] Backend response received:', response.status);
+
       if (!response.data || !response.data.summary) {
+        console.error('🤖 [AI Summary] ERROR: No summary in response:', response.data);
         throw new Error("No summary generated");
       }
 
+      console.log('✅ [AI Summary] Summary generated successfully!');
       return response.data.summary;
     } catch (error) {
-      console.error("Error generating AI summary:", error);
+      console.error("❌ [AI Summary] Error generating AI summary:", error);
+      if (error.response) {
+        console.error("❌ [AI Summary] Response status:", error.response.status);
+        console.error("❌ [AI Summary] Response data:", error.response.data);
+      }
       throw error;
     }
   };

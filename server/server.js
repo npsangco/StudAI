@@ -469,14 +469,18 @@ app.use("/api/admin", adminRoutes);
 // AI Summarization endpoint
 app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
     try {
+        console.log('🤖 [Server] AI Summarization request received');
         const { text, systemPrompt } = req.body;
 
         if (!text) {
+            console.error('❌ [Server] No text provided in request');
             return res.status(400).json({ error: "Text content is required" });
         }
 
         const openAiApiKey = process.env.OPENAI_API_KEY;
+        console.log('🔑 [Server] OpenAI API Key status:', openAiApiKey ? 'Present ✓' : 'Missing ✗');
         if (!openAiApiKey) {
+            console.error('❌ [Server] OpenAI API key not configured in environment variables');
             return res.status(500).json({ error: "OpenAI API key not configured" });
         }
 
@@ -501,6 +505,7 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
             presence_penalty: 0.3
         };
 
+        console.log('📡 [Server] Calling OpenAI API...');
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -510,9 +515,11 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
             body: JSON.stringify(APIBody)
         });
 
+        console.log('📡 [Server] OpenAI API response status:', response.status);
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error("OpenAI API error:", response.status, errorData);
+            console.error("❌ [Server] OpenAI API error:", response.status, errorData);
             return res.status(response.status).json({ 
                 error: `OpenAI API error: ${response.status}`,
                 details: errorData
@@ -523,9 +530,11 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         const summary = data.choices[0]?.message?.content?.trim();
 
         if (!summary) {
+            console.error('❌ [Server] No summary generated from OpenAI response');
             return res.status(500).json({ error: "Failed to generate summary" });
         }
 
+        console.log('✅ [Server] Summary generated successfully, length:', summary.length);
         res.json({ summary });
     } catch (err) {
         console.error("Error in AI summarization:", err);
@@ -536,14 +545,18 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
 // AI Chatbot endpoint
 app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
     try {
+        console.log('🤖 [Server] AI Chat request received');
         const { messages } = req.body;
 
         if (!messages || !Array.isArray(messages)) {
+            console.error('❌ [Server] Invalid messages format in request');
             return res.status(400).json({ error: "Messages array is required" });
         }
 
         const openAiApiKey = process.env.OPENAI_API_KEY;
+        console.log('🔑 [Server] OpenAI API Key status:', openAiApiKey ? 'Present ✓' : 'Missing ✗');
         if (!openAiApiKey) {
+            console.error('❌ [Server] OpenAI API key not configured in environment variables');
             return res.status(500).json({ error: "OpenAI API key not configured" });
         }
 
@@ -557,6 +570,7 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             presence_penalty: 0.3
         };
 
+        console.log('📡 [Server] Calling OpenAI API for chat...');
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -566,9 +580,11 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             body: JSON.stringify(APIBody)
         });
 
+        console.log('📡 [Server] OpenAI API response status:', response.status);
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error("OpenAI API error:", response.status, errorData);
+            console.error("❌ [Server] OpenAI API error:", response.status, errorData);
             return res.status(response.status).json({ 
                 error: `OpenAI API error: ${response.status}`,
                 details: errorData
@@ -579,12 +595,14 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
         const reply = data.choices[0]?.message?.content?.trim();
 
         if (!reply) {
+            console.error('❌ [Server] No reply generated from OpenAI response');
             return res.status(500).json({ error: "Failed to generate response" });
         }
 
+        console.log('✅ [Server] Chat response generated successfully, length:', reply.length);
         res.json({ reply });
     } catch (err) {
-        console.error("Error in AI chat:", err);
+        console.error("❌ [Server] Error in AI chat:", err);
         res.status(500).json({ error: "Failed to generate response" });
     }
 });
