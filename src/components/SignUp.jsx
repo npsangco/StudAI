@@ -204,7 +204,7 @@ function Signup() {
     };
 
     const handleGoogleSignUp = () => {
-        window.location.href = `${API_URL}/auth/google/`;
+        window.location.href = `${API_URL}/auth/google`;
     };
 
     // Format time remaining
