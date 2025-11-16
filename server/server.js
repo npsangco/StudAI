@@ -103,6 +103,9 @@ import {
 
 const app = express();
 
+// Trust proxy - required for Digital Ocean App Platform
+app.set('trust proxy', 1);
+
 // ============================================
 // ACHIEVEMENT INITIALIZATION
 // ============================================
