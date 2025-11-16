@@ -55,7 +55,9 @@ function Login() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/auth/google/`;
+    // Remove /api suffix since OAuth is at server root
+    const serverUrl = API_URL.replace(/\/api\/?$/, '');
+    window.location.href = `${serverUrl}/auth/google`;
   };
 
   return (
