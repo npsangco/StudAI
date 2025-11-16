@@ -1237,16 +1237,61 @@ app.post("/api/auth/reset-password", async (req, res) => {
 });
 
 //----------------- FILE UPLOAD -----------------
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+console.log('📁 [Server] Uploads directory path:', uploadsDir);
+
+try {
+    if (!fs.existsSync(uploadsDir)) {
+        console.log('📁 [Server] Creating uploads directory...');
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log('✅ [Server] Uploads directory created successfully');
+    } else {
+        console.log('✅ [Server] Uploads directory already exists');
+    }
+    
+    // Test write permissions
+    const testFile = path.join(uploadsDir, '.test');
+    fs.writeFileSync(testFile, 'test');
+    fs.unlinkSync(testFile);
+    console.log('✅ [Server] Uploads directory is writable');
+} catch (err) {
+    console.error('❌ [Server] Failed to create/write to uploads directory:', err);
+}
+
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/')
+        console.log('📁 [Server] Multer destination check for:', uploadsDir);
+        cb(null, uploadsDir)
     },
     filename: function (req, file, cb) {
-        cb(null, file.originalname)
+        const timestamp = Date.now();
+        const safeFilename = `${timestamp}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        console.log('📁 [Server] Multer filename:', file.originalname, '→', safeFilename);
+        cb(null, safeFilename)
     }
 });
 
-var upload = multer({ storage: storage })
+var upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+    fileFilter: (req, file, cb) => {
+        console.log('📁 [Server] Multer file filter, mimetype:', file.mimetype);
+        cb(null, true);
+    }
+});
+
+// Multer error handler
+app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        console.error('❌ [Server] Multer error:', err);
+        return res.status(400).json({ error: `Upload error: ${err.message}` });
+    } else if (err) {
+        console.error('❌ [Server] Unknown upload error:', err);
+        return res.status(500).json({ error: 'File upload failed' });
+    }
+    next();
+});
 
 app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
     try {
@@ -1638,6 +1683,24 @@ app.use((req, res, next) => {
     } else {
         next();
     }
+});
+
+// ----------------- GLOBAL ERROR HANDLER -----------------
+// This catches any errors that weren't handled by route-specific error handlers
+app.use((err, req, res, next) => {
+    console.error('❌ [Server] Unhandled error:', err);
+    console.error('❌ [Server] Error stack:', err.stack);
+    
+    // Don't send error details in production
+    const errorDetails = process.env.NODE_ENV === 'production' 
+        ? 'Internal server error' 
+        : err.message;
+    
+    res.status(err.status || 500).json({
+        error: errorDetails,
+        path: req.path,
+        method: req.method
+    });
 });
 
 // ----------------- START SERVER -----------------
