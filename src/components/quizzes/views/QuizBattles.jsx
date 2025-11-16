@@ -93,7 +93,7 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
               maxLength={6}
               value={gamePin}
               onChange={(e) => handlePinChange(e.target.value)}
-              className="w-full px-4 py-3 text-2xl font-bold text-center tracking-widest border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all bg-white"
+              className="w-full px-4 py-3 text-2xl font-mono text-center tracking-widest border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all bg-white"
               disabled={loading}
             />
             {error && (
