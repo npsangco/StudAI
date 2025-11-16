@@ -380,8 +380,7 @@ if (sessionStore) {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
                 maxAge: 1000 * 60 * 60 * 24,
-                sameSite: 'lax', // Changed to 'lax' since frontend and backend are on same domain
-                domain: process.env.NODE_ENV === 'production' ? '.ondigitalocean.app' : undefined,
+                sameSite: 'lax', // 'lax' for same-domain deployment
             },
             rolling: true,
         })
