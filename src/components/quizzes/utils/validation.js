@@ -143,9 +143,10 @@ export function validateAdaptiveRequirements(questions) {
   const MIN_QUESTIONS = 5;
 
   if (!questions || questions.length < MIN_QUESTIONS) {
+    const remaining = MIN_QUESTIONS - (questions?.length || 0);
     return {
       canUseAdaptive: false,
-      warning: `Adaptive difficulty requires at least ${MIN_QUESTIONS} questions. Current: ${questions?.length || 0}`
+      warning: `Classic Mode: Add ${remaining} more question${remaining > 1 ? 's' : ''} to unlock Adaptive Mode (intelligently adjusts difficulty based on student performance)`
     };
   }
 
@@ -157,7 +158,7 @@ export function validateAdaptiveRequirements(questions) {
   if (difficulties.size < 2) {
     return {
       canUseAdaptive: false,
-      warning: 'Adaptive difficulty requires questions from at least 2 difficulty levels'
+      warning: 'Classic Mode: Add questions from different difficulty levels to unlock Adaptive Mode (automatically personalizes learning path)'
     };
   }
 
