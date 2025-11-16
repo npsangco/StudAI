@@ -399,6 +399,11 @@ if (sessionStore) {
 app.use(passport.initialize());
 app.use(passport.session());
 
+console.log('🔍 Google OAuth Configuration Check:');
+console.log('   GOOGLE_ID:', process.env.GOOGLE_ID ? '✓ Set' : '✗ Missing');
+console.log('   GOOGLE_SECRET:', process.env.GOOGLE_SECRET ? '✓ Set' : '✗ Missing');
+console.log('   GOOGLE_CALLBACK_URL:', process.env.GOOGLE_CALLBACK_URL || 'Not set');
+
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_ID,
     clientSecret: process.env.GOOGLE_SECRET,
