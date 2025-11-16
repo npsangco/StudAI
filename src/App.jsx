@@ -22,6 +22,7 @@ import QuizManagement from "./pages/Admin/QuizManagement";
 import StudySessions from "./pages/Admin/StudySessions";
 import AuditLogs from "./pages/Admin/AuditLogs";
 import Footer from "./components/Footer";
+import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import 'primereact/resources/themes/lara-light-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
@@ -81,11 +82,11 @@ function App() {
           <Route path="/planner" element={<Planner />} />
           <Route path="/profile" element={<Profile />} />
 
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/users" element={<UserManagement />} />
-          <Route path="/admin/quizzes" element={<QuizManagement />} />
-          <Route path="/admin/sessions" element={<StudySessions />} />
-          <Route path="/admin/logs" element={<AuditLogs />} />
+          <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+          <Route path="/admin/users" element={<ProtectedAdminRoute><UserManagement /></ProtectedAdminRoute>} />
+          <Route path="/admin/quizzes" element={<ProtectedAdminRoute><QuizManagement /></ProtectedAdminRoute>} />
+          <Route path="/admin/sessions" element={<ProtectedAdminRoute><StudySessions /></ProtectedAdminRoute>} />
+          <Route path="/admin/logs" element={<ProtectedAdminRoute><AuditLogs /></ProtectedAdminRoute>} />
 
           <Route path="/verify-status" element={<EmailStatus />} />
           <Route path="/password-updated" element={<PasswordStatus type="success" />} />

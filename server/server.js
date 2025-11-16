@@ -60,8 +60,11 @@ import Achievement from "./models/Achievement.js"; // ← ADD THIS
 import UserAchievement from "./models/UserAchievement.js"; // ← ADD THIS
 import UserDailyStat from "./models/UserDailyStat.js";
 import { Op } from "sequelize";
+
+// Middleware
 import { auditMiddleware } from "./middleware/auditMiddleware.js";
 import { sessionLockCheck } from "./middleware/sessionLockCheck.js";
+import { requireAdmin } from "./middleware/adminAuthMiddleware.js";
 
 // Emails
 import { startEmailReminders } from "./services/emailScheduler.js";
@@ -461,9 +464,9 @@ app.use("/api/notes", sessionLockCheck, noteRoutes);
 app.use("/api/plans", sessionLockCheck, planRoutes);
 app.use("/api/quizzes", sessionLockCheck, quizRoutes);
 app.use("/api/sessions", sessionLockCheck, sessionRoutes);
-app.use("/api/admin", auditRoutes);
 app.use("/api/achievements", sessionLockCheck, achievementRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/admin", requireAdmin, auditRoutes);
+app.use("/api/admin", requireAdmin, adminRoutes);
 
 // ----------------- OPENAI API ROUTES -----------------
 // AI Summarization endpoint
@@ -1645,6 +1648,44 @@ app.get('/api/quiz-attempts/count', async (req, res) => {
     } catch (err) {
         console.error('Error fetching quiz attempts count:', err);
         res.status(500).json({ error: 'Failed to fetch quiz attempts count' });
+    }
+});
+
+// ----------------- ADMIN CHECK ENDPOINT -----------------
+app.get("/api/auth/check-admin", sessionLockCheck, async (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ 
+            isAdmin: false, 
+            authenticated: false 
+        });
+    }
+
+    try {
+        const user = await User.findByPk(req.session.userId, {
+            attributes: ["user_id", "role", "status"]
+        });
+
+        if (!user) {
+            return res.status(404).json({ 
+                isAdmin: false, 
+                authenticated: false 
+            });
+        }
+
+        const isAdmin = user.role === "Admin" || user.role === "admin";
+        
+        res.json({
+            isAdmin,
+            authenticated: true,
+            role: user.role,
+            status: user.status
+        });
+    } catch (err) {
+        console.error("Admin check error:", err);
+        res.status(500).json({ 
+            error: "Internal server error",
+            isAdmin: false 
+        });
     }
 });
 

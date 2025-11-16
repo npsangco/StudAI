@@ -43,9 +43,26 @@ function Login() {
         password,
       }, { withCredentials: true });
       
-      localStorage.setItem("token", data.token);
+      // Store token if provided
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+      
+      // Store user data
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+      
       toast.success("Logged in successfully!");
-      navigate("/dashboard");
+      
+      // ✅ ROLE-BASED REDIRECT
+      if (data.user && (data.user.role === 'Admin' || data.user.role === 'admin')) {
+        console.log("🔑 Admin user detected, redirecting to /admin");
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        console.log("👤 Regular user detected, redirecting to /dashboard");
+        navigate("/dashboard", { replace: true });
+      }
     } catch (err) {
       const errorMessage = err.response?.data?.error || "Login failed. Please try again.";
       toast.error(errorMessage);
