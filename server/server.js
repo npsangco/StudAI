@@ -60,8 +60,8 @@ import Achievement from "./models/Achievement.js"; // ← ADD THIS
 import UserAchievement from "./models/UserAchievement.js"; // ← ADD THIS
 import UserDailyStat from "./models/UserDailyStat.js";
 import { Op } from "sequelize";
-import { auditMiddleware } from "./auditMiddleware.js";
-import { sessionLockCheck } from "./sessionLockCheck.js";
+import { auditMiddleware } from "./middleware/auditMiddleware.js";
+import { sessionLockCheck } from "./middleware/sessionLockCheck.js";
 
 // Emails
 import { startEmailReminders } from "./services/emailScheduler.js";

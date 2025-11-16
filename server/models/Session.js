@@ -44,16 +44,16 @@ const Session = sequelize.define("Session", {
         type: DataTypes.DATE,
         allowNull: true,
     },
-    actual_start: {
-        type: DataTypes.DATE,
-        allowNull: true,
-        comment: 'Actual meeting start time from Zoom webhook'
-    },
-    actual_end: {
-        type: DataTypes.DATE,
-        allowNull: true,
-        comment: 'Actual meeting end time from Zoom webhook'
-    },
+    // actual_start: {
+    //     type: DataTypes.DATE,
+    //     allowNull: true,
+    //     comment: 'Actual meeting start time from Zoom webhook'
+    // },
+    // actual_end: {
+    //     type: DataTypes.DATE,
+    //     allowNull: true,
+    //     comment: 'Actual meeting end time from Zoom webhook'
+    // },
     status: {
         type: DataTypes.STRING,
         defaultValue: "scheduled",

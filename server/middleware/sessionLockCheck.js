@@ -1,4 +1,4 @@
-import User from "./models/User.js";
+import User from "../models/User.js";
 
 export async function sessionLockCheck(req, res, next) {
     if (req.session && req.session.userId) {
