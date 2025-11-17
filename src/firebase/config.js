@@ -24,4 +24,3 @@ export const isFirebaseConnected = () => {
   return realtimeDb && realtimeDb.app;
 };
 
-console.log('🔥 Firebase initialized successfully!');

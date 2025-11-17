@@ -49,8 +49,7 @@ const NoteEditor = ({
       });
       
       if (result.queued) {
-        console.log('📱 Note saved offline, will sync when online');
-        
+
         // Update the local note state to reflect the saved content
         onSave(updatedNote);
         setHasUnsavedChanges(false);

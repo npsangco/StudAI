@@ -28,7 +28,7 @@ export default function QuizManagement() {
     }, []);
 
     const handleEdit = (quizId) => {
-        console.log("Edit quiz:", quizId);
+        
         // You can later redirect to an edit page or open a modal here
     };
 

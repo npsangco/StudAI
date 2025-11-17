@@ -5,6 +5,14 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@firebase/app': '@firebase/app',
+    }
+  },
+  optimizeDeps: {
+    exclude: ['firebase', 'firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/database']
+  },
   plugins: [
     tailwindcss(), 
     react(),
@@ -14,7 +22,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff,woff2}'],
         cleanupOutdatedCaches: true,
-        sourcemap: true,
+        sourcemap: false,
         // Cache API responses for offline use
         runtimeCaching: [
           {
@@ -62,5 +70,23 @@ export default defineConfig({
         ]
       }
     })
-  ]
+  ],
+  build: {
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['lucide-react', '@headlessui/react']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
+  }
 })

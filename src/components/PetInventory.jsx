@@ -28,7 +28,7 @@ export default function PetInventory({ onClose, onUseItem }) {
           const updatedRes = await petApi.getInventory();
           setInventory(updatedRes.data.inventory || []);
         } catch (equipError) {
-          console.log("Auto-equip failed, using original inventory", equipError);
+          
           setInventory(inventory);
         }
       } else {

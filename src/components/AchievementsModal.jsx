@@ -57,13 +57,10 @@ export default function AchievementsModal({ isOpen, onClose }) {
 
     const handleEquipAchievement = async (achievementId) => {
         try {
-            console.log('Attempting to equip achievement:', achievementId);
-            console.log('Available achievements:', achievements);
-            
+
             // Verify the achievement exists and is unlocked
             const achievementToEquip = achievements.find(a => a.achievement_id === achievementId);
-            console.log('Achievement to equip:', achievementToEquip);
-            
+
             if (!achievementToEquip) {
                 console.error('Achievement not found in local state');
                 return;
@@ -75,7 +72,6 @@ export default function AchievementsModal({ isOpen, onClose }) {
             }
 
             const response = await achievementsApi.equip(achievementId);
-            console.log('Equip response:', response.data);
 
             if (response.data.success) {
                 // Refresh achievements to get updated equipped status from backend

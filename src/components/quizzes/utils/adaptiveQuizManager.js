@@ -30,13 +30,6 @@ export const initializeAdaptiveQueue = (rawQuestions) => {
     hard: rawQuestions.filter(q => (q.difficulty || 'medium').toLowerCase() === 'hard')
   };
 
-  console.log('📚 Question pools:', {
-    easy: pools.easy.length,
-    medium: pools.medium.length,
-    hard: pools.hard.length,
-    total: rawQuestions.length
-  });
-
   // Determine starting difficulty based on available questions
   let startingDifficulty = 'medium';
   if (pools.medium.length > 0) {
@@ -54,8 +47,6 @@ export const initializeAdaptiveQueue = (rawQuestions) => {
     ...pools.easy,
     ...pools.hard
   ];
-
-  console.log(`🎯 ADAPTIVE QUEUE INITIALIZED: ${orderedQuestions.length} questions ordered (Starting: ${startingDifficulty})`);
 
   return {
     orderedQuestions,
@@ -105,8 +96,6 @@ export const reorderRemainingQuestions = (remainingQuestions, targetDifficulty) 
       reordered.push(...remaining[diff]);
     }
   });
-
-  console.log(`🔄 REORDERED remaining ${reordered.length} questions for ${targetDifficulty} difficulty`);
 
   return reordered;
 };
@@ -194,8 +183,6 @@ export const performAdaptiveCheck = ({
     result.action = adjustment.action;
     result.messageKey = adjustment.messageKey;
 
-    console.log(`📊 Accuracy: ${accuracy.toFixed(0)}% | ${adjustment.action} | ${currentDifficulty} → ${adjustment.newDifficulty}`);
-
     // 🔥 REORDER remaining questions if difficulty changed
     if (adjustment.newDifficulty !== currentDifficulty) {
       result.shouldReorder = true;
@@ -209,8 +196,6 @@ export const performAdaptiveCheck = ({
 
       // Reconstruct full questions array: answered + reordered remaining
       result.reorderedQuestions = [...answeredQuestions, ...reordered];
-
-      console.log(`🎯 Difficulty changed: ${currentDifficulty} → ${adjustment.newDifficulty}. Reordered ${reordered.length} remaining questions.`);
     }
   }
 

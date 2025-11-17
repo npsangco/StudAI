@@ -137,7 +137,7 @@ export function useQuizAPI(quizDataHook) {
           timer_per_question: quizData.editing.timer_per_question ?? 30
         });
         quizId = response.data.quiz.quiz_id;
-        console.log('✅ Quiz created with ID:', quizId);
+        
       } else {
         // Update existing quiz metadata
         await quizApi.update(quizId, {
@@ -146,7 +146,7 @@ export function useQuizAPI(quizDataHook) {
           is_public: quizData.editing.isPublic !== undefined ? quizData.editing.isPublic : false,
           timer_per_question: quizData.editing.timer_per_question ?? 30
         });
-        console.log('✅ Quiz updated:', quizId);
+        
       }
 
       // Get existing questions from server (skip if temp quiz)
@@ -164,12 +164,7 @@ export function useQuizAPI(quizDataHook) {
       // Now insert all questions in the correct order
       for (let i = 0; i < questions.length; i++) {
         const question = questions[i];
-        
-        console.log(`💾 Saving question ${i + 1}:`, {
-          type: question.type,
-          difficulty: question.difficulty
-        });
-        
+
         // Ensure choices and matchingPairs are properly formatted
         let choicesData = question.choices;
         if (typeof choicesData === 'string') {
@@ -249,7 +244,7 @@ export function useQuizAPI(quizDataHook) {
   const autoDeleteEmptyQuiz = async () => {
     if (quizData.editing && questions.length === 0 && !quizData.editing.isTemp) {
       try {
-        console.log('🗑️ Auto-deleting empty quiz:', quizData.editing.id);
+        
         await quizApi.delete(quizData.editing.id);
       } catch (err) {
         console.error('Failed to auto-delete empty quiz:', err);
@@ -266,9 +261,7 @@ export function useQuizAPI(quizDataHook) {
       
       const response = await quizApi.createBattle(quizId);
       const { battle, gamePin } = response.data;
-      
-      console.log('✅ Battle created:', gamePin);
-      
+
       updateGameState({ 
         gamePin,
         battleId: battle.battle_id,
@@ -293,8 +286,7 @@ export function useQuizAPI(quizDataHook) {
       setLoading(true);
       
       await quizApi.startBattle(gamePin);
-      
-      console.log('✅ Battle started by host!');
+
       return true;
     } catch (err) {
       console.error('Start battle error:', err);

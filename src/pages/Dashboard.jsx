@@ -5,7 +5,10 @@ import PetBuddy from '../components/PetBuddy';
 import AchievementsModal from '../components/AchievementsModal';
 import ToastContainer from '../components/ToastContainer';
 import AppLoader from '../components/AppLoader';
+import TutorialOverlay from '../components/TutorialOverlay';
 import { useToast } from '../hooks/useToast';
+import { useTutorial } from '../hooks/useTutorial';
+import { dashboardTutorialSteps } from '../config/tutorialSteps';
 import { API_URL } from '../config/api.config';
 import { FileText, BookOpen, Trophy, TrendingUp, Clock, Calendar, Target, Zap } from 'lucide-react';
 
@@ -33,6 +36,7 @@ export default function Dashboard() {
   });
   
   const { toasts, removeToast, toast } = useToast();
+  const { showTutorial, completeTutorial, skipTutorial } = useTutorial();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -220,10 +224,7 @@ export default function Dashboard() {
   // AI Summarization using OpenAI (via backend)
   const generateAISummary = async (content, title) => {
     try {
-      console.log('🤖 [AI Summary] Starting AI summarization via backend...');
-      console.log('🤖 [AI Summary] API URL:', API_URL);
-      console.log('🤖 [AI Summary] Endpoint:', `${API_URL}/api/openai/summarize`);
-      
+
       let systemPrompt = "You are an expert educational assistant that creates comprehensive, well-structured study notes and summaries.";
       
       if (restriction.uploaded && !restriction.openai) {
@@ -248,7 +249,6 @@ ${content}
 
 Please format the summary in a clear, organized manner with proper headings and bullet points where appropriate.`;
 
-      console.log('🤖 [AI Summary] Calling backend endpoint...');
       const response = await axios.post(
         `${API_URL}/api/openai/summarize`,
         {
@@ -260,14 +260,11 @@ Please format the summary in a clear, organized manner with proper headings and 
         }
       );
 
-      console.log('🤖 [AI Summary] Backend response received:', response.status);
-
       if (!response.data || !response.data.summary) {
         console.error('🤖 [AI Summary] ERROR: No summary in response:', response.data);
         throw new Error("No summary generated");
       }
 
-      console.log('✅ [AI Summary] Summary generated successfully!');
       return response.data.summary;
     } catch (error) {
       console.error("❌ [AI Summary] Error generating AI summary:", error);
@@ -286,7 +283,7 @@ Please format the summary in a clear, organized manner with proper headings and 
   };
 
   const handleTextExtracted = (data) => {
-    console.log('Text extracted:', data);
+    
     setExtractedContent(data);
     setIsExtracting(false);
   };
@@ -320,15 +317,12 @@ Please format the summary in a clear, organized manner with proper headings and 
     setShowModal(false);
 
     try {
-      console.log("📝 [Upload Process] Step 1: Generating AI summary...");
+      
       const aiSummary = await generateAISummary(
         extractedContent.content,
         extractedContent.title
       );
 
-      console.log("✅ [Upload Process] Step 1 Complete - AI Summary generated, length:", aiSummary.length);
-
-      console.log("📤 [Upload Process] Step 2: Uploading file...");
       const formData = new FormData();
       formData.append("myFile", uploadedFiles[0]);
 
@@ -337,9 +331,6 @@ Please format the summary in a clear, organized manner with proper headings and 
         withCredentials: true
       });
 
-      console.log("✅ [Upload Process] Step 2 Complete - File uploaded:", uploadRes.data.filename);
-
-      console.log("💾 [Upload Process] Step 3: Saving summary to database...");
       const payload = {
         content: aiSummary,
         title: extractedContent.title,
@@ -351,19 +342,12 @@ Please format the summary in a clear, organized manner with proper headings and 
           originalContent: extractedContent.content.substring(0, 500) + "..."
         }
       };
-      console.log("💾 [Upload Process] Payload:", { 
-        title: payload.title, 
-        contentLength: payload.content.length,
-        restrictions: payload.restrictions 
-      });
 
       const summaryRes = await axios.post(
         `${API_URL}/api/generate-summary`,
         payload,
         { withCredentials: true }
       );
-
-      console.log("✅ [Upload Process] Step 3 Complete - Summary saved:", summaryRes.data);
 
       toast.success("Summary generated and saved successfully!");
       
@@ -501,10 +485,19 @@ Please format the summary in a clear, organized manner with proper headings and 
     <div className="min-h-screen bg-gray-100">
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
       
+      {/* Tutorial Overlay */}
+      {showTutorial && (
+        <TutorialOverlay 
+          steps={dashboardTutorialSteps}
+          onComplete={completeTutorial}
+          onSkip={skipTutorial}
+        />
+      )}
+      
       {/* Clean Professional Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4" data-tutorial="welcome">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
@@ -559,7 +552,7 @@ Please format the summary in a clear, organized manner with proper headings and 
       <div className="bg-gray-50 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Activity Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-tutorial="stats">
             <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-lg hover:border-blue-300 transition-all group">
               <div className="flex items-center justify-between mb-4">
                 <div className="bg-blue-100 p-3 rounded-xl group-hover:bg-blue-600 transition-colors">
@@ -630,7 +623,7 @@ Please format the summary in a clear, organized manner with proper headings and 
           {/* Left Column - AI Summarizer */}
           <div className="lg:col-span-2 space-y-6">
             {/* AI Summarizer */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-6" data-tutorial="ai-summarizer">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="bg-indigo-100 p-2.5 rounded-lg">
@@ -761,9 +754,9 @@ Please format the summary in a clear, organized manner with proper headings and 
             </div>
 
             {/* Recent Activity Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-tutorial="recent-activity">
               {/* Recent Notes */}
-              <div className="bg-white rounded-lg border border-gray-200 p-5">
+              <div className="bg-white rounded-lg border border-gray-200 p-5">{/* Recent Notes */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="bg-blue-50 p-2 rounded-lg">
@@ -837,7 +830,7 @@ Please format the summary in a clear, organized manner with proper headings and 
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 gap-4">
-              <div className="bg-white rounded-lg border border-gray-200 p-5">
+              <div className="bg-white rounded-lg border border-gray-200 p-5" data-tutorial="quick-actions">
                 <h3 className="font-semibold text-gray-900 mb-4 text-sm flex items-center gap-2">
                   <div className="w-1 h-4 bg-indigo-600 rounded"></div>
                   Quick Actions
@@ -972,7 +965,7 @@ Please format the summary in a clear, organized manner with proper headings and 
             </div>
 
             {/* Pet Companion */}
-            <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <div className="bg-white rounded-lg border border-gray-200 p-5" data-tutorial="pet-buddy">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-1 h-4 bg-purple-600 rounded"></div>
                 <h2 className="text-sm font-semibold text-gray-900">Your Study Companion</h2>
@@ -981,7 +974,7 @@ Please format the summary in a clear, organized manner with proper headings and 
             </div>
 
             {/* Recent Achievements */}
-            <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <div className="bg-white rounded-lg border border-gray-200 p-5" data-tutorial="achievements">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-yellow-50 p-2 rounded-lg">
