@@ -1,5 +1,5 @@
-// PetBuddy.jsx - With Toast Notifications
-import { useState, useEffect, useCallback } from "react";
+// PetBuddy.jsx - With Toast Notifications and Pet Dialog
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { petApi } from "../api/api";
 import PetShop from "./PetShop";
 import PetInventory from "./PetInventory";
@@ -226,8 +226,24 @@ export default function PetBuddy() {
   }
 
   // Compact Main Pet View
+  // Determine container style based on pet stats
+  const criticalStats = [pet.hunger_level, pet.happiness_level, pet.cleanliness_level].filter(stat => stat < 20);
+  const lowStats = [pet.hunger_level, pet.happiness_level, pet.cleanliness_level].filter(stat => stat < 40);
+  
+  let containerClass = "";
+  if (criticalStats.length >= 2) {
+    // Multiple critical stats - red alert
+    containerClass = "bg-red-50 border-2 border-red-400 shadow-red-200 shadow-lg";
+  } else if (criticalStats.length === 1 || lowStats.length >= 1) {
+    // One critical or any low stat - yellow warning
+    containerClass = "bg-yellow-50 border-2 border-yellow-400 shadow-yellow-200 shadow-lg";
+  } else {
+    // All good
+    containerClass = "bg-white";
+  }
+
   return (
-    <div>
+    <div className={`rounded-lg p-4 transition-all duration-300 ${containerClass}`}>
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
       
       <CompactPetHeader 
@@ -236,6 +252,11 @@ export default function PetBuddy() {
         onShop={() => setActiveView("shop")}
         onInventory={() => setActiveView("inventory")}
       />
+      
+      {/* Fixed height container to prevent layout shift */}
+      <div className="min-h-[60px] flex items-end justify-center mb-2">
+        <PetBubbleDialog pet={pet} />
+      </div>
       
       <CompactPetImage pet={pet} />
 
@@ -380,16 +401,195 @@ const CompactPetHeader = ({ pet, onUpdateName, onShop, onInventory }) => {
   );
 };
 
-const CompactPetImage = ({ pet }) => (
-  <div className="flex justify-center mb-3">
-    <img 
-      src={pet.pet_type === "Dog" ? "/dog.gif" : "/cat.gif"} 
-      alt={pet.pet_type}
-      className="w-32 h-32 sm:w-40 sm:h-40 object-contain"
-      loading="lazy"
-    />
-  </div>
-);
+// Get cat sprite based on level (age)
+const getCatSprite = (level) => {
+  if (level >= 1 && level <= 16) {
+    return "/cat-kitten.gif"; // Kitten (levels 1-16)
+  } else if (level >= 17 && level <= 33) {
+    return "/cat-teen.gif"; // Teen/Middle (levels 17-33)
+  } else {
+    return "/cat-adult.gif"; // Adult (levels 34-50)
+  }
+};
+
+// Pet Bubble Dialog Component
+const PetBubbleDialog = ({ pet }) => {
+  const [currentDialog, setCurrentDialog] = useState(null);
+  const [dialogKey, setDialogKey] = useState(0);
+
+  // Dialog messages categorized by type
+  const dialogMessages = useMemo(() => ({
+    // Critical needs (red stats < 20)
+    critical_hunger: [
+      "I'm so hungry! 🍖 Feed me please!",
+      "My tummy is rumbling... 😢",
+      "I really need some food!",
+      "*stomach growls* I'm starving!",
+    ],
+    critical_happiness: [
+      "I'm feeling so lonely... 😢",
+      "Can we play? I'm really sad...",
+      "I need some fun time! 🎾",
+      "*whimpers* Please play with me...",
+    ],
+    critical_cleanliness: [
+      "I really need a bath! 🛁",
+      "I'm so dirty... can you clean me?",
+      "Please help me get clean! 💧",
+      "*covered in dirt* I need cleaning!",
+    ],
+    // Low needs (20-40)
+    low_hunger: [
+      "I could use a snack! 🍪",
+      "Getting a bit hungry here...",
+      "Food would be nice! 😊",
+    ],
+    low_happiness: [
+      "Want to play soon? 🎾",
+      "I'm getting a bit bored...",
+      "Some playtime would be fun!",
+    ],
+    low_cleanliness: [
+      "Could use a little cleanup! 🧼",
+      "I'm getting a bit messy...",
+      "A bath would be nice soon!",
+    ],
+    // Motivational messages (good stats 70+)
+    motivated: [
+      "You're doing amazing! Keep it up! ⭐",
+      "I'm so proud of you! 💪",
+      "Great job studying today! 📚",
+      "You're crushing it! 🔥",
+      "Keep up the awesome work! ✨",
+      "I believe in you! 💖",
+      "You're making great progress! 🌟",
+      "Learning looks good on you! 🎓",
+      "You're unstoppable! 🚀",
+      "Focus and conquer! 💯",
+    ],
+    // Level milestone messages
+    level_milestone: [
+      `Wow! We're level ${pet.level}! 🎉`,
+      "We're growing stronger together! 💪",
+      "Look how far we've come! ⭐",
+      "This is exciting progress! 🌟",
+    ],
+    // General happy messages
+    happy: [
+      "I'm feeling great! 😊",
+      "Life is good! 🌈",
+      "Thanks for taking care of me! 💕",
+      "You're the best! 🥰",
+      "I love spending time with you! 💖",
+    ],
+  }), [pet.level]);
+
+  // Determine which dialog to show based on pet stats
+  useEffect(() => {
+    const getDialogMessage = () => {
+      const { hunger_level, happiness_level, cleanliness_level } = pet;
+      
+      // Priority 1: Critical needs (< 20)
+      if (hunger_level < 20) {
+        const messages = dialogMessages.critical_hunger;
+        return messages[Math.floor(Math.random() * messages.length)];
+      }
+      if (happiness_level < 20) {
+        const messages = dialogMessages.critical_happiness;
+        return messages[Math.floor(Math.random() * messages.length)];
+      }
+      if (cleanliness_level < 20) {
+        const messages = dialogMessages.critical_cleanliness;
+        return messages[Math.floor(Math.random() * messages.length)];
+      }
+      
+      // Priority 2: Low needs (20-40)
+      if (hunger_level < 40) {
+        const messages = dialogMessages.low_hunger;
+        return messages[Math.floor(Math.random() * messages.length)];
+      }
+      if (happiness_level < 40) {
+        const messages = dialogMessages.low_happiness;
+        return messages[Math.floor(Math.random() * messages.length)];
+      }
+      if (cleanliness_level < 40) {
+        const messages = dialogMessages.low_cleanliness;
+        return messages[Math.floor(Math.random() * messages.length)];
+      }
+      
+      // Priority 3: Level milestones (every 5 levels)
+      if (pet.level % 5 === 0 && pet.level > 1 && Math.random() < 0.3) {
+        const messages = dialogMessages.level_milestone;
+        return messages[Math.floor(Math.random() * messages.length)];
+      }
+      
+      // Priority 4: Motivational messages (all stats 70+)
+      if (hunger_level >= 70 && happiness_level >= 70 && cleanliness_level >= 70) {
+        if (Math.random() < 0.4) { // 40% chance to show motivational
+          const messages = dialogMessages.motivated;
+          return messages[Math.floor(Math.random() * messages.length)];
+        }
+      }
+      
+      // Priority 5: Happy messages (all stats 50+)
+      if (hunger_level >= 50 && happiness_level >= 50 && cleanliness_level >= 50) {
+        if (Math.random() < 0.3) { // 30% chance to show happy message
+          const messages = dialogMessages.happy;
+          return messages[Math.floor(Math.random() * messages.length)];
+        }
+      }
+      
+      return null;
+    };
+
+    const message = getDialogMessage();
+    setCurrentDialog(message);
+    setDialogKey(prev => prev + 1); // Force re-render for animation
+
+    // Change dialog every 8 seconds
+    const interval = setInterval(() => {
+      const newMessage = getDialogMessage();
+      setCurrentDialog(newMessage);
+      setDialogKey(prev => prev + 1);
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [pet, dialogMessages]);
+
+  if (!currentDialog) return null;
+
+  return (
+    <div key={dialogKey} className="flex justify-center animate-bounce-in">
+      <div className="relative max-w-xs">
+        <div className="bg-white border-2 border-gray-300 rounded-2xl px-4 py-2 shadow-lg relative">
+          <p className="text-xs sm:text-sm text-gray-800 font-medium text-center">
+            {currentDialog}
+          </p>
+          {/* Speech bubble tail */}
+          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-300"></div>
+          <div className="absolute -bottom-1.5 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-7 border-r-7 border-t-7 border-l-transparent border-r-transparent border-t-white"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CompactPetImage = ({ pet }) => {
+  const petImage = pet.pet_type === "Dog" 
+    ? "/dog.gif" 
+    : getCatSprite(pet.level);
+  
+  return (
+    <div className="flex justify-center mb-3">
+      <img 
+        src={petImage} 
+        alt={`${pet.pet_type} - Level ${pet.level}`}
+        className="w-32 h-32 sm:w-40 sm:h-40 object-contain"
+        loading="lazy"
+      />
+    </div>
+  );
+};
 
 const CompactPetStats = ({ pet }) => {
   const getStatColor = (value) => {
@@ -445,16 +645,6 @@ const CompactPetStats = ({ pet }) => {
           ></div>
         </div>
       </div>
-
-      {/* Low Stat Warning */}
-      {(pet.hunger_level < 20 || pet.happiness_level < 20 || 
-        pet.cleanliness_level < 20 || pet.energy_level < 20) && (
-        <div className="mt-2 bg-red-50 border border-red-200 rounded-lg p-2">
-          <p className="text-red-600 text-xs font-medium">
-            ⚠️ Your companion needs attention!
-          </p>
-        </div>
-      )}
     </div>
   );
 };

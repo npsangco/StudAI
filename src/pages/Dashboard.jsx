@@ -501,99 +501,145 @@ Please format the summary in a clear, organized manner with proper headings and 
     <div className="min-h-screen bg-gray-100">
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
       
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      {/* Clean Professional Header */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Welcome back, {user ? user.username : 'Student'}
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Let's make today productive
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+                  Welcome back, {user ? user.username : 'Student'}
+                </h1>
+                {equippedAchievement && (
+                  <div 
+                    className="px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                    style={{ 
+                      backgroundColor: `${equippedAchievement.color}15`,
+                      color: equippedAchievement.color,
+                      border: `1px solid ${equippedAchievement.color}30`
+                    }}
+                  >
+                    <Trophy className="w-3.5 h-3.5" />
+                    {getUserTitle()}
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-gray-600">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>
-            <div className={`hidden sm:flex items-center space-x-2 px-4 py-2 rounded-full border ${
-              equippedAchievement 
-                ? '' 
-                : 'bg-gray-50 border-gray-200'
-            }`}
-              style={
-                equippedAchievement ? { 
-                  backgroundColor: `${equippedAchievement.color}15`,
-                  borderColor: `${equippedAchievement.color}30`
-                } : {}
-              }
-            >
-              <Trophy 
-                className="w-4 h-4" 
-                style={{ color: equippedAchievement?.color || '#9ca3af' }} 
-              />
-              <span 
-                className="text-sm font-medium"
-                style={{ color: equippedAchievement?.color || '#4b5563' }}
-              >
-                {getUserTitle()}
-              </span>
+            
+            {/* User Points & Streak Display */}
+            <div className="flex flex-wrap gap-3">
+              <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center gap-3">
+                <div className="bg-indigo-100 p-2 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-indigo-600 font-medium">Points</p>
+                  <p className="text-lg font-bold text-indigo-900">{user?.points || 0}</p>
+                </div>
+              </div>
+              
+              <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center gap-3">
+                <div className="bg-orange-100 p-2 rounded-lg">
+                  <Zap className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-orange-600 font-medium">Streak</p>
+                  <p className="text-lg font-bold text-orange-900">{stats.studyStreak} days</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <FileText className="w-5 h-5 text-blue-600" />
-              <span className="text-xs text-gray-500">Total</span>
+      <div className="bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Activity Stats Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-lg hover:border-blue-300 transition-all group">
+              <div className="flex items-center justify-between mb-4">
+                <div className="bg-blue-100 p-3 rounded-xl group-hover:bg-blue-600 transition-colors">
+                  <FileText className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
+                </div>
+                <div className="bg-blue-50 px-3 py-1 rounded-full">
+                  <span className="text-xs font-semibold text-blue-700">Total</span>
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-gray-900 mb-1">{stats.totalNotes}</p>
+              <p className="text-sm text-gray-600 font-medium">Notes Created</p>
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500">Study materials</p>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.totalNotes}</p>
-            <p className="text-xs text-gray-600 mt-1">Notes Created</p>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Trophy className="w-5 h-5 text-yellow-600" />
-              <span className="text-xs text-gray-500">Quizzes</span>
+            <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-lg hover:border-yellow-300 transition-all group">
+              <div className="flex items-center justify-between mb-4">
+                <div className="bg-yellow-100 p-3 rounded-xl group-hover:bg-yellow-600 transition-colors">
+                  <Trophy className="w-6 h-6 text-yellow-600 group-hover:text-white transition-colors" />
+                </div>
+                <div className="bg-yellow-50 px-3 py-1 rounded-full">
+                  <span className="text-xs font-semibold text-yellow-700">Ready</span>
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-gray-900 mb-1">{stats.totalQuizzes}</p>
+              <p className="text-sm text-gray-600 font-medium">Quizzes Available</p>
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500">Practice tests</p>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.totalQuizzes}</p>
-            <p className="text-xs text-gray-600 mt-1">Available</p>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Target className="w-5 h-5 text-green-600" />
-              <span className="text-xs text-gray-500">Attempts</span>
+            <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-lg hover:border-green-300 transition-all group">
+              <div className="flex items-center justify-between mb-4">
+                <div className="bg-green-100 p-3 rounded-xl group-hover:bg-green-600 transition-colors">
+                  <Target className="w-6 h-6 text-green-600 group-hover:text-white transition-colors" />
+                </div>
+                <div className="bg-green-50 px-3 py-1 rounded-full">
+                  <span className="text-xs font-semibold text-green-700">Done</span>
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-gray-900 mb-1">{stats.completedQuizzes}</p>
+              <p className="text-sm text-gray-600 font-medium">Quizzes Completed</p>
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500">Your attempts</p>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.completedQuizzes}</p>
-            <p className="text-xs text-gray-600 mt-1">Quizzes Taken</p>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Zap className="w-5 h-5 text-orange-600" />
-              <span className="text-xs text-gray-500">Streak</span>
+            <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-lg hover:border-purple-300 transition-all group">
+              <div className="flex items-center justify-between mb-4">
+                <div className="bg-purple-100 p-3 rounded-xl group-hover:bg-purple-600 transition-colors">
+                  <Clock className="w-6 h-6 text-purple-600 group-hover:text-white transition-colors" />
+                </div>
+                <div className="bg-purple-50 px-3 py-1 rounded-full">
+                  <span className="text-xs font-semibold text-purple-700">Active</span>
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-gray-900 mb-1">{upcomingPlans.length}</p>
+              <p className="text-sm text-gray-600 font-medium">Pending Plans</p>
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500">To complete</p>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.studyStreak}</p>
-            <p className="text-xs text-gray-600 mt-1">Day Streak</p>
           </div>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Left Column - AI Summarizer */}
           <div className="lg:col-span-2 space-y-6">
             {/* AI Summarizer */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="bg-indigo-100 rounded-lg p-2">
-                  <span className="text-2xl">🤖</span>
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">AI Summarizer</h2>
-                  <p className="text-sm text-gray-600">Upload your study materials</p>
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-indigo-100 p-2.5 rounded-lg">
+                    <TrendingUp className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">AI Study Assistant</h2>
+                    <p className="text-sm text-gray-600">Generate summaries from your materials</p>
+                  </div>
                 </div>
               </div>
 
@@ -617,10 +663,15 @@ Please format the summary in a clear, organized manner with proper headings and 
                   className="hidden"
                   name='myFile'
                 />
-                <div className="text-5xl mb-4">📤</div>
-                <p className="font-medium text-gray-900 mb-1">Drop your files here</p>
+                <div className="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-8 h-8 text-indigo-600" />
+                </div>
+                <p className="font-semibold text-gray-900 mb-1">Drop your files here</p>
                 <p className="text-sm text-gray-500">
-                  or click to browse • PDF, PPT, PPTX • Max 25MB
+                  or click to browse
+                </p>
+                <p className="text-xs text-gray-400 mt-2">
+                  Supported: PDF, PPT, PPTX • Max 25MB
                 </p>
               </div>
 
@@ -634,14 +685,12 @@ Please format the summary in a clear, organized manner with proper headings and 
                   <div className="mt-6 space-y-3">
                     <p className="text-sm font-medium text-gray-700">Uploaded Files</p>
                     {uploadedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 border border-gray-200 p-4 rounded-xl hover:bg-gray-100 transition-colors">
+                      <div key={index} className="flex items-center justify-between bg-gray-50 border border-gray-200 p-4 rounded-lg hover:bg-gray-100 transition-colors">
                         <div className="flex items-center space-x-3 flex-1 min-w-0">
                           <div className="flex-shrink-0">
-                            {file.name.toLowerCase().includes('pdf') ? (
-                              <span className="text-2xl">📄</span>
-                            ) : (
-                              <span className="text-2xl">📊</span>
-                            )}
+                            <div className="bg-white p-2 rounded-lg border border-gray-300">
+                              <FileText className="w-5 h-5 text-gray-600" />
+                            </div>
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
@@ -664,9 +713,11 @@ Please format the summary in a clear, organized manner with proper headings and 
                   </div>
 
                   {extractedContent && (
-                    <div className="mt-4 bg-green-50 border border-green-200 p-4 rounded-xl">
+                    <div className="mt-4 bg-green-50 border border-green-200 p-4 rounded-lg">
                       <div className="flex items-start space-x-3">
-                        <span className="text-xl">✓</span>
+                        <div className="bg-green-100 p-1.5 rounded-lg">
+                          <Target className="w-4 h-4 text-green-600" />
+                        </div>
                         <div>
                           <p className="text-sm font-medium text-green-900">Extraction Complete</p>
                           <p className="text-xs text-green-700 mt-1">
@@ -710,116 +761,160 @@ Please format the summary in a clear, organized manner with proper headings and 
             </div>
 
             {/* Recent Activity Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Recent Notes */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="bg-white rounded-lg border border-gray-200 p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <BookOpen className="w-5 h-5 text-blue-600" />
-                    <h3 className="font-semibold text-gray-900">Recent Notes</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="bg-blue-50 p-2 rounded-lg">
+                      <BookOpen className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-sm">Recent Notes</h3>
                   </div>
-                  <a href="/notes" className="text-sm text-indigo-600 hover:text-indigo-700">View all</a>
+                  <a href="/notes" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">View all →</a>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {recentNotes.length > 0 ? (
                     recentNotes.map((note) => (
                       <a
                         key={note.note_id}
                         href="/notes"
-                        className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        className="block p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all"
                       >
-                        <p className="font-medium text-sm text-gray-900 truncate">{note.title}</p>
-                        <div className="flex items-center justify-between mt-1">
+                        <p className="font-medium text-sm text-gray-900 truncate mb-1">{note.title}</p>
+                        <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-500">{note.words || 0} words</span>
                           <span className="text-xs text-gray-500">{formatDate(note.created_at)}</span>
                         </div>
                       </a>
                     ))
                   ) : (
-                    <p className="text-sm text-gray-500 text-center py-4">No notes yet</p>
+                    <div className="text-center py-6">
+                      <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No notes yet</p>
+                      <a href="/notes" className="text-xs text-indigo-600 hover:text-indigo-700 mt-1 inline-block">Create your first note</a>
+                    </div>
                   )}
                 </div>
               </div>
 
               {/* Recent Quizzes */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="bg-white rounded-lg border border-gray-200 p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Trophy className="w-5 h-5 text-yellow-600" />
-                    <h3 className="font-semibold text-gray-900">Recent Quizzes</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="bg-yellow-50 p-2 rounded-lg">
+                      <Trophy className="w-4 h-4 text-yellow-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-sm">Recent Quizzes</h3>
                   </div>
-                  <a href="/quizzes" className="text-sm text-indigo-600 hover:text-indigo-700">View all</a>
+                  <a href="/quizzes" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">View all →</a>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {recentQuizzes.length > 0 ? (
                     recentQuizzes.map((quiz) => (
                       <a
                         key={quiz.quiz_id}
                         href="/quizzes"
-                        className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        className="block p-3 border border-gray-200 rounded-lg hover:border-yellow-300 hover:bg-yellow-50 transition-all"
                       >
-                        <p className="font-medium text-sm text-gray-900 truncate">{quiz.title}</p>
-                        <div className="flex items-center justify-between mt-1">
+                        <p className="font-medium text-sm text-gray-900 truncate mb-1">{quiz.title}</p>
+                        <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-500">{quiz.total_questions || 0} questions</span>
                           <span className="text-xs text-gray-500">{formatDate(quiz.created_at)}</span>
                         </div>
                       </a>
                     ))
                   ) : (
-                    <p className="text-sm text-gray-500 text-center py-4">No quizzes yet</p>
+                    <div className="text-center py-6">
+                      <Trophy className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No quizzes yet</p>
+                      <a href="/quizzes" className="text-xs text-indigo-600 hover:text-indigo-700 mt-1 inline-block">Create your first quiz</a>
+                    </div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Quick Actions & Recent Achievements - Now aligned side by side */}
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-              {/* Quick Actions */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                <div className="grid grid-cols-3 gap-3">
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 gap-4">
+              <div className="bg-white rounded-lg border border-gray-200 p-5">
+                <h3 className="font-semibold text-gray-900 mb-4 text-sm flex items-center gap-2">
+                  <div className="w-1 h-4 bg-indigo-600 rounded"></div>
+                  Quick Actions
+                </h3>
+                <div className="grid grid-cols-3 gap-3 mb-5">
                   <a
                     href="/notes"
-                    className="flex flex-col items-center justify-center p-4 rounded-lg hover:bg-blue-50 transition-colors border border-gray-200 hover:border-blue-300"
+                    className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all group"
                   >
-                    <div className="bg-blue-100 p-3 rounded-lg mb-2">
-                      <FileText className="w-6 h-6 text-blue-600" />
+                    <div className="bg-blue-100 p-3 rounded-lg mb-2 group-hover:bg-blue-200 transition-colors">
+                      <FileText className="w-5 h-5 text-blue-600" />
                     </div>
-                    <p className="text-sm font-medium text-gray-900 text-center">Create Note</p>
+                    <p className="text-xs font-medium text-gray-900 text-center">Create Note</p>
                   </a>
                   <a
                     href="/quizzes"
-                    className="flex flex-col items-center justify-center p-4 rounded-lg hover:bg-yellow-50 transition-colors border border-gray-200 hover:border-yellow-300"
+                    className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 hover:border-yellow-400 hover:bg-yellow-50 transition-all group"
                   >
-                    <div className="bg-yellow-100 p-3 rounded-lg mb-2">
-                      <Trophy className="w-6 h-6 text-yellow-600" />
+                    <div className="bg-yellow-100 p-3 rounded-lg mb-2 group-hover:bg-yellow-200 transition-colors">
+                      <Trophy className="w-5 h-5 text-yellow-600" />
                     </div>
-                    <p className="text-sm font-medium text-gray-900 text-center">Start Quiz</p>
+                    <p className="text-xs font-medium text-gray-900 text-center">Start Quiz</p>
                   </a>
                   <a
                     href="/planner"
-                    className="flex flex-col items-center justify-center p-4 rounded-lg hover:bg-red-50 transition-colors border border-gray-200 hover:border-red-300"
+                    className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 hover:border-red-400 hover:bg-red-50 transition-all group"
                   >
-                    <div className="bg-red-100 p-3 rounded-lg mb-2">
-                      <Calendar className="w-6 h-6 text-red-600" />
+                    <div className="bg-red-100 p-3 rounded-lg mb-2 group-hover:bg-red-200 transition-colors">
+                      <Calendar className="w-5 h-5 text-red-600" />
                     </div>
-                    <p className="text-sm font-medium text-gray-900 text-center">Add Plan</p>
+                    <p className="text-xs font-medium text-gray-900 text-center">Add Plan</p>
                   </a>
+                </div>
+
+                {/* Study Progress Summary */}
+                <div className="border-t border-gray-200 pt-4">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
+                    Your Progress
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-blue-900">Completion</span>
+                        <BookOpen className="w-3.5 h-3.5 text-blue-600" />
+                      </div>
+                      <p className="text-lg font-bold text-blue-900">
+                        {stats.totalQuizzes > 0 ? Math.round((stats.completedQuizzes / stats.totalQuizzes) * 100) : 0}%
+                      </p>
+                      <p className="text-xs text-blue-700 mt-0.5">Quiz rate</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border border-green-200">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-green-900">Productivity</span>
+                        <Target className="w-3.5 h-3.5 text-green-600" />
+                      </div>
+                      <p className="text-lg font-bold text-green-900">{stats.totalNotes + stats.completedQuizzes}</p>
+                      <p className="text-xs text-green-700 mt-0.5">Activities</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Right Column */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Upcoming Deadlines */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-red-600" />
-                  <h2 className="text-lg font-semibold text-gray-900">Upcoming Deadlines</h2>
+                <div className="flex items-center gap-2">
+                  <div className="bg-red-50 p-2 rounded-lg">
+                    <Calendar className="w-4 h-4 text-red-600" />
+                  </div>
+                  <h2 className="text-sm font-semibold text-gray-900">Upcoming Deadlines</h2>
                 </div>
-                <a href="/planner" className="text-sm text-indigo-600 hover:text-indigo-700">View all</a>
+                <a href="/planner" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">View all →</a>
               </div>
               <div className="space-y-3">
                 {upcomingPlans.length > 0 ? (
@@ -868,31 +963,37 @@ Please format the summary in a clear, organized manner with proper headings and 
                     );
                   })
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <div className="text-4xl mb-2">🎉</div>
+                  <div className="text-center py-6 text-gray-500">
+                    <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                     <p className="text-sm">No upcoming deadlines</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Pet Buddy */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+            {/* Pet Companion */}
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-4 bg-purple-600 rounded"></div>
+                <h2 className="text-sm font-semibold text-gray-900">Your Study Companion</h2>
+              </div>
               <PetBuddy userId={user?.user_id} />
             </div>
 
             {/* Recent Achievements */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Trophy className="w-5 h-5 text-yellow-600" />
-                  <h3 className="font-semibold text-gray-900">Recent Achievement</h3>
+                <div className="flex items-center gap-2">
+                  <div className="bg-yellow-50 p-2 rounded-lg">
+                    <Trophy className="w-4 h-4 text-yellow-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 text-sm">Recent Achievement</h3>
                 </div>
                 <button 
                   onClick={() => setShowAchievementsModal(true)}
-                  className="text-sm text-indigo-600 hover:text-indigo-700"
+                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
                 >
-                  View all
+                  View all →
                 </button>
               </div>
               <div className="space-y-3">
@@ -927,6 +1028,7 @@ Please format the summary in a clear, organized manner with proper headings and 
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {showModal && <GenerateModal />}

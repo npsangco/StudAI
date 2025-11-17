@@ -75,9 +75,8 @@ export default function PetShop({ onClose, onItemPurchase }) {
 
     setPurchasing(itemId);
     try {
-      for (let i = 0; i < quantity; i++) {
-        await petApi.purchaseItem({ itemId });
-      }
+      // Send quantity in a single request instead of multiple sequential calls
+      await petApi.purchaseItem({ itemId, quantity });
 
       // Only reload points, not the entire shop
       await loadUserPoints();

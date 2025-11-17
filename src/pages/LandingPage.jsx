@@ -45,13 +45,13 @@ export default function LandingPage() {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                             <button
                                 onClick={() => window.location.href = '/signup'}
-                                className="bg-gradient-to-r from-yellow-600 to-blue-500 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all transform hover:-translate-y-1"
+                                className="bg-gradient-to-r from-yellow-500 to-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all transform hover:-translate-y-1 hover:scale-105"
                             >
                                 Start Learning Free
                             </button>
                             <button
                                 onClick={() => scrollToSection('features')}
-                                className="border-2 border-indigo-600 text-indigo-600 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-indigo-50 transition-all"
+                                className="bg-white border-2 border-gray-900 text-gray-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-900 hover:text-white transition-all transform hover:-translate-y-1"
                             >
                                 Explore Features
                             </button>
@@ -247,14 +247,14 @@ export default function LandingPage() {
                                 <h3 className="text-xl font-bold text-gray-900 mb-1">{dev.name}</h3>
                                 <p className="text-gray-600 mb-4">{dev.role}</p>
                                 <div className="flex justify-center space-x-3">
-                                    <button className="w-10 h-10 bg-white rounded-lg flex items-center justify-center hover:bg-indigo-50 transition-colors">
-                                        <Github className="w-5 h-5 text-gray-700" />
+                                    <button className="w-10 h-10 bg-white rounded-lg flex items-center justify-center hover:bg-gray-900 hover:text-white transition-all shadow-sm hover:shadow-md group">
+                                        <Github className="w-5 h-5 text-gray-700 group-hover:text-white transition-colors" />
                                     </button>
-                                    <button className="w-10 h-10 bg-white rounded-lg flex items-center justify-center hover:bg-indigo-50 transition-colors">
-                                        <Linkedin className="w-5 h-5 text-gray-700" />
+                                    <button className="w-10 h-10 bg-white rounded-lg flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm hover:shadow-md group">
+                                        <Linkedin className="w-5 h-5 text-gray-700 group-hover:text-white transition-colors" />
                                     </button>
-                                    <button className="w-10 h-10 bg-white rounded-lg flex items-center justify-center hover:bg-indigo-50 transition-colors">
-                                        <Mail className="w-5 h-5 text-gray-700" />
+                                    <button className="w-10 h-10 bg-white rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm hover:shadow-md group">
+                                        <Mail className="w-5 h-5 text-gray-700 group-hover:text-white transition-colors" />
                                     </button>
                                 </div>
                             </div>

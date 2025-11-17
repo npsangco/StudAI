@@ -81,6 +81,7 @@ async function getDailyStats(userId) {
 }
 
 async function logDailyStats(userId, activityType, points, exp = 0) {
+  console.log('📊 Logging daily stats:', { userId, activityType, points, exp });
   const today = new Date().toISOString().split('T')[0];
   
   let dailyStat = await UserDailyStat.findOne({
@@ -88,6 +89,7 @@ async function logDailyStats(userId, activityType, points, exp = 0) {
   });
   
   if (!dailyStat) {
+    console.log('📊 Creating new daily stat record for today');
     dailyStat = await UserDailyStat.create({
       user_id: userId,
       last_reset_date: today,
@@ -109,8 +111,15 @@ async function logDailyStats(userId, activityType, points, exp = 0) {
     updates.notes_created_today = dailyStat.notes_created_today + 1;
   }
   
+  console.log('📊 Updating daily stats with:', updates);
   await dailyStat.update(updates);
   await dailyStat.reload(); // Refresh to get updated values
+  console.log('📊 Daily stats after update:', {
+    notes: dailyStat.notes_created_today,
+    quizzes: dailyStat.quizzes_completed_today,
+    points: dailyStat.points_earned_today,
+    exp: dailyStat.exp_earned_today
+  });
   return dailyStat;
 }
 

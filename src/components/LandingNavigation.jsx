@@ -48,26 +48,33 @@ export default function LandingNavigation() {
           <div className="flex items-center">
             <div className="flex shrink-0 items-center ml-4 sm:ml-0">
               <button
-              onClick={() => window.location.href = '/'}
-              className="text-2xl font-bold tracking-tight text-black hover:text-gray-800 transition-colors cursor-pointer"
+                onClick={() => window.location.href = '/'}
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
               >
-                Stud<span className="text-indigo-600">AI</span>
+                <img 
+                  src="/StudAI_Logo-black.png" 
+                  alt="StudAI Logo" 
+                  className="h-10 w-auto"
+                />
+                <span className="text-2xl font-bold tracking-tight text-black hidden sm:block">
+                  Stud<span className="text-indigo-600">AI</span>
+                </span>
               </button>
             </div>
           </div>
 
-          <div className="flex items-center space-x-4 ml-4">
-            <button
-              onClick={() => window.location.href = '/signup'}
-              className="text-black hover:text-gray-800 px-3 py-2 text-sm font-medium transition-colors"
-            >
-              + Create
-            </button>
+          <div className="flex items-center space-x-3 ml-4">
             <button
               onClick={() => window.location.href = '/login'}
-              className="bg-black text-white hover:bg-gray-800 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              className="bg-white/80 backdrop-blur-sm text-gray-900 hover:bg-white px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:shadow-md border border-gray-200"
             >
-              Log in
+              Log In
+            </button>
+            <button
+              onClick={() => window.location.href = '/signup'}
+              className="bg-gray-900 text-white hover:bg-gray-800 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:shadow-lg"
+            >
+              Sign Up
             </button>
           </div>
         </div>
@@ -75,18 +82,18 @@ export default function LandingNavigation() {
 
       {isMenuOpen && (
         <div className="sm:hidden">
-          <div className="space-y-1 px-2 pt-2 pb-3 bg-yellow-300 border-t border-black/10">
-            <button
-              onClick={() => window.location.href = '/signup'}
-              className="text-black hover:bg-black/10 block rounded-md px-3 py-2 text-base font-medium w-full text-left"
-            >
-              + Create
-            </button>
+          <div className="space-y-2 px-4 pt-3 pb-4 bg-yellow-300 border-t border-black/10">
             <button
               onClick={() => window.location.href = '/login'}
-              className="text-black hover:bg-black/10 block rounded-md px-3 py-2 text-base font-medium w-full text-left"
+              className="bg-white/80 text-gray-900 hover:bg-white block rounded-lg px-4 py-2.5 text-base font-semibold w-full text-center transition-all border border-gray-200"
             >
-              Log in
+              Log In
+            </button>
+            <button
+              onClick={() => window.location.href = '/signup'}
+              className="bg-gray-900 text-white hover:bg-gray-800 block rounded-lg px-4 py-2.5 text-base font-semibold w-full text-center transition-all"
+            >
+              Sign Up
             </button>
           </div>
         </div>

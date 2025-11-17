@@ -55,8 +55,8 @@ const actionLimiter = rateLimit({
 
 const purchaseLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10, // Reduced from 100
-  message: { error: "Too many purchases, please slow down." }
+  max: 30, // Limit button spam, not purchase quantity
+  message: { error: "Too many purchase requests, please slow down." }
 });
 
 const generalLimiter = rateLimit({

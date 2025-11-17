@@ -6,6 +6,7 @@ import { API_URL } from "../config/api.config";
 import { Eye, EyeOff, ArrowLeft, Loader2, Clock } from "lucide-react";
 import ToastContainer from "./ToastContainer";
 import { useToast } from "../hooks/useToast";
+import InteractiveBubbles from "./InteractiveBubbles";
 import { 
     validateEmail, 
     validateUsername, 
@@ -287,17 +288,6 @@ function Signup() {
                             </div>
                         </div>
                     </div>
-                    
-                    {/* Floating Icons */}
-                    <div className="absolute top-1/4 left-1/3 animate-bounce" style={{animationDelay: '0.5s', animationDuration: '3s'}}>
-                        <div className="w-8 h-8 bg-white/40 rounded-full flex items-center justify-center text-yellow-600 font-bold text-lg shadow-lg">📚</div>
-                    </div>
-                    <div className="absolute bottom-1/3 right-1/4 animate-pulse" style={{animationDuration: '2s'}}>
-                        <div className="w-10 h-10 bg-white/40 rounded-full flex items-center justify-center text-red-600 font-bold text-xl shadow-lg">✏️</div>
-                    </div>
-                    <div className="absolute top-2/3 left-1/4 animate-bounce" style={{animationDelay: '1s', animationDuration: '2.5s'}}>
-                        <div className="w-7 h-7 bg-white/40 rounded-full flex items-center justify-center text-yellow-700 font-bold shadow-lg">💡</div>
-                    </div>
                 </div>
 
                 {/* Right Side - Verification Waiting */}
@@ -377,7 +367,10 @@ function Signup() {
             <ToastContainer toasts={toasts} onDismiss={removeToast} />
             {/* Left Side - StudAI Branding */}
             <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 relative overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center p-12">
+                {/* Interactive Bubbles Background */}
+                <InteractiveBubbles />
+                
+                <div className="absolute inset-0 flex items-center justify-center p-12 z-10">
                     <div className="max-w-lg text-center">
                         <img 
                           src="/StudAI_Logo-black.png" 
@@ -390,26 +383,6 @@ function Signup() {
                             today.
                         </h2>
                     </div>
-                </div>
-
-                {/* Decorative Elements */}
-                <div className="absolute top-20 right-20">
-                    <div className="w-12 h-12 bg-red-500 rounded-full opacity-80 animate-pulse"></div>
-                </div>
-                <div className="absolute top-40 right-40">
-                    <div className="w-8 h-8 bg-red-400 rounded-full opacity-60 animate-bounce"></div>
-                </div>
-                <div className="absolute bottom-1/3 left-20">
-                    <div className="w-6 h-20 bg-red-500 rounded-full transform rotate-12 opacity-90"></div>
-                </div>
-                <div className="absolute top-1/3 left-32">
-                    <div className="w-10 h-10 bg-white/30 rounded-full opacity-70 animate-pulse"></div>
-                </div>
-                <div className="absolute top-1/4 right-1/3">
-                    <div className="w-6 h-6 bg-red-300 rounded-full opacity-50"></div>
-                </div>
-                <div className="absolute bottom-1/4 left-1/4">
-                    <div className="w-16 h-16 bg-white/20 rounded-lg transform rotate-45 opacity-60"></div>
                 </div>
 
                 {/* Paper/Study Elements */}
@@ -439,17 +412,6 @@ function Signup() {
                             <div className="h-2 bg-yellow-200 rounded w-3/4"></div>
                         </div>
                     </div>
-                </div>
-                
-                {/* Floating Icons */}
-                <div className="absolute top-1/4 left-1/3 animate-bounce" style={{animationDelay: '0.5s', animationDuration: '3s'}}>
-                    <div className="w-8 h-8 bg-white/40 rounded-full flex items-center justify-center text-yellow-600 font-bold text-lg shadow-lg">📚</div>
-                </div>
-                <div className="absolute bottom-1/3 right-1/4 animate-pulse" style={{animationDuration: '2s'}}>
-                    <div className="w-10 h-10 bg-white/40 rounded-full flex items-center justify-center text-red-600 font-bold text-xl shadow-lg">✏️</div>
-                </div>
-                <div className="absolute top-2/3 left-1/4 animate-bounce" style={{animationDelay: '1s', animationDuration: '2.5s'}}>
-                    <div className="w-7 h-7 bg-white/40 rounded-full flex items-center justify-center text-yellow-700 font-bold shadow-lg">💡</div>
                 </div>
             </div>
 
