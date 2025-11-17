@@ -6,6 +6,9 @@ import AppLoader from "../components/AppLoader";
 import { useToast } from "../hooks/useToast";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useConfirm } from "../hooks/useConfirm";
+import TutorialOverlay from '../components/TutorialOverlay';
+import { useTutorial } from '../hooks/useTutorial';
+import { plannerTutorialSteps } from '../config/tutorialSteps';
 
 export default function Planner() {
   const [currentYear] = useState(new Date().getFullYear());
@@ -21,6 +24,7 @@ export default function Planner() {
   
   const { toasts, removeToast, toast } = useToast();
   const { confirmState, confirm, closeConfirm } = useConfirm();
+  const { showTutorial, completeTutorial, skipTutorial } = useTutorial('planner');
   const [dailyTaskStatus, setDailyTaskStatus] = useState({ used: 0, remaining: 3, max: 3 });
   const [showLimitModal, setShowLimitModal] = useState(false);
 
@@ -156,8 +160,6 @@ export default function Planner() {
         due_date: dueDate
       });
 
-      console.log('Add plan result:', result);
-
       if (result.success) {
         setPlans(prev => [...prev, result.plan]);
         
@@ -252,7 +254,7 @@ export default function Planner() {
   const renderYearSelection = () => (
     <div className="min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8 sm:mb-12">
+        <div className="text-center mb-8 sm:mb-12" data-tutorial="calendar-view">
           <Calendar className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-indigo-600" />
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-2">Select Year</h1>
           <p className="text-base sm:text-lg text-gray-600">Choose a year to start planning</p>
@@ -528,7 +530,7 @@ export default function Planner() {
                     }`}
                   >
                     <div className="flex-1 w-full sm:w-auto">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap" data-tutorial="task-indicators">
                         {!plan.completed && (
                           <div className={`w-3 h-3 rounded-full shadow-sm flex-shrink-0 ${
                             planIndicator === 'red' ? 'bg-red-500' :
@@ -565,6 +567,7 @@ export default function Planner() {
                         <button
                           onClick={() => markAsDone(plan.planner_id || plan.id)}
                           className="flex items-center justify-center gap-2 bg-green-500 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-green-600 font-semibold transition-all shadow-md hover:shadow-lg w-full sm:w-auto text-sm sm:text-base"
+                          data-tutorial="complete-task"
                         >
                           <Check className="w-4 h-4" />
                           Mark Done
@@ -583,7 +586,7 @@ export default function Planner() {
           </div>
 
           {showForm ? (
-            <div className="bg-white border-2 border-indigo-200 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-xl">
+            <div className="bg-white border-2 border-indigo-200 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-xl" data-tutorial="add-plan">
               <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Add New Plan</h3>
               <input
                 type="text"
@@ -680,6 +683,14 @@ export default function Planner() {
         variant={confirmState.variant}
       />
       {loading && <AppLoader message="Loading your planner" />}
+
+      {showTutorial && (
+        <TutorialOverlay
+          steps={plannerTutorialSteps}
+          onComplete={completeTutorial}
+          onSkip={skipTutorial}
+        />
+      )}
       
       {!selectedYear && renderYearSelection()}
       {selectedYear && selectedMonth === null && renderMonthSelection()}

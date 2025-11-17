@@ -58,10 +58,10 @@ function Login() {
       
       // ✅ ROLE-BASED REDIRECT
       if (data.user && (data.user.role === 'Admin' || data.user.role === 'admin')) {
-        console.log("🔑 Admin user detected, redirecting to /admin");
+        
         navigate("/admin/dashboard", { replace: true });
       } else {
-        console.log("👤 Regular user detected, redirecting to /dashboard");
+        
         navigate("/dashboard", { replace: true });
       }
     } catch (err) {
@@ -133,7 +133,7 @@ function Login() {
       </div>
 
       {/* Right Side - Form */}
-      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-6 sm:p-8 lg:p-12">
+      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-6 sm:p-8 lg:p-12 relative z-20">
         <div className="w-full max-w-md">
           {/* Back Button */}
           <button

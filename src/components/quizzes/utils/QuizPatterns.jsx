@@ -4,8 +4,6 @@ import React from 'react';
 export const QuizBackgroundPattern = ({ questionType }) => {
   if (!questionType) return null;
 
-  console.log('🎨 Rendering pattern for:', questionType);
-
   switch (questionType) {
     case 'Multiple Choice':
       return (

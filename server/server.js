@@ -190,12 +190,10 @@ async function initializeDefaultAchievements() {
 
 // ----------- CORS -----------------
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? [CLIENT_URL]
-        : [CLIENT_URL, "http://localhost:5174", "http://localhost:3000"],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: ['https://studai.dev'],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 // ----------------- EXPRESS MIDDLEWARE -----------------
@@ -390,9 +388,10 @@ if (sessionStore) {
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
+                secure: true,
                 maxAge: 1000 * 60 * 60 * 24,
-                sameSite: 'lax', // 'lax' for same-domain deployment
+                sameSite: 'none',
+                domain: '.walrus-app-umg67.ondigitalocean.app', // Use backend domain for cookie
             },
             rolling: true,
         })

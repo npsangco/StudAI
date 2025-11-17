@@ -14,16 +14,13 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
   // 🔥 REAL-TIME LISTENER: Subscribe to players in Firebase
   useEffect(() => {
     if (!isActive || !gamePin) return;
-    
-    console.log('🔥 Subscribing to players for PIN:', gamePin);
-    
+
     // Listen to Firebase players
     const unsubscribe = listenToPlayers(gamePin, (firebasePlayers) => {
-      console.log('📡 Players updated:', firebasePlayers);
 
       // Transform Firebase data to match your existing format
       const transformedPlayers = firebasePlayers.map(p => {
-        console.log(`👤 Player ${p.name} - profilePicture:`, p.profilePicture);
+        
         return {
           id: `user_${p.userId}`,
           name: p.name,
@@ -36,13 +33,12 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
         };
       });
 
-      console.log('🎭 Transformed players:', transformedPlayers);
       setPlayers(transformedPlayers);
     });
     
     // Cleanup: Unsubscribe when component unmounts
     return () => {
-      console.log('🔥 Unsubscribing from players');
+      
       unsubscribe();
     };
   }, [isActive, gamePin]);
@@ -53,7 +49,7 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
 
     try {
       await markPlayerReady(gamePin, currentUserId);
-      console.log('✅ Marked self as ready');
+      
     } catch (error) {
       console.error('❌ Error marking ready:', error);
     }
@@ -65,7 +61,7 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
 
     try {
       await markPlayerUnready(gamePin, currentUserId);
-      console.log('✅ Marked self as unready');
+      
     } catch (error) {
       console.error('❌ Error marking unready:', error);
     }

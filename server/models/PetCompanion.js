@@ -20,6 +20,7 @@ const PetCompanion = sequelize.define(
     last_played: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     last_cleaned: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     last_updated: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    all_stats_zero_since: { type: DataTypes.DATE, allowNull: true },
   },
   {
     tableName: "pet_companion",

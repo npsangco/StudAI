@@ -44,7 +44,6 @@ export default function QuizManagement() {
                 questions: res.data || []
             });
         } catch (err) {
-            console.error("Failed to fetch questions:", err);
             toast.error("Failed to load questions. Please try again.");
         }
     };

@@ -5,6 +5,9 @@ import { API_BASE } from "../components/api";
 import AchievementsModal from "../components/AchievementsModal";
 import ToastContainer from "../components/ToastContainer";
 import { useToast } from "../hooks/useToast";
+import TutorialOverlay from '../components/TutorialOverlay';
+import { useTutorial } from '../hooks/useTutorial';
+import { profileTutorialSteps } from '../config/tutorialSteps';
 
 export default function Profile() {
     const [showPassword, setShowPassword] = useState(false);
@@ -22,6 +25,7 @@ export default function Profile() {
     const [isHovering, setIsHovering] = useState(false);
     
     const { toasts, removeToast, toast } = useToast();
+    const { showTutorial, completeTutorial, skipTutorial } = useTutorial('profile');
 
     const fileInputRef = useRef(null);
 
@@ -156,6 +160,14 @@ export default function Profile() {
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
             <ToastContainer toasts={toasts} onDismiss={removeToast} />
+
+            {showTutorial && (
+                <TutorialOverlay
+                    steps={profileTutorialSteps}
+                    onComplete={completeTutorial}
+                    onSkip={skipTutorial}
+                />
+            )}
             
             <AchievementsModal 
                 isOpen={showAchievementsModal} 
@@ -174,6 +186,7 @@ export default function Profile() {
                             <button
                                 onClick={() => setShowAchievementsModal(true)}
                                 className="flex items-center gap-3 px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                                data-tutorial="achievements"
                             >
                                 <Trophy className="w-5 h-5 sm:w-6 sm:h-6" />
                                 <span className="font-semibold text-sm sm:text-base">Achievements</span>
@@ -191,6 +204,7 @@ export default function Profile() {
                                     onMouseEnter={() => setIsHovering(true)}
                                     onMouseLeave={() => setIsHovering(false)}
                                     onClick={() => fileInputRef.current.click()}
+                                    data-tutorial="profile-picture"
                                 >
                                     <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 bg-gray-200 rounded-full overflow-hidden border-4 border-white shadow-lg relative">
                                         <img
@@ -243,7 +257,7 @@ export default function Profile() {
                             </div>
 
                             {/* Profile Form Section */}
-                            <div className="flex-1 space-y-6 lg:space-y-8">
+                            <div className="flex-1 space-y-6 lg:space-y-8" data-tutorial="edit-profile">
                                 {/* Email */}
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -276,7 +290,7 @@ export default function Profile() {
                                 </div>
 
                                 {/* Password */}
-                                <div>
+                                <div data-tutorial="change-password">
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                                         New Password
                                     </label>

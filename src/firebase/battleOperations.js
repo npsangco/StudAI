@@ -29,8 +29,7 @@ export const createBattleRoom = async (gamePin, battleData) => {
       players: {}, // Empty at start
       answers: {}
     });
-    
-    console.log('✅ Firebase battle room created:', gamePin);
+
     return true;
   } catch (error) {
     console.error('❌ Error creating battle room:', error);
@@ -57,7 +56,6 @@ export const addPlayerToBattle = async (gamePin, playerData) => {
       joinedAt: Date.now()
     });
 
-    console.log('✅ Player added to Firebase:', playerData.name);
     return true;
   } catch (error) {
     console.error('❌ Error adding player:', error);
@@ -72,7 +70,7 @@ export const markPlayerReady = async (gamePin, userId) => {
   try {
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
     await update(playerRef, { isReady: true });
-    console.log('✅ Player marked ready:', userId);
+    
   } catch (error) {
     console.error('❌ Error marking ready:', error);
     throw error;
@@ -86,7 +84,7 @@ export const markPlayerUnready = async (gamePin, userId) => {
   try {
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
     await update(playerRef, { isReady: false });
-    console.log('✅ Player marked unready:', userId);
+    
   } catch (error) {
     console.error('❌ Error marking unready:', error);
     throw error;
@@ -100,7 +98,7 @@ export const updateBattleStatus = async (gamePin, status) => {
   try {
     const statusRef = ref(realtimeDb, `battles/${gamePin}/metadata/status`);
     await set(statusRef, status);
-    console.log('✅ Battle status updated:', status);
+    
   } catch (error) {
     console.error('❌ Error updating status:', error);
     throw error;
@@ -114,7 +112,7 @@ export const updatePlayerProgress = async (gamePin, userId, questionIndex) => {
   try {
     const progressRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}/currentQuestion`);
     await set(progressRef, questionIndex);
-    console.log('✅ Progress updated for user:', userId, '→ Q', questionIndex);
+    
   } catch (error) {
     console.error('❌ Error updating progress:', error);
     throw error;
@@ -128,7 +126,7 @@ export const advanceQuestion = async (gamePin, questionIndex) => {
   try {
     const questionRef = ref(realtimeDb, `battles/${gamePin}/metadata/currentQuestion`);
     await set(questionRef, questionIndex);
-    console.log('✅ Question advanced to:', questionIndex);
+    
   } catch (error) {
     console.error('❌ Error advancing question:', error);
     throw error;
@@ -142,7 +140,7 @@ export const updatePlayerScore = async (gamePin, userId, newScore) => {
   try {
     const scoreRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}/score`);
     await set(scoreRef, newScore);
-    console.log('✅ Score updated for user:', userId, '→', newScore);
+    
   } catch (error) {
     console.error('❌ Error updating score:', error);
     throw error;
@@ -156,7 +154,7 @@ export const removePlayerFromBattle = async (gamePin, userId) => {
   try {
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
     await remove(playerRef);
-    console.log('✅ Player removed:', userId);
+    
   } catch (error) {
     console.error('❌ Error removing player:', error);
     throw error;
@@ -170,7 +168,7 @@ export const deleteBattleRoom = async (gamePin) => {
   try {
     const battleRef = ref(realtimeDb, `battles/${gamePin}`);
     await remove(battleRef);
-    console.log('✅ Battle room deleted:', gamePin);
+    
   } catch (error) {
     console.error('❌ Error deleting battle:', error);
     throw error;
@@ -251,7 +249,7 @@ export const storeQuizQuestions = async (gamePin, questions) => {
   try {
     const questionsRef = ref(realtimeDb, `battles/${gamePin}/questions`);
     await set(questionsRef, questions);
-    console.log('✅ Questions stored in Firebase:', questions.length);
+    
   } catch (error) {
     console.error('❌ Error storing questions:', error);
     throw error;
@@ -267,7 +265,7 @@ export const listenToQuizQuestions = (gamePin, callback) => {
   return onValue(questionsRef, (snapshot) => {
     const questions = snapshot.val();
     if (questions) {
-      console.log('📚 Questions received from Firebase!');
+      
       callback(questions);
     }
   });
@@ -300,11 +298,10 @@ const acquireSyncLock = async (gamePin) => {
     });
     
     if (!transactionResult.committed) {
-      console.log('⏭️ Sync already in progress by another instance');
+      
       return { acquired: false, reason: 'Lock already held' };
     }
-    
-    console.log('🔒 Sync lock acquired');
+
     return { acquired: true };
     
   } catch (error) {
@@ -320,7 +317,7 @@ const releaseSyncLock = async (gamePin) => {
   try {
     const lockRef = ref(realtimeDb, `battles/${gamePin}/metadata/syncLock`);
     await remove(lockRef);
-    console.log('🔓 Sync lock released');
+    
   } catch (error) {
     console.error('❌ Error releasing sync lock:', error);
   }
@@ -335,13 +332,12 @@ const releaseSyncLock = async (gamePin) => {
  * NOW WITH ATOMIC LOCK TO PREVENT DUPLICATE SYNCS
  */
 export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
-  console.log('🔄 Starting MySQL sync for battle:', gamePin);
-  
+
   // 🔒 STEP 1: ACQUIRE LOCK
   const lockResult = await acquireSyncLock(gamePin);
   
   if (!lockResult.acquired) {
-    console.log('⏭️ Sync skipped:', lockResult.reason);
+    
     return { 
       success: false, 
       error: lockResult.reason,
@@ -359,7 +355,7 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
       
       // If synced less than 5 minutes ago, skip
       if (Date.now() - syncData.timestamp < 5 * 60 * 1000) {
-        console.log('⏭️ Battle already synced recently:', syncData);
+        
         await releaseSyncLock(gamePin);
         return { success: true, alreadySynced: true };
       }
@@ -405,14 +401,11 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
     const winner = sortedPlayers[0];
     const winnerId = winner.userId;
-    
-    console.log('🏆 Winner:', winner.name, 'with score:', winner.score);
-    
+
     // Retry loop with exponential backoff
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`🔄 MySQL sync attempt ${attempt}/${maxRetries}`);
-        
+
         const response = await fetch(
           `${API_URL}/api/quizzes/battle/${gamePin}/sync-results`,
           {
@@ -451,7 +444,7 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
           // Retry on 5xx errors (server errors)
           if (attempt < maxRetries) {
             const backoffMs = 1000 * Math.pow(2, attempt); // 2s, 4s, 8s
-            console.log(`⏳ Retrying in ${backoffMs}ms...`);
+            
             await new Promise(resolve => setTimeout(resolve, backoffMs));
             continue;
           }
@@ -466,15 +459,14 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
         
         // Parse successful response
         const result = await response.json();
-        console.log('✅ MySQL sync successful:', result);
-        
+
         // ✅ VERIFY the sync actually worked
         if (!result.success) {
           console.error('❌ Server reported sync failure:', result);
           
           if (attempt < maxRetries) {
             const backoffMs = 1000 * Math.pow(2, attempt);
-            console.log(`⏳ Retrying in ${backoffMs}ms...`);
+            
             await new Promise(resolve => setTimeout(resolve, backoffMs));
             continue;
           }
@@ -503,7 +495,7 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
         await markSyncComplete(gamePin, winnerId);
         
         // VERIFY THE SYNC WORKED
-        console.log('🔍 Verifying sync in database...');
+        
         try {
           const verifyResponse = await fetch(
             `${API_URL}/api/quizzes/battle/${gamePin}/verify-sync`,
@@ -515,8 +507,7 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
           
           if (verifyResponse.ok) {
             const verifyData = await verifyResponse.json();
-            console.log('✅ Sync verification successful:', verifyData);
-            
+
             // Double-check status
             if (verifyData.status !== 'completed') {
               console.warn('⚠️ WARNING: Battle status is not "completed":', verifyData.status);
@@ -548,7 +539,7 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
         // Network errors - retry
         if (attempt < maxRetries) {
           const backoffMs = 1000 * Math.pow(2, attempt);
-          console.log(`⏳ Retrying in ${backoffMs}ms...`);
+          
           await new Promise(resolve => setTimeout(resolve, backoffMs));
           continue;
         }
@@ -592,8 +583,7 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
  * @returns {Promise<{success: boolean, viewerCount: number}>}
  */
 export const incrementViewers = async (gamePin) => {
-  console.log('👀 Incrementing viewer for battle:', gamePin);
-  
+
   const viewersRef = ref(realtimeDb, `battles/${gamePin}/metadata/viewers`);
   
   try {
@@ -618,8 +608,7 @@ export const incrementViewers = async (gamePin) => {
     }
     
     const newViewerCount = transactionResult.snapshot.val();
-    console.log('✅ Viewer count incremented to:', newViewerCount);
-    
+
     return {
       success: true,
       viewerCount: newViewerCount
@@ -643,8 +632,7 @@ export const incrementViewers = async (gamePin) => {
  * @returns {Promise<{success: boolean, viewerCount: number, cleanedUp: boolean}>}
  */
 export const decrementViewersAndCleanup = async (gamePin) => {
-  console.log('👋 Decrementing viewer for battle:', gamePin);
-  
+
   const viewersRef = ref(realtimeDb, `battles/${gamePin}/metadata/viewers`);
   
   try {
@@ -670,12 +658,10 @@ export const decrementViewersAndCleanup = async (gamePin) => {
     }
     
     const newViewerCount = transactionResult.snapshot.val();
-    console.log('✅ Viewer count decremented to:', newViewerCount);
-    
+
     // Check if this was the last viewer
     if (newViewerCount === 0) {
-      console.log('🧹 Last viewer left, checking if safe to cleanup...');
-      
+
       // Check if MySQL sync is complete before cleanup
       const canCleanup = await checkSyncStatusAndCleanup(gamePin);
       
@@ -716,7 +702,7 @@ const checkSyncStatusAndCleanup = async (gamePin) => {
     const snapshot = await get(battleRef);
     
     if (!snapshot.exists()) {
-      console.log('⏭️ Battle already deleted');
+      
       return true;
     }
     
@@ -725,8 +711,7 @@ const checkSyncStatusAndCleanup = async (gamePin) => {
     
     // Check if MySQL sync is confirmed
     if (syncStatus?.synced === true) {
-      console.log('✅ MySQL sync confirmed, safe to cleanup Firebase');
-      
+
       // Check how old the sync is (safety check)
       const syncAge = Date.now() - (syncStatus.timestamp || 0);
       const maxAge = 10 * 60 * 1000; // 10 minutes
@@ -737,14 +722,12 @@ const checkSyncStatusAndCleanup = async (gamePin) => {
       
       // Delete the entire battle room
       await deleteBattleRoom(gamePin);
-      console.log('🗑️ Firebase battle data deleted successfully');
-      
+
       return true;
     }
     
     // MySQL sync not confirmed yet
-    console.log('⏳ MySQL sync not confirmed yet, marking for delayed cleanup');
-    
+
     // Mark battle for delayed cleanup
     const pendingCleanupRef = ref(realtimeDb, `battles/${gamePin}/metadata/pendingCleanup`);
     await set(pendingCleanupRef, {
@@ -755,13 +738,12 @@ const checkSyncStatusAndCleanup = async (gamePin) => {
     // Set a TTL - auto-delete after 5 minutes even without sync confirmation
     // This prevents orphaned data if sync somehow never completes
     setTimeout(async () => {
-      console.log('⏰ TTL expired, force cleaning up:', gamePin);
-      
+
       // Check one more time if still exists
       const checkSnapshot = await get(battleRef);
       if (checkSnapshot.exists()) {
         await deleteBattleRoom(gamePin);
-        console.log('🗑️ Force deleted after TTL');
+        
       }
     }, 5 * 60 * 1000); // 5 minutes
     
@@ -791,16 +773,13 @@ export const markSyncComplete = async (gamePin, winnerId) => {
       timestamp: Date.now(),
       winnerId: winnerId
     });
-    
-    console.log('✅ MySQL sync marked complete in Firebase');
-    
+
     // Check if there's a pending cleanup
     const pendingCleanupRef = ref(realtimeDb, `battles/${gamePin}/metadata/pendingCleanup`);
     const pendingSnapshot = await get(pendingCleanupRef);
     
     if (pendingSnapshot.exists()) {
-      console.log('🧹 Pending cleanup found, executing now...');
-      
+
       // Check if viewers is 0
       const viewersRef = ref(realtimeDb, `battles/${gamePin}/metadata/viewers`);
       const viewersSnapshot = await get(viewersRef);
@@ -808,9 +787,9 @@ export const markSyncComplete = async (gamePin, winnerId) => {
       
       if (viewerCount === 0) {
         await deleteBattleRoom(gamePin);
-        console.log('🗑️ Executed pending cleanup');
+        
       } else {
-        console.log('⏭️ Viewers still present, not cleaning up yet');
+        
       }
     }
     

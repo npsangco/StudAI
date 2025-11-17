@@ -40,8 +40,6 @@ export const createReconnectionToken = async (gamePin, userId, playerData) => {
     // Store in localStorage
     localStorage.setItem(`reconnect_${gamePin}_${userId}`, JSON.stringify(tokenData));
     
-    console.log('✅ Reconnection token created:', token.substr(0, 20) + '...');
-    
     return token;
     
   } catch (error) {
@@ -56,14 +54,13 @@ export const createReconnectionToken = async (gamePin, userId, playerData) => {
  */
 export const verifyReconnectionToken = async (gamePin, userId, token) => {
   try {
-    console.log('🔍 Verifying reconnection token...');
-    
+
     // Get token from Firebase
     const tokenRef = ref(realtimeDb, `battles/${gamePin}/reconnectionTokens/user_${userId}`);
     const snapshot = await get(tokenRef);
     
     if (!snapshot.exists()) {
-      console.log('❌ Token not found in Firebase');
+      
       return { valid: false, error: 'Token not found' };
     }
     
@@ -71,19 +68,17 @@ export const verifyReconnectionToken = async (gamePin, userId, token) => {
     
     // Check if token matches
     if (tokenData.token !== token) {
-      console.log('❌ Token mismatch');
+      
       return { valid: false, error: 'Invalid token' };
     }
     
     // Check if expired
     if (Date.now() > tokenData.expiresAt) {
-      console.log('❌ Token expired');
+      
       await remove(tokenRef); // Clean up expired token
       return { valid: false, error: 'Token expired' };
     }
-    
-    console.log('✅ Token verified successfully');
-    
+
     return {
       valid: true,
       tokenData
@@ -144,9 +139,7 @@ export const invalidateReconnectionToken = async (gamePin, userId) => {
     // Remove from localStorage
     const key = `reconnect_${gamePin}_${userId}`;
     localStorage.removeItem(key);
-    
-    console.log('✅ Reconnection token invalidated');
-    
+
   } catch (error) {
     console.error('❌ Error invalidating token:', error);
   }
@@ -177,7 +170,7 @@ export const cleanupExpiredTokens = async (gamePin) => {
     }
     
     if (cleaned > 0) {
-      console.log(`🧹 Cleaned up ${cleaned} expired tokens`);
+      
     }
     
   } catch (error) {
@@ -240,9 +233,7 @@ export const clearAllReconnectionTokens = () => {
     for (const key of keys) {
       localStorage.removeItem(key);
     }
-    
-    console.log('🧹 All reconnection tokens cleared');
-    
+
   } catch (error) {
     console.error('❌ Error clearing tokens:', error);
   }

@@ -35,7 +35,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   const handleBackFromEditor = async () => {
     // If it's a temp quiz (never saved), just discard it
     if (quizData.editing?.isTemp) {
-      console.log('🗑️ Discarding temp quiz');
+      
       handleBackToList();
       return;
     }
@@ -136,7 +136,6 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         });
         // 🔥 Auto-mark host as ready!
         await markPlayerReady(gamePin, currentUser.id);
-        console.log('✅ Host auto-marked as ready');
 
         // Continue...
         updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
@@ -149,8 +148,6 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   };
 
   const handleJoinSuccess = async (battle, participant) => {
-    console.log('✅ Successfully joined battle:', battle);
-    console.log('✅ Participant info:', participant);
 
     // Set the battle data
     updateGameState({
@@ -174,15 +171,12 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     // ✅ Go directly to lobby WITHOUT loading questions
     updateUiState({ currentView: VIEWS.LOBBY });
 
-    console.log('🎮 Joined lobby successfully!');
   };
 
   const handleStartBattle = async () => {
     // FIX: Get gamePin from gameState instead of quizData
     const currentGamePin = gameState.gamePin;
-    
-    console.log('🎮 Starting battle with PIN:', currentGamePin);
-    
+
     if (!currentGamePin) {
       console.error('❌ No game PIN found!');
       setError('Game PIN not found. Please try creating the battle again.');
@@ -192,12 +186,10 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     try {
       // 1️⃣ Store questions in Firebase (so players can access them)
       await storeQuizQuestions(currentGamePin, questions);
-      console.log('✅ Questions stored in Firebase');
-      
+
       // 2️⃣ Update battle status in Firebase to "in_progress"
       await updateBattleStatus(currentGamePin, 'in_progress');
-      console.log('✅ Battle status set to in_progress');
-      
+
       // 3️⃣ Update battle status in MySQL
       await quizAPI.startBattle(currentGamePin);
       
@@ -275,7 +267,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         share_code: shareCode || quizData.editing.share_code // Preserve share_code
       };
       updateQuizData({ editing: updatedQuiz });
-      console.log('✅ Quiz public status updated in state:', { isPublic, shareCode });
+      
     }
   };
 
@@ -287,7 +279,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         timer_per_question: timerValue
       };
       updateQuizData({ editing: updatedQuiz });
-      console.log('⏱️ Quiz timer updated in state:', timerValue);
+      
     }
   };
 
@@ -354,8 +346,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   };
 
   const handleUpdateQuestion = (questionId, field, value) => {
-    console.log('🔍 UPDATE QUESTION:', { questionId, field, value });
-    
+
     setQuestions(questions.map(q => {
       if (q.id === questionId) {
         if (field === 'type' && value !== q.type) {
@@ -369,7 +360,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         }
         
         const updated = { ...q, [field]: value };
-        console.log('✅ Question updated:', updated);
+        
         return updated;
       }
       return q;

@@ -202,13 +202,15 @@ export default function Navigation() {
     {/* Floating Daily Quest Button */}
     <button
       onClick={() => setShowQuests(true)}
-      className="fixed bottom-24 right-6 z-50 p-4 rounded-full bg-black transition-all shadow-lg hover:shadow-2xl group animate-bounce"
+      className={`fixed bottom-24 right-6 z-50 p-4 rounded-full bg-black transition-all shadow-lg hover:shadow-2xl group ${questsRef.current?.isAllComplete() ? '' : 'animate-bounce'}`}
       title="Daily Quests"
     >
       <Target className="w-6 h-6 text-white" />
-      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-        !
-      </span>
+      {!questsRef.current?.isAllComplete() && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+          !
+        </span>
+      )}
     </button>
 
     {/* Daily Quests Modal */}

@@ -31,7 +31,6 @@ export const sendReaction = async (gamePin, reactionData) => {
       expiresAt: now + 5000 // 5 seconds TTL
     });
 
-    console.log(`✅ Reaction sent: ${reactionData.emoji} by ${reactionData.userName}`);
     return { success: true, reactionId };
 
   } catch (error) {
@@ -103,7 +102,6 @@ export const cleanupExpiredReactions = async (gamePin) => {
 
     if (Object.keys(updates).length > 0) {
       await update(reactionsRef, updates);
-      console.log(`🧹 Cleaned up ${Object.keys(updates).length} expired reactions`);
     }
 
   } catch (error) {

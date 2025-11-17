@@ -38,9 +38,7 @@ export const initializeConnectionTracking = async (gamePin, userId) => {
     await playerDisconnectRef.update({
       isOnline: false
     });
-    
-    console.log('✅ Connection tracking initialized for user:', userId);
-    
+
     return {
       connectionRef,
       playerRef
@@ -160,9 +158,7 @@ export const markPlayerOffline = async (gamePin, userId) => {
     // Update player status
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}/isOnline`);
     await set(playerRef, false);
-    
-    console.log('✅ Player marked offline:', userId);
-    
+
   } catch (error) {
     console.error('❌ Error marking offline:', error);
   }
@@ -175,7 +171,7 @@ export const markPlayerOffline = async (gamePin, userId) => {
 export const cleanupConnectionTracking = async (gamePin, userId) => {
   try {
     await markPlayerOffline(gamePin, userId);
-    console.log('✅ Connection tracking cleaned up');
+    
   } catch (error) {
     console.error('❌ Cleanup error:', error);
   }
@@ -222,8 +218,7 @@ export const canRejoinBattle = async (gamePin) => {
  */
 export const rejoinBattle = async (gamePin, userId) => {
   try {
-    console.log('🔄 Attempting to rejoin battle:', gamePin, userId);
-    
+
     // Check if battle still exists and is active
     const eligibility = await canRejoinBattle(gamePin);
     
@@ -269,9 +264,7 @@ export const rejoinBattle = async (gamePin, userId) => {
     });
     
     await set(ref(realtimeDb, `battles/${gamePin}/players/user_${userId}/isOnline`), true);
-    
-    console.log('✅ Successfully rejoined battle');
-    
+
     return {
       success: true,
       playerData: {

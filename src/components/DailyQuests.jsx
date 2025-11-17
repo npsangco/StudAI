@@ -29,7 +29,12 @@ const DailyQuests = forwardRef(({ isOpen, onClose }, ref) => {
 
   // Expose refresh function to parent
   useImperativeHandle(ref, () => ({
-    refresh: fetchDailyStats
+    refresh: fetchDailyStats,
+    isAllComplete: () => {
+      return dailyStats.notes_created_today >= 3 && 
+             dailyStats.quizzes_completed_today >= 3 && 
+             dailyStats.planner_updates_today >= 3;
+    }
   }));
 
   useEffect(() => {

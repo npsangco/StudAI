@@ -416,11 +416,10 @@ function Signup() {
             </div>
 
             {/* Right Side - Form */}
-            <div className="w-full lg:w-1/2 bg-white flex flex-col overflow-hidden">
+            <div className="w-full lg:w-1/2 bg-white flex flex-col overflow-hidden relative z-20">
                 <div className="flex-1 overflow-y-auto">
                     <div className="min-h-full flex items-center justify-center p-6 sm:p-8 lg:p-12">
-                        <div className="w-full max-w-md py-4">
-                            {/* Back Button */}
+                        <div className="w-full max-w-md py-4">{/* Back Button */}
                             <button
                                 onClick={() => navigate("/")}
                                 className="flex items-center text-gray-600 hover:text-gray-900 mb-8 transition-colors group"

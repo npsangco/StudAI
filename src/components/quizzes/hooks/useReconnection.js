@@ -45,8 +45,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
     if (!isActive || !gamePin || !userId || hasInitializedRef.current) {
       return;
     }
-    
-    console.log('🔌 Initializing connection tracking for user:', userId);
+
     hasInitializedRef.current = true;
     
     const init = async () => {
@@ -58,7 +57,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
         if (playerData) {
           const token = await createReconnectionToken(gamePin, userId, playerData);
           reconnectionTokenRef.current = token;
-          console.log('✅ Reconnection token created');
+          
         }
         
         // Start heartbeat
@@ -76,7 +75,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
     init();
     
     return () => {
-      console.log('🧹 useReconnection cleanup triggered');
+      
       cleanup();
       hasInitializedRef.current = false;
     };
@@ -106,15 +105,13 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
     if (gamePin && userId) {
       sendHeartbeat(gamePin, userId);
     }
-    
-    console.log('💓 Heartbeat started (interval: 5s)');
   }, [gamePin, userId]);
   
   const stopHeartbeat = useCallback(() => {
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
-      console.log('💔 Heartbeat stopped');
+      
     }
   }, []);
   
@@ -124,19 +121,16 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
   
   const setupConnectionListener = useCallback(() => {
     if (!gamePin || !userId) return;
-    
-    console.log('👂 Setting up connection state listener');
-    
+
     const unsubscribe = listenToConnectionState(gamePin, userId, (state) => {
-      console.log('🔌 Connection state updated:', state);
-      
+
       setConnectionState(prev => {
         const wasOnline = prev.isOnline;
         const isNowOnline = state.isOnline;
         
         // Detect disconnect
         if (wasOnline && !isNowOnline) {
-          console.log('⚠️ Disconnection detected!');
+          
           handleDisconnect();
         }
         
@@ -156,8 +150,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
   // ============================================
   
   const handleDisconnect = useCallback(() => {
-    console.log('🔌 Handling disconnect...');
-    
+
     setConnectionState(prev => ({
       ...prev,
       isOnline: false,
@@ -179,9 +172,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
     if (!gamePin || !userId) {
       return { success: false, error: 'Missing game info' };
     }
-    
-    console.log('🔄 Attempting reconnection...');
-    
+
     setConnectionState(prev => ({
       ...prev,
       isReconnecting: true
@@ -223,9 +214,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
         reconnectionAvailable: false,
         lastHeartbeat: Date.now()
       });
-      
-      console.log('✅ Reconnection successful!');
-      
+
       return {
         success: true,
         playerData: rejoinResult.playerData
@@ -252,8 +241,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
   // ============================================
   
   const cleanup = useCallback(async () => {
-    console.log('🧹 Cleaning up connection...');
-    
+
     stopHeartbeat();
     
     if (connectionListenerRef.current) {
@@ -271,8 +259,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
   // ============================================
   
   const disconnect = useCallback(async () => {
-    console.log('👋 Manually disconnecting...');
-    
+
     // Invalidate reconnection token
     if (gamePin && userId) {
       await invalidateReconnectionToken(gamePin, userId);

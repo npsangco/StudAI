@@ -96,10 +96,7 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
   };
   async function callOpenAIAPI(userQuestion) {
     try {
-      console.log('🤖 [Chatbot] Starting AI chat via backend...');
-      console.log('🤖 [Chatbot] API URL:', API_URL);
-      console.log('🤖 [Chatbot] Endpoint:', `${API_URL}/api/openai/chat`);
-      
+
       const messages = [
         {
           role: "system",
@@ -111,14 +108,11 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
         }
       ];
 
-      console.log('🤖 [Chatbot] Calling backend endpoint...');
       const response = await axios.post(
         `${API_URL}/api/openai/chat`,
         { messages },
         { withCredentials: true }
       );
-
-      console.log('🤖 [Chatbot] Backend response received:', response.status);
 
       const botReply = response.data?.reply || "Sorry, I couldn't generate a response.";
       const botMessage = {
@@ -127,7 +121,7 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
         content: botReply,
         timestamp: new Date().toISOString()
       };
-      console.log('✅ [Chatbot] Chat response generated successfully!');
+      
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
       console.error("❌ [Chatbot] Error calling OpenAI API:", error);

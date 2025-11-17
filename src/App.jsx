@@ -23,6 +23,7 @@ import StudySessions from "./pages/Admin/StudySessions";
 import AuditLogs from "./pages/Admin/AuditLogs";
 import Footer from "./components/Footer";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
+import DevMenu from "./components/DevMenu";
 import 'primereact/resources/themes/lara-light-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
@@ -96,6 +97,9 @@ function App() {
 
       {/* Show footer on all pages except login/signup and during quiz games */}
       {!shouldHideFooter && !hideNavbar && <Footer />}
+
+      {/* Developer Menu - only shows in development */}
+      <DevMenu />
     </div>
   );
 }

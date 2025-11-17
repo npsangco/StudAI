@@ -5,10 +5,14 @@ import { useToast } from '../hooks/useToast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useConfirm } from '../hooks/useConfirm';
 import { API_URL } from '../config/api.config';
+import TutorialOverlay from '../components/TutorialOverlay';
+import { useTutorial } from '../hooks/useTutorial';
+import { sessionsTutorialSteps } from '../config/tutorialSteps';
 
 const Sessions = () => {
   const { toasts, toast, removeToast } = useToast();
   const { confirmState, confirm, closeConfirm } = useConfirm();
+  const { showTutorial, completeTutorial, skipTutorial } = useTutorial('sessions');
   const [user, setUser] = useState(null);
   const [mySessions, setMySessions] = useState([]);
   const [publicSessions, setPublicSessions] = useState([]);
@@ -79,7 +83,7 @@ const Sessions = () => {
         }
       }
     } catch (err) {
-      console.log('User status check failed:', err);
+      
     }
   };
 
@@ -94,7 +98,7 @@ const Sessions = () => {
         setMySessions(data.sessions || []);
       }
     } catch (err) {
-      console.log('Failed to load my sessions:', err);
+      
     }
   };
 
@@ -109,7 +113,7 @@ const Sessions = () => {
         setPublicSessions(data.sessions || []);
       }
     } catch (err) {
-      console.log('Failed to load public sessions:', err);
+      
     }
   };
 
@@ -381,6 +385,7 @@ const Sessions = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-colors text-sm"
+                    data-tutorial="join-session"
                   >
                     Join Session
                   </a>
@@ -443,6 +448,15 @@ const Sessions = () => {
         cancelText={confirmState.cancelText}
         variant={confirmState.variant}
       />
+
+      {showTutorial && (
+        <TutorialOverlay
+          steps={sessionsTutorialSteps}
+          onComplete={completeTutorial}
+          onSkip={skipTutorial}
+        />
+      )}
+
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
@@ -475,6 +489,7 @@ const Sessions = () => {
                   onClick={handleZoomConnect}
                   disabled={loading}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
+                  data-tutorial="zoom-connect"
                 >
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -490,7 +505,7 @@ const Sessions = () => {
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Create Session Form */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
+          <div className="bg-white rounded-2xl shadow-lg p-6" data-tutorial="create-session">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <Calendar className="w-6 h-6 text-blue-600" />
               Create New Study Session
@@ -606,7 +621,7 @@ const Sessions = () => {
           {/* Sessions List with Tabs */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex gap-2">
+              <div className="flex gap-2" data-tutorial="my-sessions">
                 <button
                   onClick={() => setActiveTab('my-sessions')}
                   className={`px-4 py-2 rounded-lg font-semibold transition-colors ${

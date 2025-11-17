@@ -20,6 +20,9 @@ import { listenToQuizQuestions, storeQuizQuestions, listenToBattleStatus } from 
 import { ReconnectionBanner } from '../components/quizzes/views/ReconnectionModal';
 import { checkForReconnectionOpportunity } from '../firebase/reconnectionTokens';
 import { rejoinBattle } from '../firebase/connectionManager';
+import TutorialOverlay from '../components/TutorialOverlay';
+import { useTutorial } from '../hooks/useTutorial';
+import { quizTutorialSteps } from '../config/tutorialSteps';
 
 const styles = `
   @keyframes slideIn {
@@ -149,6 +152,8 @@ function QuizzesPage() {
     quizDataHook.updateUiState({ currentView: targetView });
   });
 
+  const { showTutorial, completeTutorial, skipTutorial } = useTutorial('quizzes');
+
   // RECONNECTION STATE
   const [reconnectionOpportunity, setReconnectionOpportunity] = useState(null);
 
@@ -169,7 +174,6 @@ function QuizzesPage() {
           profile_picture: userData.profile_picture || null
         });
 
-        console.log('✅ Current user loaded:', userData.username);
       } catch (error) {
         console.error('❌ Failed to fetch user:', error);
       }
@@ -179,7 +183,7 @@ function QuizzesPage() {
 
     // Listen for profile updates from Profile page
     const handleProfileUpdate = () => {
-      console.log('🔄 Profile updated, refetching user data...');
+      
       fetchCurrentUser();
     };
 
@@ -208,7 +212,7 @@ function QuizzesPage() {
     const opportunity = checkForReconnectionOpportunity();
     
     if (opportunity) {
-      console.log('🔄 Found reconnection opportunity:', opportunity);
+      
       setReconnectionOpportunity(opportunity);
     }
   }, []);
@@ -219,9 +223,7 @@ function QuizzesPage() {
   
   const handleBannerReconnect = async () => {
     if (!reconnectionOpportunity) return;
-    
-    console.log('🔄 Banner reconnect clicked');
-    
+
     try {
       const result = await rejoinBattle(
         reconnectionOpportunity.gamePin,
@@ -229,8 +231,7 @@ function QuizzesPage() {
       );
       
       if (result.success) {
-        console.log('✅ Rejoined battle via banner:', result.playerData);
-        
+
         // All data is now in result.playerData
         const { quizId, battleId, quizTitle, gamePin } = result.playerData;
         
@@ -266,8 +267,7 @@ function QuizzesPage() {
           
           // Clear opportunity
           setReconnectionOpportunity(null);
-          
-          console.log('✅ Reconnection complete!');
+
         } else {
           toast.error('Failed to load quiz questions');
           setReconnectionOpportunity(null);
@@ -284,8 +284,7 @@ function QuizzesPage() {
   };
   
   const handleDismissBanner = () => {
-    console.log('🚫 Reconnection banner dismissed');
-    
+
     // Permanently invalidate the reconnection token
     if (reconnectionOpportunity) {
       const { gamePin, userId } = reconnectionOpportunity;
@@ -293,8 +292,7 @@ function QuizzesPage() {
       // Remove from localStorage
       const key = `reconnect_${gamePin}_${userId}`;
       localStorage.removeItem(key);
-      console.log('✅ Reconnection token removed from localStorage');
-      
+
       // Note: Firebase cleanup will happen via token expiration
       // or can be done here if needed
     }
@@ -388,18 +386,17 @@ function QuizzesPage() {
       !quizDataHook.gameState.isHost &&
       quizDataHook.gameState.gamePin
     ) {
-      console.log('👂 Listening for quiz questions from Firebase...');
 
       const unsubscribe = listenToQuizQuestions(
         quizDataHook.gameState.gamePin,
         (firebaseQuestions) => {
-          console.log('📚 Questions received from Firebase!', firebaseQuestions.length);
+          
           quizDataHook.setQuestions(firebaseQuestions);
         }
       );
 
       return () => {
-        console.log('🔇 Stopped listening for questions');
+        
         unsubscribe();
       };
     }
@@ -415,16 +412,13 @@ function QuizzesPage() {
       quizDataHook.uiState.currentView === VIEWS.LOBBY && 
       quizDataHook.gameState.gamePin
     ) {
-      console.log('👂 Listening for battle status changes...');
-      
+
       const unsubscribe = listenToBattleStatus(
         quizDataHook.gameState.gamePin,
         (newStatus) => {
-          console.log('📡 Battle status changed to:', newStatus);
-          
+
           if (newStatus === 'in_progress') {
-            console.log('🚀 Battle started! Moving to loading screen...');
-            
+
             // Transition to loading screen, then countdown will start the game
             quizDataHook.updateUiState({ currentView: VIEWS.LOADING_BATTLE });
             countdown.start();
@@ -433,7 +427,7 @@ function QuizzesPage() {
       );
       
       return () => {
-        console.log('🔇 Stopped listening for battle status');
+        
         unsubscribe();
       };
     }
@@ -608,6 +602,14 @@ function QuizzesPage() {
     <>
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       <style>{styles}</style>
+
+      {showTutorial && (
+        <TutorialOverlay
+          steps={quizTutorialSteps}
+          onComplete={completeTutorial}
+          onSkip={skipTutorial}
+        />
+      )}
       
       {/* RECONNECTION BANNER - Show on landing page too */}
       <ReconnectionBanner

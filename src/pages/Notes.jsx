@@ -6,10 +6,13 @@ import { notesService } from '../utils/syncService';
 import { cacheSingleNote } from '../utils/indexedDB';
 import NoteEditor from '../components/NoteEditor';
 import Chatbot from '../components/Chatbot';
+import TutorialOverlay from '../components/TutorialOverlay';
 import { notesApi, sharedNotesApi, quizApi } from '../api/api';
 import { exportNoteToPDF, exportMultipleNotesToPDF } from '../utils/pdfExport';
 import ToastContainer from '../components/ToastContainer';
 import { useToast } from '../hooks/useToast';
+import { useTutorial } from '../hooks/useTutorial';
+import { notesTutorialSteps } from '../config/tutorialSteps';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useConfirm } from '../hooks/useConfirm';
 import GenerateQuizModal from '../components/GenerateQuizModal';
@@ -46,6 +49,7 @@ const Notes = () => {
   
   const { toasts, removeToast, toast } = useToast();
   const { confirmState, confirm, closeConfirm } = useConfirm();
+  const { showTutorial, completeTutorial, skipTutorial } = useTutorial('notes');
 
   useEffect(() => {
     fetchNotesFromDatabase();
@@ -541,7 +545,7 @@ const Notes = () => {
           </div>
         </div>
         {!exportMode && (
-          <div className="hidden sm:flex flex-col gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2 relative">
+          <div className="hidden sm:flex flex-col gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2 relative" data-tutorial="note-actions">
             <div className="grid grid-cols-2 gap-1">
               <button
                 onClick={(e) => {
@@ -842,6 +846,16 @@ const Notes = () => {
   return (
     <div className="min-h-screen p-3 sm:p-4 md:p-6">
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
+      
+      {/* Tutorial Overlay */}
+      {showTutorial && (
+        <TutorialOverlay 
+          steps={notesTutorialSteps}
+          onComplete={completeTutorial}
+          onSkip={skipTutorial}
+        />
+      )}
+      
       <ConfirmDialog
         isOpen={confirmState.isOpen}
         onClose={closeConfirm}
@@ -897,7 +911,7 @@ const Notes = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
-            <div className="relative flex-1 max-w-full sm:max-w-md">
+            <div className="relative flex-1 max-w-full sm:max-w-md" data-tutorial="search-notes">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input
                 type="text"
@@ -911,6 +925,7 @@ const Notes = () => {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
+                data-tutorial="categories"
                 className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
               >
                 <option value="all">All Categories</option>
@@ -962,7 +977,7 @@ const Notes = () => {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6" data-tutorial="notes-header">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h2 className="text-xl sm:text-2xl font-semibold text-slate-800">My Notes</h2>
               <span className="text-xs sm:text-sm text-slate-500">{filteredNotes.length} notes</span>
@@ -1014,6 +1029,7 @@ const Notes = () => {
               <button
                 onClick={() => setShowAddNote(true)}
                 disabled={exportMode}
+                data-tutorial="create-note"
                 className={`w-full mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg text-sm sm:text-base ${
                   exportMode
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
