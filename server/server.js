@@ -395,7 +395,7 @@ if (sessionStore) {
                 maxAge: 1000 * 60 * 60 * 24,
                 sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
                 domain: process.env.NODE_ENV === 'production'
-                    ? '.walrus-app-umg67.ondigitalocean.app'
+                    ? '.studai.dev'
                     : undefined, // No domain for localhost
             },
             rolling: true,
