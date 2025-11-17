@@ -190,12 +190,10 @@ async function initializeDefaultAchievements() {
 
 // ----------- CORS -----------------
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? [CLIENT_URL]
-        : [CLIENT_URL, "http://localhost:5174", "http://localhost:3000"],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+  origin: ['https://studai.dev'],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 // ----------------- EXPRESS MIDDLEWARE -----------------
