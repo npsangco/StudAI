@@ -190,7 +190,7 @@ async function initializeDefaultAchievements() {
 
 // ----------- CORS -----------------
 app.use(cors({
-  origin: ['https://studai.dev'],
+    origin: ['https://studai.dev'],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -388,9 +388,10 @@ if (sessionStore) {
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
+                secure: true, // Always true for production
                 maxAge: 1000 * 60 * 60 * 24,
-                sameSite: 'lax', // 'lax' for same-domain deployment
+                sameSite: 'none', // Required for cross-domain cookies
+                domain: '.studai.dev', // Set to your frontend domain
             },
             rolling: true,
         })
