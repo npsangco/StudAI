@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Edit3, Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import ToastContainer from "../../components/ToastContainer";
 import { useToast } from "../../hooks/useToast";
 import ConfirmDialog from "../../components/ConfirmDialog";
+import QuestionsModal from "../../components/QuestionsModal";
 import { useConfirm } from "../../hooks/useConfirm";
 import { API_URL } from "../../config/api.config";
 
@@ -12,6 +13,11 @@ export default function QuizManagement() {
     const { toasts, toast, removeToast } = useToast();
     const { confirmState, confirm, closeConfirm } = useConfirm();
     const [quizzes, setQuizzes] = useState([]);
+    const [questionsModalState, setQuestionsModalState] = useState({
+        isOpen: false,
+        quiz: null,
+        questions: []
+    });
 
     useEffect(() => {
         const fetchQuizzes = async () => {
@@ -27,12 +33,57 @@ export default function QuizManagement() {
         fetchQuizzes();
     }, []);
 
-    const handleEdit = (quizId) => {
-        console.log("Edit quiz:", quizId);
-        // You can later redirect to an edit page or open a modal here
+    const handleViewQuestions = async (quiz) => {
+        try {
+            const res = await axios.get(`${API_URL}/api/admin/quizzes/${quiz.quiz_id}/questions`, {
+                withCredentials: true,
+            });
+            setQuestionsModalState({
+                isOpen: true,
+                quiz: quiz,
+                questions: res.data || []
+            });
+        } catch (err) {
+            console.error("Failed to fetch questions:", err);
+            toast.error("Failed to load questions. Please try again.");
+        }
     };
 
-    const handleDelete = async (quizId) => {
+    const handleDeleteQuestion = async (questionId) => {
+        try {
+            await axios.delete(`${API_URL}/api/admin/questions/${questionId}`, {
+                withCredentials: true,
+            });
+
+            // Update the questions list in the modal
+            setQuestionsModalState(prev => ({
+                ...prev,
+                questions: prev.questions.filter(q => q.question_id !== questionId)
+            }));
+
+            // Update the quiz's question count in the main list
+            setQuizzes(prev => prev.map(quiz =>
+                quiz.quiz_id === questionsModalState.quiz.quiz_id
+                    ? { ...quiz, questions: quiz.questions - 1 }
+                    : quiz
+            ));
+
+            toast.success("Question deleted successfully!");
+        } catch (err) {
+            console.error("Failed to delete question:", err);
+            toast.error("Failed to delete question. Please try again.");
+        }
+    };
+
+    const closeQuestionsModal = () => {
+        setQuestionsModalState({
+            isOpen: false,
+            quiz: null,
+            questions: []
+        });
+    };
+
+    const handleDeleteQuiz = async (quizId) => {
         await confirm({
             title: 'Delete Quiz',
             message: 'Are you sure you want to delete this quiz? This action cannot be undone.',
@@ -67,6 +118,14 @@ export default function QuizManagement() {
                 cancelText={confirmState.cancelText}
                 variant={confirmState.variant}
             />
+            <QuestionsModal
+                isOpen={questionsModalState.isOpen}
+                onClose={closeQuestionsModal}
+                quiz={questionsModalState.quiz}
+                questions={questionsModalState.questions}
+                onDeleteQuestion={handleDeleteQuestion}
+            />
+
             {/* Sidebar */}
             <div className="hidden md:block fixed top-0 left-0 h-screen">
                 <Sidebar />
@@ -115,9 +174,6 @@ export default function QuizManagement() {
                                                         <p className="font-medium text-gray-800">
                                                             {quiz.title}
                                                         </p>
-                                                        <p className="text-xs text-gray-500">
-                                                            {quiz.details}
-                                                        </p>
                                                     </div>
                                                 </td>
                                                 <td className="py-2 px-3">{quiz.questions}</td>
@@ -125,8 +181,8 @@ export default function QuizManagement() {
                                                 <td className="py-2 px-3">
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-medium ${quiz.status === "Open"
-                                                                ? "bg-green-100 text-green-800"
-                                                                : "bg-gray-200 text-gray-700"
+                                                            ? "bg-green-100 text-green-800"
+                                                            : "bg-gray-200 text-gray-700"
                                                             }`}
                                                     >
                                                         {quiz.status}
@@ -137,13 +193,13 @@ export default function QuizManagement() {
                                                 </td>
                                                 <td className="py-2 px-3 flex space-x-2">
                                                     <button
-                                                        onClick={() => handleEdit(quiz.quiz_id)}
+                                                        onClick={() => handleViewQuestions(quiz)}
                                                         className="flex items-center bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-blue-600"
                                                     >
-                                                        <Edit3 className="w-4 h-4 mr-1" /> Edit
+                                                        <Eye className="w-4 h-4 mr-1" /> View
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(quiz.quiz_id)}
+                                                        onClick={() => handleDeleteQuiz(quiz.quiz_id)}
                                                         className="flex items-center bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
                                                     >
                                                         <Trash2 className="w-4 h-4 mr-1" /> Delete

@@ -7,8 +7,19 @@ import QuizAttempt from "../models/QuizAttempt.js";
 import Session from "../models/Session.js";
 import sequelize from "../db.js";
 import Note from "../models/Note.js";
+import Question from "../models/Question.js"
 
 const router = express.Router();
+
+// Helper function to create admin audit log
+const createAdminLog = async (action, tableName, recordId, adminUserId) => {
+    await AuditLog.create({
+        user_id: adminUserId,
+        action: action,
+        table_name: tableName,
+        record_id: recordId,
+    });
+};
 
 router.get("/users", async (req, res) => {
     try {
@@ -85,12 +96,7 @@ router.post("/users/:userId/lock", async (req, res) => {
             { where: { user_id: userId } }
         );
 
-        await AuditLog.create({
-            user_id: req.user?.user_id, // Admin
-            action: "LOCK_USER",
-            table_name: "User",
-            record_id: userId,
-        });
+        await createAdminLog("LOCK_USER", "User", userId, req.user?.user_id);
 
         res.json({ message: "User locked successfully" });
     } catch (error) {
@@ -109,12 +115,7 @@ router.post("/users/:userId/unlock", async (req, res) => {
             { where: { user_id: userId } }
         );
 
-        await AuditLog.create({
-            user_id: req.user?.user_id,
-            action: "UNLOCK_USER",
-            table_name: "User",
-            record_id: userId,
-        });
+        await createAdminLog("UNLOCK_USER", "User", userId, req.user?.user_id);
 
         res.json({ message: "User unlocked successfully" });
     } catch (error) {
@@ -158,7 +159,7 @@ router.get("/quizzes", async (req, res) => {
                 timesTaken: quizData.total_attempts,
                 status: quizData.is_public ? "Open" : "Private",
                 created: formattedDate,
-                created_at: quizData.created_at
+                createdAt: quizData.createdAt
             };
         });
 
@@ -185,18 +186,61 @@ router.delete("/quizzes/:quizId", async (req, res) => {
             where: { quiz_id: quizId }
         });
 
-        // Log the action
-        await AuditLog.create({
-            user_id: req.user?.user_id,
-            action: "DELETE_QUIZ",
-            table_name: "Quiz",
-            record_id: quizId,
-        });
+        await createAdminLog("DELETE_QUIZ", "Quiz", quizId, req.user?.user_id);
 
         res.json({ message: "Quiz deleted successfully" });
     } catch (error) {
         console.error("Error deleting quiz:", error);
         res.status(500).json({ error: "Failed to delete quiz" });
+    }
+});
+
+// Get all questions for a specific quiz
+router.get("/quizzes/:quizId/questions", async (req, res) => {
+    try {
+        const { quizId } = req.params;
+
+        const questions = await Question.findAll({
+            where: { quiz_id: quizId },
+            order: [['question_order', 'ASC']]
+        });
+
+        res.json(questions);
+    } catch (error) {
+        console.error("Error fetching questions:", error);
+        res.status(500).json({ error: "Failed to fetch questions" });
+    }
+});
+
+// Delete a specific question
+router.delete("/questions/:questionId", async (req, res) => {
+    try {
+        const { questionId } = req.params;
+
+        const question = await Question.findByPk(questionId);
+
+        if (!question) {
+            return res.status(404).json({ error: "Question not found" });
+        }
+
+        const quizId = question.quiz_id;
+
+        // Delete the question
+        await Question.destroy({
+            where: { question_id: questionId }
+        });
+
+        // Update the quiz's total_questions count
+        await Quiz.decrement('total_questions', {
+            where: { quiz_id: quizId }
+        });
+
+        await createAdminLog("DELETE_QUESTION", "Question", questionId, req.user?.user_id);
+
+        res.json({ success: true, message: "Question deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting question:", error);
+        res.status(500).json({ error: "Failed to delete question" });
     }
 });
 
@@ -296,13 +340,7 @@ router.put("/sessions/:sessionId/end", async (req, res) => {
             { where: { session_id: sessionId } }
         );
 
-        // Log the action
-        await AuditLog.create({
-            user_id: req.user?.user_id,
-            action: "END_SESSION",
-            table_name: "Session",
-            record_id: sessionId,
-        });
+        await createAdminLog("END_SESSION", "Session", sessionId, req.user?.user_id);
 
         res.json({ message: "Session ended successfully" });
     } catch (error) {
@@ -382,7 +420,7 @@ router.get("/recent-users", async (req, res) => {
 router.get("/recent-sessions", async (req, res) => {
     try {
         const sessions = await Session.findAll({
-            order: [["created_at", "DESC"]],
+            order: [["createdAt", "DESC"]],
             limit: 5
         });
 
