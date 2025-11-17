@@ -388,10 +388,10 @@ if (sessionStore) {
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: true, // Always true for production
+                secure: true,
                 maxAge: 1000 * 60 * 60 * 24,
-                sameSite: 'none', // Required for cross-domain cookies
-                domain: '.studai.dev', // Set to your frontend domain
+                sameSite: 'none',
+                domain: '.walrus-app-umg67.ondigitalocean.app', // Use backend domain for cookie
             },
             rolling: true,
         })
