@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Trophy, X, GripVertical } from 'lucide-react';
+import { Trophy, X, GripVertical, Flame, Award, Medal } from 'lucide-react';
 
 export const LiveLeaderboard = ({
   players,
@@ -23,7 +23,7 @@ export const LiveLeaderboard = ({
   const getStreakIcon = (player) => {
     // If player has score of 3+, show fire icon
     if (player.score >= 3 && !player.forfeited) {
-      return <span className="text-sm" title="On fire!">🔥</span>;
+      return <Flame className="w-4 h-4 text-orange-500" title="On fire!" />;
     }
     return null;
   };
@@ -33,11 +33,11 @@ export const LiveLeaderboard = ({
     return recentAnswers && recentAnswers.includes(playerId);
   };
   
-  // Get rank emoji
-  const getRankEmoji = (rank) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
+  // Get rank icon
+  const getRankIcon = (rank) => {
+    if (rank === 1) return <Award className="w-4 h-4 text-yellow-500" />;
+    if (rank === 2) return <Medal className="w-4 h-4 text-gray-400" />;
+    if (rank === 3) return <Medal className="w-4 h-4 text-amber-600" />;
     return rank;
   };
 
@@ -143,7 +143,7 @@ export const LiveLeaderboard = ({
                     text-xl font-bold min-w-[32px] text-center
                     ${isCurrentUser ? 'text-black' : 'text-gray-700'}
                   `}>
-                    {getRankEmoji(rank)}
+                    {getRankIcon(rank)}
                   </span>
 
                   <div className="flex-1">
@@ -220,7 +220,7 @@ export const LiveLeaderboard = ({
                   {players.length} Players
                 </p>
                 <p className="text-sm text-gray-600">
-                  You: {currentUserRank}{getRankSuffix(currentUserRank)} {getRankEmoji(currentUserRank)} • {currentUserScore}pts
+                  You: {currentUserRank}{getRankSuffix(currentUserRank)} {getRankIcon(currentUserRank)} • {currentUserScore}pts
                 </p>
               </div>
             </div>
@@ -251,7 +251,7 @@ export const LiveLeaderboard = ({
                 >
                   <div className="flex items-center gap-3">
                     <span className={`text-xl font-bold ${isCurrentUser ? 'text-black' : 'text-gray-700'}`}>
-                      {getRankEmoji(rank)}
+                      {getRankIcon(rank)}
                     </span>
                     <p className={`font-bold ${isCurrentUser ? 'text-black' : 'text-gray-900'}`}>
                       {isCurrentUser ? 'You' : player.name}
@@ -315,7 +315,7 @@ export const LiveLeaderboard = ({
                   }`}
                 >
                   <span className="flex items-center gap-1.5">
-                    <span className="text-base">{getRankEmoji(rank)}</span>
+                    <span className="text-base">{getRankIcon(rank)}</span>
                     <span className="truncate max-w-[65px]">
                       {isCurrentUser ? 'You' : player.name}
                     </span>
@@ -376,7 +376,7 @@ export const LiveLeaderboard = ({
                     >
                       <div className="flex items-center gap-3">
                         <span className={`text-2xl font-bold ${isCurrentUser ? 'text-black' : 'text-gray-700'}`}>
-                          {getRankEmoji(rank)}
+                          {getRankIcon(rank)}
                         </span>
                         <div>
                           <p className={`font-bold text-base ${isCurrentUser ? 'text-black' : 'text-gray-900'}`}>

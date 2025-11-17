@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy } from 'lucide-react';
+import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy, FileText } from 'lucide-react';
 
 // ============================================
 // QUIZ MODE SELECTION MODAL
@@ -38,7 +38,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
           <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg sm:rounded-xl shadow-lg p-2.5 sm:p-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 backdrop-blur-sm rounded-md flex items-center justify-center flex-shrink-0">
-                <span className="text-sm sm:text-base">📝</span>
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-white text-[11px] sm:text-xs line-clamp-1" title={quiz.title}>{quiz.title}</h3>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Check } from 'lucide-react';
+import { Plus, X, Check, Info } from 'lucide-react';
 
 // Multiple Choice Question Component
 export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateChoice, onAddChoice }) => {
@@ -33,44 +33,63 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      <div className="flex items-center gap-1.5 text-xs text-gray-600 font-medium px-1">
+        <Info className="w-3.5 h-3.5 text-blue-500" />
+        <span>Click the checkbox to mark as correct answer</span>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {choices?.map((choice, choiceIndex) => (
-          <div
-            key={choiceIndex}
-            onClick={(e) => {
-              if (e.target === e.currentTarget || e.target.tagName === 'INPUT') {
-                onUpdateQuestion(question.id, 'correctAnswer', choice);
-              }
-            }}
-            className={`p-2 sm:p-3 rounded border transition-all cursor-pointer ${
-              question.correctAnswer === choice
-                ? 'bg-green-500 text-white border-green-500'
-                : 'bg-white border-gray-200 hover:border-gray-300'
-            }`}
-          >
+        {choices?.map((choice, choiceIndex) => {
+          // Only mark as correct if both the choice and correctAnswer are non-empty and match
+          const isCorrect = choice && question.correctAnswer && question.correctAnswer === choice;
+
+          return (
+            <div
+              key={`choice-${question.id}-${choiceIndex}`}
+              className={`relative p-2 sm:p-3 rounded-lg border-2 transition-all ${
+                isCorrect
+                  ? 'bg-green-50 border-green-500 shadow-md'
+                  : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
+              }`}
+            >
             <div className="flex items-center gap-2">
+              {/* Checkbox to mark as correct */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateQuestion(question.id, 'correctAnswer', choice);
+                }}
+                className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all hover:scale-110 ${
+                  isCorrect
+                    ? 'bg-green-500 border-green-500'
+                    : 'bg-white border-gray-300 hover:border-green-400'
+                }`}
+                title="Mark as correct answer"
+              >
+                {isCorrect && (
+                  <Check className="w-3 h-3 text-white" />
+                )}
+              </button>
+
               <input
                 type="text"
                 value={choice}
                 onChange={(e) => {
-                  e.stopPropagation();
                   const newValue = e.target.value;
                   onUpdateChoice(question.id, choiceIndex, newValue);
-                  
+
+                  // Update correct answer if this was the selected choice
                   if (question.correctAnswer === choice) {
                     onUpdateQuestion(question.id, 'correctAnswer', newValue);
                   }
                 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-                className={`flex-1 bg-transparent border-0 text-xs sm:text-sm focus:outline-none ${
-                  question.correctAnswer === choice ? 'text-white placeholder-green-200' : 'text-gray-800 placeholder-gray-400'
+                className={`flex-1 bg-transparent border-0 text-xs sm:text-sm focus:outline-none focus:ring-0 ${
+                  isCorrect ? 'text-green-900 font-medium placeholder-green-300' : 'text-gray-800 placeholder-gray-400'
                 }`}
                 placeholder={`Option ${choiceIndex + 1}`}
               />
-              
+
               {/* Remove Button */}
               {choices.length > 2 && (
                 <button
@@ -79,7 +98,7 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
                     handleRemoveChoice(choiceIndex);
                   }}
                   className={`flex-shrink-0 p-1 rounded hover:bg-red-100 transition-colors ${
-                    question.correctAnswer === choice ? 'text-white hover:bg-red-400' : 'text-red-500'
+                    isCorrect ? 'text-red-600 hover:bg-red-200' : 'text-red-500'
                   }`}
                   type="button"
                   title="Remove choice"
@@ -89,20 +108,21 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       <button
         onClick={() => onAddChoice(question.id)}
         disabled={!canAddMore}
-        className={`flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-medium transition-colors ${
-          canAddMore 
-            ? 'text-blue-500 hover:bg-blue-50 cursor-pointer' 
-            : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+        className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+          canAddMore
+            ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 cursor-pointer shadow-sm hover:shadow'
+            : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
         }`}
         type="button"
       >
-        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-        {canAddMore ? 'Add more choices' : `Maximum ${MAX_CHOICES} choices reached`}
+        <Plus className="w-4 h-4" />
+        {canAddMore ? `Add Choice (${choices.length}/${MAX_CHOICES})` : `Maximum ${MAX_CHOICES} choices reached`}
       </button>
     </div>
   );
@@ -182,7 +202,7 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
             </div>
           ))}
         </div>
-        
+
         <div className="space-y-2">
           <h4 className="text-xs sm:text-sm font-medium text-gray-700">Right Column</h4>
           {pairs.map((pair, index) => (
@@ -211,15 +231,15 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
       <button
         onClick={() => onAddMatchingPair(question.id)}
         disabled={!canAddMore}
-        className={`flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-medium transition-colors ${
-          canAddMore 
-            ? 'text-blue-500 hover:bg-blue-50 cursor-pointer' 
-            : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+        className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+          canAddMore
+            ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 cursor-pointer shadow-sm hover:shadow'
+            : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
         }`}
         type="button"
       >
-        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-        {canAddMore ? 'Add matching pair' : `Maximum ${MAX_PAIRS} pairs reached`}
+        <Plus className="w-4 h-4" />
+        {canAddMore ? `Add Matching Pair (${pairs.length}/${MAX_PAIRS})` : `Maximum ${MAX_PAIRS} pairs reached`}
       </button>
     </div>
   );

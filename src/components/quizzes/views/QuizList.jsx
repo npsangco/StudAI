@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit, Play, GripVertical, Trash2, MoreVertical, Share2, Plus, Sparkles, BookOpen, Users, Trophy } from 'lucide-react';
+import { Edit, Play, GripVertical, Trash2, MoreVertical, Share2, Plus, Sparkles, BookOpen, Users, Trophy, Circle, FileText, Clock, Target, Lock } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 
 // Utility: Get quiz accent color based on quiz ID
@@ -137,21 +137,29 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false }) => {
   );
 };
 
-// Difficulty Badge Component
-const DifficultyBadge = ({ difficulty, count }) => {
-  const configs = {
-    easy: { color: 'bg-green-100 text-green-800', emoji: '🟢', label: 'Easy' },
-    medium: { color: 'bg-yellow-100 text-yellow-800', emoji: '🟡', label: 'Med' },
-    hard: { color: 'bg-red-100 text-red-800', emoji: '🔴', label: 'Hard' }
-  };
+// Mode Badge Component
+const ModeBadge = ({ questionCount }) => {
+  if (questionCount === 0) return null;
 
-  const config = configs[difficulty];
-  if (!config || !count) return null;
+  const isAdaptive = questionCount >= 5;
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
-      <span className="text-[10px]">{config.emoji}</span>
-      {count}
+    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+      isAdaptive
+        ? 'bg-purple-100 text-purple-700'
+        : 'bg-gray-100 text-gray-600'
+    }`}>
+      {isAdaptive ? (
+        <>
+          <Target className="w-3 h-3" />
+          <span className="hidden sm:inline">Adaptive</span>
+        </>
+      ) : (
+        <>
+          <Circle className="w-3 h-3" />
+          <span className="hidden sm:inline">Classic</span>
+        </>
+      )}
     </span>
   );
 };
@@ -160,10 +168,13 @@ const DifficultyBadge = ({ difficulty, count }) => {
 const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showShareCode, setShowShareCode] = useState(false);
   const isBeingDragged = draggedIndex === index;
   const showDropIndicator = isDragOver && !isBeingDragged;
   const isEmpty = !quiz.questionCount || quiz.questionCount === 0;
   const isShared = quiz.shared_by_username;
+  const isPublic = quiz.isPublic || quiz.is_public;
+  const shareCode = quiz.share_code;
   const accentColor = getQuizAccentColor(quiz.id);
 
   const handleDragStart = (e) => {
@@ -265,20 +276,23 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
           </div>
 
           {/* Metadata */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-            <span>📝 {quiz.questionCount || 0} questions</span>
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4 flex-wrap">
+            <span className="flex items-center gap-1.5">
+              <FileText className="w-4 h-4" />
+              {quiz.questionCount || 0} {quiz.questionCount === 1 ? 'question' : 'questions'}
+            </span>
             <span className="text-gray-400">•</span>
-            <span>{quiz.created}</span>
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4" />
+              {quiz.timer_per_question === 0 ? '∞' : `${quiz.timer_per_question || 30}s`}
+            </span>
+            <span className="text-gray-400">•</span>
+            <span className="text-xs" title={quiz.created_at || quiz.created}>
+              {quiz.created_at || quiz.created}
+            </span>
+            <span className="text-gray-400">•</span>
+            <ModeBadge questionCount={quiz.questionCount || 0} />
           </div>
-
-          {/* Difficulty Badges */}
-          {quiz.difficulty_breakdown && (
-            <div className="flex items-center gap-2 mb-4">
-              <DifficultyBadge difficulty="easy" count={quiz.difficulty_breakdown.easy} />
-              <DifficultyBadge difficulty="medium" count={quiz.difficulty_breakdown.medium} />
-              <DifficultyBadge difficulty="hard" count={quiz.difficulty_breakdown.hard} />
-            </div>
-          )}
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
@@ -327,7 +341,29 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
               {showMoreMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)}></div>
-                  <div className="absolute right-0 bottom-full mb-2 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px] z-20">
+                  <div className="absolute right-0 bottom-full mb-2 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] z-20">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isPublic && shareCode) {
+                          setShowShareCode(true);
+                          setShowMoreMenu(false);
+                        }
+                      }}
+                      disabled={!isPublic || !shareCode}
+                      className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
+                        isPublic && shareCode
+                          ? 'text-gray-700 hover:bg-gray-50 cursor-pointer'
+                          : 'text-gray-400 cursor-not-allowed bg-gray-50'
+                      }`}
+                      title={!isPublic ? 'Enable public sharing in quiz editor to get a share code' : !shareCode ? 'No share code available' : 'View and copy share code'}
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span className="flex-1">View Share Code</span>
+                      {!isPublic && (
+                        <Lock className="w-3.5 h-3.5 text-gray-400" />
+                      )}
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -339,6 +375,46 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
                       <Trash2 className="w-4 h-4" />
                       Delete Quiz
                     </button>
+                  </div>
+                </>
+              )}
+
+              {/* Share Code Modal */}
+              {showShareCode && (
+                <>
+                  <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowShareCode(false)}>
+                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                      <div className="text-center mb-4">
+                        <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+                          <Share2 className="w-8 h-8 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-1">Share This Quiz</h3>
+                        <p className="text-sm text-gray-600">Give this code to others so they can import your quiz</p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-4 mb-4 border-2 border-yellow-300">
+                        <div className="text-center">
+                          <div className="text-xs font-semibold text-gray-600 uppercase mb-2">Import Code</div>
+                          <div className="text-4xl font-mono font-bold text-gray-900 tracking-wider mb-3">{shareCode}</div>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(shareCode);
+                              alert('Share code copied to clipboard!');
+                            }}
+                            className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all text-sm"
+                          >
+                            Copy Code
+                          </button>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setShowShareCode(false)}
+                        className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-all text-sm"
+                      >
+                        Close
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
@@ -420,7 +496,7 @@ export const QuizList = ({
             <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg sm:rounded-xl border-2 border-dashed border-yellow-300 p-3 sm:p-5 hover:border-yellow-400 transition-all">
               <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
-                  <span className="text-lg sm:text-xl">✨</span>
+                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate">Import Quiz</h3>

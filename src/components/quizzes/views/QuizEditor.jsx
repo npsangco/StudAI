@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
-import { Copy, Check, Clock, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Copy, Check, Clock, ChevronDown, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
-import { validateAdaptiveRequirements } from '../utils/validation';
 
 // ============================================
 // COMPACT SETTINGS BAR COMPONENT
@@ -34,7 +33,7 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange }) => {
 
   const handleToggle = async () => {
     if (isTempQuiz) {
-      alert('⚠️ Please save the quiz first before changing visibility settings.');
+      alert('Please save the quiz first before changing visibility settings.');
       return;
     }
 
@@ -89,11 +88,11 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange }) => {
   };
 
   const timerOptions = [
-    { value: 15, label: '15s', emoji: '⚡' },
-    { value: 30, label: '30s', emoji: '⏱️' },
-    { value: 45, label: '45s', emoji: '🕐' },
-    { value: 60, label: '60s', emoji: '⏰' },
-    { value: 0, label: 'No Limit', emoji: '∞' }
+    { value: 15, label: '15s', icon: Zap },
+    { value: 30, label: '30s', icon: Timer },
+    { value: 45, label: '45s', icon: Clock },
+    { value: 60, label: '60s', icon: Clock },
+    { value: 0, label: 'No Limit', icon: Infinity }
   ];
 
   return (
@@ -113,7 +112,17 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange }) => {
               } ${loading || isTempQuiz ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               title={isTempQuiz ? 'Save quiz first to change visibility' : ''}
             >
-              {isPublic ? '🌍 Public' : '🔒 Private'}
+              {isPublic ? (
+                <>
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>Public</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Private</span>
+                </>
+              )}
               <ChevronDown className="w-3 h-3" />
             </button>
 
@@ -146,20 +155,23 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange }) => {
               <span className="text-sm font-medium text-gray-700">Timer:</span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {timerOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleTimerChange(option.value)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    timerValue === option.value
-                      ? 'bg-yellow-500 text-white shadow-md'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:border-yellow-500 hover:bg-yellow-50'
-                  }`}
-                >
-                  <span className="mr-1">{option.emoji}</span>
-                  {option.label}
-                </button>
-              ))}
+              {timerOptions.map((option) => {
+                const IconComponent = option.icon;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleTimerChange(option.value)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                      timerValue === option.value
+                        ? 'bg-yellow-500 text-white shadow-md'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:border-yellow-500 hover:bg-yellow-50'
+                    }`}
+                  >
+                    <IconComponent className="w-3.5 h-3.5" />
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -470,7 +482,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
 
   return (
     <>
-      <div className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-4">
           {/* Desktop Layout */}
           <div className="hidden md:flex items-center justify-between gap-4">
@@ -519,23 +531,24 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
 
               {/* Adaptive Mode Indicator */}
               {(() => {
-                const adaptiveCheck = validateAdaptiveRequirements(questions);
-                if (adaptiveCheck.canUseAdaptive) {
+                if (questionCount >= 5) {
                   return (
                     <span
                       className="px-3 py-1.5 text-sm rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1.5"
-                      title="Adaptive difficulty enabled for solo mode"
+                      title="Questions adapt to player's skill level in solo mode"
                     >
-                      🎯 Adaptive Mode
+                      <Target className="w-3.5 h-3.5" />
+                      <span>Adaptive Mode</span>
                     </span>
                   );
                 } else if (questionCount > 0 && questionCount < 5) {
                   return (
                     <span
                       className="px-3 py-1.5 text-sm rounded-full font-medium bg-gray-100 text-gray-600 flex items-center gap-1.5"
-                      title={adaptiveCheck.warning}
+                      title="Questions appear in fixed order (add 5+ for adaptive mode)"
                     >
-                      ⚪ Classic Mode
+                      <Circle className="w-3.5 h-3.5" />
+                      <span>Classic Mode</span>
                     </span>
                   );
                 }
@@ -546,10 +559,11 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               {hasErrors && (
                 <button
                   onClick={() => setShowErrorModal(true)}
-                  className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-full font-medium hover:bg-red-600 transition-all animate-pulse cursor-pointer shadow-md"
+                  className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-full font-medium hover:bg-red-600 transition-all animate-pulse cursor-pointer shadow-md flex items-center gap-1.5"
                   title="Click to view all errors"
                 >
-                  ⚠️ {errors.length} {errors.length === 1 ? 'Error' : 'Errors'}
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>{errors.length} {errors.length === 1 ? 'Error' : 'Errors'}</span>
                 </button>
               )}
 
@@ -570,14 +584,15 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               <button
                 onClick={handleSaveClick}
                 disabled={hasErrors}
-                className={`px-5 py-2 text-sm rounded-lg font-medium transition-all ${
+                className={`flex items-center gap-2 px-5 py-2 text-sm rounded-lg font-medium transition-all ${
                   hasErrors
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-yellow-500 text-white hover:bg-yellow-600 shadow-md hover:shadow-lg'
                 }`}
                 title={hasErrors ? 'Fix errors before saving' : 'Save quiz'}
               >
-                💾 Save
+                <Save className="w-4 h-4" />
+                <span>Save</span>
               </button>
             </div>
           </div>
@@ -627,9 +642,10 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               {hasErrors && (
                 <button
                   onClick={() => setShowErrorModal(true)}
-                  className="px-2 py-1 bg-red-500 text-white text-xs rounded-full font-medium animate-pulse"
+                  className="flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs rounded-full font-medium animate-pulse"
                 >
-                  ⚠️ {errors.length}
+                  <AlertCircle className="w-3 h-3" />
+                  <span>{errors.length}</span>
                 </button>
               )}
             </div>
@@ -651,13 +667,14 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               <button
                 onClick={handleSaveClick}
                 disabled={hasErrors}
-                className={`px-3 py-2 text-xs rounded-lg font-medium flex-1 ${
+                className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs rounded-lg font-medium flex-1 ${
                   hasErrors
                     ? 'bg-gray-300 text-gray-500'
                     : 'bg-yellow-500 text-white'
                 }`}
               >
-                💾 Save
+                <Save className="w-3.5 h-3.5" />
+                <span>Save</span>
               </button>
             </div>
           </div>
@@ -747,26 +764,29 @@ export const QuizEditor = ({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <PolishedHeader
-        quiz={quiz}
-        questions={questions}
-        onBack={onBack}
-        onAddQuestion={onAddQuestion}
-        onSave={onSave}
-        onUpdateTitle={onUpdateTitle}
-      />
+      {/* Sticky Header Container */}
+      <div className="sticky top-0 z-[100] bg-white shadow-md" style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+        <PolishedHeader
+          quiz={quiz}
+          questions={questions}
+          onBack={onBack}
+          onAddQuestion={onAddQuestion}
+          onSave={onSave}
+          onUpdateTitle={onUpdateTitle}
+        />
 
-      <CompactSettingsBar
-        quiz={quiz}
-        onPublicStatusChange={onUpdatePublicStatus}
-        onTimerChange={onUpdateTimer}
-      />
+        <CompactSettingsBar
+          quiz={quiz}
+          onPublicStatusChange={onUpdatePublicStatus}
+          onTimerChange={onUpdateTimer}
+        />
+      </div>
 
       <div className="max-w-5xl mx-auto p-4 md:p-6">
         {questions.length === 0 ? (
           <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-8 md:p-12 text-center border-2 border-dashed border-yellow-300 shadow-sm">
             <div className="w-20 h-20 bg-yellow-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl">📝</span>
+              <FileText className="w-10 h-10 text-yellow-600" />
             </div>
             <h3 className="text-2xl font-bold text-gray-800 mb-2">
               No Questions Yet
@@ -776,9 +796,10 @@ export const QuizEditor = ({
             </p>
             <button
               onClick={onAddQuestion}
-              className="bg-yellow-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-all transform hover:scale-105 shadow-md"
+              className="flex items-center gap-2 bg-yellow-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-all transform hover:scale-105 shadow-md mx-auto"
             >
-              ✨ Add First Question
+              <Sparkles className="w-5 h-5" />
+              <span>Add First Question</span>
             </button>
           </div>
         ) : (
@@ -786,12 +807,10 @@ export const QuizEditor = ({
             {questions.map((question, index) => (
               <div
                 key={question.id}
-                draggable
-                onDragStart={(e) => handleQuestionDragStart(e, index)}
+                data-question-wrapper={index}
                 onDragOver={(e) => handleQuestionDragOver(e, index)}
                 onDragLeave={handleQuestionDragLeave}
                 onDrop={(e) => handleQuestionDrop(e, index)}
-                onDragEnd={handleQuestionDragEnd}
                 className={`transition-all ${
                   draggedQuestionIndex === index ? 'opacity-50 scale-95' : ''
                 } ${
@@ -811,6 +830,8 @@ export const QuizEditor = ({
                   onAddMatchingPair={onAddMatchingPair}
                   onUpdateMatchingPair={onUpdateMatchingPair}
                   onRemoveMatchingPair={onRemoveMatchingPair}
+                  onDragStart={(e) => handleQuestionDragStart(e, index)}
+                  onDragEnd={handleQuestionDragEnd}
                 />
               </div>
             ))}
