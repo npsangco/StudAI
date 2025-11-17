@@ -396,7 +396,7 @@ if (sessionStore) {
                 sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
                 domain: process.env.NODE_ENV === 'production'
                     ? '.studai.dev'
-                    : undefined, // No domain for localhost
+                    : 'http://localhost:4000',
             },
             rolling: true,
         })
@@ -904,9 +904,25 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
         req.session.username = user.username;
         req.session.role = user.role;
 
+        // Debug: Log session and cookie info
+        console.log('🔒 [Login] Session set:', {
+            userId: req.session.userId,
+            email: req.session.email,
+            username: req.session.username,
+            role: req.session.role
+        });
+        console.log('🔒 [Login] Request headers:', req.headers);
+        console.log('🔒 [Login] NODE_ENV:', process.env.NODE_ENV);
+        console.log('🔒 [Login] Cookie config:', req.session.cookie);
+
         // await updateUserStreak(user.user_id);
 
         const updatedUser = await User.findByPk(user.user_id);
+
+        // Debug: Log response cookies
+        res.on('finish', () => {
+            console.log('🔒 [Login] Response Set-Cookie header:', res.getHeader('Set-Cookie'));
+        });
 
         res.status(200).json({
             message: "Login successful",
