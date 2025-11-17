@@ -586,7 +586,7 @@ export default function Planner() {
           </div>
 
           {showForm ? (
-            <div className="bg-white border-2 border-indigo-200 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-xl" data-tutorial="add-plan">
+            <div className="bg-white border-2 border-indigo-200 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-xl" data-tutorial="add-task">
               <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Add New Plan</h3>
               <input
                 type="text"

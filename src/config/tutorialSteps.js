@@ -116,6 +116,7 @@ export const notesTutorialSteps = [
       'Notes support rich text formatting',
       'Organize with categories and tags',
       'Share notes with study groups',
+      'The closest-due plan from your date appears at the top',
     ],
   },
   {
@@ -225,13 +226,26 @@ export const plannerTutorialSteps = [
   },
   {
     target: '[data-tutorial="add-task"]',
-    title: 'Add Study Task',
-    description: 'Create new tasks or assignments. Set due dates, priority levels, and add notes. The planner will remind you as deadlines approach.',
+    title: 'Add a Study Task',
+    description: 'Click the "Add a plan" button to create a new study task. Try it now to proceed!',
     icon: Plus,
     tips: [
       'Set priority: High, Medium, or Low',
       'Add time estimates to better plan',
       'Link tasks to specific subjects',
+    ],
+    action: 'click',
+    interactive: true,
+  },
+  {
+    target: '[data-tutorial="add-task"]',
+    title: 'Add Study Task',
+    description: 'Create new tasks or assignments. Set due dates and add notes. The planner will remind you as deadlines approach.',
+    icon: Plus,
+    tips: [
+      'Add time estimates to better plan',
+      'Link tasks to specific subjects',
+      // Removed priority tip
     ],
   },
   {
@@ -253,7 +267,7 @@ export const plannerTutorialSteps = [
     tips: [
       'Red badges indicate urgent tasks',
       'Click to mark as complete',
-      'Filter by subject or priority',
+      'Filter by subject',
     ],
   },
 ];

@@ -409,7 +409,7 @@ export const QuizList = ({
 
   // Single container for both empty and list states
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col max-h-[calc(100vh-7rem)]">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col max-h-[calc(100vh-7rem)]" data-tutorial="quiz-list">
       {quizzes.length === 0 ? (
         /* ============================================ */
         /* EMPTY STATE - No Header, Import at Top */
@@ -536,7 +536,7 @@ export const QuizList = ({
         /* ============================================ */
         <>
           {/* Header - Fixed */}
-          <div className="flex-shrink-0 p-6 pb-4 border-b border-gray-100">
+          <div className="flex-shrink-0 p-6 pb-4 border-b border-gray-100" data-tutorial="quiz-list-header">
             <h2 className="text-2xl font-bold text-gray-900">My Quizzes</h2>
           </div>
 
@@ -572,6 +572,7 @@ export const QuizList = ({
       <div className="flex-shrink-0 p-6 pt-4 border-t border-gray-100 bg-white">
         <button
           onClick={onCreateQuiz}
+          data-tutorial="create-quiz"
           className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 px-4 rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-md hover:shadow-lg active:scale-95"
         >
           + Create New Quiz
