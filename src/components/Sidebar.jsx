@@ -159,7 +159,6 @@ export default function Sidebar() {
                                         <User className="w-6 h-6 text-white" />
                                     </div>
                                 )}
-                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-gray-900 truncate">

@@ -59,6 +59,7 @@ import ZoomToken from "./models/ZoomToken.js";
 import Achievement from "./models/Achievement.js"; // ← ADD THIS
 import UserAchievement from "./models/UserAchievement.js"; // ← ADD THIS
 import UserDailyStat from "./models/UserDailyStat.js";
+import AuditLog from "./models/AuditLog.js";
 import { Op } from "sequelize";
 
 // Middleware
@@ -615,7 +616,7 @@ app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "em
 
 app.get(
     "/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: `${CLIENT_URL}/` }),
+    passport.authenticate("google", { failureRedirect: `http://localhost:5173/` }),
     async (req, res) => {
         try {
             const user = req.user;
@@ -924,7 +925,19 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
 
 
 // Logout
-app.post("/api/auth/logout", (req, res) => {
+app.post("/api/auth/logout", async (req, res) => {
+    const userId = req.session?.user?.user_id;
+
+    // ⬅️ Inserted: create audit log BEFORE destroying session
+    if (userId) {
+        await AuditLog.create({
+            user_id: userId,
+            action: "LOGOUT",
+            table_name: "User",
+            record_id: userId
+        });
+    }
+
     if (req.session) {
         req.session.destroy((err) => {
             if (err) return res.status(500).json({ error: "Logout failed" });
