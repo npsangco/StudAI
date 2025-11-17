@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Copy } from 'lucide-react';
+import { Trash2, Copy, Star } from 'lucide-react';
 import {
   MultipleChoiceQuestion,
   FillInBlanksQuestion,
@@ -18,17 +18,19 @@ export const QuestionCard = ({
   onDuplicateQuestion,
   onAddMatchingPair,
   onUpdateMatchingPair,
-  onRemoveMatchingPair
+  onRemoveMatchingPair,
+  onDragStart,
+  onDragEnd
 }) => {
   // Get difficulty info for colored badge
   const getDifficultyInfo = () => {
     switch (question.difficulty) {
       case 'easy':
-        return { label: 'EASY', points: 1, stars: '⭐', bgColor: 'bg-green-100', textColor: 'text-green-700' };
+        return { label: 'EASY', points: 1, starCount: 1, bgColor: 'bg-green-100', textColor: 'text-green-700' };
       case 'hard':
-        return { label: 'HARD', points: 10, stars: '⭐⭐⭐', bgColor: 'bg-red-100', textColor: 'text-red-700' };
+        return { label: 'HARD', points: 10, starCount: 3, bgColor: 'bg-red-100', textColor: 'text-red-700' };
       default: // medium
-        return { label: 'MEDIUM', points: 5, stars: '⭐⭐', bgColor: 'bg-yellow-100', textColor: 'text-yellow-700' };
+        return { label: 'MEDIUM', points: 5, starCount: 2, bgColor: 'bg-yellow-100', textColor: 'text-yellow-700' };
     }
   };
 
@@ -40,9 +42,15 @@ export const QuestionCard = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
         {/* Left side: Drag + Number + Type */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Drag Handle */}
-          <div className="w-6 h-6 bg-gray-200 rounded-lg flex items-center justify-center cursor-move hover:bg-gray-300 transition-colors flex-shrink-0">
-            <span className="text-xs font-bold text-gray-600">⋮⋮</span>
+          {/* Drag Handle - ONLY draggable element */}
+          <div
+            draggable={true}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            data-drag-handle="true"
+            className="w-6 h-6 bg-gray-200 rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-gray-300 transition-colors flex-shrink-0"
+          >
+            <span className="text-xs font-bold text-gray-600" style={{ pointerEvents: 'none' }}>⋮⋮</span>
           </div>
 
           {/* Question Number */}
@@ -63,37 +71,46 @@ export const QuestionCard = ({
           {/* Difficulty Star Selector - Inline */}
           <div className="hidden sm:flex items-center gap-1.5 ml-2">
             <button
+              draggable={false}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={() => onUpdateQuestion(question.id, 'difficulty', 'easy')}
-              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all ${
+              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all flex items-center gap-0.5 ${
                 question.difficulty === 'easy'
                   ? 'bg-green-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-700'
               }`}
               title="Easy - 1 point"
             >
-              ⭐
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'easy' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
             </button>
             <button
+              draggable={false}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={() => onUpdateQuestion(question.id, 'difficulty', 'medium')}
-              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all ${
+              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all flex items-center gap-0.5 ${
                 question.difficulty === 'medium'
                   ? 'bg-yellow-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-600 hover:bg-yellow-50 hover:text-yellow-700'
               }`}
               title="Medium - 5 points"
             >
-              ⭐⭐
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'medium' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'medium' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
             </button>
             <button
+              draggable={false}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={() => onUpdateQuestion(question.id, 'difficulty', 'hard')}
-              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all ${
+              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all flex items-center gap-0.5 ${
                 question.difficulty === 'hard'
                   ? 'bg-red-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700'
               }`}
               title="Hard - 10 points"
             >
-              ⭐⭐⭐
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'hard' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'hard' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'hard' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
             </button>
           </div>
         </div>
@@ -103,53 +120,66 @@ export const QuestionCard = ({
           {/* Difficulty Star Selector - Mobile */}
           <div className="flex sm:hidden items-center gap-1.5">
             <button
+              draggable={false}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={() => onUpdateQuestion(question.id, 'difficulty', 'easy')}
-              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all ${
+              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all flex items-center gap-0.5 ${
                 question.difficulty === 'easy'
                   ? 'bg-green-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-700'
               }`}
               title="Easy - 1 point"
             >
-              ⭐
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'easy' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
             </button>
             <button
+              draggable={false}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={() => onUpdateQuestion(question.id, 'difficulty', 'medium')}
-              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all ${
+              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all flex items-center gap-0.5 ${
                 question.difficulty === 'medium'
                   ? 'bg-yellow-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-600 hover:bg-yellow-50 hover:text-yellow-700'
               }`}
               title="Medium - 5 points"
             >
-              ⭐⭐
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'medium' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'medium' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
             </button>
             <button
+              draggable={false}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={() => onUpdateQuestion(question.id, 'difficulty', 'hard')}
-              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all ${
+              className={`px-2 py-1 rounded-lg text-sm font-medium transition-all flex items-center gap-0.5 ${
                 question.difficulty === 'hard'
                   ? 'bg-red-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700'
               }`}
               title="Hard - 10 points"
             >
-              ⭐⭐⭐
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'hard' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'hard' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
+              <Star className={`w-3.5 h-3.5 ${question.difficulty === 'hard' ? 'fill-white' : 'fill-yellow-500 text-yellow-500'}`} style={{ pointerEvents: 'none' }} />
             </button>
           </div>
 
           <button
+            draggable={false}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={() => onDuplicateQuestion && onDuplicateQuestion(question.id)}
             className="p-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all"
             title="Duplicate question"
           >
-            <Copy className="w-4 h-4" />
+            <Copy className="w-4 h-4" style={{ pointerEvents: 'none' }} />
           </button>
           <button
+            draggable={false}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={() => onDeleteQuestion(question.id)}
             className="p-2 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all"
             title="Delete question"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-4 h-4" style={{ pointerEvents: 'none' }} />
           </button>
         </div>
       </div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { X, Sparkles, Trophy, Handshake, Medal, FileText, Award } from 'lucide-react';
 import AnswerReviewModal from './AnswerReviewModal';
-import { 
-  listenToPlayers, 
+import {
+  listenToPlayers,
   syncBattleResultsToMySQL,
   incrementViewers,
   decrementViewersAndCleanup
@@ -162,8 +162,20 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
             
             {/* Header */}
             <div className="text-center mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                {isTie ? '✨ It\'s a Tie! 🤝' : '✨ Battle Complete! 🏆'}
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center justify-center gap-2">
+                {isTie ? (
+                  <>
+                    <Sparkles className="w-5 h-5 text-yellow-500" />
+                    <span>It's a Tie!</span>
+                    <Handshake className="w-5 h-5 text-yellow-500" />
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 text-yellow-500" />
+                    <span>Battle Complete!</span>
+                    <Trophy className="w-5 h-5 text-yellow-500" />
+                  </>
+                )}
               </h2>
             </div>
 
@@ -221,34 +233,40 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
 
             {/* Ranking List */}
             <div className="bg-gray-50 rounded-xl p-3 mb-4 border border-gray-200">
-              <h3 className="text-xs font-bold text-gray-700 mb-2.5 text-center">
-                📊 Final Rankings
+              <h3 className="text-xs font-bold text-gray-700 mb-2.5 text-center flex items-center justify-center gap-1.5">
+                <Trophy className="w-4 h-4" />
+                Final Rankings
               </h3>
               
               <div className="space-y-1.5 max-h-[250px] overflow-y-auto scrollbar-thin">
                 {sortedPlayers.map((player, index) => {
                   const rank = index + 1;
                   const isWinner = winners.some(w => w.userId === player.userId);
-                  const rankEmoji = rank === 1 && !isTie ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
-                  
+                  const getRankIcon = () => {
+                    if (rank === 1 && !isTie) return <Award className="w-4 h-4 text-yellow-500 fill-yellow-500" />;
+                    if (rank === 2) return <Medal className="w-4 h-4 text-gray-400 fill-gray-400" />;
+                    if (rank === 3) return <Medal className="w-4 h-4 text-amber-600 fill-amber-600" />;
+                    return null;
+                  };
+
                   return (
-                    <div 
-                      key={player.id} 
+                    <div
+                      key={player.id}
                       className={`bg-white rounded-lg p-2 border-2 flex items-center justify-between ${
-                        isWinner && isTie 
-                          ? 'border-yellow-300' 
+                        isWinner && isTie
+                          ? 'border-yellow-300'
                           : isWinner
                           ? 'border-green-300'
                           : 'border-gray-200'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div className="text-[10px] font-bold text-gray-600 min-w-[35px] flex-shrink-0">
+                        <div className="text-[10px] font-bold text-gray-600 min-w-[35px] flex-shrink-0 flex items-center gap-1">
                           {rank === 1 && isTie ? '1st (T)' : rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`}
                         </div>
-                        
-                        {rankEmoji && <span className="text-base flex-shrink-0">{rankEmoji}</span>}
-                        {isTie && isWinner && <span className="text-base flex-shrink-0">👑</span>}
+
+                        {getRankIcon() && <span className="flex-shrink-0">{getRankIcon()}</span>}
+                        {isTie && isWinner && <Trophy className="w-4 h-4 text-yellow-500 flex-shrink-0" />}
                         
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0 ${
                           isWinner ? 'bg-yellow-600' : 'bg-gray-600'
@@ -274,7 +292,7 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
             {/* Rewards */}
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-2.5 mb-4 border border-green-200 text-center">
               <div className="flex items-center justify-center gap-1.5 text-green-700">
-                <span className="text-lg">🎁</span>
+                <Award className="w-5 h-5 text-yellow-600" />
                 <span className="text-sm font-bold">
                   {isTie ? 'Winners earned' : 'Winner earned'}: +{pointsEarned} Points
                 </span>
@@ -289,7 +307,7 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
                   onClick={() => setShowAnswerReview(true)}
                   className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-sm"
                 >
-                  <span>📝</span>
+                  <FileText className="w-4 h-4" />
                   Review Answers
                 </button>
               )}

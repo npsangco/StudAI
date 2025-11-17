@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Clock, Target, Trophy, Zap } from 'lucide-react';
+import { ArrowLeft, Clock, Target, Trophy, Zap, Star } from 'lucide-react';
 import { getPointsForDifficulty } from './utils/adaptiveDifficultyManager';
 import './QuizGameHeader.css';
 
@@ -144,17 +144,15 @@ const DifficultySlotCard = ({ difficulty, points, currentQuestion }) => {
         {/* Animated Stars */}
         <div className="flex items-center gap-0.5">
           {Array.from({ length: starCount }).map((_, idx) => (
-            <span
+            <Star
               key={`${animationKey}-${idx}`}
-              className={`text-lg sm:text-xl transition-all duration-300 transform inline-block ${
+              className={`w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 fill-yellow-500 transition-all duration-300 transform ${
                 revealStep > idx ? 'scale-100 opacity-100 star-pop' : 'scale-0 opacity-0'
               }`}
               style={{
                 transitionDelay: `${idx * 150}ms`
               }}
-            >
-              ⭐
-            </span>
+            />
           ))}
         </div>
         
@@ -245,7 +243,7 @@ export const QuizGameHeader = ({
                   <div className="flex flex-col items-center gap-0.5">
                     <div className="flex items-center gap-0.5">
                       {Array.from({ length: difficulty === 'easy' ? 1 : difficulty === 'medium' ? 2 : 3 }).map((_, idx) => (
-                        <span key={idx} className="text-base">⭐</span>
+                        <Star key={idx} className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
                       ))}
                     </div>
                     <div className="text-xs font-bold text-gray-900">+{points}</div>
@@ -312,7 +310,10 @@ export const QuizGameHeader = ({
                     {adaptiveMode && (
                       <>
                         <span>•</span>
-                        <span className="text-purple-700 font-semibold">🎯 Adaptive Mode</span>
+                        <span className="text-purple-700 font-semibold flex items-center gap-1">
+                          <Target className="w-3.5 h-3.5" />
+                          Adaptive Mode
+                        </span>
                       </>
                     )}
                   </p>

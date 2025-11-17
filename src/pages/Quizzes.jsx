@@ -336,6 +336,32 @@ function QuizzesPage() {
     return () => document.body.classList.remove('quiz-page-active');
   }, [quizDataHook.uiState.currentView]);
 
+  // Fix sticky header for editor view by removing overflow-x:hidden from html, body, and root
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById('root');
+
+    if (quizDataHook.uiState.currentView === VIEWS.EDITING) {
+      // Store original values
+      const originalHtmlOverflow = html.style.overflowX;
+      const originalBodyOverflow = body.style.overflowX;
+      const originalRootOverflow = root.style.overflowX;
+
+      // Set to visible for sticky to work
+      html.style.overflowX = 'visible';
+      body.style.overflowX = 'visible';
+      root.style.overflowX = 'visible';
+
+      return () => {
+        // Restore original values
+        html.style.overflowX = originalHtmlOverflow || 'hidden';
+        body.style.overflowX = originalBodyOverflow || 'hidden';
+        root.style.overflowX = originalRootOverflow || 'hidden';
+      };
+    }
+  }, [quizDataHook.uiState.currentView]);
+
   // Hide navbar for game views
   useEffect(() => {
     const gameViews = [VIEWS.LOADING, VIEWS.LOADING_BATTLE, VIEWS.LOBBY, VIEWS.SOLO, VIEWS.BATTLE];

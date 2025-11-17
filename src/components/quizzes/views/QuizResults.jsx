@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Trophy, RotateCcw, X } from 'lucide-react';
-import { 
-  calculateDifficultyBreakdown, 
+import { Trophy, RotateCcw, X, Sparkles, Star } from 'lucide-react';
+import {
+  calculateDifficultyBreakdown,
   getDifficultyDisplay,
   getMaxScore
 } from '../utils/adaptiveDifficultyManager';
@@ -47,8 +47,10 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
             
             {/* Header */}
             <div className="text-center mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                ✨ Quiz Completed! ✨
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center justify-center gap-2">
+                <Sparkles className="w-5 h-5 text-yellow-500" />
+                Quiz Completed!
+                <Sparkles className="w-5 h-5 text-yellow-500" />
               </h2>
             </div>
 
@@ -90,12 +92,17 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
                   {['easy', 'medium', 'hard'].map(diff => {
                     const data = difficultyBreakdown[diff];
                     const display = getDifficultyDisplay(diff);
+                    const starCount = diff === 'easy' ? 1 : diff === 'medium' ? 2 : 3;
                     if (data.total === 0) return null;
-                    
+
                     return (
                       <div key={diff} className="bg-white rounded-lg p-2 border-2 border-gray-200 hover:border-yellow-300 transition-colors">
                         <div className="text-center space-y-0.5">
-                          <div className="text-base">{display.stars}</div>
+                          <div className="flex items-center justify-center gap-0.5">
+                            {Array.from({ length: starCount }).map((_, idx) => (
+                              <Star key={idx} className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                            ))}
+                          </div>
                           <div className="text-[10px] font-bold text-gray-600 uppercase">{display.label}</div>
                           <div className="text-lg font-bold text-gray-900">
                             {data.correct}/{data.total}
@@ -114,12 +121,17 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
                   {['easy', 'medium', 'hard'].map(diff => {
                     const data = difficultyBreakdown[diff];
                     const display = getDifficultyDisplay(diff);
+                    const starCount = diff === 'easy' ? 1 : diff === 'medium' ? 2 : 3;
                     if (data.total === 0) return null;
-                    
+
                     return (
                       <div key={diff} className="bg-white rounded-lg p-2 border-2 border-gray-200 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="text-base">{display.stars}</div>
+                          <div className="flex items-center gap-0.5">
+                            {Array.from({ length: starCount }).map((_, idx) => (
+                              <Star key={idx} className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                            ))}
+                          </div>
                           <div>
                             <div className="text-[10px] font-bold text-gray-600 uppercase">{display.label}</div>
                             <div className="text-sm font-bold text-gray-900">
@@ -146,7 +158,7 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
                 </div>
                 <div className="w-px h-4 bg-yellow-300"></div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-base">⭐</span>
+                  <Star className="w-4 h-4 text-blue-600 fill-blue-600" />
                   <span className="font-bold text-blue-700">+{expEarned} EXP</span>
                 </div>
               </div>

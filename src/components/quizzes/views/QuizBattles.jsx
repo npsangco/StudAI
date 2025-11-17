@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { quizApi } from '../../../api/api';
 import { API_URL } from '../../../config/api.config';
 import { addPlayerToBattle } from '../../../firebase/battleOperations';
+import { Crown, Lightbulb } from 'lucide-react';
 
 export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -115,20 +116,27 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
             <button
               onClick={handleJoinBattle}
               disabled={gamePin.length !== 6 || loading}
-              className={`w-full mt-4 py-3 rounded-xl font-semibold text-base text-white transition-all ${
+              className={`w-full mt-4 py-3 rounded-xl font-semibold text-base text-white transition-all flex items-center justify-center gap-2 ${
                 gamePin.length === 6 && !loading
                   ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95'
                   : 'bg-gray-300 cursor-not-allowed'
               }`}
             >
-              {loading ? 'Joining...' : '👑 Join Battle'}
+              {loading ? (
+                'Joining...'
+              ) : (
+                <>
+                  <Crown className="w-5 h-5" />
+                  Join Battle
+                </>
+              )}
             </button>
           </div>
 
           {/* How to Join Section */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <span className="text-lg">💡</span>
+              <Lightbulb className="w-5 h-5 text-yellow-600" />
               How to Join
             </h3>
             <ol className="text-sm text-gray-700 space-y-2 list-none">
