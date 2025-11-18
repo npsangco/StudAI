@@ -1298,14 +1298,19 @@ var upload = multer({
 
 // Multer error handler
 app.use((err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
+    const isUploadRoute = req.originalUrl?.startsWith('/api/upload');
+
+    if (err instanceof multer.MulterError && isUploadRoute) {
         console.error('❌ [Server] Multer error:', err);
         return res.status(400).json({ error: `Upload error: ${err.message}` });
-    } else if (err) {
+    }
+
+    if (err && isUploadRoute) {
         console.error('❌ [Server] Unknown upload error:', err);
         return res.status(500).json({ error: 'File upload failed' });
     }
-    next();
+
+    return next(err);
 });
 
 app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
