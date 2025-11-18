@@ -559,7 +559,7 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
 app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
     try {
         console.log('🤖 [Server] AI Chat request received');
-        const { messages, noteId, userMessage } = req.body;
+        const { messages, noteId, fileId, userMessage } = req.body;
 
         if (!req.session || !req.session.userId) {
             return res.status(401).json({ error: "Not logged in" });
@@ -570,14 +570,43 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             return res.status(400).json({ error: "Messages array is required" });
         }
 
-        if (!noteId) {
-            console.error('❌ [Server] noteId missing in chat request');
-            return res.status(400).json({ error: "noteId is required" });
+        let normalizedNoteId = null;
+
+        if (noteId !== undefined && noteId !== null) {
+            normalizedNoteId = parseInt(noteId, 10);
+            if (Number.isNaN(normalizedNoteId)) {
+                return res.status(400).json({ error: "noteId must be numeric" });
+            }
         }
 
-        const normalizedNoteId = parseInt(noteId, 10);
-        if (Number.isNaN(normalizedNoteId)) {
-            return res.status(400).json({ error: "noteId must be numeric" });
+        if (normalizedNoteId === null && fileId !== undefined && fileId !== null) {
+            const parsedFileId = parseInt(fileId, 10);
+            if (Number.isNaN(parsedFileId)) {
+                return res.status(400).json({ error: "fileId must be numeric" });
+            }
+
+            if (!Note) {
+                console.error('❌ [Server] Note model unavailable while resolving fileId');
+                return res.status(500).json({ error: "Note model unavailable" });
+            }
+
+            const relatedNote = await Note.findOne({
+                where: {
+                    file_id: parsedFileId,
+                    user_id: req.session.userId
+                }
+            });
+
+            if (!relatedNote) {
+                return res.status(404).json({ error: "No note found for provided fileId" });
+            }
+
+            normalizedNoteId = relatedNote.note_id;
+        }
+
+        if (normalizedNoteId === null) {
+            console.error('❌ [Server] noteId missing in chat request');
+            return res.status(400).json({ error: "noteId is required" });
         }
 
         const latestUserMessage = typeof userMessage === 'string' && userMessage.trim().length > 0

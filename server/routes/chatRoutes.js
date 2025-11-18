@@ -1,5 +1,6 @@
 import express from 'express';
 import ChatMessage from '../models/ChatMessage.js';
+import Note from '../models/Note.js';
 
 const router = express.Router();
 
@@ -12,20 +13,45 @@ const requireAuth = (req, res, next) => {
 
 router.get('/history', requireAuth, async (req, res) => {
   try {
-    const { noteId } = req.query;
+    const { noteId, fileId } = req.query;
 
-    if (!noteId) {
-      return res.status(400).json({ error: 'noteId is required' });
+    let resolvedNoteId = null;
+
+    if (noteId) {
+      const parsed = parseInt(noteId, 10);
+      if (Number.isNaN(parsed)) {
+        return res.status(400).json({ error: 'noteId must be numeric' });
+      }
+      resolvedNoteId = parsed;
     }
 
-    const parsedNoteId = parseInt(noteId, 10);
-    if (Number.isNaN(parsedNoteId)) {
-      return res.status(400).json({ error: 'noteId must be numeric' });
+    if (!resolvedNoteId && fileId) {
+      const parsedFileId = parseInt(fileId, 10);
+      if (Number.isNaN(parsedFileId)) {
+        return res.status(400).json({ error: 'fileId must be numeric' });
+      }
+
+      const relatedNote = await Note.findOne({
+        where: {
+          file_id: parsedFileId,
+          user_id: req.session.userId
+        }
+      });
+
+      if (!relatedNote) {
+        return res.status(404).json({ error: 'No note found for provided fileId' });
+      }
+
+      resolvedNoteId = relatedNote.note_id;
+    }
+
+    if (!resolvedNoteId) {
+      return res.status(400).json({ error: 'noteId is required' });
     }
 
     const whereClause = {
       user_id: req.session.userId,
-      note_id: parsedNoteId
+      note_id: resolvedNoteId
     };
 
     const history = await ChatMessage.findAll({
