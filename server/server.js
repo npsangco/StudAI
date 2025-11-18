@@ -407,7 +407,12 @@ console.log('   GOOGLE_ID:', process.env.GOOGLE_ID ? '✓ Set' : '✗ Missing');
 console.log('   GOOGLE_SECRET:', process.env.GOOGLE_SECRET ? '✓ Set' : '✗ Missing');
 console.log('   GOOGLE_CALLBACK_URL:', process.env.GOOGLE_CALLBACK_URL || 'Not set');
 
-passport.use(new GoogleStrategy({
+if (!process.env.GOOGLE_ID || !process.env.GOOGLE_SECRET) {
+    console.warn('⚠️  Google OAuth not configured - OAuth login will not be available');
+}
+
+if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
+    passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_ID,
     clientSecret: process.env.GOOGLE_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL,
@@ -419,24 +424,23 @@ passport.use(new GoogleStrategy({
         let user = await User.findOne({ where: { email } });
 
         if (!user) {
-            const dummyPass = Math.random().toString(36).slice(-8);
+            // Generate secure random password for OAuth users
+            const crypto = await import('crypto');
+            const securePassword = crypto.randomBytes(32).toString('hex');
 
             user = await User.create({
                 email,
-                username: profile.displayName || email,
-                password: await bcrypt.hash(dummyPass, 10),
+                username: profile.displayName || email.split('@')[0],
+                password: await bcrypt.hash(securePassword, 12),
                 role: "Student",
-                status: "active",
-                profile_picture: profile.photos && profile.photos.length > 0
-                    ? profile.photos[0].value
-                    : "/uploads/profile_pictures/default-avatar.png"
+                status: "active", // OAuth users are pre-verified by Google
+                profile_picture: "/uploads/profile_pictures/default-avatar.png" // Use local default
             });
+            
+            console.log(`✅ New user created via Google OAuth: ${email}`);
         } else {
-            if ((!user.profile_picture || user.profile_picture.includes("default-avatar")) &&
-                profile.photos && profile.photos.length > 0) {
-                user.profile_picture = profile.photos[0].value;
-                await user.save();
-            }
+            // User exists, just update last login
+            console.log(`✅ Existing user logged in via Google OAuth: ${email}`);
         }
 
         return done(null, user);
@@ -444,6 +448,9 @@ passport.use(new GoogleStrategy({
         return done(err, null);
     }
 }));
+
+    }));
+}
 
 passport.serializeUser((user, done) => {
     done(null, user.user_id);
@@ -611,11 +618,16 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
 });
 
 // ----------------- AUTH ROUTES -----------------
-app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+app.get("/auth/google", (req, res, next) => {
+    if (!process.env.GOOGLE_ID || !process.env.GOOGLE_SECRET) {
+        return res.status(503).json({ error: "Google OAuth is not configured" });
+    }
+    passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+});
 
 app.get(
     "/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: `http://localhost:5173/` }),
+    passport.authenticate("google", { failureRedirect: `${CLIENT_URL}/?error=google_auth_failed` }),
     async (req, res) => {
         try {
             const user = req.user;
@@ -631,10 +643,6 @@ app.get(
                 console.log(`🚫 Inactive user attempted Google login: ${user.email}`);
                 return res.redirect(`${CLIENT_URL}/?error=account_inactive`);
             }
-            
-            console.log("📍 Google callback hit");
-            console.log("📍 User from passport:", req.user);
-            console.log("📍 CLIENT_URL:", CLIENT_URL);
             
             if (!req.user) {
                 console.error("❌ No user object from passport");
