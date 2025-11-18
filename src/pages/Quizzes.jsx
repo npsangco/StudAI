@@ -144,7 +144,7 @@ function QuizzesPage() {
   const { toasts, toast, removeToast } = useToast();
   const [currentUser, setCurrentUser] = useState(null);
   const quizDataHook = useQuizData();
-  const quizAPI = useQuizAPI(quizDataHook);
+  const quizAPI = useQuizAPI(quizDataHook, toast);
   const countdown = useCountdown(COUNTDOWN_SECONDS, () => {
     const targetView = quizDataHook.uiState.currentView === VIEWS.LOADING 
       ? VIEWS.SOLO 
@@ -568,6 +568,7 @@ function QuizzesPage() {
   if (quizDataHook.uiState.currentView === VIEWS.EDITING && quizDataHook.quizData.editing) {
     return (
       <>
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
         <style>{styles}</style>
         <QuizEditor
           quiz={quizDataHook.quizData.editing}
@@ -589,6 +590,7 @@ function QuizzesPage() {
           onUpdateMatchingPair={handlers.handleUpdateMatchingPair}
           onRemoveMatchingPair={handlers.handleRemoveMatchingPair}
           onShowValidationErrors={() => quizDataHook.setShowValidationModal(true)}
+          toast={toast}
         />
       </>
     );
@@ -600,7 +602,7 @@ function QuizzesPage() {
 
   return (
     <>
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
       <style>{styles}</style>
 
       {showTutorial && (
@@ -627,6 +629,7 @@ function QuizzesPage() {
         setGamePin={(pin) => quizDataHook.updateGameState({ gamePin: pin })}
         onJoinSuccess={handlers.handleJoinSuccess}
         onQuizImported={() => quizAPI.loadQuizzesFromAPI()}
+        toast={toast}
       />
 
       {/* Modals */}

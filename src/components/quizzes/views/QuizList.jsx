@@ -18,8 +18,46 @@ const getQuizAccentColor = (quizId) => {
   return colors[index];
 };
 
+// Utility: Format relative time or date
+const formatQuizDate = (dateString) => {
+  if (!dateString) return '';
+
+  // Parse the date - if it's coming from MySQL it might be in local time
+  // We need to treat it as UTC to get the correct time
+  let date;
+  if (dateString.includes('T') || dateString.includes('Z')) {
+    // ISO format with timezone info
+    date = new Date(dateString);
+  } else {
+    // MySQL datetime format without timezone (e.g., "2025-01-18 14:30:00")
+    // Treat it as UTC by appending 'Z'
+    date = new Date(dateString + 'Z');
+  }
+
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+
+  // Less than 1 minute
+  if (diffMins < 1) return 'just now';
+
+  // Less than 1 hour
+  if (diffMins < 60) return `${diffMins} min${diffMins === 1 ? '' : 's'} ago`;
+
+  // Less than 24 hours
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+
+  // 1 day or more - show date in MM/DD/YY format
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+
+  return `${month}/${day}/${year}`;
+};
+
 // Share Code Input Component
-const ShareCodeInput = ({ onImportQuiz, asTopCard = false }) => {
+const ShareCodeInput = ({ onImportQuiz, asTopCard = false, toast }) => {
   const [shareCode, setShareCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -46,7 +84,7 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false }) => {
       if (response.ok) {
         setShareCode('');
         if (onImportQuiz) onImportQuiz();
-        alert(`Quiz "${data.quiz.title}" imported successfully!`);
+        toast.success(`Quiz "${data.quiz.title}" imported successfully!`);
       } else {
         setError(data.error || 'Failed to import quiz');
       }
@@ -152,12 +190,12 @@ const ModeBadge = ({ questionCount }) => {
       {isAdaptive ? (
         <>
           <Target className="w-3 h-3" />
-          <span className="hidden sm:inline">Adaptive</span>
+          <span>Adaptive</span>
         </>
       ) : (
         <>
           <Circle className="w-3 h-3" />
-          <span className="hidden sm:inline">Classic</span>
+          <span>Classic</span>
         </>
       )}
     </span>
@@ -165,7 +203,7 @@ const ModeBadge = ({ questionCount }) => {
 };
 
 // Quiz Item Component with Drag & Drop - REDESIGNED
-const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete }) => {
+const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete, toast }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showShareCode, setShowShareCode] = useState(false);
@@ -236,7 +274,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 ${
+        className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible transition-all duration-200 ${
           isEmpty ? 'opacity-60' : ''
         } ${
           isBeingDragged
@@ -288,7 +326,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
             </span>
             <span className="text-gray-400">•</span>
             <span className="text-xs" title={quiz.created_at || quiz.created}>
-              {quiz.created_at || quiz.created}
+              {formatQuizDate(quiz.created_at || quiz.created)}
             </span>
             <span className="text-gray-400">•</span>
             <ModeBadge questionCount={quiz.questionCount || 0} />
@@ -341,7 +379,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
               {showMoreMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)}></div>
-                  <div className="absolute right-0 bottom-full mb-2 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] z-20">
+                  <div className="absolute right-0 top-auto bottom-full mb-2 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] z-[100]">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -389,7 +427,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
                           <Share2 className="w-8 h-8 text-white" />
                         </div>
                         <h3 className="text-xl font-bold text-gray-900 mb-1">Share This Quiz</h3>
-                        <p className="text-sm text-gray-600">Give this code to others so they can import your quiz</p>
+                        <p className="text-sm text-gray-600">Share this code with friends to import</p>
                       </div>
 
                       <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-4 mb-4 border-2 border-yellow-300">
@@ -397,9 +435,13 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
                           <div className="text-xs font-semibold text-gray-600 uppercase mb-2">Import Code</div>
                           <div className="text-4xl font-mono font-bold text-gray-900 tracking-wider mb-3">{shareCode}</div>
                           <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(shareCode);
-                              alert('Share code copied to clipboard!');
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(shareCode);
+                                toast.success('Share code copied to clipboard!');
+                              } catch (error) {
+                                toast.error('Failed to copy share code');
+                              }
                             }}
                             className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all text-sm"
                           >
@@ -437,7 +479,8 @@ export const QuizList = ({
   onQuizSelect,
   onDeleteQuiz,
   onCreateQuiz,
-  onImportQuiz
+  onImportQuiz,
+  toast
 }) => {
   const [shareCode, setShareCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -465,7 +508,7 @@ export const QuizList = ({
       if (response.ok) {
         setShareCode('');
         if (onImportQuiz) onImportQuiz();
-        alert(`Quiz "${data.quiz.title}" imported successfully!`);
+        toast.success(`Quiz "${data.quiz.title}" imported successfully!`);
       } else {
         setError(data.error || 'Failed to import quiz');
       }
@@ -485,7 +528,7 @@ export const QuizList = ({
 
   // Single container for both empty and list states
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col max-h-[calc(100vh-7rem)]" data-tutorial="quiz-list">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]" data-tutorial="quiz-list">
       {quizzes.length === 0 ? (
         /* ============================================ */
         /* EMPTY STATE - No Header, Import at Top */
@@ -620,7 +663,7 @@ export const QuizList = ({
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <div className="space-y-4">
               {/* Import Card - Top Position */}
-              <ShareCodeInput onImportQuiz={onImportQuiz} asTopCard={true} />
+              <ShareCodeInput onImportQuiz={onImportQuiz} asTopCard={true} toast={toast} />
 
               {/* Quiz Cards */}
               <div className="space-y-4">
@@ -636,6 +679,7 @@ export const QuizList = ({
                     onEdit={onEditQuiz}
                     onSelect={onQuizSelect}
                     onDelete={onDeleteQuiz}
+                    toast={toast}
                   />
                 ))}
               </div>
@@ -645,7 +689,7 @@ export const QuizList = ({
       )}
 
       {/* Bottom Section - Create Button (always visible) */}
-      <div className="flex-shrink-0 p-6 pt-4 border-t border-gray-100 bg-white">
+      <div className="flex-shrink-0 p-6 pt-4 border-t border-gray-100 bg-white rounded-b-xl">
         <button
           onClick={onCreateQuiz}
           data-tutorial="create-quiz"

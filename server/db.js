@@ -13,6 +13,12 @@ const sequelizeConfig = {
   password: process.env.DB_PASS,
   dialect: 'mysql',
   logging: false, // Set to console.log to see SQL queries
+  timezone: '+08:00', // Your local timezone (Philippines UTC+8)
+  dialectOptions: {
+    dateStrings: true,
+    typeCast: true,
+    timezone: '+08:00' // Also set in dialectOptions
+  },
   pool: {
     max: 5,
     min: 0,
@@ -25,20 +31,24 @@ const sequelizeConfig = {
 if (useSocketPath) {
   sequelizeConfig.host = `/cloudsql/${process.env.DB_SOCKET_PATH}`;
   sequelizeConfig.dialectOptions = {
-    socketPath: `/cloudsql/${process.env.DB_SOCKET_PATH}`
+    ...sequelizeConfig.dialectOptions,
+    socketPath: `/cloudsql/${process.env.DB_SOCKET_PATH}`,
+    timezone: '+08:00' // Keep timezone
   };
 } else {
   // Use TCP connection for local development (with Cloud SQL Proxy or public IP)
   sequelizeConfig.host = process.env.DB_HOST;
   sequelizeConfig.port = process.env.DB_PORT || 3306;
-  
+
   // Enable SSL for production TCP connections
   if (isProduction) {
     sequelizeConfig.dialectOptions = {
+      ...sequelizeConfig.dialectOptions,
       ssl: {
         require: true,
         rejectUnauthorized: false
-      }
+      },
+      timezone: '+08:00' // Keep timezone
     };
   }
 }

@@ -5,7 +5,7 @@ import { validateAllQuestions } from '../utils/validation';
  * Custom hook for all quiz-related API calls
  * Handles all backend communication and data transformation
  */
-export function useQuizAPI(quizDataHook) {
+export function useQuizAPI(quizDataHook, toast) {
   const {
     setLoading,
     setError,
@@ -38,9 +38,11 @@ export function useQuizAPI(quizDataHook) {
         title: quiz.title,
         description: quiz.description,
         questionCount: quiz.total_questions || 0,
-        created: new Date(quiz.created_at).toLocaleDateString(),
+        created: quiz.created_at, // Keep raw timestamp for relative time formatting
+        created_at: quiz.created_at, // Also keep as created_at for consistency
         isPublic: quiz.is_public,
         share_code: quiz.share_code,
+        shared_by_username: quiz.shared_by_username, // For imported quizzes
         timer_per_question: quiz.timer_per_question ?? 30,
         creator: quiz.creator?.username || 'Unknown'
       }));
@@ -219,19 +221,22 @@ export function useQuizAPI(quizDataHook) {
   const deleteQuiz = async () => {
     try {
       setLoading(true);
-      
+
+      const quizTitle = deleteState.quizToDelete.title;
       await quizApi.delete(deleteState.quizToDelete.id);
-      
+
       // Reload quizzes
       await loadQuizzesFromAPI();
-      
+
       updateDeleteState({ quizToDelete: null });
       updateUiState({ showDeleteModal: false });
-      
+
+      toast.success(`Quiz "${quizTitle}" deleted successfully`);
       return true;
     } catch (err) {
       console.error('Failed to delete quiz:', err);
       setError(err.response?.data?.error || 'Failed to delete quiz');
+      toast.error('Failed to delete quiz');
       return false;
     } finally {
       setLoading(false);

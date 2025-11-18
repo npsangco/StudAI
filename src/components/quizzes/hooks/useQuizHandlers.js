@@ -285,12 +285,12 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
 
   const handleSaveQuiz = async () => {
     const success = await quizAPI.saveQuiz();
-    
+
     if (success) {
-      alert('Quiz saved successfully!');
+      toast.success('Quiz saved successfully!');
       handleBackToList();
     } else {
-      alert('Failed to save quiz. Please try again.');
+      toast.error('Failed to save quiz. Please try again.');
     }
   };
 
@@ -300,7 +300,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
 
   const handleAddQuestion = () => {
     if (questions.length >= 30) {
-      alert('Maximum 30 questions per quiz!');
+      toast.warning('Maximum 30 questions per quiz!');
       return;
     }
 

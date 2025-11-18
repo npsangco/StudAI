@@ -8,7 +8,7 @@ import { API_URL } from '../../../config/api.config';
 // COMPACT SETTINGS BAR COMPONENT
 // ============================================
 
-const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange }) => {
+const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }) => {
   const initialIsPublic = quiz.isPublic ?? quiz.is_public ?? false;
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [shareCode, setShareCode] = useState(quiz.share_code || null);
@@ -33,7 +33,7 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange }) => {
 
   const handleToggle = async () => {
     if (isTempQuiz) {
-      alert('Please save the quiz first before changing visibility settings.');
+      toast.warning('Please save the quiz first before changing visibility settings.');
       return;
     }
 
@@ -58,11 +58,13 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange }) => {
         if (onPublicStatusChange) {
           onPublicStatusChange(newIsPublic, newShareCode);
         }
+
+        toast.success(newIsPublic ? 'Quiz is now public' : 'Quiz is now private');
       } else {
-        alert(data.error || 'Failed to update quiz sharing');
+        toast.error(data.error || 'Failed to update quiz visibility');
       }
     } catch (error) {
-      alert('Failed to update quiz sharing');
+      toast.error('Failed to update quiz sharing');
     } finally {
       setLoading(false);
     }
@@ -75,8 +77,9 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange }) => {
       await navigator.clipboard.writeText(shareCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      toast.success('Share code copied to clipboard!');
     } catch (error) {
-      console.error('Copy error:', error);
+      toast.error('Failed to copy share code');
     }
   };
 
@@ -712,7 +715,8 @@ export const QuizEditor = ({
   onAddMatchingPair,
   onUpdateMatchingPair,
   onRemoveMatchingPair,
-  onReorderQuestions
+  onReorderQuestions,
+  toast
 }) => {
   const [draggedQuestionIndex, setDraggedQuestionIndex] = useState(null);
   const [dragOverQuestionIndex, setDragOverQuestionIndex] = useState(null);
@@ -779,6 +783,7 @@ export const QuizEditor = ({
           quiz={quiz}
           onPublicStatusChange={onUpdatePublicStatus}
           onTimerChange={onUpdateTimer}
+          toast={toast}
         />
       </div>
 
