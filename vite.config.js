@@ -23,6 +23,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff,woff2}'],
         cleanupOutdatedCaches: true,
         sourcemap: false,
+        navigateFallbackDenylist: [/^\/auth\//, /^\/api\//],
         // Cache API responses for offline use
         runtimeCaching: [
           {
