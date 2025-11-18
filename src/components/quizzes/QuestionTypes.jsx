@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Check, Info } from 'lucide-react';
+import { Plus, X, Check, Info, Link } from 'lucide-react';
 
 // Multiple Choice Question Component
 export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateChoice, onAddChoice }) => {
@@ -489,13 +489,13 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   const totalCount = parsedPairs.length;
   const percentage = Math.round((correctCount / totalCount) * 100);
 
-  // Get gradient colors based on score
-  const getGradientColors = () => {
-    if (percentage === 100) return 'from-green-400 to-green-500';
-    if (percentage >= 80) return 'from-green-400 to-yellow-400';
-    if (percentage >= 60) return 'from-yellow-400 to-orange-400';
-    if (percentage >= 40) return 'from-orange-400 to-red-400';
-    return 'from-red-400 to-red-500';
+  // Get solid color based on score
+  const getScoreColor = () => {
+    if (percentage === 100) return 'bg-green-500';
+    if (percentage >= 80) return 'bg-green-400';
+    if (percentage >= 60) return 'bg-yellow-500';
+    if (percentage >= 40) return 'bg-orange-500';
+    return 'bg-red-500';
   };
 
   // Get encouraging message
@@ -509,9 +509,10 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
   // Get question type config
   const config = {
-    gradient: 'from-orange-500 to-red-600',
+    color: 'bg-orange-500',
     bgPattern: 'from-orange-50 to-red-50',
-    label: 'Matching'
+    label: 'Matching',
+    icon: 'link'
   };
 
   return (
@@ -520,7 +521,8 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
       <div className="relative">
         {/* Question Type Badge */}
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${config.gradient} text-white font-bold text-sm shadow-lg`}>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${config.color} text-white font-bold text-sm shadow-lg`}>
+            <Link size={16} />
             <span>{config.label}</span>
           </div>
         </div>
@@ -652,10 +654,9 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
               onClick={handleSubmit}
               disabled={!canSubmit || isPaused}
               className="
-                bg-gradient-to-r from-yellow-400 to-amber-500
-                hover:from-yellow-500 hover:to-amber-600
-                disabled:bg-white/20 disabled:from-white/20 disabled:to-white/20
-                text-black font-bold text-lg sm:text-xl px-10 sm:px-12 py-4 sm:py-5
+                bg-amber-500 hover:bg-amber-600
+                disabled:bg-white/20
+                text-white font-bold text-lg sm:text-xl px-10 sm:px-12 py-4 sm:py-5
                 rounded-2xl shadow-xl hover:shadow-2xl
                 transition-all duration-300 transform hover:scale-105
                 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:text-black/50
@@ -669,7 +670,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
       ) : (
         <div className="space-y-4">
           {/* Score Card */}
-          <div className={`relative overflow-hidden rounded-2xl shadow-2xl bg-gradient-to-r ${getGradientColors()} border-2 border-white/40`}>
+          <div className={`relative overflow-hidden rounded-2xl shadow-2xl ${getScoreColor()} border-2 border-white/40`}>
             <div className="absolute inset-0 bg-white/20 backdrop-blur-xl"></div>
             <div className="relative px-5 sm:px-6 py-5 sm:py-6">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">

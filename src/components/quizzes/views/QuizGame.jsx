@@ -1023,12 +1023,12 @@ const QuizGame = ({
     // In battle mode, questions might still be loading from Firebase
     if (mode === 'battle') {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-400 flex items-center justify-center">
+        <div className="min-h-screen bg-amber-50 flex items-center justify-center">
           <div className="text-center bg-white/20 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border-2 border-white/40">
             <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <h2 className="text-2xl font-bold text-black drop-shadow-sm mb-2">Loading questions...</h2>
             <p className="text-black/70 mb-4">Please wait while we load the quiz questions</p>
-            <button onClick={onBack} className="bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-bold px-6 py-3 rounded-xl hover:from-yellow-500 hover:to-amber-600 transition-all shadow-lg hover:shadow-xl border-2 border-white/40">
+            <button onClick={onBack} className="bg-amber-500 text-white font-bold px-6 py-3 rounded-xl hover:bg-amber-600 transition-all shadow-lg hover:shadow-xl border-2 border-white/40">
               Cancel
             </button>
           </div>
@@ -1038,10 +1038,10 @@ const QuizGame = ({
 
     // Solo mode: No questions means error
     return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-400 flex items-center justify-center">
+      <div className="min-h-screen bg-amber-50 flex items-center justify-center">
         <div className="text-center bg-white/20 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border-2 border-white/40">
           <h2 className="text-2xl font-bold text-black drop-shadow-sm mb-4">No questions available</h2>
-          <button onClick={onBack} className="bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-bold px-6 py-3 rounded-xl hover:from-yellow-500 hover:to-amber-600 transition-all shadow-lg hover:shadow-xl border-2 border-white/40">
+          <button onClick={onBack} className="bg-amber-500 text-white font-bold px-6 py-3 rounded-xl hover:bg-amber-600 transition-all shadow-lg hover:shadow-xl border-2 border-white/40">
             Go Back
           </button>
         </div>
@@ -1050,7 +1050,7 @@ const QuizGame = ({
   }
   
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-400">
+    <div className="min-h-screen relative overflow-hidden bg-amber-50">
       {/* DYNAMIC PATTERNS based on question type */}
       <QuizBackgroundPattern questionType={currentQ?.type} />
 
@@ -1140,7 +1140,7 @@ const QuizGame = ({
                   <div className="text-center mt-6">
                     <button
                       onClick={handleManualNext}
-                      className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
+                      className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
                     >
                       {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
                     </button>
@@ -1197,7 +1197,7 @@ const QuizGame = ({
                 <div className="text-center mt-6 mb-32">
                   <button
                     onClick={handleManualNext}
-                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
+                    className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
                   >
                     {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
                   </button>
@@ -1241,7 +1241,7 @@ const QuizGame = ({
                 <div className="text-center mt-6 mb-32">
                   <button
                     onClick={handleManualNext}
-                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
+                    className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
                   >
                     {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
                   </button>
@@ -1286,7 +1286,7 @@ const QuizGame = ({
             <div className="text-center mt-6">
               <button
                 onClick={handleManualNext}
-                className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-amber-900 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
+                className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
               >
                 {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
               </button>

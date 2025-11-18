@@ -1,5 +1,6 @@
 import React from 'react';
 import { MatchingQuizPlayer } from './QuestionTypes';
+import { List, CheckCircle, Edit3, Link } from 'lucide-react';
 
 export const QuizQuestion = ({
   question,
@@ -29,25 +30,29 @@ export const QuizQuestion = ({
   // Get question type config
   const getQuestionTypeConfig = (type) => {
     const configs = {
-      'Multiple Choice': { 
-        gradient: 'from-blue-500 to-indigo-600',
+      'Multiple Choice': {
+        color: 'bg-blue-500',
         bgPattern: 'from-blue-50 to-indigo-50',
-        label: 'Multiple Choice'
+        label: 'Multiple Choice',
+        icon: 'list'
       },
-      'True/False': { 
-        gradient: 'from-purple-500 to-pink-600',
+      'True/False': {
+        color: 'bg-purple-500',
         bgPattern: 'from-purple-50 to-pink-50',
-        label: 'True or False'
+        label: 'True or False',
+        icon: 'check-circle'
       },
-      'Fill in the blanks': { 
-        gradient: 'from-teal-500 to-cyan-600',
+      'Fill in the blanks': {
+        color: 'bg-teal-500',
         bgPattern: 'from-teal-50 to-cyan-50',
-        label: 'Fill in the Blanks'
+        label: 'Fill in the Blanks',
+        icon: 'edit-3'
       },
-      'Matching': { 
-        gradient: 'from-orange-500 to-red-600',
+      'Matching': {
+        color: 'bg-orange-500',
         bgPattern: 'from-orange-50 to-red-50',
-        label: 'Matching'
+        label: 'Matching',
+        icon: 'link'
       }
     };
     return configs[type] || configs['Multiple Choice'];
@@ -73,7 +78,11 @@ export const QuizQuestion = ({
       <div className="relative z-20">
         {/* Question Type Badge */}
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${config.gradient} text-white font-bold text-sm shadow-lg`}>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${config.color} text-white font-bold text-sm shadow-lg`}>
+            {config.icon === 'list' && <List size={16} />}
+            {config.icon === 'check-circle' && <CheckCircle size={16} />}
+            {config.icon === 'edit-3' && <Edit3 size={16} />}
+            {config.icon === 'link' && <Link size={16} />}
             <span>{config.label}</span>
           </div>
         </div>
@@ -108,13 +117,13 @@ export const QuizQuestion = ({
               
               if (selectedAnswer) {
                 if (isCorrect) {
-                  bgClass = 'bg-gradient-to-br from-green-400 to-emerald-500';
-                  borderClass = 'border-green-300';
+                  bgClass = 'bg-green-500';
+                  borderClass = 'border-green-400';
                   textClass = 'text-white';
                   shadowClass = 'shadow-2xl shadow-green-500/40';
                 } else if (isWrong) {
-                  bgClass = 'bg-gradient-to-br from-red-400 to-rose-500';
-                  borderClass = 'border-red-300';
+                  bgClass = 'bg-red-500';
+                  borderClass = 'border-red-400';
                   textClass = 'text-white';
                   shadowClass = 'shadow-2xl shadow-red-500/40';
                 } else {
@@ -172,13 +181,13 @@ export const QuizQuestion = ({
 
               if (selectedAnswer) {
                 if (isCorrect) {
-                  bgClass = 'bg-gradient-to-br from-green-400 to-emerald-500';
-                  borderClass = 'border-green-300';
+                  bgClass = 'bg-green-500';
+                  borderClass = 'border-green-400';
                   textClass = 'text-white drop-shadow-sm';
                   shadowClass = 'shadow-2xl shadow-green-500/40';
                 } else if (isWrong) {
-                  bgClass = 'bg-gradient-to-br from-red-400 to-rose-500';
-                  borderClass = 'border-red-300';
+                  bgClass = 'bg-red-500';
+                  borderClass = 'border-red-400';
                   textClass = 'text-white drop-shadow-sm';
                   shadowClass = 'shadow-2xl shadow-red-500/40';
                 } else {
@@ -283,10 +292,9 @@ export const QuizQuestion = ({
                   onClick={onFillInAnswer}
                   disabled={!userAnswer?.trim() || isPaused}
                   className="
-                    bg-gradient-to-r from-yellow-400 to-amber-500
-                    hover:from-yellow-500 hover:to-amber-600
-                    disabled:bg-white/20 disabled:from-white/20 disabled:to-white/20
-                    text-black font-bold text-lg px-10 py-4
+                    bg-amber-500 hover:bg-amber-600
+                    disabled:bg-white/20
+                    text-white font-bold text-lg px-10 py-4
                     rounded-2xl shadow-xl hover:shadow-2xl
                     transition-all duration-300 transform hover:scale-105
                     disabled:cursor-not-allowed disabled:hover:scale-100 disabled:text-black/50
