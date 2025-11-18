@@ -214,3 +214,24 @@
   background: linear-gradient(to right, #FFE500, #FFD000, #FFA700);
   box-shadow: 0 20px 25px -5px rgba(255, 219, 0, 0.4);
 }
+
+/* ================================
+   INK SPREAD ANIMATION (for bubble fill)
+   ================================ */
+@keyframes ink-spread {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-ink-spread {
+  animation: ink-spread 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
