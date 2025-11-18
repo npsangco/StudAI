@@ -383,32 +383,28 @@ sequelize.authenticate()
     });
 
 // ----------------- Session Configuration -----------------
-if (sessionStore) {
-    const isProduction = process.env.NODE_ENV === 'production';
-    
-    app.use(
-        session({
-            secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
-            resave: false,
-            saveUninitialized: false,
-            store: sessionStore,
-            name: "studai_session",
-            cookie: {
-                httpOnly: true,
-                secure: isProduction,
-                maxAge: 1000 * 60 * 60 * 24, // 24 hours
-                sameSite: 'lax',
-                path: '/dashboard'
-            },
-            rolling: true,
-            proxy: true
-        })
-    );
-    
-    console.log('✅ Session middleware configured');
-} else {
-    console.error('❌ sessionStore is not available!');
-}
+const isProduction = process.env.NODE_ENV === 'production';
+
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
+        resave: false,
+        saveUninitialized: false,
+        store: sessionStore,
+        name: "studai_session",
+        cookie: {
+            httpOnly: true,
+            secure: isProduction,
+            maxAge: 1000 * 60 * 60 * 24, // 24 hours
+            sameSite: 'lax',
+            path: '/'
+        },
+        rolling: true,
+        proxy: true
+    })
+);
+
+console.log('✅ Session middleware configured');
 
 // ----------------- PASSPORT (Google OAuth) -----------------
 app.use(passport.initialize());
