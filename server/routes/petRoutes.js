@@ -270,8 +270,15 @@ async function checkPetAchievements(userId) {
 // ============================================
 
 router.get("/", generalLimiter, requireAuth, async (req, res) => {
+  // Debug: Log session and cookies for troubleshooting
+  console.log('[Pet API] Session:', req.session);
+  console.log('[Pet API] Cookies:', req.cookies);
   const userId = req.session.userId;
 
+  if (!userId) {
+    console.log('[Pet API] 401 Unauthorized - No session.userId');
+    return res.status(401).json({ error: 'Not logged in' });
+  }
   try {
     const cacheKey = `pet:${userId}`;
     const cachedPet = cache.get(cacheKey);
