@@ -190,10 +190,14 @@ async function initializeDefaultAchievements() {
 
 // ----------- CORS -----------------
 app.use(cors({
-    origin: ['https://studai.dev'],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+    origin: [
+        'https://studai.dev',
+        'https://www.studai.dev',
+        'https://walrus-app-umg67.ondigitalocean.app'
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 // ----------------- EXPRESS MIDDLEWARE -----------------
@@ -379,6 +383,8 @@ sequelize.authenticate()
 
 // ----------------- Session Configuration -----------------
 if (sessionStore) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     app.use(
         session({
             secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
@@ -388,12 +394,13 @@ if (sessionStore) {
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: true,
+                secure: isProduction,
                 maxAge: 1000 * 60 * 60 * 24,
-                sameSite: 'none',
-                domain: '.walrus-app-umg67.ondigitalocean.app', // Use backend domain for cookie
+                sameSite: 'lax',
+                path: '/'
             },
             rolling: true,
+            proxy: true
         })
     );
 }
