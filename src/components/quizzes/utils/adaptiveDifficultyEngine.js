@@ -70,19 +70,53 @@ export const MAINTAIN_MESSAGES = {
 
 /**
  * Checks if adaptive mode should be enabled for a quiz
+ * 🔧 FIXED: Better handling of edge cases
  */
 export const canUseAdaptiveMode = (questions) => {
-  if (!questions || questions.length < ADAPTIVE_CONFIG.MIN_QUESTIONS_FOR_ADAPTIVE) {
-    return { enabled: false, reason: 'Not enough questions (minimum 5)' };
+  // Edge case: No questions
+  if (!questions || !Array.isArray(questions) || questions.length === 0) {
+    return { enabled: false, reason: 'No questions available' };
+  }
+
+  // Edge case: Not enough questions
+  if (questions.length < ADAPTIVE_CONFIG.MIN_QUESTIONS_FOR_ADAPTIVE) {
+    return { 
+      enabled: false, 
+      reason: `Not enough questions (minimum ${ADAPTIVE_CONFIG.MIN_QUESTIONS_FOR_ADAPTIVE}, found ${questions.length})` 
+    };
   }
 
   // Check if quiz has questions from at least 2 difficulty levels
-  const difficulties = new Set(questions.map(q => q.difficulty?.toLowerCase() || 'medium'));
+  const difficulties = new Set(
+    questions
+      .map(q => (q.difficulty?.toLowerCase() || 'medium').trim())
+      .filter(d => ['easy', 'medium', 'hard'].includes(d)) // Only valid difficulties
+  );
+
+  // 🔧 EDGE CASE FIX: All questions same difficulty
   if (difficulties.size < 2) {
-    return { enabled: false, reason: 'Quiz must have at least 2 different difficulty levels' };
+    const singleDifficulty = Array.from(difficulties)[0] || 'medium';
+    return { 
+      enabled: false, 
+      reason: `All questions are ${singleDifficulty} difficulty. Need at least 2 difficulty levels.`,
+      fallbackMode: 'classic',
+      singleDifficulty
+    };
   }
 
-  return { enabled: true };
+  // 🔧 EDGE CASE FIX: Check if difficulty distribution is reasonable
+  const pools = splitQuestionsByDifficulty(questions);
+  const minQuestionsPerLevel = 2;
+  const hasEnoughVariety = Object.values(pools).filter(pool => pool.length >= minQuestionsPerLevel).length >= 2;
+
+  return { 
+    enabled: true,
+    distribution: {
+      easy: pools.easy.length,
+      medium: pools.medium.length,
+      hard: pools.hard.length
+    }
+  };
 };
 
 /**
@@ -170,24 +204,86 @@ export const getQuestionsFromPool = (pools, targetDifficulty, count) => {
 
 /**
  * Calculates running accuracy from recent answers
+ * 🔧 FIXED: Better handling of edge cases and inconsistent patterns
  */
 export const calculateRunningAccuracy = (answersHistory, lookbackCount = ADAPTIVE_CONFIG.CHECK_INTERVAL) => {
-  if (!answersHistory || answersHistory.length === 0) return 0;
+  // 🔧 EDGE CASE FIX: No answers yet
+  if (!answersHistory || !Array.isArray(answersHistory) || answersHistory.length === 0) {
+    return null; // Return null instead of 0 to indicate "no data"
+  }
 
   const recentAnswers = answersHistory.slice(-lookbackCount);
-  const correctCount = recentAnswers.filter(a => a.isCorrect).length;
+  
+  // 🔧 EDGE CASE FIX: Empty slice
+  if (recentAnswers.length === 0) {
+    return null;
+  }
 
-  return (correctCount / recentAnswers.length) * 100;
+  // Filter out invalid answers (just in case)
+  const validAnswers = recentAnswers.filter(a => a && typeof a.isCorrect === 'boolean');
+  
+  if (validAnswers.length === 0) {
+    return null;
+  }
+
+  const correctCount = validAnswers.filter(a => a.isCorrect).length;
+  const accuracy = (correctCount / validAnswers.length) * 100;
+
+  // 🔧 EDGE CASE FIX: 50/50 pattern detection (random guessing)
+  // If user has alternating pattern, add confidence score
+  if (validAnswers.length >= 4) {
+    let alternations = 0;
+    for (let i = 1; i < validAnswers.length; i++) {
+      if (validAnswers[i].isCorrect !== validAnswers[i - 1].isCorrect) {
+        alternations++;
+      }
+    }
+    const alternationRate = alternations / (validAnswers.length - 1);
+    
+    // If user alternates >70%, they might be guessing randomly
+    if (alternationRate > 0.7 && accuracy >= 40 && accuracy <= 60) {
+      // Don't change difficulty if suspected random guessing
+      return { accuracy, confidence: 'low', pattern: 'alternating' };
+    }
+  }
+
+  return { accuracy, confidence: 'normal', pattern: 'consistent' };
 };
 
 /**
  * Determines if difficulty should change based on accuracy
+ * 🔧 FIXED: Handle null accuracy and low-confidence patterns
  */
-export const determineDifficultyAdjustment = (accuracy, currentDifficulty) => {
-  const { LEVEL_UP, LEVEL_DOWN } = ADAPTIVE_CONFIG.ACCURACY_THRESHOLDS;
+export const determineDifficultyAdjustment = (accuracyData, currentDifficulty) => {
+  // 🔧 EDGE CASE FIX: No accuracy data available
+  if (accuracyData === null || accuracyData === undefined) {
+    return {
+      newDifficulty: currentDifficulty,
+      action: 'MAINTAIN',
+      messageKey: null,
+      reason: 'Insufficient data'
+    };
+  }
+
+  // Handle both old format (number) and new format (object with confidence)
+  const accuracy = typeof accuracyData === 'object' ? accuracyData.accuracy : accuracyData;
+  const confidence = typeof accuracyData === 'object' ? accuracyData.confidence : 'normal';
+  const pattern = typeof accuracyData === 'object' ? accuracyData.pattern : 'consistent';
+
+  // 🔧 EDGE CASE FIX: Low confidence (random guessing) - maintain difficulty
+  if (confidence === 'low' && pattern === 'alternating') {
+    return {
+      newDifficulty: currentDifficulty,
+      action: 'MAINTAIN',
+      messageKey: null,
+      reason: 'Pattern inconsistent (possible guessing)'
+    };
+  }
+
+  const { PERFECT, STRUGGLING } = ADAPTIVE_CONFIG.ACCURACY_THRESHOLDS;
 
   // High performance - level up
-  if (accuracy >= LEVEL_UP) {
+  if (accuracy >= PERFECT) {
     if (currentDifficulty === 'easy') {
       return {
         newDifficulty: 'medium',
@@ -212,35 +308,39 @@ export const determineDifficultyAdjustment = (accuracy, currentDifficulty) => {
   }
 
   // Struggling - level down
-  if (accuracy < LEVEL_DOWN) {
+  if (accuracy <= STRUGGLING) {
     if (currentDifficulty === 'hard') {
       return {
         newDifficulty: 'medium',
         action: 'LEVEL_DOWN',
-        messageKey: 'hard_to_medium'
+        messageKey: 'hard_to_medium',
+        reason: 'Low accuracy'
       };
     }
     if (currentDifficulty === 'medium') {
       return {
         newDifficulty: 'easy',
         action: 'LEVEL_DOWN',
-        messageKey: 'medium_to_easy'
+        messageKey: 'medium_to_easy',
+        reason: 'Low accuracy'
       };
     }
     if (currentDifficulty === 'easy') {
       return {
         newDifficulty: 'easy',
         action: 'MAINTAIN',
-        messageKey: 'staying_easy'
+        messageKey: 'staying_easy',
+        reason: 'Already at easiest level'
       };
     }
   }
 
-  // Middle ground - maintain
+  // Middle ground (50%) - maintain (learning phase)
   return {
     newDifficulty: currentDifficulty,
     action: 'MAINTAIN',
-    messageKey: null
+    messageKey: null,
+    reason: 'Balanced performance'
   };
 };
 
@@ -317,32 +417,91 @@ export const performAdaptiveCheck = (adaptiveState, answersHistory, questionsAns
 
 /**
  * Builds adaptive journey summary for quiz results
+ * 🔧 FIXED: Comprehensive validation and error handling
  */
 export const buildAdaptiveJourney = (difficultyHistory, answersHistory) => {
-  const changes = difficultyHistory
-    .filter(h => h.action !== 'INITIAL')
-    .map(h => ({
-      afterQuestion: h.afterQuestion,
-      fromDifficulty: h.fromDifficulty,
-      toDifficulty: h.toDifficulty,
-      accuracy: Math.round(h.accuracy),
-      action: h.action
-    }));
+  // 🔧 EDGE CASE FIX: Validate inputs
+  if (!difficultyHistory || !Array.isArray(difficultyHistory)) {
+    return {
+      changes: [],
+      finalDifficulty: 'medium',
+      peakDifficulty: 'medium',
+      totalAdjustments: 0,
+      error: 'Invalid difficulty history',
+      corrupted: true
+    };
+  }
+
+  if (difficultyHistory.length === 0) {
+    return {
+      changes: [],
+      finalDifficulty: 'medium',
+      peakDifficulty: 'medium',
+      totalAdjustments: 0,
+      warning: 'No difficulty changes recorded'
+    };
+  }
+
+  // Filter and validate changes
+  const validChanges = difficultyHistory
+    .filter(h => h && h.action !== 'INITIAL')
+    .map(h => {
+      // Validate each field
+      const afterQuestion = typeof h.afterQuestion === 'number' ? h.afterQuestion : 0;
+      const fromDifficulty = ['easy', 'medium', 'hard'].includes(h.fromDifficulty) ? h.fromDifficulty : 'medium';
+      const toDifficulty = ['easy', 'medium', 'hard'].includes(h.toDifficulty) ? h.toDifficulty : 'medium';
+      const accuracy = typeof h.accuracy === 'number' ? Math.round(h.accuracy) : 0;
+      const action = h.action || 'MAINTAIN';
+
+      return {
+        afterQuestion,
+        fromDifficulty,
+        toDifficulty,
+        accuracy,
+        action
+      };
+    });
 
   // Determine peak and final difficulty
   const difficultyRank = { easy: 1, medium: 2, hard: 3 };
-  const allDifficulties = difficultyHistory.map(h => h.toDifficulty || h.difficulty);
+  
+  const allDifficulties = difficultyHistory
+    .map(h => h.toDifficulty || h.difficulty)
+    .filter(d => d && ['easy', 'medium', 'hard'].includes(d));
+
+  // 🔧 EDGE CASE FIX: Handle empty difficulties array
+  if (allDifficulties.length === 0) {
+    return {
+      changes: validChanges,
+      finalDifficulty: 'medium',
+      peakDifficulty: 'medium',
+      totalAdjustments: validChanges.length,
+      warning: 'Could not determine difficulty progression'
+    };
+  }
+
   const peakDifficulty = allDifficulties.reduce((peak, current) => {
-    return difficultyRank[current] > difficultyRank[peak] ? current : peak;
+    return (difficultyRank[current] || 0) > (difficultyRank[peak] || 0) ? current : peak;
   }, 'easy');
 
-  const finalDifficulty = allDifficulties[allDifficulties.length - 1];
+  const finalDifficulty = allDifficulties[allDifficulties.length - 1] || 'medium';
+
+  // Calculate additional stats
+  const totalCorrect = answersHistory?.filter(a => a?.isCorrect).length || 0;
+  const totalQuestions = answersHistory?.length || 0;
+  const overallAccuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
 
   return {
-    changes,
+    changes: validChanges,
     finalDifficulty,
     peakDifficulty,
-    totalAdjustments: changes.length
+    totalAdjustments: validChanges.length,
+    statistics: {
+      overallAccuracy,
+      totalQuestions,
+      correctAnswers: totalCorrect
+    },
+    validated: true
   };
 };
 

@@ -19,16 +19,56 @@ export const shouldPerformAdaptiveCheck = (questionsAnswered) => {
 /**
  * 🔥 OPTION 1: Initialize adaptive queue with ALL questions
  * Returns questions in optimal starting order (medium → easy → hard by default)
+ * 🔧 FIXED: Better handling of edge cases
  * @param {Array} rawQuestions - All questions from quiz
  * @returns {Object} { orderedQuestions, questionPools, startingDifficulty }
  */
 export const initializeAdaptiveQueue = (rawQuestions) => {
-  // Split into difficulty pools
+  // 🔧 EDGE CASE FIX: Validate input
+  if (!rawQuestions || !Array.isArray(rawQuestions) || rawQuestions.length === 0) {
+    return {
+      orderedQuestions: [],
+      questionPools: { easy: [], medium: [], hard: [] },
+      startingDifficulty: 'medium',
+      error: 'No questions available'
+    };
+  }
+
+  // Split into difficulty pools with validation
   const pools = {
-    easy: rawQuestions.filter(q => (q.difficulty || 'medium').toLowerCase() === 'easy'),
-    medium: rawQuestions.filter(q => (q.difficulty || 'medium').toLowerCase() === 'medium'),
-    hard: rawQuestions.filter(q => (q.difficulty || 'medium').toLowerCase() === 'hard')
+    easy: [],
+    medium: [],
+    hard: []
   };
+
+  rawQuestions.forEach(q => {
+    if (!q) {
+      return;
+    }
+
+    const difficulty = (q.difficulty || 'medium').toLowerCase().trim();
+    
+    if (pools[difficulty]) {
+      pools[difficulty].push(q);
+    } else {
+      pools.medium.push(q);
+    }
+  });
+
+  // 🔧 EDGE CASE FIX: All questions same difficulty
+  const nonEmptyPools = Object.entries(pools).filter(([_, questions]) => questions.length > 0);
+  
+  if (nonEmptyPools.length === 1) {
+    const [singleDifficulty, questions] = nonEmptyPools[0];
+    
+    return {
+      orderedQuestions: questions,
+      questionPools: pools,
+      startingDifficulty: singleDifficulty,
+      warning: `All questions are ${singleDifficulty} difficulty`,
+      limitedAdaptive: true
+    };
+  }
 
   // Determine starting difficulty based on available questions
   let startingDifficulty = 'medium';
@@ -36,7 +76,7 @@ export const initializeAdaptiveQueue = (rawQuestions) => {
     startingDifficulty = 'medium';
   } else if (pools.easy.length > 0) {
     startingDifficulty = 'easy';
-  } else {
+  } else if (pools.hard.length > 0) {
     startingDifficulty = 'hard';
   }
 
@@ -51,7 +91,12 @@ export const initializeAdaptiveQueue = (rawQuestions) => {
   return {
     orderedQuestions,
     questionPools: pools,
-    startingDifficulty
+    startingDifficulty,
+    distribution: {
+      easy: pools.easy.length,
+      medium: pools.medium.length,
+      hard: pools.hard.length
+    }
   };
 };
 
@@ -102,14 +147,51 @@ export const reorderRemainingQuestions = (remainingQuestions, targetDifficulty) 
 
 /**
  * Determines new difficulty based on accuracy
+ * 🔧 FIXED: Better handling of 50/50 patterns and edge cases
  * @param {number} accuracy - Accuracy percentage (0-100)
  * @param {string} currentDifficulty - Current difficulty level
+ * @param {Array} recentAnswers - Recent answer history for pattern detection
  * @returns {Object} { newDifficulty, action, messageKey }
  */
-export const determineDifficultyAdjustment = (accuracy, currentDifficulty) => {
+export const determineDifficultyAdjustment = (accuracy, currentDifficulty, recentAnswers = []) => {
+  // 🔧 EDGE CASE FIX: Validate inputs
+  if (typeof accuracy !== 'number' || isNaN(accuracy)) {
+    return {
+      newDifficulty: currentDifficulty,
+      action: 'MAINTAIN',
+      messageKey: null,
+      reason: 'Invalid accuracy data'
+    };
+  }
+
+  if (!['easy', 'medium', 'hard'].includes(currentDifficulty)) {
+    currentDifficulty = 'medium'; // Fallback
+  }
+
   let newDifficulty = currentDifficulty;
   let action = 'MAINTAIN';
   let messageKey = null;
+
+  // 🔧 EDGE CASE FIX: Detect alternating pattern (random guessing)
+  if (recentAnswers.length >= 4) {
+    let alternations = 0;
+    for (let i = 1; i < recentAnswers.length; i++) {
+      if (recentAnswers[i].isCorrect !== recentAnswers[i - 1].isCorrect) {
+        alternations++;
+      }
+    }
+    const alternationRate = alternations / (recentAnswers.length - 1);
+    
+    // If user alternates >70% and accuracy is around 50%, likely guessing
+    if (alternationRate > 0.7 && accuracy >= 40 && accuracy <= 60) {
+      return {
+        newDifficulty: currentDifficulty,
+        action: 'MAINTAIN',
+        messageKey: null,
+        reason: 'Inconsistent pattern detected'
+      };
+    }
+  }
 
   // 🔥 Empathetic thresholds
   if (accuracy === 100) {

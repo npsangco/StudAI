@@ -284,11 +284,17 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   };
 
   const handleSaveQuiz = async () => {
+    // Show immediate feedback
+    toast.info('Saving quiz...');
+
     const success = await quizAPI.saveQuiz();
 
     if (success) {
       toast.success('Quiz saved successfully!');
-      handleBackToList();
+      // Small delay to let user see the toast before navigating away
+      setTimeout(() => {
+        handleBackToList();
+      }, 500);
     } else {
       toast.error('Failed to save quiz. Please try again.');
     }
