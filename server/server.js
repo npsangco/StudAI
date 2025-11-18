@@ -114,6 +114,52 @@ const app = express();
 // Trust proxy - required for Digital Ocean App Platform
 app.set('trust proxy', 1);
 
+async function migrateChatHistoryTable() {
+    try {
+        const queryInterface = sequelize.getQueryInterface();
+        const tables = await queryInterface.showAllTables();
+        const normalize = (table) => {
+            if (typeof table === 'string') return table.toLowerCase();
+            if (table && typeof table.tableName === 'string') return table.tableName.toLowerCase();
+            return '';
+        };
+
+        const hasChatHistory = tables.some((table) => normalize(table) === 'chat_history');
+        const hasChatbot = tables.some((table) => normalize(table) === 'chatbot');
+
+        if (!hasChatHistory) {
+            if (!hasChatbot) {
+                await ChatMessage.sync();
+            }
+            return;
+        }
+
+        if (!hasChatbot) {
+            await ChatMessage.sync();
+        }
+
+        const [historyRows] = await sequelize.query(
+            'SELECT chat_id, user_id, note_id, message, response, timestamp FROM chat_history'
+        );
+        const [existingRows] = await sequelize.query('SELECT chat_id FROM chatbot');
+
+        const existingIds = new Set(existingRows.map((row) => row.chat_id));
+        const rowsToInsert = historyRows.filter((row) => !existingIds.has(row.chat_id));
+
+        if (rowsToInsert.length > 0) {
+            await queryInterface.bulkInsert('chatbot', rowsToInsert);
+            console.log(`✅ Migrated ${rowsToInsert.length} legacy chat records into chatbot table`);
+        } else {
+            console.log('ℹ️ No legacy chat_history rows needed migration');
+        }
+
+        await queryInterface.dropTable('chat_history');
+        console.log('🧹 Dropped legacy chat_history table');
+    } catch (err) {
+        console.error('❌ Failed to migrate chat_history to chatbot:', err);
+    }
+}
+
 // ============================================
 // ACHIEVEMENT INITIALIZATION
 // ============================================
@@ -371,7 +417,8 @@ sequelize.authenticate()
         // Initialize default achievements if they don't exist
         await initializeDefaultAchievements();
         await ChatMessage.sync();
-        console.log("✅ Chat history table synced");
+        console.log("✅ Chatbot table ensured");
+        await migrateChatHistoryTable();
         
         startEmailReminders();
         // console.log("📅 Email reminder scheduler started!"); for email testing
@@ -679,7 +726,7 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
         } catch (storeErr) {
             const missingTable = storeErr?.original?.code === 'ER_NO_SUCH_TABLE';
             if (missingTable) {
-                console.warn('⚠️ [Server] chat_history table missing. Attempting to recreate via sync...');
+                console.warn('⚠️ [Server] chatbot table missing. Attempting to recreate via sync...');
                 try {
                     await ChatMessage.sync();
                     chatRecord = await ChatMessage.create({
