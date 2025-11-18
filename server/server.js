@@ -975,62 +975,43 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
-        // Set session - use a callback to ensure it's saved before responding
+        // Set session
         req.session.userId = user.user_id;
         req.session.email = user.email;
         req.session.username = user.username;
         req.session.role = user.role;
 
-        // Debug: Log session and cookie info
-        console.log('🔒 [Login] Session set:', {
-            userId: req.session.userId,
-            email: req.session.email,
-            username: req.session.username,
-            role: req.session.role,
-            sessionID: req.sessionID
-        });
-        console.log('🔒 [Login] Request origin:', req.headers.origin || 'same-origin');
-        console.log('🔒 [Login] NODE_ENV:', process.env.NODE_ENV);
-        console.log('🔒 [Login] Cookie config:', req.session.cookie);
+        // Debug: Log session info
+        console.log('🔒 [Login] Attempting login for user:', user.user_id);
+        console.log('🔒 [Login] Session ID:', req.sessionID);
 
-        // await updateUserStreak(user.user_id);
+        // Prepare response data
+        const responseData = {
+            message: "Login successful",
+            user: {
+                id: user.user_id,
+                email: user.email,
+                username: user.username,
+                role: user.role,
+                points: user.points,
+                profile_picture: user.profile_picture,
+                study_streak: user.study_streak,
+                longest_streak: user.longest_streak,
+            },
+        };
 
-        const updatedUser = await User.findByPk(user.user_id);
-
-        // Explicitly save session before sending response
-        req.session.save((err) => {
-            if (err) {
-                console.error('❌ [Login] Session save error:', err);
-                return res.status(500).json({ error: "Failed to create session" });
-            }
-
-            console.log('✅ [Login] Session saved successfully');
-            console.log('🔒 [Login] Session ID:', req.sessionID);
-            console.log('🔒 [Login] Cookie will be sent with settings:', {
-                httpOnly: req.session.cookie.httpOnly,
-                secure: req.session.cookie.secure,
-                sameSite: req.session.cookie.sameSite,
-                maxAge: req.session.cookie.maxAge
-            });
-
-            res.status(200).json({
-                message: "Login successful",
-                user: {
-                    id: updatedUser.user_id,
-                    email: updatedUser.email,
-                    username: updatedUser.username,
-                    role: updatedUser.role,
-                    points: updatedUser.points,
-                    profile_picture: updatedUser.profile_picture,
-                    study_streak: updatedUser.study_streak,
-                    longest_streak: updatedUser.longest_streak,
-                },
-            });
-        });
+        // Send response immediately - let session middleware handle saving
+        console.log('✅ [Login] Sending successful login response');
+        res.status(200).json(responseData);
+        
     } catch (err) {
         console.error("❌ [Login] Login error:", err.message);
         console.error("❌ [Login] Stack trace:", err.stack);
-        res.status(500).json({ error: "Internal server error" });
+        
+        // Make sure we always send a response
+        if (!res.headersSent) {
+            res.status(500).json({ error: "Internal server error" });
+        }
     }
 });
 
@@ -1868,5 +1849,22 @@ app.use((err, req, res, next) => {
     });
 });
 
+// ----------------- PROCESS ERROR HANDLERS -----------------
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    // Don't exit - just log the error
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    console.error('Stack:', error.stack);
+    // In production, you might want to exit and let the process manager restart
+    // But for now, we'll just log it
+});
+
 // ----------------- START SERVER -----------------
-app.listen(PORT, () => console.log(`🚀 Server running on ${SERVER_URL}`));
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on ${SERVER_URL}`);
+    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔐 Session store: ${sessionStore ? 'Active' : 'Missing'}`);
+});
