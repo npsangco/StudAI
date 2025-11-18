@@ -61,6 +61,7 @@ import UserAchievement from "./models/UserAchievement.js"; // ← ADD THIS
 import UserDailyStat from "./models/UserDailyStat.js";
 import AuditLog from "./models/AuditLog.js";
 import { Op } from "sequelize";
+import ChatMessage from "./models/ChatMessage.js";
 
 // Middleware
 import { auditMiddleware } from "./middleware/auditMiddleware.js";
@@ -99,6 +100,7 @@ import sessionRoutes from "./routes/sessionRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
 import achievementRoutes from "./routes/achievementRoutes.js"
 import adminRoutes from "./routes/adminRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 
 // Import validation middleware
 import {
@@ -368,6 +370,8 @@ sequelize.authenticate()
         
         // Initialize default achievements if they don't exist
         await initializeDefaultAchievements();
+        await ChatMessage.sync();
+        console.log("✅ Chat history table synced");
         
         startEmailReminders();
         // console.log("📅 Email reminder scheduler started!"); for email testing
@@ -472,6 +476,7 @@ app.use("/api/sessions", sessionLockCheck, sessionRoutes);
 app.use("/api/achievements", sessionLockCheck, achievementRoutes);
 app.use("/api/admin", requireAdmin, auditRoutes);
 app.use("/api/admin", requireAdmin, adminRoutes);
+app.use("/api/chat", sessionLockCheck, chatRoutes);
 
 // ----------------- OPENAI API ROUTES -----------------
 // AI Summarization endpoint
@@ -554,11 +559,37 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
 app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
     try {
         console.log('🤖 [Server] AI Chat request received');
-        const { messages } = req.body;
+        const { messages, noteId, userMessage } = req.body;
+
+        if (!req.session || !req.session.userId) {
+            return res.status(401).json({ error: "Not logged in" });
+        }
 
         if (!messages || !Array.isArray(messages)) {
             console.error('❌ [Server] Invalid messages format in request');
             return res.status(400).json({ error: "Messages array is required" });
+        }
+
+        if (!noteId) {
+            console.error('❌ [Server] noteId missing in chat request');
+            return res.status(400).json({ error: "noteId is required" });
+        }
+
+        const normalizedNoteId = parseInt(noteId, 10);
+        if (Number.isNaN(normalizedNoteId)) {
+            return res.status(400).json({ error: "noteId must be numeric" });
+        }
+
+        const latestUserMessage = typeof userMessage === 'string' && userMessage.trim().length > 0
+            ? userMessage.trim()
+            : (() => {
+                const reversed = [...messages].reverse();
+                const found = reversed.find((msg) => msg.role === 'user');
+                return found?.content?.trim() || '';
+            })();
+
+        if (!latestUserMessage) {
+            return res.status(400).json({ error: "userMessage is required" });
         }
 
         const openAiApiKey = process.env.OPENAI_API_KEY;
@@ -607,8 +638,21 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             return res.status(500).json({ error: "Failed to generate response" });
         }
 
+        let chatRecord = null;
+        try {
+            chatRecord = await ChatMessage.create({
+                user_id: req.session.userId,
+                note_id: normalizedNoteId,
+                message: latestUserMessage,
+                response: reply
+            });
+            console.log('📝 [Server] Chat interaction stored with ID:', chatRecord.chat_id);
+        } catch (storeErr) {
+            console.error('❌ [Server] Failed to store chat history:', storeErr);
+        }
+
         console.log('✅ [Server] Chat response generated successfully, length:', reply.length);
-        res.json({ reply });
+        res.json({ reply, chat: chatRecord });
     } catch (err) {
         console.error("❌ [Server] Error in AI chat:", err);
         res.status(500).json({ error: "Failed to generate response" });

@@ -27,12 +27,7 @@ Primary table for user accounts and authentication.
 | last_activity_date | DATE | Last date user was active |
 | longest_streak | INTEGER | Record longest streak |
 | createdAt | TIMESTAMP | Account creation timestamp |
-
-**Relationships:**
-- Has one `UserDailyStat`
-- Has many `Note`, `Quiz`, `QuizAttempt`, `File`, `Plan`, `Session`
 - Has one `PetCompanion`
-- Has many `UserAchievement`, `UserPetItem`
 
 ---
 
@@ -50,10 +45,7 @@ Tracks daily user activity metrics. Resets daily via cron job.
 | exp_earned_today | INTEGER | Experience points earned today (default: 0) |
 | last_reset_date | DATE | Last daily reset date |
 | createdAt | TIMESTAMP | Record creation |
-| updatedAt | TIMESTAMP | Last update |
-
 **Relationships:**
-- Belongs to `User` (1:1)
 
 **Note:** This removes redundancy from the User table where daily counters were previously stored.
 
@@ -107,6 +99,24 @@ Tracks note sharing via unique codes.
 | share_code | STRING(6, UNIQUE) | Unique 6-character share code |
 | isActive | BOOLEAN | Share link active status |
 | createdAt | TIMESTAMP | Share creation time |
+
+**Relationships:**
+- Belongs to `User`
+- Belongs to `Note`
+
+---
+
+#### **chat_history** (ChatMessage.js)
+Stores every chatbot prompt/response to keep contextual history per note.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| chat_id | INTEGER (PK) | Auto-incrementing primary key |
+| user_id | INTEGER (FK) | References users.user_id |
+| note_id | INTEGER (FK) | References note.note_id |
+| message | TEXT | User prompt content |
+| response | TEXT | AI assistant answer |
+| timestamp | TIMESTAMP | When the exchange was recorded |
 
 **Relationships:**
 - Belongs to `User`
