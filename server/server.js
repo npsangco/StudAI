@@ -191,8 +191,8 @@ async function initializeDefaultAchievements() {
 // ----------- CORS -----------------
 app.use(cors({
     origin: [
-        'https://studai.dev',
-        'http://localhost:5173',
+        'https://walrus-app-umg67.ondigitalocean.app', // Production
+        'http://localhost:5173', // Local frontend
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -382,6 +382,8 @@ sequelize.authenticate()
 
 // ----------------- Session Configuration -----------------
 if (sessionStore) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     app.use(
         session({
             secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
@@ -391,12 +393,9 @@ if (sessionStore) {
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production' ? true : false,
-                maxAge: 1000 * 60 * 60 * 24,
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-                domain: process.env.NODE_ENV === 'production'
-                    ? undefined
-                    : undefined, // No domain for localhost
+                secure: isProduction,
+                maxAge: 1000 * 60 * 60 * 24, // 24 hours
+                sameSite: 'lax', // 'lax' works for both same-domain production AND localhost
             },
             rolling: true,
         })
