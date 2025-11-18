@@ -189,50 +189,21 @@ async function initializeDefaultAchievements() {
 // ============================================
 
 // ----------- CORS -----------------
-const allowedOrigins = [
-    'https://studai.dev',  // ← YOUR ACTUAL FRONTEND DOMAIN
-    'https://www.studai.dev',  // www version
-    'https://walrus-app-umg67.ondigitalocean.app', // Backend domain (if frontend is served from here)
-    'http://localhost:5173', // Local development
-    'http://localhost:4000', // Local backend
-];
-
 app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
-        if (!origin) return callback(null, true);
-        
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            console.warn(`⚠️  CORS blocked request from origin: ${origin}`);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: [
+        'https://studai.dev',
+        'https://www.studai.dev',
+        'https://walrus-app-umg67.ondigitalocean.app',
+        'http://localhost:5173'
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    exposedHeaders: ["Set-Cookie"],
+    allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 // ----------------- EXPRESS MIDDLEWARE -----------------
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
-
-// Debug middleware - log all requests in development or when debugging
-if (process.env.DEBUG_SESSIONS === 'true' || process.env.NODE_ENV !== 'production') {
-    app.use((req, res, next) => {
-        if (req.path.startsWith('/api')) {
-            console.log(`📥 [${req.method}] ${req.path}`, {
-                hasSession: !!req.session,
-                sessionId: req.sessionID,
-                userId: req.session?.userId,
-                cookies: req.headers.cookie ? 'Present' : 'None'
-            });
-        }
-        next();
-    });
-}
 
 app.use("/api", auditMiddleware);
 
@@ -414,26 +385,6 @@ sequelize.authenticate()
 // ----------------- Session Configuration -----------------
 if (sessionStore) {
     const isProduction = process.env.NODE_ENV === 'production';
-    // Check if frontend is served from same origin (no separate frontend domain)
-    const isSameOrigin = !process.env.CLIENT_URL || process.env.CLIENT_URL === process.env.SERVER_URL;
-    
-    const cookieConfig = {
-        httpOnly: true,
-        secure: isProduction,  // Require HTTPS in production
-        maxAge: 1000 * 60 * 60 * 24, // 24 hours
-        sameSite: isSameOrigin ? 'lax' : 'none',  // Use 'lax' for same-origin, 'none' for cross-origin
-        path: '/',  // Explicitly set path
-    };
-    
-    console.log('🔐 Session Configuration:', {
-        isProduction,
-        isSameOrigin,
-        sessionSecret: process.env.SESSION_SECRET ? '✓ Set' : '✗ Using fallback',
-        cookieSecure: cookieConfig.secure,
-        sameSite: cookieConfig.sameSite,
-        CLIENT_URL: process.env.CLIENT_URL || 'Not set (same-origin)',
-        SERVER_URL: process.env.SERVER_URL
-    });
     
     app.use(
         session({
@@ -442,15 +393,21 @@ if (sessionStore) {
             saveUninitialized: false,
             store: sessionStore,
             name: "studai_session",
-            cookie: cookieConfig,
-            rolling: true,  // Reset maxAge on every response
-            proxy: true,  // Trust the reverse proxy (Digital Ocean App Platform)
+            cookie: {
+                httpOnly: true,
+                secure: isProduction,
+                maxAge: 1000 * 60 * 60 * 24, // 24 hours
+                sameSite: 'lax',
+                path: '/dashboard'
+            },
+            rolling: true,
+            proxy: true
         })
     );
     
-    console.log('✅ Session middleware configured successfully');
+    console.log('✅ Session middleware configured');
 } else {
-    console.error('❌ CRITICAL: sessionStore is not available! Sessions will not work!');
+    console.error('❌ sessionStore is not available!');
 }
 
 // ----------------- PASSPORT (Google OAuth) -----------------
@@ -908,31 +865,14 @@ app.get("/api/auth/check-verification", async (req, res) => {
 });
 
 
-// Health check endpoint with session debugging info
+// Health check endpoint
 app.get("/api/health", (req, res) => {
-    const health = {
+    res.json({
         status: "OK",
-        environment: process.env.NODE_ENV || 'development',
-        server: {
-            uptime: process.uptime(),
-            timestamp: new Date().toISOString()
-        },
-        session: {
-            middleware: !!sessionStore ? 'configured' : 'missing',
-            hasSession: !!req.session,
-            sessionId: req.sessionID,
-            userId: req.session?.userId,
-            cookieSettings: req.session?.cookie ? {
-                httpOnly: req.session.cookie.httpOnly,
-                secure: req.session.cookie.secure,
-                sameSite: req.session.cookie.sameSite,
-                maxAge: req.session.cookie.maxAge
-            } : null,
-            hasCookieHeader: !!req.headers.cookie
-        }
-    };
-    
-    res.json(health);
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        authenticated: !!req.session?.userId
+    });
 });
 
 // Login
@@ -981,12 +921,8 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
         req.session.username = user.username;
         req.session.role = user.role;
 
-        // Debug: Log session info
-        console.log('🔒 [Login] Attempting login for user:', user.user_id);
-        console.log('🔒 [Login] Session ID:', req.sessionID);
-
-        // Prepare response data
-        const responseData = {
+        // Send response
+        res.status(200).json({
             message: "Login successful",
             user: {
                 id: user.user_id,
@@ -998,17 +934,10 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
                 study_streak: user.study_streak,
                 longest_streak: user.longest_streak,
             },
-        };
-
-        // Send response immediately - let session middleware handle saving
-        console.log('✅ [Login] Sending successful login response');
-        res.status(200).json(responseData);
+        });
         
     } catch (err) {
-        console.error("❌ [Login] Login error:", err.message);
-        console.error("❌ [Login] Stack trace:", err.stack);
-        
-        // Make sure we always send a response
+        console.error("Login error:", err.message);
         if (!res.headersSent) {
             res.status(500).json({ error: "Internal server error" });
         }
@@ -1864,7 +1793,6 @@ process.on('uncaughtException', (error) => {
 
 // ----------------- START SERVER -----------------
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on ${SERVER_URL}`);
+    console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔐 Session store: ${sessionStore ? 'Active' : 'Missing'}`);
 });
