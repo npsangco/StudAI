@@ -190,15 +190,10 @@ async function initializeDefaultAchievements() {
 
 // ----------- CORS -----------------
 app.use(cors({
-    origin: [
-        'https://studai.dev',
-        'https://www.studai.dev',
-        'https://walrus-app-umg67.ondigitalocean.app',
-        'http://localhost:5173'
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    origin: ['https://studai.dev'],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 // ----------------- EXPRESS MIDDLEWARE -----------------
@@ -383,28 +378,25 @@ sequelize.authenticate()
     });
 
 // ----------------- Session Configuration -----------------
-const isProduction = process.env.NODE_ENV === 'production';
-
-app.use(
-    session({
-        secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
-        resave: false,
-        saveUninitialized: false,
-        store: sessionStore,
-        name: "studai_session",
-        cookie: {
-            httpOnly: true,
-            secure: isProduction,
-            maxAge: 1000 * 60 * 60 * 24, // 24 hours
-            sameSite: 'lax',
-            path: '/'
-        },
-        rolling: true,
-        proxy: true
-    })
-);
-
-console.log('✅ Session middleware configured');
+if (sessionStore) {
+    app.use(
+        session({
+            secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
+            resave: false,
+            saveUninitialized: false,
+            store: sessionStore,
+            name: "studai_session",
+            cookie: {
+                httpOnly: true,
+                secure: true,
+                maxAge: 1000 * 60 * 60 * 24,
+                sameSite: 'none',
+                domain: '.walrus-app-umg67.ondigitalocean.app', // Use backend domain for cookie
+            },
+            rolling: true,
+        })
+    );
+}
 
 // ----------------- PASSPORT (Google OAuth) -----------------
 app.use(passport.initialize());
@@ -861,16 +853,6 @@ app.get("/api/auth/check-verification", async (req, res) => {
 });
 
 
-// Health check endpoint
-app.get("/api/health", (req, res) => {
-    res.json({
-        status: "OK",
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString(),
-        authenticated: !!req.session?.userId
-    });
-});
-
 // Login
 app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
     const { email, password } = req.validatedData;
@@ -917,26 +899,26 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
         req.session.username = user.username;
         req.session.role = user.role;
 
-        // Send response
+        // await updateUserStreak(user.user_id);
+
+        const updatedUser = await User.findByPk(user.user_id);
+
         res.status(200).json({
             message: "Login successful",
             user: {
-                id: user.user_id,
-                email: user.email,
-                username: user.username,
-                role: user.role,
-                points: user.points,
-                profile_picture: user.profile_picture,
-                study_streak: user.study_streak,
-                longest_streak: user.longest_streak,
+                id: updatedUser.user_id,
+                email: updatedUser.email,
+                username: updatedUser.username,
+                role: updatedUser.role,
+                points: updatedUser.points,
+                profile_picture: updatedUser.profile_picture,
+                study_streak: updatedUser.study_streak,
+                longest_streak: updatedUser.longest_streak,
             },
         });
-        
     } catch (err) {
         console.error("Login error:", err.message);
-        if (!res.headersSent) {
-            res.status(500).json({ error: "Internal server error" });
-        }
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 
@@ -1774,21 +1756,5 @@ app.use((err, req, res, next) => {
     });
 });
 
-// ----------------- PROCESS ERROR HANDLERS -----------------
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-    // Don't exit - just log the error
-});
-
-process.on('uncaughtException', (error) => {
-    console.error('❌ Uncaught Exception:', error);
-    console.error('Stack:', error.stack);
-    // In production, you might want to exit and let the process manager restart
-    // But for now, we'll just log it
-});
-
 // ----------------- START SERVER -----------------
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on ${SERVER_URL}`));
