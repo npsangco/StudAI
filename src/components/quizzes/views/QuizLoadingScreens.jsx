@@ -180,21 +180,27 @@ export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false
     <>
       <style>{styles}</style>
       <div className="fixed inset-0 w-full h-full flex items-center justify-center overflow-hidden" style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #020617 100%)'
+        background: 'linear-gradient(to bottom, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)'
       }}>
-        {/* Animated yellow particles flying across */}
+        {/* Subtle dot pattern */}
+        <div className="fixed inset-0 pointer-events-none opacity-30" style={{
+          backgroundImage: 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
+          backgroundSize: '40px 40px'
+        }} />
+
+        {/* Animated yellow particles */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {[...Array(20)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-1 h-1 bg-yellow-400 rounded-full animate-float-shard"
+              className="absolute w-2 h-2 bg-yellow-400 rounded-full animate-float-shard"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
                 animationDelay: `${i * 0.3}s`,
                 animationDuration: `${3 + Math.random() * 4}s`,
-                opacity: 0.6,
-                boxShadow: '0 0 10px rgba(255, 219, 0, 0.8)'
+                opacity: 0.4,
+                boxShadow: '0 0 10px rgba(255, 219, 0, 0.6)'
               }}
             />
           ))}
@@ -202,8 +208,8 @@ export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false
 
         {/* Radial glow effects */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-yellow-500/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 left-1/4 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-yellow-400/15 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
         </div>
 
         <div className="text-center animate-fade-in z-10 relative px-4 max-w-2xl">
@@ -211,28 +217,28 @@ export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false
           <div className="mb-8 flex justify-center">
             <div className={`backdrop-blur-xl border-2 rounded-2xl px-6 py-3 shadow-2xl ${
               isAdaptiveMode
-                ? 'bg-gradient-to-r from-orange-500/30 to-amber-500/30 border-orange-400/50'
-                : 'bg-white/10 border-white/30'
+                ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-orange-400'
+                : 'bg-white/60 border-white'
             }`}>
               <div className="flex items-center gap-3">
                 {isAdaptiveMode ? (
                   <>
-                    <svg className="w-6 h-6 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-6 h-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                     <div className="text-left">
-                      <div className="text-orange-300 font-bold text-sm">ADAPTIVE MODE</div>
-                      <div className="text-orange-200/80 text-xs">Difficulty adjusts to your performance</div>
+                      <div className="text-orange-700 font-bold text-sm">ADAPTIVE MODE</div>
+                      <div className="text-orange-600/80 text-xs">Difficulty adjusts to your performance</div>
                     </div>
                   </>
                 ) : (
                   <>
-                    <svg className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div className="text-left">
-                      <div className="text-white font-bold text-sm">CLASSIC MODE</div>
-                      <div className="text-gray-300/80 text-xs">All questions in original order</div>
+                      <div className="text-gray-900 font-bold text-sm">CLASSIC MODE</div>
+                      <div className="text-gray-700 text-xs">All questions in original order</div>
                     </div>
                   </>
                 )}
@@ -240,65 +246,66 @@ export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false
             </div>
           </div>
 
-          {/* Countdown Circle */}
+          {/* Countdown Circle - Frosted Glass */}
           <div className="mb-8 relative">
-            <div className="w-40 h-40 mx-auto rounded-full flex items-center justify-center relative" style={{
-              background: 'linear-gradient(135deg, rgba(255, 219, 0, 0.2), rgba(255, 219, 0, 0.1))',
-              boxShadow: '0 0 60px rgba(255, 219, 0, 0.4), inset 0 0 40px rgba(255, 219, 0, 0.1)'
+            {/* Glass layers */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-48 h-48 rounded-full backdrop-blur-2xl bg-white/20 border-2 border-white/40 transform translate-y-2 translate-x-2" style={{
+                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)'
+              }} />
+            </div>
+            <div className="relative w-48 h-48 mx-auto rounded-full backdrop-blur-xl bg-white/40 border-2 border-white/60 flex items-center justify-center" style={{
+              boxShadow: '0 25px 50px rgba(255, 219, 0, 0.25), 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
             }}>
               {/* Pulsing rings */}
-              <div className="absolute inset-0 rounded-full border-4 border-yellow-400/30 animate-ping" style={{ animationDuration: '2s' }} />
-              <div className="absolute inset-4 rounded-full border-2 border-yellow-400/50" />
+              <div className="absolute inset-0 rounded-full border-4 border-yellow-400/40 animate-ping" style={{ animationDuration: '2s' }} />
+              <div className="absolute inset-4 rounded-full border-2 border-yellow-400/60" />
 
               {/* Countdown number */}
-              <div className="text-9xl font-black bg-gradient-to-b from-yellow-300 to-yellow-500 bg-clip-text text-transparent animate-bounce" style={{
-                textShadow: '0 0 40px rgba(255, 219, 0, 0.5)'
-              }}>
+              <div className="text-9xl font-black bg-gradient-to-b from-yellow-500 to-yellow-600 bg-clip-text text-transparent animate-bounce drop-shadow-lg">
                 {countdown}
               </div>
             </div>
           </div>
 
           {/* Get Ready Text */}
-          <h2 className="text-5xl sm:text-6xl font-black mb-4 bg-gradient-to-r from-white via-yellow-100 to-white bg-clip-text text-transparent" style={{
-            textShadow: '0 0 30px rgba(255, 255, 255, 0.3)'
-          }}>
+          <h2 className="text-5xl sm:text-6xl font-black mb-4 bg-gradient-to-r from-gray-900 via-yellow-600 to-gray-900 bg-clip-text text-transparent drop-shadow-sm">
             Get Ready!
           </h2>
 
-          <p className="text-gray-300 text-xl sm:text-2xl font-semibold mb-8 drop-shadow-lg">
+          <p className="text-gray-700 text-xl sm:text-2xl font-semibold mb-8 drop-shadow-sm">
             {quizTitle}
           </p>
 
           {/* Mechanics Icons */}
           <div className="flex justify-center gap-6 mb-8">
-            <div className="backdrop-blur-lg bg-white/5 border border-white/20 rounded-xl p-4 flex flex-col items-center gap-2">
-              <svg className="w-8 h-8 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="backdrop-blur-lg bg-white/60 border-2 border-white/70 rounded-xl p-4 flex flex-col items-center gap-2 shadow-lg">
+              <svg className="w-8 h-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-gray-300 text-xs font-semibold">Timed</span>
+              <span className="text-gray-700 text-xs font-semibold">Timed</span>
             </div>
-            <div className="backdrop-blur-lg bg-white/5 border border-white/20 rounded-xl p-4 flex flex-col items-center gap-2">
-              <svg className="w-8 h-8 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="backdrop-blur-lg bg-white/60 border-2 border-white/70 rounded-xl p-4 flex flex-col items-center gap-2 shadow-lg">
+              <svg className="w-8 h-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
               </svg>
-              <span className="text-gray-300 text-xs font-semibold">Score</span>
+              <span className="text-gray-700 text-xs font-semibold">Score</span>
             </div>
             {isAdaptiveMode && (
-              <div className="backdrop-blur-lg bg-orange-500/10 border border-orange-400/30 rounded-xl p-4 flex flex-col items-center gap-2">
-                <svg className="w-8 h-8 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="backdrop-blur-lg bg-orange-100 border-2 border-orange-300 rounded-xl p-4 flex flex-col items-center gap-2 shadow-lg">
+                <svg className="w-8 h-8 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
-                <span className="text-orange-300 text-xs font-semibold">Adaptive</span>
+                <span className="text-orange-700 text-xs font-semibold">Adaptive</span>
               </div>
             )}
           </div>
 
           {/* Pro Tip */}
           <div className="max-w-md mx-auto">
-            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-4 shadow-2xl">
-              <p className="text-sm text-gray-200 font-medium">
-                <span className="font-bold text-yellow-300">Pro Tip:</span> <span className="text-white">{randomTip}</span>
+            <div className="backdrop-blur-xl bg-white/60 border-2 border-white/70 rounded-2xl p-4 shadow-2xl">
+              <p className="text-sm text-gray-800 font-medium">
+                <span className="font-bold text-yellow-700">Pro Tip:</span> <span className="text-gray-900">{randomTip}</span>
               </p>
             </div>
           </div>
