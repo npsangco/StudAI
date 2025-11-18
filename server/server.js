@@ -391,7 +391,7 @@ if (sessionStore) {
                 secure: true,
                 maxAge: 1000 * 60 * 60 * 24,
                 sameSite: 'none',
-                domain: '.walrus-app-umg67.ondigitalocean.app', // Use backend domain for cookie
+                domain: '.walrus-app-umg67.ondigitalocean.app',
             },
             rolling: true,
         })
@@ -1258,17 +1258,29 @@ app.post("/api/auth/reset-password", async (req, res) => {
 });
 
 //----------------- FILE UPLOAD -----------------
-// Ensure uploads directory exists
+// Ensure uploads directories exist
 const uploadsDir = path.join(__dirname, 'uploads');
+const profilePicturesDir = path.join(__dirname, 'uploads', 'profile_pictures');
 console.log('📁 [Server] Uploads directory path:', uploadsDir);
+console.log('📁 [Server] Profile pictures directory path:', profilePicturesDir);
 
 try {
+    // Create main uploads directory
     if (!fs.existsSync(uploadsDir)) {
         console.log('📁 [Server] Creating uploads directory...');
         fs.mkdirSync(uploadsDir, { recursive: true });
         console.log('✅ [Server] Uploads directory created successfully');
     } else {
         console.log('✅ [Server] Uploads directory already exists');
+    }
+    
+    // Create profile_pictures subdirectory
+    if (!fs.existsSync(profilePicturesDir)) {
+        console.log('📁 [Server] Creating profile_pictures directory...');
+        fs.mkdirSync(profilePicturesDir, { recursive: true });
+        console.log('✅ [Server] Profile pictures directory created successfully');
+    } else {
+        console.log('✅ [Server] Profile pictures directory already exists');
     }
     
     // Test write permissions
