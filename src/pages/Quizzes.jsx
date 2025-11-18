@@ -480,9 +480,17 @@ function QuizzesPage() {
 
   if (quizDataHook.uiState.currentView === VIEWS.LOADING || quizDataHook.uiState.currentView === VIEWS.LOADING_BATTLE) {
     // Check if adaptive mode is enabled (only for solo mode)
-    const rawQuestions = quizDataHook.quizData.selected?.questions || [];
+    // Use quizDataHook.questions (which is the loaded questions array) instead of selected.questions
+    const rawQuestions = quizDataHook.questions || [];
     const isSoloMode = quizDataHook.uiState.currentView === VIEWS.LOADING;
     const adaptiveCheck = isSoloMode ? canUseAdaptiveMode(rawQuestions) : { enabled: false };
+
+    console.log('🔍 SoloLoadingScreen Debug:', {
+      questionsCount: rawQuestions.length,
+      adaptiveEnabled: adaptiveCheck.enabled,
+      adaptiveReason: adaptiveCheck.reason,
+      isSoloMode
+    });
 
     return (
       <SoloLoadingScreen

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
-import { Copy, Check, Clock, ChevronDown, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText } from 'lucide-react';
+import { Copy, Check, Clock, ChevronDown, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText, Info, X } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 import { canUseAdaptiveMode } from '../utils/adaptiveDifficultyEngine';
 
@@ -415,6 +415,193 @@ const findDuplicates = (arr) => {
 };
 
 // ============================================
+// QUIZ MODES INFO MODAL
+// ============================================
+
+const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
+  if (!isOpen) return null;
+
+  // Get current quiz stats
+  const adaptiveCheck = canUseAdaptiveMode(currentQuiz);
+  const isAdaptive = adaptiveCheck.enabled;
+  const distribution = adaptiveCheck.distribution;
+  const questionCount = currentQuiz.length;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        {/* Modal */}
+        <div 
+          className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Info className="w-5 h-5 text-blue-600" />
+              Quiz Modes: How It Works
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 space-y-6">
+            {/* Intro */}
+            <p className="text-gray-700">
+              Your quiz will automatically use the best mode based on your questions:
+            </p>
+
+            {/* Adaptive Mode Section */}
+            <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-purple-700" />
+                <h3 className="text-lg font-bold text-purple-900">ADAPTIVE MODE</h3>
+              </div>
+              
+              <p className="text-gray-700">
+                Questions automatically adjust difficulty based on student performance
+              </p>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-gray-900">Requirements to enable:</p>
+                <ul className="space-y-1.5 ml-1">
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-green-600 font-bold mt-0.5">✓</span>
+                    <span>At least <strong>5 questions</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-green-600 font-bold mt-0.5">✓</span>
+                    <span>At least <strong>2 different difficulty levels</strong> (Easy, Medium, or Hard)</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-gray-900">How it works:</p>
+                <ul className="space-y-1.5 ml-1">
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-gray-400">•</span>
+                    <span>Student answers correctly → Gets harder</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-gray-400">•</span>
+                    <span>Student struggles → Gets easier</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-gray-400">•</span>
+                    <span>Keeps students engaged at their level</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Classic Mode Section */}
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Circle className="w-5 h-5 text-amber-700" />
+                <h3 className="text-lg font-bold text-amber-900">CLASSIC MODE</h3>
+              </div>
+              
+              <p className="text-gray-700">
+                All students get the same questions in the same order
+              </p>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-gray-900">Used when:</p>
+                <ul className="space-y-1.5 ml-1">
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-gray-400">•</span>
+                    <span>Less than 5 questions</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-gray-400">•</span>
+                    <span>All questions same difficulty</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-gray-900">How it works:</p>
+                <ul className="space-y-1.5 ml-1">
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-gray-400">•</span>
+                    <span>Fixed question order</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-gray-400">•</span>
+                    <span>No difficulty adjustment</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-gray-400">•</span>
+                    <span>Standard quiz experience</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Current Quiz Status */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-gray-900">Your Current Quiz:</p>
+                  {questionCount > 0 ? (
+                    <>
+                      <p className="text-gray-700">
+                        {questionCount} question{questionCount !== 1 ? 's' : ''}
+                        {distribution && ` • Easy (${distribution.easy}), Medium (${distribution.medium}), Hard (${distribution.hard})`}
+                      </p>
+                      <p className="text-gray-900 font-medium">
+                        Status: {isAdaptive ? (
+                          <span className="text-purple-700">✅ Adaptive Mode Active</span>
+                        ) : (
+                          <span className="text-amber-700">⚠️ Classic Mode</span>
+                        )}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-gray-700">No questions added yet</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Tip */}
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4">
+              <p className="text-gray-800 flex items-start gap-2">
+                <span className="text-xl">💡</span>
+                <span>
+                  <strong>Tip:</strong> Mix Easy, Medium, and Hard questions to unlock Adaptive Mode for better student engagement!
+                </span>
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end rounded-b-2xl">
+            <button
+              onClick={onClose}
+              className="px-6 py-2.5 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition-colors shadow-sm"
+            >
+              Got it!
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ============================================
 // POLISHED HEADER COMPONENT
 // ============================================
 
@@ -422,6 +609,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
   const [isEditing, setIsEditing] = useState(false);
   const [tempTitle, setTempTitle] = useState(quiz.title);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showModesInfoModal, setShowModesInfoModal] = useState(false);
 
   const getAllErrors = () => {
     const errors = [];
@@ -533,53 +721,46 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
               </span>
 
-              {/* Adaptive Mode Indicator */}
+              {/* Adaptive Mode Indicator with Info Icon */}
               {(() => {
                 // Check adaptive mode eligibility
                 const adaptiveCheck = canUseAdaptiveMode(questions);
                 
                 if (adaptiveCheck.enabled) {
                   // ✅ Adaptive Mode Enabled
-                  const { easy, medium, hard } = adaptiveCheck.distribution;
-                  const tooltip = `Adaptive Mode Active!\n✓ ${questionCount} questions\n✓ Difficulty distribution: Easy (${easy}), Medium (${medium}), Hard (${hard})\n\nQuestions will dynamically adjust to student performance in solo mode.`;
-                  
                   return (
-                    <span
-                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1.5 cursor-help"
-                      title={tooltip}
+                    <button
+                      onClick={() => setShowModesInfoModal(true)}
+                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1.5 hover:bg-purple-200 transition-colors cursor-pointer"
                     >
                       <Target className="w-3.5 h-3.5" />
                       <span>Adaptive Mode</span>
-                    </span>
+                      <Info className="w-3.5 h-3.5 opacity-70" />
+                    </button>
                   );
                 } else if (questionCount > 0) {
                   // ❌ Classic Mode (with specific reason)
-                  let tooltip = 'Classic Mode: ';
                   let displayReason = '';
                   
                   if (questionCount < 5) {
                     const remaining = 5 - questionCount;
-                    displayReason = `Need ${remaining} more`;
-                    tooltip += `Add ${remaining} more question${remaining > 1 ? 's' : ''} to unlock Adaptive Mode.\n\n`;
+                    displayReason = `+${remaining} more`;
                   } else if (adaptiveCheck.reason?.includes('same difficulty')) {
                     displayReason = 'Same difficulty';
-                    tooltip += `All questions are ${adaptiveCheck.singleDifficulty} difficulty.\n\n`;
                   } else {
-                    displayReason = 'Not eligible';
-                    tooltip += `${adaptiveCheck.reason}\n\n`;
+                    displayReason = 'Vary difficulty';
                   }
                   
-                  tooltip += 'Requirements for Adaptive Mode:\n✓ Minimum 5 questions\n✓ At least 2 different difficulty levels (Easy, Medium, Hard)';
-                  
                   return (
-                    <span
-                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1.5 cursor-help"
-                      title={tooltip}
+                    <button
+                      onClick={() => setShowModesInfoModal(true)}
+                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1.5 hover:bg-amber-200 transition-colors cursor-pointer"
                     >
                       <Circle className="w-3.5 h-3.5" />
                       <span>Classic Mode</span>
                       <span className="text-xs opacity-75">({displayReason})</span>
-                    </span>
+                      <Info className="w-3.5 h-3.5 opacity-70" />
+                    </button>
                   );
                 }
                 return null;
@@ -669,23 +850,40 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 {questionCount} Q
               </span>
 
-              {/* Adaptive Mode Badge - Mobile */}
+              {/* Adaptive Mode Badge - Mobile with Info Icon */}
               {(() => {
                 const adaptiveCheck = canUseAdaptiveMode(questions);
                 
                 if (adaptiveCheck.enabled) {
                   return (
-                    <span className="px-2 py-1 text-xs rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
+                    <button
+                      onClick={() => setShowModesInfoModal(true)}
+                      className="px-2 py-1 text-xs rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1 active:bg-purple-200"
+                    >
                       <Target className="w-3 h-3" />
                       <span>Adaptive</span>
-                    </span>
+                      <Info className="w-3 h-3 opacity-70" />
+                    </button>
                   );
                 } else if (questionCount > 0) {
+                  // Show reason inline for mobile
+                  let displayReason = '';
+                  if (questionCount < 5) {
+                    const remaining = 5 - questionCount;
+                    displayReason = ` +${remaining}`;
+                  } else if (adaptiveCheck.reason?.includes('same difficulty')) {
+                    displayReason = ' (vary)';
+                  }
+                  
                   return (
-                    <span className="px-2 py-1 text-xs rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1">
+                    <button
+                      onClick={() => setShowModesInfoModal(true)}
+                      className="px-2 py-1 text-xs rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1 active:bg-amber-200"
+                    >
                       <Circle className="w-3 h-3" />
-                      <span>Classic</span>
-                    </span>
+                      <span>Classic{displayReason}</span>
+                      <Info className="w-3 h-3 opacity-70" />
+                    </button>
                   );
                 }
                 return null;
@@ -738,6 +936,13 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
         isOpen={showErrorModal}
         onClose={() => setShowErrorModal(false)}
         errors={errors}
+      />
+
+      {/* Quiz Modes Info Modal */}
+      <QuizModesInfoModal
+        isOpen={showModesInfoModal}
+        onClose={() => setShowModesInfoModal(false)}
+        currentQuiz={questions}
       />
     </>
   );
