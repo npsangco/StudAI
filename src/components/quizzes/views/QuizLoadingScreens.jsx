@@ -176,6 +176,17 @@ export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false
 
   const [randomTip] = useState(() => proTips[Math.floor(Math.random() * proTips.length)]);
 
+  // Memoize particle positions to prevent flickering on countdown changes
+  const [particles] = useState(() =>
+    Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      delay: i * 0.3,
+      duration: 3 + Math.random() * 4
+    }))
+  );
+
   return (
     <>
       <style>{styles}</style>
@@ -190,15 +201,15 @@ export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false
 
         {/* Animated yellow particles */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(20)].map((_, i) => (
+          {particles.map((particle) => (
             <div
-              key={i}
+              key={particle.id}
               className="absolute w-2 h-2 bg-yellow-400 rounded-full animate-float-shard"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${i * 0.3}s`,
-                animationDuration: `${3 + Math.random() * 4}s`,
+                left: `${particle.left}%`,
+                top: `${particle.top}%`,
+                animationDelay: `${particle.delay}s`,
+                animationDuration: `${particle.duration}s`,
                 opacity: 0.4,
                 boxShadow: '0 0 10px rgba(255, 219, 0, 0.6)'
               }}
