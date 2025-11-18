@@ -114,51 +114,6 @@ const app = express();
 // Trust proxy - required for Digital Ocean App Platform
 app.set('trust proxy', 1);
 
-async function migrateChatHistoryTable() {
-    try {
-        const queryInterface = sequelize.getQueryInterface();
-        const tables = await queryInterface.showAllTables();
-        const normalize = (table) => {
-            if (typeof table === 'string') return table.toLowerCase();
-            if (table && typeof table.tableName === 'string') return table.tableName.toLowerCase();
-            return '';
-        };
-
-        const hasChatHistory = tables.some((table) => normalize(table) === 'chat_history');
-        const hasChatbot = tables.some((table) => normalize(table) === 'chatbot');
-
-        if (!hasChatHistory) {
-            if (!hasChatbot) {
-                await ChatMessage.sync();
-            }
-            return;
-        }
-
-        if (!hasChatbot) {
-            await ChatMessage.sync();
-        }
-
-        const [historyRows] = await sequelize.query(
-            'SELECT chat_id, user_id, note_id, message, response, timestamp FROM chat_history'
-        );
-        const [existingRows] = await sequelize.query('SELECT chat_id FROM chatbot');
-
-        const existingIds = new Set(existingRows.map((row) => row.chat_id));
-        const rowsToInsert = historyRows.filter((row) => !existingIds.has(row.chat_id));
-
-        if (rowsToInsert.length > 0) {
-            await queryInterface.bulkInsert('chatbot', rowsToInsert);
-            console.log(`✅ Migrated ${rowsToInsert.length} legacy chat records into chatbot table`);
-        } else {
-            console.log('ℹ️ No legacy chat_history rows needed migration');
-        }
-
-        await queryInterface.dropTable('chat_history');
-        console.log('🧹 Dropped legacy chat_history table');
-    } catch (err) {
-        console.error('❌ Failed to migrate chat_history to chatbot:', err);
-    }
-}
 
 // ============================================
 // ACHIEVEMENT INITIALIZATION
@@ -230,6 +185,56 @@ async function initializeDefaultAchievements() {
   } catch (error) {
     console.error('Error initializing achievements:', error);
   }
+}
+
+async function ensureChatbotForeignKey() {
+    try {
+        const dbName = sequelize.config?.database || process.env.DB_NAME;
+
+        if (!dbName) {
+            console.warn('⚠️ Skipping chatbot FK validation because DB name is undefined');
+            return;
+        }
+
+        const [constraints] = await sequelize.query(
+            `SELECT CONSTRAINT_NAME, REFERENCED_TABLE_NAME
+             FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA = :dbName
+               AND TABLE_NAME = 'chatbot'
+               AND COLUMN_NAME = 'note_id'
+               AND REFERENCED_TABLE_NAME IS NOT NULL`,
+            { replacements: { dbName } }
+        );
+
+        let hasCorrectConstraint = false;
+
+        for (const constraint of constraints) {
+            if (constraint.REFERENCED_TABLE_NAME === 'note') {
+                hasCorrectConstraint = true;
+                continue;
+            }
+
+            await sequelize.getQueryInterface().removeConstraint('chatbot', constraint.CONSTRAINT_NAME);
+            console.log(`🧹 Removed invalid chatbot FK constraint ${constraint.CONSTRAINT_NAME}`);
+        }
+
+        if (!hasCorrectConstraint) {
+            await sequelize.getQueryInterface().addConstraint('chatbot', {
+                fields: ['note_id'],
+                type: 'foreign key',
+                name: 'fk_chatbot_note_id',
+                references: {
+                    table: 'note',
+                    field: 'note_id',
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
+            });
+            console.log('✅ Added chatbot.note_id -> note.note_id foreign key');
+        }
+    } catch (err) {
+        console.error('❌ Failed to enforce chatbot.note_id foreign key:', err);
+    }
 }
 
 // ============================================
@@ -418,7 +423,7 @@ sequelize.authenticate()
         await initializeDefaultAchievements();
         await ChatMessage.sync();
         console.log("✅ Chatbot table ensured");
-        await migrateChatHistoryTable();
+        await ensureChatbotForeignKey();
         
         startEmailReminders();
         // console.log("📅 Email reminder scheduler started!"); for email testing
