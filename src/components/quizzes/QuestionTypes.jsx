@@ -527,14 +527,57 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
           </div>
         </div>
 
-        {/* Question Card - Glass Theme */}
-        <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-gray-200 relative overflow-hidden pt-10" style={{ boxShadow: '0 25px 50px -12px rgba(255, 219, 0, 0.15)' }}>
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full -translate-y-16 translate-x-16 blur-2xl" style={{ backgroundColor: 'rgba(255, 219, 0, 0.3)' }} />
-          <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full translate-y-16 -translate-x-16 blur-2xl" style={{ backgroundColor: 'rgba(255, 219, 0, 0.25)' }} />
+        {/* Question Card - Frosted Glass Layers */}
+        <div className="relative overflow-visible">
+          {/* Floating glass shards orbiting the card */}
+          <div className="absolute inset-0 pointer-events-none">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="absolute w-2 h-2 rounded-sm animate-float-shard opacity-30"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 219, 0, 0.6), rgba(99, 102, 241, 0.6))',
+                  left: `${10 + i * 15}%`,
+                  top: `${-10 + (i % 2) * 120}%`,
+                  animationDelay: `${i * 0.8}s`,
+                  animationDuration: `${6 + i}s`,
+                  transform: `rotate(${i * 60}deg)`,
+                  boxShadow: '0 0 8px rgba(255, 219, 0, 0.4)'
+                }}
+              />
+            ))}
+          </div>
 
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black drop-shadow-sm leading-tight relative z-10 text-center">
-            {question.question}
-          </h2>
+          {/* Background gradient layer (shifts subtly) */}
+          <div className="absolute inset-0 rounded-3xl opacity-40 animate-gradient-shift" style={{
+            background: 'linear-gradient(135deg, #FFDB00 0%, #FFC700 25%, rgba(99, 102, 241, 0.3) 50%, #FFB800 75%, #FFDB00 100%)',
+            backgroundSize: '200% 200%'
+          }} />
+
+          {/* Glass Layer 1 - Back layer (heaviest blur) */}
+          <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/20 border border-white/30 transform translate-y-2 translate-x-2" style={{
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.08)'
+          }} />
+
+          {/* Glass Layer 2 - Middle layer */}
+          <div className="absolute inset-0 rounded-3xl backdrop-blur-xl bg-white/30 border border-white/40 transform translate-y-1 translate-x-1" style={{
+            boxShadow: '0 15px 30px rgba(0, 0, 0, 0.06)'
+          }} />
+
+          {/* Glass Layer 3 - Front layer (main content) */}
+          <div className="relative rounded-3xl backdrop-blur-lg bg-white/50 border-2 border-white/60 p-8 sm:p-10" style={{
+            boxShadow: '0 25px 50px rgba(255, 219, 0, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.8)'
+          }}>
+            {/* Top glass highlight */}
+            <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-3xl pointer-events-none" />
+
+            {/* Question Text - sits between glass layers */}
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight relative z-10 text-center" style={{
+              textShadow: '0 1px 2px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.1)'
+            }}>
+              {question.question}
+            </h2>
+          </div>
         </div>
       </div>
         
