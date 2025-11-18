@@ -253,7 +253,38 @@ router.get('/', requireAuth, async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
-    res.json({ quizzes });
+    // Enhance each quiz with difficulty distribution for adaptive mode check
+    const enhancedQuizzes = await Promise.all(quizzes.map(async (quiz) => {
+      const quizData = quiz.toJSON();
+      
+      // Get difficulty distribution
+      const [difficultyStats] = await sequelize.query(`
+        SELECT 
+          SUM(CASE WHEN LOWER(difficulty) = 'easy' THEN 1 ELSE 0 END) as easy_count,
+          SUM(CASE WHEN LOWER(difficulty) = 'medium' THEN 1 ELSE 0 END) as medium_count,
+          SUM(CASE WHEN LOWER(difficulty) = 'hard' THEN 1 ELSE 0 END) as hard_count,
+          COUNT(DISTINCT LOWER(difficulty)) as unique_difficulties
+        FROM questions 
+        WHERE quiz_id = ? AND difficulty IN ('easy', 'medium', 'hard', 'Easy', 'Medium', 'Hard')
+      `, {
+        replacements: [quiz.quiz_id]
+      });
+
+      const stats = difficultyStats[0] || { easy_count: 0, medium_count: 0, hard_count: 0, unique_difficulties: 0 };
+      
+      // Determine if adaptive mode is possible
+      quizData.difficulty_distribution = {
+        easy: parseInt(stats.easy_count) || 0,
+        medium: parseInt(stats.medium_count) || 0,
+        hard: parseInt(stats.hard_count) || 0
+      };
+      quizData.has_varied_difficulty = parseInt(stats.unique_difficulties) >= 2;
+      quizData.can_use_adaptive = quizData.total_questions >= 5 && quizData.has_varied_difficulty;
+      
+      return quizData;
+    }));
+
+    res.json({ quizzes: enhancedQuizzes });
   } catch (err) {
     console.error('❌ Get quizzes error:', err);
     res.status(500).json({ error: 'Failed to fetch quizzes' });
