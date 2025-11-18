@@ -1,11 +1,11 @@
 /* ================================
-   SOLID AMBER HEADER - CLEAN & EASY ON EYES
+   BRANDED YELLOW HEADER - LIVELY & ON-BRAND
    ================================ */
 .header-static-yellow {
   position: relative;
-  background: #f59e0b;
-  border-bottom: 3px solid #d97706;
-  box-shadow: 0 8px 32px rgba(251, 191, 36, 0.3);
+  background: linear-gradient(135deg, #FFDB00 0%, #FFC700 50%, #FFB800 100%);
+  border-bottom: 3px solid #FFB800;
+  box-shadow: 0 8px 32px rgba(255, 219, 0, 0.4);
 }
 
 /* ================================

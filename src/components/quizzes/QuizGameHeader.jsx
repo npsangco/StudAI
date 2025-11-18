@@ -309,8 +309,8 @@ export const QuizGameHeader = ({
                     )}
                     {adaptiveMode && (
                       <>
-                        <span>•</span>
-                        <span className="text-orange-700 font-semibold flex items-center gap-1">
+                        <span className="text-black/60">•</span>
+                        <span className="text-orange-600 font-bold flex items-center gap-1 bg-orange-100 px-2 py-0.5 rounded-full">
                           <Target className="w-3.5 h-3.5" />
                           Adaptive Mode
                         </span>
@@ -364,8 +364,8 @@ export const QuizGameHeader = ({
             className="absolute inset-y-0 left-0 transition-all duration-500 ease-out rounded-full overflow-hidden"
             style={{ width: `${progress}%` }}
           >
-            {/* Gradient base - branded yellow */}
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #FFDB00, #FFC700, #FFB800)' }} />
+            {/* Gradient base - indigo from branding */}
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700" />
 
             {/* Top glass highlight */}
             <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-full" />
@@ -374,7 +374,7 @@ export const QuizGameHeader = ({
             <div className="absolute inset-0 progress-shimmer rounded-full" />
 
             {/* Leading edge glow (pulsing) */}
-            <div className="absolute right-0 top-0 bottom-0 w-8 animate-pulse rounded-r-full" style={{ background: 'linear-gradient(to left, rgba(255, 219, 0, 0.8), rgba(255, 219, 0, 0.4), transparent)' }} />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-indigo-400/80 via-indigo-500/40 to-transparent animate-pulse rounded-r-full" />
           </div>
 
           {/* Milestone markers with stars */}
@@ -389,10 +389,9 @@ export const QuizGameHeader = ({
                 <Star
                   className={`w-3 h-3 transition-all duration-300 ${
                     isPassed
-                      ? 'scale-125 drop-shadow-lg star-pop'
-                      : 'fill-transparent scale-100'
+                      ? 'text-indigo-500 fill-indigo-500 scale-125 drop-shadow-lg star-pop'
+                      : 'text-gray-400/30 fill-transparent scale-100'
                   }`}
-                  style={{ color: isPassed ? '#FFDB00' : 'rgba(120, 120, 120, 0.3)', fill: isPassed ? '#FFDB00' : 'transparent' }}
                 />
               </div>
             );
