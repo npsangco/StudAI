@@ -447,8 +447,6 @@ if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
     } catch (err) {
         return done(err, null);
     }
-}));
-
     }));
 }
 
