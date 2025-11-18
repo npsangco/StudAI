@@ -355,22 +355,47 @@ export const QuizGameHeader = ({
         </div>
         
         {/* Progress bar */}
-        <div className="relative bg-amber-900/30 h-2 overflow-hidden">
-          <div
-            className="progress-bar h-2 transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
+        <div className="relative bg-gradient-to-b from-amber-900/30 to-amber-800/20 h-3 overflow-hidden rounded-full">
+          {/* Inner shadow for depth */}
+          <div className="absolute inset-0 shadow-inner" />
 
-          {/* Milestone markers */}
-          {[25, 50, 75, 100].map((milestone) => (
-            <div
-              key={milestone}
-              className={`absolute top-0 bottom-0 w-0.5 bg-amber-900/50 transition-opacity ${
-                progress >= milestone ? 'opacity-100' : 'opacity-30'
-              }`}
-              style={{ left: `${milestone}%` }}
-            />
-          ))}
+          {/* Main progress fill */}
+          <div
+            className="absolute inset-y-0 left-0 transition-all duration-500 ease-out rounded-full overflow-hidden"
+            style={{ width: `${progress}%` }}
+          >
+            {/* Gradient base - yellow to amber to orange */}
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600" />
+
+            {/* Top glass highlight */}
+            <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-full" />
+
+            {/* Shimmer animation */}
+            <div className="absolute inset-0 progress-shimmer rounded-full" />
+
+            {/* Leading edge glow (pulsing) */}
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-yellow-300/80 via-yellow-400/40 to-transparent animate-pulse rounded-r-full" />
+          </div>
+
+          {/* Milestone markers with stars */}
+          {[25, 50, 75, 100].map((milestone) => {
+            const isPassed = progress >= milestone;
+            return (
+              <div
+                key={milestone}
+                className="absolute top-1/2 -translate-y-1/2 transition-all duration-500"
+                style={{ left: `calc(${milestone}% - 6px)` }}
+              >
+                <Star
+                  className={`w-3 h-3 transition-all duration-300 ${
+                    isPassed
+                      ? 'text-yellow-400 fill-yellow-400 scale-125 drop-shadow-lg star-pop'
+                      : 'text-amber-700/30 fill-transparent scale-100'
+                  }`}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
 

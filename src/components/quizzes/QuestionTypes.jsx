@@ -528,9 +528,9 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
         </div>
 
         {/* Question Card - Glass Theme */}
-        <div className="bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-white/40 relative overflow-hidden pt-10">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/20 rounded-full -translate-y-16 translate-x-16" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-400/20 rounded-full translate-y-16 -translate-x-16" />
+        <div className="bg-gradient-to-br from-yellow-100/10 to-white/20 backdrop-blur-xl rounded-3xl shadow-2xl shadow-amber-500/20 p-6 sm:p-8 border-2 border-yellow-300/30 relative overflow-hidden pt-10">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/30 rounded-full -translate-y-16 translate-x-16 blur-2xl" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-400/30 rounded-full translate-y-16 -translate-x-16 blur-2xl" />
 
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black drop-shadow-sm leading-tight relative z-10 text-center">
             {question.question}
@@ -654,10 +654,11 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
               onClick={handleSubmit}
               disabled={!canSubmit || isPaused}
               className="
-                bg-amber-500 hover:bg-amber-600
-                disabled:bg-white/20
+                bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600
+                hover:from-yellow-500 hover:via-amber-600 hover:to-orange-600
+                disabled:from-white/20 disabled:via-white/20 disabled:to-white/20
                 text-white font-bold text-lg sm:text-xl px-10 sm:px-12 py-4 sm:py-5
-                rounded-2xl shadow-xl hover:shadow-2xl
+                rounded-2xl shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-600/40
                 transition-all duration-300 transform hover:scale-105
                 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:text-black/50
                 border-2 border-white/40

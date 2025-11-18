@@ -1028,7 +1028,7 @@ const QuizGame = ({
             <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <h2 className="text-2xl font-bold text-black drop-shadow-sm mb-2">Loading questions...</h2>
             <p className="text-black/70 mb-4">Please wait while we load the quiz questions</p>
-            <button onClick={onBack} className="bg-amber-500 text-white font-bold px-6 py-3 rounded-xl hover:bg-amber-600 transition-all shadow-lg hover:shadow-xl border-2 border-white/40">
+            <button onClick={onBack} className="bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600 hover:from-yellow-500 hover:via-amber-600 hover:to-orange-600 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-lg shadow-amber-500/30 hover:shadow-xl hover:shadow-amber-600/40 border-2 border-white/40">
               Cancel
             </button>
           </div>
@@ -1051,6 +1051,27 @@ const QuizGame = ({
   
   return (
     <div className="min-h-screen relative overflow-hidden bg-amber-50">
+      {/* Radial gradient overlay */}
+      <div className="fixed inset-0 bg-gradient-radial from-yellow-100/5 via-transparent to-transparent pointer-events-none" />
+
+      {/* Floating sparkles */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {[...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 bg-yellow-400/60 rounded-full animate-float blur-sm"
+            style={{
+              left: `${(i * 15 + 10)}%`,
+              top: `${(i * 12 + 5)}%`,
+              animationDelay: `${i * 0.7}s`,
+              animationDuration: `${4 + (i % 3)}s`
+            }}
+          >
+            <div className="absolute inset-0 bg-white/40 rounded-full animate-ping" style={{ animationDuration: `${2 + (i % 2)}s` }} />
+          </div>
+        ))}
+      </div>
+
       {/* DYNAMIC PATTERNS based on question type */}
       <QuizBackgroundPattern questionType={currentQ?.type} />
 
@@ -1140,7 +1161,7 @@ const QuizGame = ({
                   <div className="text-center mt-6">
                     <button
                       onClick={handleManualNext}
-                      className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
+                      className="px-8 py-3 bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600 hover:from-yellow-500 hover:via-amber-600 hover:to-orange-600 text-white rounded-2xl font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-600/40 transition-all transform hover:scale-105 border-2 border-white/40"
                     >
                       {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
                     </button>
@@ -1197,7 +1218,7 @@ const QuizGame = ({
                 <div className="text-center mt-6 mb-32">
                   <button
                     onClick={handleManualNext}
-                    className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
+                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600 hover:from-yellow-500 hover:via-amber-600 hover:to-orange-600 text-white rounded-2xl font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-600/40 transition-all transform hover:scale-105 border-2 border-white/40"
                   >
                     {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
                   </button>
@@ -1241,7 +1262,7 @@ const QuizGame = ({
                 <div className="text-center mt-6 mb-32">
                   <button
                     onClick={handleManualNext}
-                    className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
+                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600 hover:from-yellow-500 hover:via-amber-600 hover:to-orange-600 text-white rounded-2xl font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-600/40 transition-all transform hover:scale-105 border-2 border-white/40"
                   >
                     {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
                   </button>

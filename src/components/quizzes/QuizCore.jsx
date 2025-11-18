@@ -88,10 +88,10 @@ export const QuizQuestion = ({
         </div>
 
         {/* Main Question Card */}
-        <div className={`bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-white/40 relative overflow-hidden pt-10 transition-all duration-300 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`}>
+        <div className={`bg-gradient-to-br from-yellow-100/10 to-white/20 backdrop-blur-xl rounded-3xl shadow-2xl shadow-amber-500/20 p-6 sm:p-8 border-2 border-yellow-300/30 relative overflow-hidden pt-10 transition-all duration-300 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`}>
           {/* Decorative corner elements */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/20 rounded-full -translate-y-16 translate-x-16" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-400/20 rounded-full translate-y-16 -translate-x-16" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/30 rounded-full -translate-y-16 translate-x-16 blur-2xl" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-400/30 rounded-full translate-y-16 -translate-x-16 blur-2xl" />
 
           {/* Question Text */}
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black drop-shadow-sm leading-tight relative z-10 text-center">
@@ -110,8 +110,8 @@ export const QuizQuestion = ({
               const isCorrect = choice === currentQ.correctAnswer;
               const isWrong = selectedAnswer && choice === selectedAnswer && !isCorrect;
 
-              let bgClass = 'bg-white/30 backdrop-blur-md hover:bg-white/40';
-              let borderClass = 'border-white/40 hover:border-white/60';
+              let bgClass = 'bg-gradient-to-br from-yellow-50/20 to-white/30 backdrop-blur-md hover:from-yellow-100/30 hover:to-white/40';
+              let borderClass = 'border-yellow-300/30 hover:border-yellow-400/50';
               let textClass = 'text-black';
               let shadowClass = 'shadow-lg hover:shadow-xl';
               
@@ -154,9 +154,18 @@ export const QuizQuestion = ({
                     relative overflow-hidden group
                   `}
                 >
-                  {/* Hover shine effect */}
+                  {/* Horizontal shine effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                  
+
+                  {/* Diagonal slash effect */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-transparent via-yellow-200/20 to-transparent translate-x-[-100%] translate-y-[-100%] group-hover:translate-x-[100%] group-hover:translate-y-[100%] transition-transform duration-1000 ease-out opacity-0 group-hover:opacity-100" />
+
+                  {/* Corner glow accent */}
+                  <div className="absolute top-0 right-0 w-0 h-0 bg-yellow-400/0 group-hover:bg-yellow-400/20 group-hover:w-12 group-hover:h-12 transition-all duration-400 rounded-bl-full blur-sm" />
+
+                  {/* Bottom border light */}
+                  <div className="absolute bottom-0 left-0 right-0 h-0 bg-gradient-to-t from-amber-400/0 group-hover:from-amber-400/40 group-hover:h-2 transition-all duration-300" />
+
                   <span className="relative z-10 block leading-relaxed text-center">
                     {choice}
                   </span>
@@ -174,8 +183,8 @@ export const QuizQuestion = ({
               const isCorrect = choice === currentQ.correctAnswer;
               const isWrong = selectedAnswer && choice === selectedAnswer && !isCorrect;
 
-              let bgClass = 'bg-white/30 backdrop-blur-md hover:bg-white/40';
-              let borderClass = 'border-white/40 hover:border-white/60';
+              let bgClass = 'bg-gradient-to-br from-yellow-50/20 to-white/30 backdrop-blur-md hover:from-yellow-100/30 hover:to-white/40';
+              let borderClass = 'border-yellow-300/30 hover:border-yellow-400/50';
               let textClass = 'text-black';
               let shadowClass = 'shadow-lg hover:shadow-xl';
 
@@ -219,9 +228,18 @@ export const QuizQuestion = ({
                     flex items-center justify-center
                   `}
                 >
-                  {/* Hover shine effect */}
+                  {/* Horizontal shine effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                  
+
+                  {/* Diagonal slash effect */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-transparent via-yellow-200/20 to-transparent translate-x-[-100%] translate-y-[-100%] group-hover:translate-x-[100%] group-hover:translate-y-[100%] transition-transform duration-1000 ease-out opacity-0 group-hover:opacity-100" />
+
+                  {/* Corner glow accent */}
+                  <div className="absolute top-0 right-0 w-0 h-0 bg-yellow-400/0 group-hover:bg-yellow-400/20 group-hover:w-12 group-hover:h-12 transition-all duration-400 rounded-bl-full blur-sm" />
+
+                  {/* Bottom border light */}
+                  <div className="absolute bottom-0 left-0 right-0 h-0 bg-gradient-to-t from-amber-400/0 group-hover:from-amber-400/40 group-hover:h-2 transition-all duration-300" />
+
                   <span className="relative z-10">{choice}</span>
                 </button>
               );
@@ -292,10 +310,11 @@ export const QuizQuestion = ({
                   onClick={onFillInAnswer}
                   disabled={!userAnswer?.trim() || isPaused}
                   className="
-                    bg-amber-500 hover:bg-amber-600
-                    disabled:bg-white/20
+                    bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600
+                    hover:from-yellow-500 hover:via-amber-600 hover:to-orange-600
+                    disabled:from-white/20 disabled:via-white/20 disabled:to-white/20
                     text-white font-bold text-lg px-10 py-4
-                    rounded-2xl shadow-xl hover:shadow-2xl
+                    rounded-2xl shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-600/40
                     transition-all duration-300 transform hover:scale-105
                     disabled:cursor-not-allowed disabled:hover:scale-100 disabled:text-black/50
                     border-2 border-white/40

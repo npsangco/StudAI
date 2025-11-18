@@ -91,7 +91,7 @@ export const EmojiPicker = ({ onEmojiSelect, disabled = false, cooldown = 2000, 
           w-12 h-12 rounded-full shadow-lg transition-all transform
           ${disabled || onCooldown
             ? 'bg-gray-300 cursor-not-allowed opacity-50'
-            : 'bg-amber-500 hover:bg-amber-600 hover:scale-110 active:scale-95'
+            : 'bg-gradient-to-br from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 hover:scale-110 active:scale-95'
           }
           flex items-center justify-center text-2xl
         `}
