@@ -1,4 +1,5 @@
 import TermsModal from './TermsAndConditions';
+import PrivacyPolicyModal from './PrivacyPolicy';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -15,9 +16,7 @@ export default function Footer() {
           {/* Links */}
           <div className="flex space-x-8">
             <TermsModal />
-            <button className="text-base text-gray-300 hover:text-white transition-colors">
-              Privacy Policy
-            </button>
+            <PrivacyPolicyModal />
           </div>
         </div>
       </div>
