@@ -106,7 +106,7 @@ Tracks note sharing via unique codes.
 
 ---
 
-#### **chat_history** (ChatMessage.js)
+#### **chatbot** (ChatMessage.js)
 Stores every chatbot prompt/response to keep contextual history per note.
 
 | Column | Type | Description |

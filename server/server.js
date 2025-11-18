@@ -114,6 +114,7 @@ const app = express();
 // Trust proxy - required for Digital Ocean App Platform
 app.set('trust proxy', 1);
 
+
 // ============================================
 // ACHIEVEMENT INITIALIZATION
 // ============================================
@@ -184,6 +185,56 @@ async function initializeDefaultAchievements() {
   } catch (error) {
     console.error('Error initializing achievements:', error);
   }
+}
+
+async function ensureChatbotForeignKey() {
+    try {
+        const dbName = sequelize.config?.database || process.env.DB_NAME;
+
+        if (!dbName) {
+            console.warn('⚠️ Skipping chatbot FK validation because DB name is undefined');
+            return;
+        }
+
+        const [constraints] = await sequelize.query(
+            `SELECT CONSTRAINT_NAME, REFERENCED_TABLE_NAME
+             FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA = :dbName
+               AND TABLE_NAME = 'chatbot'
+               AND COLUMN_NAME = 'note_id'
+               AND REFERENCED_TABLE_NAME IS NOT NULL`,
+            { replacements: { dbName } }
+        );
+
+        let hasCorrectConstraint = false;
+
+        for (const constraint of constraints) {
+            if (constraint.REFERENCED_TABLE_NAME === 'note') {
+                hasCorrectConstraint = true;
+                continue;
+            }
+
+            await sequelize.getQueryInterface().removeConstraint('chatbot', constraint.CONSTRAINT_NAME);
+            console.log(`🧹 Removed invalid chatbot FK constraint ${constraint.CONSTRAINT_NAME}`);
+        }
+
+        if (!hasCorrectConstraint) {
+            await sequelize.getQueryInterface().addConstraint('chatbot', {
+                fields: ['note_id'],
+                type: 'foreign key',
+                name: 'fk_chatbot_note_id',
+                references: {
+                    table: 'note',
+                    field: 'note_id',
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
+            });
+            console.log('✅ Added chatbot.note_id -> note.note_id foreign key');
+        }
+    } catch (err) {
+        console.error('❌ Failed to enforce chatbot.note_id foreign key:', err);
+    }
 }
 
 // ============================================
@@ -371,7 +422,8 @@ sequelize.authenticate()
         // Initialize default achievements if they don't exist
         await initializeDefaultAchievements();
         await ChatMessage.sync();
-        console.log("✅ Chat history table synced");
+        console.log("✅ Chatbot table ensured");
+        await ensureChatbotForeignKey();
         
         startEmailReminders();
         // console.log("📅 Email reminder scheduler started!"); for email testing
@@ -677,7 +729,24 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             });
             console.log('📝 [Server] Chat interaction stored with ID:', chatRecord.chat_id);
         } catch (storeErr) {
-            console.error('❌ [Server] Failed to store chat history:', storeErr);
+            const missingTable = storeErr?.original?.code === 'ER_NO_SUCH_TABLE';
+            if (missingTable) {
+                console.warn('⚠️ [Server] chatbot table missing. Attempting to recreate via sync...');
+                try {
+                    await ChatMessage.sync();
+                    chatRecord = await ChatMessage.create({
+                        user_id: req.session.userId,
+                        note_id: normalizedNoteId,
+                        message: latestUserMessage,
+                        response: reply
+                    });
+                    console.log('📝 [Server] Chat interaction stored after table sync. ID:', chatRecord.chat_id);
+                } catch (retryErr) {
+                    console.error('❌ [Server] Retry storing chat history failed:', retryErr);
+                }
+            } else {
+                console.error('❌ [Server] Failed to store chat history:', storeErr);
+            }
         }
 
         console.log('✅ [Server] Chat response generated successfully, length:', reply.length);

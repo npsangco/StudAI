@@ -29,7 +29,7 @@ const ChatMessage = sequelize.define('ChatMessage', {
     defaultValue: DataTypes.NOW
   }
 }, {
-  tableName: 'chat_history',
+  tableName: 'chatbot',
   timestamps: false
 });
 
