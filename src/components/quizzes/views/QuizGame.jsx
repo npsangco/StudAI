@@ -103,6 +103,8 @@ const QuizGame = ({
   const timeoutHandledRef = useRef(false);
 
   // Track correct answers for accurate accuracy calculation
+  // Use ref for synchronous updates to prevent flickering
+  const correctAnswersCountRef = useRef(0);
   const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
   
   // Calculate max possible score based on mode
@@ -623,8 +625,9 @@ const QuizGame = ({
     setAnswersHistory(newAnswersHistory);
 
     if (isCorrect) {
-      // Track correct answers
-      setCorrectAnswersCount(prev => prev + 1);
+      // Track correct answers (sync ref + state)
+      correctAnswersCountRef.current += 1;
+      setCorrectAnswersCount(correctAnswersCountRef.current);
       
       // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo' 
@@ -686,8 +689,9 @@ const QuizGame = ({
     game.setUserAnswer(actualAnswer + '_submitted');
     
     if (isCorrect) {
-      // Track correct answers
-      setCorrectAnswersCount(prev => prev + 1);
+      // Track correct answers (sync ref + state)
+      correctAnswersCountRef.current += 1;
+      setCorrectAnswersCount(correctAnswersCountRef.current);
       
       // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo' 
@@ -748,8 +752,9 @@ const QuizGame = ({
     setAnswersHistory(newAnswersHistory);
     
     if (isCorrect) {
-      // Track correct answers
-      setCorrectAnswersCount(prev => prev + 1);
+      // Track correct answers (sync ref + state)
+      correctAnswersCountRef.current += 1;
+      setCorrectAnswersCount(correctAnswersCountRef.current);
       
       // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo' 
@@ -1103,7 +1108,7 @@ const QuizGame = ({
         playersCount={allPlayers.length}
         onBack={handleBackOrForfeit}
         currentQuestionData={currentQ}
-        correctAnswersCount={correctAnswersCount}
+        correctAnswersCount={correctAnswersCountRef.current}
         maxPossibleScore={maxPossibleScore}
         adaptiveMode={useAdaptiveMode}
       />

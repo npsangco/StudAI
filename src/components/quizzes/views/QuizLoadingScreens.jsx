@@ -199,22 +199,33 @@ export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false
           backgroundSize: '40px 40px'
         }} />
 
-        {/* Animated yellow particles */}
+        {/* Animated particles - Yellow, Orange, and Indigo */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {particles.map((particle) => (
-            <div
-              key={particle.id}
-              className="absolute w-2 h-2 bg-yellow-400 rounded-full animate-float-shard"
-              style={{
-                left: `${particle.left}%`,
-                top: `${particle.top}%`,
-                animationDelay: `${particle.delay}s`,
-                animationDuration: `${particle.duration}s`,
-                opacity: 0.4,
-                boxShadow: '0 0 10px rgba(255, 219, 0, 0.6)'
-              }}
-            />
-          ))}
+          {particles.map((particle) => {
+            const colorType = particle.id % 3;
+            const background = colorType === 0 ? '#fbbf24' : colorType === 1 ? '#f97316' : '#818cf8';
+            const boxShadow = colorType === 0
+              ? '0 0 12px rgba(251, 191, 36, 0.8)'
+              : colorType === 1
+              ? '0 0 12px rgba(249, 115, 22, 0.8)'
+              : '0 0 12px rgba(129, 140, 248, 0.8)';
+
+            return (
+              <div
+                key={particle.id}
+                className="absolute w-2 h-2 rounded-full animate-float-shard"
+                style={{
+                  background,
+                  left: `${particle.left}%`,
+                  top: `${particle.top}%`,
+                  animationDelay: `${particle.delay}s`,
+                  animationDuration: `${particle.duration}s`,
+                  opacity: 0.6,
+                  boxShadow
+                }}
+              />
+            );
+          })}
         </div>
 
         {/* Radial glow effects */}

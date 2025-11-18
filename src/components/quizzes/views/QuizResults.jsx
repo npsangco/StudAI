@@ -10,6 +10,16 @@ import AnswerReviewModal from './AnswerReviewModal';
 const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
   const [showAnswerReview, setShowAnswerReview] = useState(false);
 
+  // Memoize particle positions to prevent flickering
+  const [particles] = useState(() =>
+    Array.from({ length: 15 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      colorType: i % 3
+    }))
+  );
+
   if (!isOpen) return null;
 
   const validScore = typeof results?.score === 'number' ? results.score : 0;
@@ -50,21 +60,30 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
 
         {/* Animated particles - More visible */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(15)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-2 rounded-full"
-              style={{
-                background: i % 3 === 0 ? '#fbbf24' : i % 3 === 1 ? '#f97316' : '#818cf8',
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animation: `float-shard ${3 + Math.random() * 4}s ease-in-out infinite`,
-                animationDelay: `${i * 0.3}s`,
-                opacity: 0.6,
-                boxShadow: i % 3 === 0 ? '0 0 12px rgba(251, 191, 36, 0.8)' : i % 3 === 1 ? '0 0 12px rgba(249, 115, 22, 0.8)' : '0 0 12px rgba(129, 140, 248, 0.8)'
-              }}
-            />
-          ))}
+          {particles.map((particle) => {
+            const background = particle.colorType === 0 ? '#fbbf24' : particle.colorType === 1 ? '#f97316' : '#818cf8';
+            const boxShadow = particle.colorType === 0
+              ? '0 0 12px rgba(251, 191, 36, 0.8)'
+              : particle.colorType === 1
+              ? '0 0 12px rgba(249, 115, 22, 0.8)'
+              : '0 0 12px rgba(129, 140, 248, 0.8)';
+
+            return (
+              <div
+                key={particle.id}
+                className="absolute w-2 h-2 rounded-full"
+                style={{
+                  background,
+                  left: `${particle.left}%`,
+                  top: `${particle.top}%`,
+                  animation: `float-shard ${3 + (particle.id % 4)}s ease-in-out infinite`,
+                  animationDelay: `${particle.id * 0.3}s`,
+                  opacity: 0.6,
+                  boxShadow
+                }}
+              />
+            );
+          })}
         </div>
 
         {/* Radial glows - More pronounced */}

@@ -484,15 +484,6 @@ function QuizzesPage() {
     const isSoloMode = quizDataHook.uiState.currentView === VIEWS.LOADING;
     const adaptiveCheck = isSoloMode ? canUseAdaptiveMode(rawQuestions) : { enabled: false };
 
-    // Debug logging
-    console.log('🔍 ADAPTIVE MODE CHECK:', {
-      totalQuestions: rawQuestions.length,
-      adaptiveEnabled: adaptiveCheck.enabled,
-      reason: adaptiveCheck.reason,
-      difficulties: rawQuestions.map(q => q.difficulty),
-      uniqueDifficulties: [...new Set(rawQuestions.map(q => q.difficulty?.toLowerCase() || 'medium'))]
-    });
-
     return (
       <SoloLoadingScreen
         countdown={countdown.countdown}
