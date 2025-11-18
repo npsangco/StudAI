@@ -190,14 +190,10 @@ async function initializeDefaultAchievements() {
 
 // ----------- CORS -----------------
 app.use(cors({
-    origin: [
-        'https://studai.dev',  // ← YOUR ACTUAL FRONTEND!
-        'https://walrus-app-umg67.ondigitalocean.app', // Backend domain
-        'http://localhost:5173', // Local development
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: ['https://studai.dev'],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 // ----------------- EXPRESS MIDDLEWARE -----------------
@@ -383,8 +379,6 @@ sequelize.authenticate()
 
 // ----------------- Session Configuration -----------------
 if (sessionStore) {
-    const isProduction = process.env.NODE_ENV === 'production';
-    
     app.use(
         session({
             secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
@@ -394,10 +388,10 @@ if (sessionStore) {
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: isProduction,
-                maxAge: 1000 * 60 * 60 * 24, // 24 hours
-                sameSite: 'none'
-                // No domain setting needed
+                secure: true,
+                maxAge: 1000 * 60 * 60 * 24,
+                sameSite: 'none',
+                domain: '.walrus-app-umg67.ondigitalocean.app', // Use backend domain for cookie
             },
             rolling: true,
         })
@@ -905,25 +899,9 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
         req.session.username = user.username;
         req.session.role = user.role;
 
-        // Debug: Log session and cookie info
-        console.log('🔒 [Login] Session set:', {
-            userId: req.session.userId,
-            email: req.session.email,
-            username: req.session.username,
-            role: req.session.role
-        });
-        console.log('🔒 [Login] Request headers:', req.headers);
-        console.log('🔒 [Login] NODE_ENV:', process.env.NODE_ENV);
-        console.log('🔒 [Login] Cookie config:', req.session.cookie);
-
         // await updateUserStreak(user.user_id);
 
         const updatedUser = await User.findByPk(user.user_id);
-
-        // Debug: Log response cookies
-        res.on('finish', () => {
-            console.log('🔒 [Login] Response Set-Cookie header:', res.getHeader('Set-Cookie'));
-        });
 
         res.status(200).json({
             message: "Login successful",

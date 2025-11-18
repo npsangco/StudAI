@@ -56,6 +56,10 @@ sessionStore.sync({
   force: false,
   // Create table if it doesn't exist
   alter: false
+}).then(() => {
+  console.log('✅ Session store table synced');
+}).catch((err) => {
+  console.error('❌ Session store sync error:', err);
 });
 
 // module.exports = sessionStore;
