@@ -394,9 +394,9 @@ if (sessionStore) {
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: isProduction, // true in production (required for sameSite: 'none')
+                secure: isProduction,
                 maxAge: 1000 * 60 * 60 * 24, // 24 hours
-                sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-domain in production
+                sameSite: 'none'
                 // No domain setting needed
             },
             rolling: true,
