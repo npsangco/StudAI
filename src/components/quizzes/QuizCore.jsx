@@ -90,21 +90,22 @@ export const QuizQuestion = ({
         </div>
 
         {/* Main Question Card - Frosted Glass Layers */}
-        <div className={`relative overflow-visible transition-all duration-500 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`}>
+        <div className={`relative transition-all duration-500 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`}>
           {/* Floating glass shards orbiting the card */}
-          <div className="absolute inset-0 pointer-events-none">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div className="absolute inset-0 pointer-events-none overflow-visible">
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
               <div
                 key={i}
-                className="absolute w-2 h-2 rounded-sm animate-float-shard opacity-30"
+                className="absolute w-3 h-3 rounded-sm animate-float-shard"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(255, 219, 0, 0.6), rgba(99, 102, 241, 0.6))',
-                  left: `${10 + i * 15}%`,
-                  top: `${-10 + (i % 2) * 120}%`,
-                  animationDelay: `${i * 0.8}s`,
-                  animationDuration: `${6 + i}s`,
-                  transform: `rotate(${i * 60}deg)`,
-                  boxShadow: '0 0 8px rgba(255, 219, 0, 0.4)'
+                  background: 'linear-gradient(135deg, rgba(255, 219, 0, 0.8), rgba(99, 102, 241, 0.6))',
+                  left: `${5 + i * 12}%`,
+                  top: i % 2 === 0 ? '-20px' : 'calc(100% + 20px)',
+                  animationDelay: `${i * 0.6}s`,
+                  animationDuration: `${5 + (i % 3)}s`,
+                  transform: `rotate(${i * 45}deg)`,
+                  boxShadow: '0 0 12px rgba(255, 219, 0, 0.6)',
+                  opacity: 0.6
                 }}
               />
             ))}
