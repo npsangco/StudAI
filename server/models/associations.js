@@ -17,6 +17,7 @@ import SharedNote from './SharedNote.js';
 import PetCompanion from './PetCompanion.js';
 import PetItem from './PetItem.js';
 import UserPetItem from './UserPetItem.js';
+import ChatMessage from './ChatMessage.js';
 
 export function setupAssociations() {
   // ────────────────────────────────
@@ -70,6 +71,18 @@ export function setupAssociations() {
     as: 'owner'
   });
 
+  // User ↔ Chat Messages (1:N)
+  User.hasMany(ChatMessage, {
+    foreignKey: 'user_id',
+    as: 'chatMessages',
+    onDelete: 'CASCADE'
+  });
+
+  ChatMessage.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'author'
+  });
+
   // ────────────────────────────────
   // 📝 NOTES MODULE
   // ────────────────────────────────
@@ -84,6 +97,17 @@ export function setupAssociations() {
   Note.belongsTo(User, {
     foreignKey: 'user_id',
     as: 'author'
+  });
+
+  Note.hasMany(ChatMessage, {
+    foreignKey: 'note_id',
+    as: 'chatHistory',
+    onDelete: 'CASCADE'
+  });
+
+  ChatMessage.belongsTo(Note, {
+    foreignKey: 'note_id',
+    as: 'note'
   });
 
   // Note ↔ Category (N:1)

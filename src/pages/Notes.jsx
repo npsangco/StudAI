@@ -100,7 +100,8 @@ const Notes = () => {
           isShared: isShared,
           isPinned: isPinned,
           category: note.category || null,
-          categoryId: note.category_id || null
+          categoryId: note.category_id || null,
+          fileId: note.fileId || note.file_id || null
         };
       });
 
