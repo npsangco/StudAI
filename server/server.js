@@ -677,7 +677,24 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             });
             console.log('📝 [Server] Chat interaction stored with ID:', chatRecord.chat_id);
         } catch (storeErr) {
-            console.error('❌ [Server] Failed to store chat history:', storeErr);
+            const missingTable = storeErr?.original?.code === 'ER_NO_SUCH_TABLE';
+            if (missingTable) {
+                console.warn('⚠️ [Server] chat_history table missing. Attempting to recreate via sync...');
+                try {
+                    await ChatMessage.sync();
+                    chatRecord = await ChatMessage.create({
+                        user_id: req.session.userId,
+                        note_id: normalizedNoteId,
+                        message: latestUserMessage,
+                        response: reply
+                    });
+                    console.log('📝 [Server] Chat interaction stored after table sync. ID:', chatRecord.chat_id);
+                } catch (retryErr) {
+                    console.error('❌ [Server] Retry storing chat history failed:', retryErr);
+                }
+            } else {
+                console.error('❌ [Server] Failed to store chat history:', storeErr);
+            }
         }
 
         console.log('✅ [Server] Chat response generated successfully, length:', reply.length);
