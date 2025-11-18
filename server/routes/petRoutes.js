@@ -24,7 +24,9 @@ const CONFIG = {
   },
   exp: {
     perItem: 4,  // EXP per item used
-    maxLevel: 50 // Max level changed from 100
+    maxLevel: 50, // Max level changed from 100
+    depletionRate: 10, // EXP lost per hour when all stats are 0
+    depletionInterval: 60 // Check every 60 minutes
   },
   shop: {
     energy: { cost: 40, effect: 35 } // Reduced from 70
@@ -101,6 +103,34 @@ async function applyStatDecay(pet) {
     energy_level: Math.max(0, Math.min(100, pet.energy_level + energyReplenish)),
     last_updated: now,
   };
+
+  // EXP depletion when all stats reach 0
+  if (updatedStats.hunger_level === 0 && 
+      updatedStats.happiness_level === 0 && 
+      updatedStats.cleanliness_level === 0) {
+    
+    if (pet.last_updated) {
+      const minutesElapsed = (now - new Date(pet.last_updated)) / (1000 * 60);
+      const depletionPeriods = Math.floor(minutesElapsed / CONFIG.exp.depletionInterval);
+      const expLoss = depletionPeriods * CONFIG.exp.depletionRate;
+      
+      if (expLoss > 0) {
+        const newExp = Math.max(0, pet.experience_points - expLoss);
+        updatedStats.experience_points = newExp;
+        
+        // Recalculate level based on new EXP
+        let newLevel = 1;
+        let expSum = 0;
+        while (newLevel < CONFIG.exp.maxLevel) {
+          const expNeeded = getExpNeeded(newLevel);
+          if (expSum + expNeeded > newExp) break;
+          expSum += expNeeded;
+          newLevel++;
+        }
+        updatedStats.level = newLevel;
+      }
+    }
+  }
 
   await pet.update(updatedStats);
   return pet;

@@ -205,9 +205,9 @@ router.get('/stats', requireAuth, async (req, res) => {
       total: result.totalAchievements,
       unlocked: result.totalUnlocked,
       locked: result.totalAchievements - result.totalUnlocked,
-      completionPercentage: Math.round(
+      completionPercentage: Math.min(100, Math.round(
         (result.totalUnlocked / result.totalAchievements) * 100
-      ),
+      )),
       totalPointsEarned: result.achievements
         .filter(a => a.is_unlocked)
         .reduce((sum, a) => sum + a.points_reward, 0)
