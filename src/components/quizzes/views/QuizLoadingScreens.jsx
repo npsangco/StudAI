@@ -179,7 +179,7 @@ export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
   return (
     <>
       <style>{styles}</style>
-      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 flex items-center justify-center overflow-hidden">
+      <div className="fixed inset-0 w-full h-full bg-white flex items-center justify-center overflow-hidden">
         <DefaultQuizPattern />
 
         <div className="text-center animate-fade-in z-10 relative px-4">

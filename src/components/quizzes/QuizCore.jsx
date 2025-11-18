@@ -1,5 +1,6 @@
 import React from 'react';
 import { MatchingQuizPlayer } from './QuestionTypes';
+import { List, CheckCircle, Edit3, Link } from 'lucide-react';
 
 export const QuizQuestion = ({
   question,
@@ -17,6 +18,8 @@ export const QuizQuestion = ({
   isPaused = false,
   isAnswerCorrect,
   isWaiting = false,
+  currentQuestionIndex,
+  totalQuestions,
 }) => {
   const currentQ = question;
 
@@ -29,25 +32,29 @@ export const QuizQuestion = ({
   // Get question type config
   const getQuestionTypeConfig = (type) => {
     const configs = {
-      'Multiple Choice': { 
-        gradient: 'from-blue-500 to-indigo-600',
+      'Multiple Choice': {
+        color: 'bg-blue-500',
         bgPattern: 'from-blue-50 to-indigo-50',
-        label: 'Multiple Choice'
+        label: 'Multiple Choice',
+        icon: 'list'
       },
-      'True/False': { 
-        gradient: 'from-purple-500 to-pink-600',
+      'True/False': {
+        color: 'bg-purple-500',
         bgPattern: 'from-purple-50 to-pink-50',
-        label: 'True or False'
+        label: 'True or False',
+        icon: 'check-circle'
       },
-      'Fill in the blanks': { 
-        gradient: 'from-teal-500 to-cyan-600',
+      'Fill in the blanks': {
+        color: 'bg-teal-500',
         bgPattern: 'from-teal-50 to-cyan-50',
-        label: 'Fill in the Blanks'
+        label: 'Fill in the Blanks',
+        icon: 'edit-3'
       },
-      'Matching': { 
-        gradient: 'from-orange-500 to-red-600',
+      'Matching': {
+        color: 'bg-orange-500',
         bgPattern: 'from-orange-50 to-red-50',
-        label: 'Matching'
+        label: 'Matching',
+        icon: 'link'
       }
     };
     return configs[type] || configs['Multiple Choice'];
@@ -73,19 +80,40 @@ export const QuizQuestion = ({
       <div className="relative z-20">
         {/* Question Type Badge */}
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${config.gradient} text-white font-bold text-sm shadow-lg`}>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${config.color} text-white font-bold text-sm shadow-lg`}>
+            {config.icon === 'list' && <List size={16} />}
+            {config.icon === 'check-circle' && <CheckCircle size={16} />}
+            {config.icon === 'edit-3' && <Edit3 size={16} />}
+            {config.icon === 'link' && <Link size={16} />}
             <span>{config.label}</span>
           </div>
         </div>
 
-        {/* Main Question Card */}
-        <div className={`bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-white/40 relative overflow-hidden pt-10 transition-all duration-300 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`}>
-          {/* Decorative corner elements */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/20 rounded-full -translate-y-16 translate-x-16" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-400/20 rounded-full translate-y-16 -translate-x-16" />
+        {/* Main Question Card - Exam Paper Style */}
+        <div className={`bg-white rounded-2xl shadow-2xl p-8 sm:p-10 border border-gray-300 relative overflow-visible transition-all duration-300 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`} style={{
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06)',
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(0, 0, 0, 0.02) 31px, rgba(0, 0, 0, 0.02) 32px)'
+        }}>
+          {/* Dog-ear fold - top right corner */}
+          <div className="absolute -top-0 -right-0 w-0 h-0 border-l-[40px] border-l-transparent border-t-[40px] border-t-[#FFDB00] opacity-90" style={{
+            filter: 'drop-shadow(-2px 2px 3px rgba(0, 0, 0, 0.15))'
+          }} />
+          <div className="absolute top-0 right-0 w-0 h-0 border-l-[40px] border-l-white border-b-[40px] border-b-transparent" />
+
+          {/* Hole punches on left side */}
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-16">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="w-3 h-3 rounded-full bg-gray-100 border border-gray-300" style={{ boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)' }} />
+            ))}
+          </div>
+
+          {/* Question Number - typewriter style */}
+          <div className="absolute top-6 left-16 font-mono text-sm text-gray-500 font-semibold">
+            Question {(currentQuestionIndex ?? 0) + 1}/{totalQuestions || '?'}
+          </div>
 
           {/* Question Text */}
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black drop-shadow-sm leading-tight relative z-10 text-center">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-black leading-relaxed relative z-10 text-left pl-12 pt-6" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
             {currentQ.question}
           </h2>
         </div>
@@ -93,127 +121,169 @@ export const QuizQuestion = ({
 
       {/* Answer Options Section */}
       <div className="mt-4">
-        {/* Multiple Choice */}
+        {/* Multiple Choice - Bubble Style */}
         {currentQ.type === 'Multiple Choice' && currentQ.choices && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="space-y-3">
             {currentQ.choices.map((choice, index) => {
+              const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+              const letter = letters[index];
               const isSelected = selectedAnswer === choice;
               const isCorrect = choice === currentQ.correctAnswer;
               const isWrong = selectedAnswer && choice === selectedAnswer && !isCorrect;
 
-              let bgClass = 'bg-white/30 backdrop-blur-md hover:bg-white/40';
-              let borderClass = 'border-white/40 hover:border-white/60';
-              let textClass = 'text-black';
-              let shadowClass = 'shadow-lg hover:shadow-xl';
-              
-              if (selectedAnswer) {
-                if (isCorrect) {
-                  bgClass = 'bg-gradient-to-br from-green-400 to-emerald-500';
-                  borderClass = 'border-green-300';
-                  textClass = 'text-white';
-                  shadowClass = 'shadow-2xl shadow-green-500/40';
-                } else if (isWrong) {
-                  bgClass = 'bg-gradient-to-br from-red-400 to-rose-500';
-                  borderClass = 'border-red-300';
-                  textClass = 'text-white';
-                  shadowClass = 'shadow-2xl shadow-red-500/40';
-                } else {
-                  bgClass = 'bg-white/40';
-                  borderClass = 'border-white/30';
-                  textClass = 'text-gray-500';
-                  shadowClass = 'shadow-sm';
-                }
-              } else if (isSelected) {
-                bgClass = 'bg-white';
-                borderClass = 'border-yellow-400';
-                shadowClass = 'shadow-2xl shadow-yellow-500/30';
-              }
-              
               return (
                 <button
                   key={index}
                   onClick={() => handleAnswerClick(choice)}
                   disabled={!!selectedAnswer || isPaused}
                   className={`
-                    ${bgClass} ${borderClass} ${textClass} ${shadowClass}
-                    backdrop-blur-xl border-2 rounded-2xl p-4 sm:p-5
-                    min-h-[90px] font-semibold text-base sm:text-lg
-                    transition-all duration-300 transform
-                    hover:scale-105 hover:-translate-y-1
-                    ${isSelected ? 'scale-105 -translate-y-1' : ''}
-                    disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0
-                    relative overflow-hidden group
+                    w-full bg-white border-2 rounded-xl p-4 sm:p-5
+                    transition-all duration-300
+                    ${!selectedAnswer ? 'hover:border-indigo-300 hover:shadow-md cursor-pointer' : 'cursor-default'}
+                    ${isSelected && !selectedAnswer ? 'border-indigo-400 shadow-lg' : 'border-gray-200'}
+                    ${isCorrect && selectedAnswer ? 'border-green-400 bg-green-50' : ''}
+                    ${isWrong ? 'border-red-400 bg-red-50' : ''}
+                    ${!isCorrect && !isWrong && selectedAnswer ? 'opacity-50' : ''}
+                    disabled:cursor-not-allowed
+                    relative group
+                    flex items-center gap-4
                   `}
+                  style={{ boxShadow: isSelected && !selectedAnswer ? '0 4px 12px rgba(99, 102, 241, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.05)' }}
                 >
-                  {/* Hover shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                  
-                  <span className="relative z-10 block leading-relaxed text-center">
+                  {/* Bubble Circle */}
+                  <div className={`
+                    flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full border-3
+                    flex items-center justify-center font-bold text-lg
+                    transition-all duration-300 relative overflow-hidden
+                    ${!selectedAnswer && !isSelected ? 'border-gray-400 bg-white' : ''}
+                    ${isSelected && !selectedAnswer ? 'border-indigo-500 bg-indigo-50' : ''}
+                    ${isCorrect && selectedAnswer ? 'border-green-500 bg-green-500' : ''}
+                    ${isWrong ? 'border-red-500 bg-red-500' : ''}
+                  `}>
+                    {/* Pencil fill animation on hover */}
+                    {!selectedAnswer && (
+                      <div className="absolute inset-0 bg-indigo-500 scale-0 group-hover:scale-100 transition-transform duration-300 ease-out rounded-full opacity-20" />
+                    )}
+
+                    {/* Letter or Check/Cross */}
+                    {!selectedAnswer && (
+                      <span className={`relative z-10 ${isSelected ? 'text-indigo-600' : 'text-gray-600'}`}>{letter}</span>
+                    )}
+                    {isCorrect && selectedAnswer && (
+                      <svg className="w-6 h-6 text-white relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    {isWrong && (
+                      <svg className="w-6 h-6 text-white relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    )}
+
+                    {/* Filled state for selected */}
+                    {isSelected && !selectedAnswer && (
+                      <div className="absolute inset-1 bg-indigo-500 rounded-full animate-ink-spread" />
+                    )}
+                  </div>
+
+                  {/* Choice Text */}
+                  <div className={`
+                    flex-1 text-left text-base sm:text-lg font-medium
+                    ${isCorrect && selectedAnswer ? 'text-green-700' : ''}
+                    ${isWrong ? 'text-red-700' : ''}
+                    ${!isCorrect && !isWrong ? 'text-gray-800' : ''}
+                  `}>
                     {choice}
-                  </span>
+                  </div>
+
+                  {/* Hover pencil indicator */}
+                  {!selectedAnswer && (
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </div>
+                  )}
+
                 </button>
               );
             })}
           </div>
         )}
 
-        {/* True/False */}
+        {/* True/False - Bubble Style */}
         {currentQ.type === 'True/False' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {['True', 'False'].map((choice) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {['True', 'False'].map((choice, index) => {
+              const letter = choice === 'True' ? 'T' : 'F';
               const isSelected = selectedAnswer === choice;
               const isCorrect = choice === currentQ.correctAnswer;
               const isWrong = selectedAnswer && choice === selectedAnswer && !isCorrect;
 
-              let bgClass = 'bg-white/30 backdrop-blur-md hover:bg-white/40';
-              let borderClass = 'border-white/40 hover:border-white/60';
-              let textClass = 'text-black';
-              let shadowClass = 'shadow-lg hover:shadow-xl';
-
-              if (selectedAnswer) {
-                if (isCorrect) {
-                  bgClass = 'bg-gradient-to-br from-green-400 to-emerald-500';
-                  borderClass = 'border-green-300';
-                  textClass = 'text-white drop-shadow-sm';
-                  shadowClass = 'shadow-2xl shadow-green-500/40';
-                } else if (isWrong) {
-                  bgClass = 'bg-gradient-to-br from-red-400 to-rose-500';
-                  borderClass = 'border-red-300';
-                  textClass = 'text-white drop-shadow-sm';
-                  shadowClass = 'shadow-2xl shadow-red-500/40';
-                } else {
-                  bgClass = 'bg-white/10 backdrop-blur-sm';
-                  borderClass = 'border-white/20';
-                  textClass = 'text-black/50';
-                  shadowClass = 'shadow-sm';
-                }
-              } else if (isSelected) {
-                bgClass = 'bg-yellow-400/50 backdrop-blur-md';
-                borderClass = 'border-yellow-500';
-                shadowClass = 'shadow-2xl shadow-yellow-500/40';
-              }
-              
               return (
                 <button
                   key={choice}
                   onClick={() => handleAnswerClick(choice)}
                   disabled={!!selectedAnswer || isPaused}
                   className={`
-                    ${bgClass} ${borderClass} ${textClass} ${shadowClass}
-                    backdrop-blur-xl border-2 rounded-2xl p-6 sm:p-8
-                    min-h-[120px] font-bold text-xl sm:text-2xl
-                    transition-all duration-300 transform
-                    hover:scale-105 hover:-translate-y-1
-                    ${isSelected ? 'scale-105 -translate-y-1' : ''}
+                    bg-white border-2 rounded-xl p-6 sm:p-8
+                    transition-all duration-300
+                    ${!selectedAnswer ? 'hover:border-indigo-300 hover:shadow-md cursor-pointer' : 'cursor-default'}
+                    ${isSelected && !selectedAnswer ? 'border-indigo-400 shadow-lg' : 'border-gray-200'}
+                    ${isCorrect && selectedAnswer ? 'border-green-400 bg-green-50' : ''}
+                    ${isWrong ? 'border-red-400 bg-red-50' : ''}
+                    ${!isCorrect && !isWrong && selectedAnswer ? 'opacity-50' : ''}
                     disabled:cursor-not-allowed
-                    relative overflow-hidden group
-                    flex items-center justify-center
+                    relative group
+                    flex flex-col items-center justify-center gap-3 min-h-[140px]
                   `}
+                  style={{ boxShadow: isSelected && !selectedAnswer ? '0 4px 12px rgba(99, 102, 241, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.05)' }}
                 >
-                  {/* Hover shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                  
-                  <span className="relative z-10">{choice}</span>
+                  {/* Bubble Circle */}
+                  <div className={`
+                    w-16 h-16 sm:w-20 sm:h-20 rounded-full border-3
+                    flex items-center justify-center font-bold text-2xl sm:text-3xl
+                    transition-all duration-300 relative overflow-hidden
+                    ${!selectedAnswer && !isSelected ? 'border-gray-400 bg-white' : ''}
+                    ${isSelected && !selectedAnswer ? 'border-indigo-500 bg-indigo-50' : ''}
+                    ${isCorrect && selectedAnswer ? 'border-green-500 bg-green-500' : ''}
+                    ${isWrong ? 'border-red-500 bg-red-500' : ''}
+                  `}>
+                    {/* Pencil fill animation on hover */}
+                    {!selectedAnswer && (
+                      <div className="absolute inset-0 bg-indigo-500 scale-0 group-hover:scale-100 transition-transform duration-300 ease-out rounded-full opacity-20" />
+                    )}
+
+                    {/* Letter or Check/Cross */}
+                    {!selectedAnswer && (
+                      <span className={`relative z-10 ${isSelected ? 'text-indigo-600' : 'text-gray-600'}`}>{letter}</span>
+                    )}
+                    {isCorrect && selectedAnswer && (
+                      <svg className="w-8 h-8 text-white relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    {isWrong && (
+                      <svg className="w-8 h-8 text-white relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    )}
+
+                    {/* Filled state for selected */}
+                    {isSelected && !selectedAnswer && (
+                      <div className="absolute inset-1 bg-indigo-500 rounded-full animate-ink-spread" />
+                    )}
+                  </div>
+
+                  {/* Choice Text */}
+                  <div className={`
+                    text-xl sm:text-2xl font-bold relative z-10
+                    ${isCorrect && selectedAnswer ? 'text-green-700' : ''}
+                    ${isWrong ? 'text-red-700' : ''}
+                    ${!isCorrect && !isWrong ? 'text-gray-800' : ''}
+                  `}>
+                    {choice}
+                  </div>
                 </button>
               );
             })}
@@ -283,9 +353,8 @@ export const QuizQuestion = ({
                   onClick={onFillInAnswer}
                   disabled={!userAnswer?.trim() || isPaused}
                   className="
-                    bg-gradient-to-r from-yellow-400 to-amber-500
-                    hover:from-yellow-500 hover:to-amber-600
-                    disabled:bg-white/20 disabled:from-white/20 disabled:to-white/20
+                    btn-branded-yellow
+                    disabled:bg-white/20
                     text-black font-bold text-lg px-10 py-4
                     rounded-2xl shadow-xl hover:shadow-2xl
                     transition-all duration-300 transform hover:scale-105
