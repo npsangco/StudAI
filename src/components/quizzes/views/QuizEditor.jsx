@@ -3,6 +3,7 @@ import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
 import { Copy, Check, Clock, ChevronDown, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
+import { canUseAdaptiveMode } from '../utils/adaptiveDifficultyEngine';
 
 // ============================================
 // COMPACT SETTINGS BAR COMPONENT
@@ -534,24 +535,50 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
 
               {/* Adaptive Mode Indicator */}
               {(() => {
-                if (questionCount >= 5) {
+                // Check adaptive mode eligibility
+                const adaptiveCheck = canUseAdaptiveMode(questions);
+                
+                if (adaptiveCheck.enabled) {
+                  // ✅ Adaptive Mode Enabled
+                  const { easy, medium, hard } = adaptiveCheck.distribution;
+                  const tooltip = `Adaptive Mode Active!\n✓ ${questionCount} questions\n✓ Difficulty distribution: Easy (${easy}), Medium (${medium}), Hard (${hard})\n\nQuestions will dynamically adjust to student performance in solo mode.`;
+                  
                   return (
                     <span
-                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1.5"
-                      title="Questions adapt to player's skill level in solo mode"
+                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1.5 cursor-help"
+                      title={tooltip}
                     >
                       <Target className="w-3.5 h-3.5" />
                       <span>Adaptive Mode</span>
                     </span>
                   );
-                } else if (questionCount > 0 && questionCount < 5) {
+                } else if (questionCount > 0) {
+                  // ❌ Classic Mode (with specific reason)
+                  let tooltip = 'Classic Mode: ';
+                  let displayReason = '';
+                  
+                  if (questionCount < 5) {
+                    const remaining = 5 - questionCount;
+                    displayReason = `Need ${remaining} more`;
+                    tooltip += `Add ${remaining} more question${remaining > 1 ? 's' : ''} to unlock Adaptive Mode.\n\n`;
+                  } else if (adaptiveCheck.reason?.includes('same difficulty')) {
+                    displayReason = 'Same difficulty';
+                    tooltip += `All questions are ${adaptiveCheck.singleDifficulty} difficulty.\n\n`;
+                  } else {
+                    displayReason = 'Not eligible';
+                    tooltip += `${adaptiveCheck.reason}\n\n`;
+                  }
+                  
+                  tooltip += 'Requirements for Adaptive Mode:\n✓ Minimum 5 questions\n✓ At least 2 different difficulty levels (Easy, Medium, Hard)';
+                  
                   return (
                     <span
-                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-gray-100 text-gray-600 flex items-center gap-1.5"
-                      title="Questions appear in fixed order (add 5+ for adaptive mode)"
+                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1.5 cursor-help"
+                      title={tooltip}
                     >
                       <Circle className="w-3.5 h-3.5" />
                       <span>Classic Mode</span>
+                      <span className="text-xs opacity-75">({displayReason})</span>
                     </span>
                   );
                 }
@@ -641,6 +668,28 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               }`}>
                 {questionCount} Q
               </span>
+
+              {/* Adaptive Mode Badge - Mobile */}
+              {(() => {
+                const adaptiveCheck = canUseAdaptiveMode(questions);
+                
+                if (adaptiveCheck.enabled) {
+                  return (
+                    <span className="px-2 py-1 text-xs rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
+                      <Target className="w-3 h-3" />
+                      <span>Adaptive</span>
+                    </span>
+                  );
+                } else if (questionCount > 0) {
+                  return (
+                    <span className="px-2 py-1 text-xs rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1">
+                      <Circle className="w-3 h-3" />
+                      <span>Classic</span>
+                    </span>
+                  );
+                }
+                return null;
+              })()}
 
               {hasErrors && (
                 <button
