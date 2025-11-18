@@ -191,8 +191,9 @@ async function initializeDefaultAchievements() {
 // ----------- CORS -----------------
 app.use(cors({
     origin: [
-        'https://walrus-app-umg67.ondigitalocean.app', // Production
-        'http://localhost:5173', // Local frontend
+        'https://studai.dev',  // ← YOUR ACTUAL FRONTEND!
+        'https://walrus-app-umg67.ondigitalocean.app', // Backend domain
+        'http://localhost:5173', // Local development
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -393,9 +394,10 @@ if (sessionStore) {
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: isProduction,
+                secure: isProduction, // true in production (required for sameSite: 'none')
                 maxAge: 1000 * 60 * 60 * 24, // 24 hours
-                sameSite: 'lax', // 'lax' works for both same-domain production AND localhost
+                sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-domain in production
+                // No domain setting needed
             },
             rolling: true,
         })
