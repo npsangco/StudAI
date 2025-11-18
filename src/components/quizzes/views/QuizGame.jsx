@@ -1155,6 +1155,8 @@ const QuizGame = ({
                   isPaused={game.isPaused || isProcessing}
                   isAnswerCorrect={game.isAnswerCorrect}
                   isWaiting={false}
+                  currentQuestionIndex={game.currentQuestionIndex}
+                  totalQuestions={questions.length}
                 />
 
                 {/* Manual next button for matching type */}
@@ -1212,6 +1214,8 @@ const QuizGame = ({
                 isPaused={game.isPaused || isProcessing}
                 isAnswerCorrect={game.isAnswerCorrect}
                 isWaiting={false}
+                currentQuestionIndex={game.currentQuestionIndex}
+                totalQuestions={questions.length}
               />
 
               {/* Manual next button for matching type */}
@@ -1256,6 +1260,8 @@ const QuizGame = ({
                 isPaused={game.isPaused || isProcessing}
                 isAnswerCorrect={game.isAnswerCorrect}
                 isWaiting={false}
+                currentQuestionIndex={game.currentQuestionIndex}
+                totalQuestions={questions.length}
               />
 
               {/* Manual next button for matching type */}
@@ -1301,6 +1307,8 @@ const QuizGame = ({
             isPaused={game.isPaused || isProcessing}
             isAnswerCorrect={game.isAnswerCorrect}
             isWaiting={false}
+            currentQuestionIndex={game.currentQuestionIndex}
+            totalQuestions={questions.length}
           />
           
           {/* Solo mode next button for matching */}

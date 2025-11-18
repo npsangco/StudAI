@@ -18,6 +18,8 @@ export const QuizQuestion = ({
   isPaused = false,
   isAnswerCorrect,
   isWaiting = false,
+  currentQuestionIndex,
+  totalQuestions,
 }) => {
   const currentQ = question;
 
@@ -107,7 +109,7 @@ export const QuizQuestion = ({
 
           {/* Question Number - typewriter style */}
           <div className="absolute top-6 left-16 font-mono text-sm text-gray-500 font-semibold">
-            Question {game?.currentQuestionIndex + 1}/{questions?.length || '?'}
+            Question {(currentQuestionIndex ?? 0) + 1}/{totalQuestions || '?'}
           </div>
 
           {/* Question Text */}
