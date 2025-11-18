@@ -1050,9 +1050,24 @@ const QuizGame = ({
   }
   
   return (
-    <div className="min-h-screen relative overflow-hidden bg-white">
-      {/* Radial gradient overlay with branded yellow */}
-      <div className="fixed inset-0 bg-gradient-radial from-[#FFDB00]/8 via-transparent to-transparent pointer-events-none" />
+    <div className="min-h-screen relative overflow-hidden" style={{
+      background: 'linear-gradient(to bottom, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)'
+    }}>
+      {/* Subtle dot pattern for texture */}
+      <div className="fixed inset-0 pointer-events-none opacity-30" style={{
+        backgroundImage: 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
+        backgroundSize: '40px 40px'
+      }} />
+
+      {/* Radial gradient overlay with branded yellow - stronger */}
+      <div className="fixed inset-0 pointer-events-none" style={{
+        background: 'radial-gradient(circle at 50% 20%, rgba(255, 219, 0, 0.15), transparent 60%)'
+      }} />
+
+      {/* Radial gradient overlay with indigo - bottom */}
+      <div className="fixed inset-0 pointer-events-none" style={{
+        background: 'radial-gradient(circle at 50% 100%, rgba(99, 102, 241, 0.08), transparent 50%)'
+      }} />
 
       {/* Floating sparkles with branded yellow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">

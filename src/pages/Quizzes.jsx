@@ -13,6 +13,7 @@ import { useQuizAPI } from '../components/quizzes/hooks/useQuizAPI';
 import { useQuizHandlers } from '../components/quizzes/hooks/useQuizHandlers';
 import { VIEWS, COUNTDOWN_SECONDS } from '../components/quizzes/utils/constants';
 import { validateAllQuestions } from '../components/quizzes/utils/validation';
+import { canUseAdaptiveMode } from '../components/quizzes/utils/adaptiveDifficultyEngine';
 import ToastContainer from "../components/ToastContainer";
 import { useToast } from "../hooks/useToast";
 import { API_URL } from '../config/api.config';
@@ -478,7 +479,18 @@ function QuizzesPage() {
   // ============================================
 
   if (quizDataHook.uiState.currentView === VIEWS.LOADING || quizDataHook.uiState.currentView === VIEWS.LOADING_BATTLE) {
-    return <SoloLoadingScreen countdown={countdown.countdown} quizTitle={quizDataHook.quizData.selected?.title} />;
+    // Check if adaptive mode is enabled (only for solo mode)
+    const rawQuestions = quizDataHook.quizData.selected?.questions || [];
+    const isSoloMode = quizDataHook.uiState.currentView === VIEWS.LOADING;
+    const adaptiveCheck = isSoloMode ? canUseAdaptiveMode(rawQuestions) : { enabled: false };
+
+    return (
+      <SoloLoadingScreen
+        countdown={countdown.countdown}
+        quizTitle={quizDataHook.quizData.selected?.title}
+        isAdaptiveMode={adaptiveCheck.enabled}
+      />
+    );
   }
 
   if (quizDataHook.uiState.currentView === VIEWS.LOBBY) {

@@ -307,15 +307,6 @@ export const QuizGameHeader = ({
                         <span>{playersCount} Players</span>
                       </>
                     )}
-                    {adaptiveMode && (
-                      <>
-                        <span className="text-black/60">•</span>
-                        <span className="text-orange-600 font-bold flex items-center gap-1 bg-orange-100 px-2 py-0.5 rounded-full">
-                          <Target className="w-3.5 h-3.5" />
-                          Adaptive Mode
-                        </span>
-                      </>
-                    )}
                   </p>
                 </div>
               </div>

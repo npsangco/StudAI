@@ -118,18 +118,18 @@ export const QuizQuestion = ({
           }} />
 
           {/* Glass Layer 1 - Back layer (heaviest blur) */}
-          <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/20 border border-white/30 transform translate-y-2 translate-x-2" style={{
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.08)'
+          <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/30 border-2 border-white/40 transform translate-y-2 translate-x-2" style={{
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)'
           }} />
 
           {/* Glass Layer 2 - Middle layer */}
-          <div className="absolute inset-0 rounded-3xl backdrop-blur-xl bg-white/30 border border-white/40 transform translate-y-1 translate-x-1" style={{
-            boxShadow: '0 15px 30px rgba(0, 0, 0, 0.06)'
+          <div className="absolute inset-0 rounded-3xl backdrop-blur-xl bg-white/40 border-2 border-white/50 transform translate-y-1 translate-x-1" style={{
+            boxShadow: '0 15px 30px rgba(0, 0, 0, 0.1)'
           }} />
 
           {/* Glass Layer 3 - Front layer (main content) */}
-          <div className="relative rounded-3xl backdrop-blur-lg bg-white/50 border-2 border-white/60 p-8 sm:p-10" style={{
-            boxShadow: '0 25px 50px rgba(255, 219, 0, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.8)'
+          <div className="relative rounded-3xl backdrop-blur-lg bg-white/60 border-2 border-white/70 p-8 sm:p-10" style={{
+            boxShadow: '0 25px 50px rgba(255, 219, 0, 0.25), 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
           }}>
             {/* Top glass highlight */}
             <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-3xl pointer-events-none" />
@@ -202,14 +202,14 @@ export const QuizQuestion = ({
                   {/* Frosted glass pane - blur reduces on hover */}
                   <div className={`absolute inset-0 rounded-2xl border-2 transition-all duration-500 ${
                     selectedAnswer && !isCorrect && !isWrong
-                      ? 'backdrop-blur-2xl bg-white/60 border-white/40'
+                      ? 'backdrop-blur-2xl bg-white/70 border-white/50'
                       : isCorrect && selectedAnswer
-                      ? 'backdrop-blur-none bg-transparent border-green-300 animate-glass-shatter'
+                      ? 'backdrop-blur-none bg-transparent border-green-400 animate-glass-shatter'
                       : isWrong
-                      ? 'backdrop-blur-sm bg-transparent border-red-300'
+                      ? 'backdrop-blur-sm bg-transparent border-red-400'
                       : isSelected && !selectedAnswer
-                      ? 'backdrop-blur-md bg-white/40 border-indigo-400'
-                      : 'backdrop-blur-xl bg-white/70 border-white/50 group-hover:backdrop-blur-md group-hover:bg-white/40'
+                      ? 'backdrop-blur-md bg-white/50 border-indigo-500'
+                      : 'backdrop-blur-xl bg-white/80 border-white/60 group-hover:backdrop-blur-md group-hover:bg-white/50'
                   }`}>
                     {/* Top highlight for glass effect */}
                     <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent rounded-t-2xl" />
@@ -310,14 +310,14 @@ export const QuizQuestion = ({
                   {/* Frosted glass pane - blur reduces on hover */}
                   <div className={`absolute inset-0 rounded-2xl border-2 transition-all duration-500 ${
                     selectedAnswer && !isCorrect && !isWrong
-                      ? 'backdrop-blur-2xl bg-white/60 border-white/40'
+                      ? 'backdrop-blur-2xl bg-white/70 border-white/50'
                       : isCorrect && selectedAnswer
-                      ? 'backdrop-blur-none bg-transparent border-green-300 animate-glass-shatter'
+                      ? 'backdrop-blur-none bg-transparent border-green-400 animate-glass-shatter'
                       : isWrong
-                      ? 'backdrop-blur-sm bg-transparent border-red-300'
+                      ? 'backdrop-blur-sm bg-transparent border-red-400'
                       : isSelected && !selectedAnswer
-                      ? 'backdrop-blur-md bg-white/40 border-indigo-400'
-                      : 'backdrop-blur-xl bg-white/70 border-white/50 group-hover:backdrop-blur-md group-hover:bg-white/40'
+                      ? 'backdrop-blur-md bg-white/50 border-indigo-500'
+                      : 'backdrop-blur-xl bg-white/80 border-white/60 group-hover:backdrop-blur-md group-hover:bg-white/50'
                   }`}>
                     {/* Top highlight for glass effect */}
                     <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent rounded-t-2xl" />
