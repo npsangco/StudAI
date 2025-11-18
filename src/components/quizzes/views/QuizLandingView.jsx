@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Swords } from 'lucide-react';
+import { BookOpen, Swords, Library } from 'lucide-react';
 import { QuizList } from './QuizList';
 import { QuizBattles } from './QuizBattles';
 
@@ -61,23 +61,25 @@ export const QuizLandingView = ({
           <div className="max-w-4xl mx-auto flex gap-2 overflow-x-hidden">
             <button
               onClick={() => setActiveView('quizzes')}
-              className={`nav-pill flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all ${
+              className={`nav-pill flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
                 activeView === 'quizzes'
                   ? 'active text-white'
                   : 'bg-gray-100 text-gray-700'
               }`}
             >
-              📚 My Quizzes
+              <Library className="w-4 h-4" />
+              My Quizzes
             </button>
             <button
               onClick={() => setActiveView('battles')}
-              className={`nav-pill flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all ${
+              className={`nav-pill flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
                 activeView === 'battles'
                   ? 'active text-white'
                   : 'bg-gray-100 text-gray-700'
               }`}
             >
-              ⚔️ Quiz Battles
+              <Swords className="w-4 h-4" />
+              Quiz Battles
             </button>
           </div>
         </div>

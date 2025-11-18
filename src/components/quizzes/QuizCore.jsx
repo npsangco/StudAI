@@ -79,13 +79,13 @@ export const QuizQuestion = ({
         </div>
 
         {/* Main Question Card */}
-        <div className={`bg-gradient-to-br ${config.bgPattern} rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-white/80 relative overflow-hidden pt-10 transition-all duration-300 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`}>
+        <div className={`bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-white/40 relative overflow-hidden pt-10 transition-all duration-300 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`}>
           {/* Decorative corner elements */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/30 rounded-full -translate-y-16 translate-x-16" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full translate-y-16 -translate-x-16" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/20 rounded-full -translate-y-16 translate-x-16" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-400/20 rounded-full translate-y-16 -translate-x-16" />
 
           {/* Question Text */}
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight relative z-10 text-center">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black drop-shadow-sm leading-tight relative z-10 text-center">
             {currentQ.question}
           </h2>
         </div>
@@ -100,11 +100,11 @@ export const QuizQuestion = ({
               const isSelected = selectedAnswer === choice;
               const isCorrect = choice === currentQ.correctAnswer;
               const isWrong = selectedAnswer && choice === selectedAnswer && !isCorrect;
-              
-              let bgClass = 'bg-white/90 hover:bg-white';
-              let borderClass = 'border-white/50 hover:border-white';
-              let textClass = 'text-gray-900';
-              let shadowClass = 'shadow-lg hover:shadow-2xl';
+
+              let bgClass = 'bg-white/30 backdrop-blur-md hover:bg-white/40';
+              let borderClass = 'border-white/40 hover:border-white/60';
+              let textClass = 'text-black';
+              let shadowClass = 'shadow-lg hover:shadow-xl';
               
               if (selectedAnswer) {
                 if (isCorrect) {
@@ -164,33 +164,33 @@ export const QuizQuestion = ({
               const isSelected = selectedAnswer === choice;
               const isCorrect = choice === currentQ.correctAnswer;
               const isWrong = selectedAnswer && choice === selectedAnswer && !isCorrect;
-              
-              let bgClass = 'bg-white/90 hover:bg-white';
-              let borderClass = 'border-white/50 hover:border-white';
-              let textClass = 'text-gray-900';
-              let shadowClass = 'shadow-lg hover:shadow-2xl';
-              
+
+              let bgClass = 'bg-white/30 backdrop-blur-md hover:bg-white/40';
+              let borderClass = 'border-white/40 hover:border-white/60';
+              let textClass = 'text-black';
+              let shadowClass = 'shadow-lg hover:shadow-xl';
+
               if (selectedAnswer) {
                 if (isCorrect) {
                   bgClass = 'bg-gradient-to-br from-green-400 to-emerald-500';
                   borderClass = 'border-green-300';
-                  textClass = 'text-white';
+                  textClass = 'text-white drop-shadow-sm';
                   shadowClass = 'shadow-2xl shadow-green-500/40';
                 } else if (isWrong) {
                   bgClass = 'bg-gradient-to-br from-red-400 to-rose-500';
                   borderClass = 'border-red-300';
-                  textClass = 'text-white';
+                  textClass = 'text-white drop-shadow-sm';
                   shadowClass = 'shadow-2xl shadow-red-500/40';
                 } else {
-                  bgClass = 'bg-white/40';
-                  borderClass = 'border-white/30';
-                  textClass = 'text-gray-500';
+                  bgClass = 'bg-white/10 backdrop-blur-sm';
+                  borderClass = 'border-white/20';
+                  textClass = 'text-black/50';
                   shadowClass = 'shadow-sm';
                 }
               } else if (isSelected) {
-                bgClass = 'bg-white';
-                borderClass = 'border-yellow-400';
-                shadowClass = 'shadow-2xl shadow-yellow-500/30';
+                bgClass = 'bg-yellow-400/50 backdrop-blur-md';
+                borderClass = 'border-yellow-500';
+                shadowClass = 'shadow-2xl shadow-yellow-500/40';
               }
               
               return (
@@ -229,13 +229,13 @@ export const QuizQuestion = ({
                 ? isAnswerCorrect(currentQ, userAnswer.replace('_submitted', ''))
                   ? 'bg-gradient-to-br from-green-400/90 to-emerald-500/90 border-green-300 shadow-green-500/40'
                   : 'bg-gradient-to-br from-red-400/90 to-rose-500/90 border-red-300 shadow-red-500/40'
-                : 'bg-white/90 border-white/50 hover:shadow-2xl'
+                : 'bg-white/30 border-white/40 hover:bg-white/40 hover:shadow-xl'
               }
             `}>
               <div className="flex items-center gap-3 mb-3">
-                <label className="text-sm font-bold text-gray-700">Type your answer:</label>
+                <label className={`text-sm font-bold ${userAnswer?.includes('_submitted') ? 'text-white drop-shadow-sm' : 'text-black'}`}>Type your answer:</label>
               </div>
-              
+
               <input
                 type="text"
                 value={userAnswer?.replace('_submitted', '') || ''}
@@ -246,11 +246,11 @@ export const QuizQuestion = ({
                   }
                 }}
                 className={`
-                  w-full text-lg sm:text-xl font-semibold bg-transparent border-b-2 pb-2 outline-none 
-                  placeholder-gray-400 focus:border-yellow-500 transition-colors
+                  w-full text-lg sm:text-xl font-semibold bg-transparent border-b-2 pb-2 outline-none
+                  placeholder-black/50 focus:border-yellow-400 transition-colors
                   ${userAnswer?.includes('_submitted')
-                    ? 'text-white border-white'
-                    : 'text-gray-900 border-gray-300'
+                    ? 'text-white drop-shadow-sm border-white'
+                    : 'text-black border-black/40'
                   }
                 `}
                 placeholder="Type here..."
@@ -285,12 +285,12 @@ export const QuizQuestion = ({
                   className="
                     bg-gradient-to-r from-yellow-400 to-amber-500
                     hover:from-yellow-500 hover:to-amber-600
-                    disabled:from-gray-300 disabled:to-gray-400
+                    disabled:bg-white/20 disabled:from-white/20 disabled:to-white/20
                     text-black font-bold text-lg px-10 py-4
                     rounded-2xl shadow-xl hover:shadow-2xl
                     transition-all duration-300 transform hover:scale-105
-                    disabled:cursor-not-allowed disabled:hover:scale-100
-                    border-2 border-yellow-600/30
+                    disabled:cursor-not-allowed disabled:hover:scale-100 disabled:text-black/50
+                    border-2 border-white/40
                   "
                 >
                   Submit Answer

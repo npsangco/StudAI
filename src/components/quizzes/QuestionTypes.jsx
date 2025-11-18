@@ -500,11 +500,11 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
   // Get encouraging message
   const getMessage = () => {
-    if (percentage === 100) return 'Perfect! You nailed it! 🎉';
-    if (percentage >= 80) return 'Great job! Almost perfect! 🌟';
-    if (percentage >= 60) return 'Good effort! Review the mistakes. 👍';
-    if (percentage >= 40) return 'Keep trying! You\'re learning. 📚';
-    return 'Don\'t worry! Review and try again. 💪';
+    if (percentage === 100) return 'Perfect! You nailed it!';
+    if (percentage >= 80) return 'Great job! Almost perfect!';
+    if (percentage >= 60) return 'Good effort! Review the mistakes.';
+    if (percentage >= 40) return 'Keep trying! You\'re learning.';
+    return 'Don\'t worry! Review and try again.';
   };
 
   // Get question type config
@@ -525,12 +525,12 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
           </div>
         </div>
 
-        {/* Question Card */}
-        <div className={`bg-gradient-to-br ${config.bgPattern} rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-white/80 relative overflow-hidden pt-10`}>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/30 rounded-full -translate-y-16 translate-x-16" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full translate-y-16 -translate-x-16" />
-          
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight relative z-10 text-center">
+        {/* Question Card - Glass Theme */}
+        <div className="bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-white/40 relative overflow-hidden pt-10">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/20 rounded-full -translate-y-16 translate-x-16" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-400/20 rounded-full translate-y-16 -translate-x-16" />
+
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black drop-shadow-sm leading-tight relative z-10 text-center">
             {question.question}
           </h2>
         </div>
@@ -539,7 +539,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
       {!isSubmitted ? (
         <div className="space-y-4">
           {/* Instructions */}
-          <p className="text-base sm:text-lg text-gray-900 px-2 font-medium text-center">
+          <p className="text-base sm:text-lg text-black drop-shadow-sm px-2 font-bold text-center">
             Drag items from one column and drop them on matching items in the other column
           </p>
 
@@ -547,7 +547,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Left Column */}
             <div className="space-y-3">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 text-center px-2">
+              <h3 className="text-lg sm:text-xl font-bold text-black drop-shadow-sm text-center px-2">
                 Column A
               </h3>
               {leftItems.map((item, index) => {
@@ -572,15 +572,16 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                     onTouchEnd={(e) => handleTouchEnd(e, item, 'left')}
                     onClick={() => matched && handleUnmatch(item, 'left')}
                     className={`
-                      bg-white/90 backdrop-blur-xl border-2 rounded-2xl p-4 sm:p-5
+                      bg-white/30 backdrop-blur-md border-2 rounded-2xl p-4 sm:p-5
                       font-semibold text-base sm:text-lg
                       transition-all duration-300 transform cursor-grab active:cursor-grabbing
-                      hover:scale-102 hover:-translate-y-1 hover:shadow-xl
+                      hover:scale-102 hover:-translate-y-1 hover:shadow-xl hover:bg-white/40
                       touch-none select-none
-                      ${matched ? 'border-2' : 'border-white/50 hover:border-white'}
+                      ${matched ? 'border-2' : 'border-white/40 hover:border-white/60'}
                       ${isDraggedItem ? 'opacity-50 scale-95' : ''}
-                      ${isDropZone ? 'border-yellow-400 bg-yellow-50/90 scale-105' : ''}
+                      ${isDropZone ? 'border-yellow-400 bg-yellow-400/30 scale-105' : ''}
                       ${matched ? 'shadow-lg' : 'shadow-md'}
+                      ${!matched ? 'text-black' : ''}
                     `}
                     style={matched ? {
                       backgroundColor: match.color.bg,
@@ -596,7 +597,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
             {/* Right Column */}
             <div className="space-y-3">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 text-center px-2">
+              <h3 className="text-lg sm:text-xl font-bold text-black drop-shadow-sm text-center px-2">
                 Column B
               </h3>
               {rightItems.map((item, index) => {
@@ -621,15 +622,16 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                     onTouchEnd={(e) => handleTouchEnd(e, item, 'right')}
                     onClick={() => matched && handleUnmatch(item, 'right')}
                     className={`
-                      bg-white/90 backdrop-blur-xl border-2 rounded-2xl p-4 sm:p-5
+                      bg-white/30 backdrop-blur-md border-2 rounded-2xl p-4 sm:p-5
                       font-semibold text-base sm:text-lg
                       transition-all duration-300 transform cursor-grab active:cursor-grabbing
-                      hover:scale-102 hover:-translate-y-1 hover:shadow-xl
+                      hover:scale-102 hover:-translate-y-1 hover:shadow-xl hover:bg-white/40
                       touch-none select-none
-                      ${matched ? 'border-2' : 'border-white/50 hover:border-white'}
+                      ${matched ? 'border-2' : 'border-white/40 hover:border-white/60'}
                       ${isDraggedItem ? 'opacity-50 scale-95' : ''}
-                      ${isDropZone ? 'border-yellow-400 bg-yellow-50/90 scale-105' : ''}
+                      ${isDropZone ? 'border-yellow-400 bg-yellow-400/30 scale-105' : ''}
                       ${matched ? 'shadow-lg' : 'shadow-md'}
+                      ${!matched ? 'text-black' : ''}
                     `}
                     style={matched ? {
                       backgroundColor: match.color.bg,
@@ -652,12 +654,12 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
               className="
                 bg-gradient-to-r from-yellow-400 to-amber-500
                 hover:from-yellow-500 hover:to-amber-600
-                disabled:from-gray-300 disabled:to-gray-400
+                disabled:bg-white/20 disabled:from-white/20 disabled:to-white/20
                 text-black font-bold text-lg sm:text-xl px-10 sm:px-12 py-4 sm:py-5
-                rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-yellow-500/30
+                rounded-2xl shadow-xl hover:shadow-2xl
                 transition-all duration-300 transform hover:scale-105
-                disabled:cursor-not-allowed disabled:hover:scale-100
-                border-2 border-yellow-600/30
+                disabled:cursor-not-allowed disabled:hover:scale-100 disabled:text-black/50
+                border-2 border-white/40
               "
             >
               {canSubmit ? 'Submit Answers' : 'Match All Pairs to Submit'}
@@ -667,19 +669,19 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
       ) : (
         <div className="space-y-4">
           {/* Score Card */}
-          <div className={`relative overflow-hidden rounded-2xl shadow-2xl bg-gradient-to-r ${getGradientColors()}`}>
-            <div className="absolute inset-0 bg-white/10"></div>
-            <div className="relative px-5 sm:px-6 py-5 sm:py-6 text-white">
+          <div className={`relative overflow-hidden rounded-2xl shadow-2xl bg-gradient-to-r ${getGradientColors()} border-2 border-white/40`}>
+            <div className="absolute inset-0 bg-white/20 backdrop-blur-xl"></div>
+            <div className="relative px-5 sm:px-6 py-5 sm:py-6">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div>
-                  <div className="text-2xl sm:text-3xl font-bold mb-1">
+                  <div className="text-2xl sm:text-3xl font-bold mb-1 text-white drop-shadow-lg">
                     {correctCount}/{totalCount} CORRECT
                   </div>
-                  <div className="text-sm sm:text-base font-medium opacity-90">
+                  <div className="text-sm sm:text-base font-medium text-white/90 drop-shadow-sm">
                     {getMessage()}
                   </div>
                 </div>
-                <div className="text-4xl sm:text-5xl font-bold">
+                <div className="text-4xl sm:text-5xl font-bold text-white drop-shadow-lg">
                   {percentage}%
                 </div>
               </div>
@@ -688,28 +690,28 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
           {/* Correct Answers Section */}
           {correctMatches.length > 0 && (
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/50 overflow-hidden">
+            <div className="bg-white/20 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/40 overflow-hidden">
               <button
                 onClick={() => setShowCorrectMatches(!showCorrectMatches)}
-                className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
+                className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/30 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
                     <Check className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-base sm:text-lg font-bold text-gray-900">
+                  <span className="text-base sm:text-lg font-bold text-black drop-shadow-sm">
                     Correct Answers ({correctMatches.length})
                   </span>
                 </div>
-                <span className="text-gray-700 text-xl font-bold">
+                <span className="text-black text-xl font-bold">
                   {showCorrectMatches ? '▴' : '▾'}
                 </span>
               </button>
-              
+
               {showCorrectMatches && (
-                <div className="px-5 pb-4 space-y-2 border-t-2 border-white/50 pt-3">
+                <div className="px-5 pb-4 space-y-2 border-t-2 border-white/40 pt-3">
                   {correctMatches.map((match, index) => (
-                    <div key={index} className="p-3 bg-green-50 rounded-xl border-2 border-green-200">
+                    <div key={index} className="p-3 bg-green-50/90 backdrop-blur-sm rounded-xl border-2 border-green-200">
                       <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900">
                         <span>{match.left}</span>
                         <span className="text-green-600 font-bold">→</span>
@@ -724,30 +726,30 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
           {/* Mistakes Section */}
           {incorrectMatches.length > 0 && (
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/50 overflow-hidden">
+            <div className="bg-white/20 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/40 overflow-hidden">
               <button
                 onClick={() => setShowMistakes(!showMistakes)}
-                className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
+                className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/30 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-lg">
                     <X className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-base sm:text-lg font-bold text-gray-900">
+                  <span className="text-base sm:text-lg font-bold text-black drop-shadow-sm">
                     Mistakes to Review ({incorrectMatches.length})
                   </span>
                 </div>
-                <span className="text-gray-700 text-xl font-bold">
+                <span className="text-black text-xl font-bold">
                   {showMistakes ? '▴' : '▾'}
                 </span>
               </button>
-              
+
               {showMistakes && (
-                <div className="px-5 pb-4 space-y-3 border-t-2 border-white/50 pt-3">
+                <div className="px-5 pb-4 space-y-3 border-t-2 border-white/40 pt-3">
                   {incorrectMatches.map((match, index) => {
                     const correctLeft = getCorrectMatch(match.left, 'left');
                     return (
-                      <div key={index} className="p-3 bg-red-50 rounded-xl border-2 border-red-200 space-y-2">
+                      <div key={index} className="p-3 bg-red-50/90 backdrop-blur-sm rounded-xl border-2 border-red-200 space-y-2">
                         <div>
                           <div className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1">
                             Your Answer:
@@ -758,7 +760,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                             <span className="line-through text-red-600">{match.right}</span>
                           </div>
                         </div>
-                        
+
                         <div>
                           <div className="text-xs font-bold text-green-700 uppercase tracking-wide mb-1">
                             Correct Answer:

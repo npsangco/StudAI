@@ -211,6 +211,62 @@ export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
   );
 };
 
+// Leave Lobby Confirmation Modal
+const LeaveLobbyModal = ({ isOpen, onClose, onConfirm }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full animate-scaleIn">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+              Leave Lobby?
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-xl transition-all flex-shrink-0"
+          >
+            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-4 sm:p-6">
+          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+            Are you sure you want to leave the lobby?
+          </p>
+        </div>
+
+        <div className="flex gap-2 sm:gap-3 p-4 sm:p-6 bg-gray-50 rounded-b-3xl">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 sm:px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm text-sm sm:text-base"
+          >
+            Stay
+          </button>
+          <button
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className="flex-1 px-4 sm:px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg text-sm sm:text-base"
+          >
+            Leave
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Battle Lobby Screen Component
 export const BattleLobbyScreen = ({
   lobbyPlayers,
@@ -226,7 +282,8 @@ export const BattleLobbyScreen = ({
   onStartBattle
 }) => {
   const [playerPositions, setLocalPlayerPositions] = useState([]);
-  const [copySuccess, setCopySuccess] = useState(false); 
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false); 
 
   // Copy PIN function
   const handleCopyPin = () => {
@@ -537,7 +594,7 @@ export const BattleLobbyScreen = ({
             {/* Leave Button - Minimal */}
             <div>
               <button
-                onClick={onLeave}
+                onClick={() => setShowLeaveModal(true)}
                 className="text-gray-600 hover:text-gray-800 font-medium text-sm md:text-base hover:underline transition-all"
               >
                 Leave Lobby
@@ -545,6 +602,13 @@ export const BattleLobbyScreen = ({
             </div>
           </div>
         </div>
+
+        {/* Leave Confirmation Modal */}
+        <LeaveLobbyModal
+          isOpen={showLeaveModal}
+          onClose={() => setShowLeaveModal(false)}
+          onConfirm={onLeave}
+        />
       </div>
     </>
   );

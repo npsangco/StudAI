@@ -106,15 +106,15 @@ export const LiveLeaderboard = ({
     };
   }, [isDragging, dragOffset]);
 
-  // Desktop - Light Mode Yellow/Black
+  // Desktop - Yellow Glass Theme
   if (mode === 'desktop') {
     return (
-      <div className="w-full bg-white rounded-2xl border-2 border-yellow-400 shadow-xl overflow-hidden">
+      <div className="w-full bg-white/20 backdrop-blur-xl rounded-2xl border-2 border-white/40 shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="bg-yellow-400 px-4 py-3 border-b-2 border-yellow-500">
+        <div className="bg-gradient-to-r from-yellow-400 to-amber-500 px-4 py-3 border-b-2 border-yellow-500">
           <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-black" />
-            <h3 className="text-lg font-bold text-black">Leaderboard</h3>
+            <Trophy className="w-5 h-5 text-amber-900 drop-shadow-sm" />
+            <h3 className="text-lg font-bold text-amber-900 drop-shadow-sm">Leaderboard</h3>
           </div>
         </div>
 
@@ -131,8 +131,8 @@ export const LiveLeaderboard = ({
                 className={`
                   flex flex-col px-3 py-2.5 rounded-lg transition-all duration-200
                   ${isCurrentUser
-                    ? 'bg-yellow-400 text-black border-2 border-yellow-500'
-                    : 'bg-gray-50 text-gray-900 border border-gray-200 hover:border-yellow-400 hover:bg-gray-100'
+                    ? 'bg-yellow-400/80 backdrop-blur-md text-amber-900 border-2 border-yellow-500'
+                    : 'bg-white/20 backdrop-blur-sm text-amber-900 border border-white/30 hover:border-yellow-400 hover:bg-white/30'
                   }
                   ${justAnswered(player.id) ? 'animate-pulse ring-2 ring-yellow-500' : ''}
                 `}
@@ -141,26 +141,26 @@ export const LiveLeaderboard = ({
                 <div className="flex items-center gap-3 flex-1">
                   <span className={`
                     text-xl font-bold min-w-[32px] text-center
-                    ${isCurrentUser ? 'text-black' : 'text-gray-700'}
+                    ${isCurrentUser ? 'text-amber-900' : 'text-amber-800'}
                   `}>
                     {getRankIcon(rank)}
                   </span>
 
                   <div className="flex-1">
                     <div className="flex items-center gap-1.5">
-                      <p className={`font-bold text-sm ${isCurrentUser ? 'text-black' : 'text-gray-900'}`}>
+                      <p className={`font-bold text-sm drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
                         {isCurrentUser ? 'You' : player.name}
                       </p>
                       {getStreakIcon(player)}
                     </div>
-                    <p className={`text-xs ${isCurrentUser ? 'text-black/70' : 'text-gray-500'}`}>
+                    <p className={`text-xs ${isCurrentUser ? 'text-amber-800' : 'text-amber-700'}`}>
                       {rank}{getRankSuffix(rank)} place
                     </p>
                   </div>
                 </div>
 
                 {/* Score */}
-                <span className={`text-lg font-bold ${isCurrentUser ? 'text-black' : 'text-gray-900'}`}>
+                <span className={`text-lg font-bold drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
                   {player.score}pts
                 </span>
                 </div>
@@ -169,16 +169,16 @@ export const LiveLeaderboard = ({
                 {totalQuestions > 0 && player.currentQuestion !== undefined && (
                   <div className="mt-2">
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className={isCurrentUser ? 'text-black/70' : 'text-gray-500'}>
+                      <span className={isCurrentUser ? 'text-amber-800' : 'text-amber-700'}>
                         Progress: {player.currentQuestion}/{totalQuestions}
                       </span>
-                      <span className={isCurrentUser ? 'text-black/70' : 'text-gray-500'}>
+                      <span className={isCurrentUser ? 'text-amber-800' : 'text-amber-700'}>
                         {Math.round((player.currentQuestion / totalQuestions) * 100)}%
                       </span>
                     </div>
-                    <div className={`h-1.5 rounded-full ${isCurrentUser ? 'bg-black/20' : 'bg-gray-200'} overflow-hidden`}>
+                    <div className={`h-1.5 rounded-full ${isCurrentUser ? 'bg-amber-900/20' : 'bg-white/20'} overflow-hidden`}>
                       <div
-                        className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-500 ease-out"
+                        className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 transition-all duration-500 ease-out shadow-lg"
                         style={{ width: `${(player.currentQuestion / totalQuestions) * 100}%` }}
                       />
                     </div>
@@ -210,21 +210,21 @@ export const LiveLeaderboard = ({
         {/* Collapsed State */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full bg-white border-t-2 border-yellow-400 transition-all duration-300 shadow-xl hover:shadow-2xl"
+          className="w-full bg-white/20 backdrop-blur-xl border-t-2 border-white/40 transition-all duration-300 shadow-xl hover:shadow-2xl hover:bg-white/30"
         >
           <div className="px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Trophy className="w-5 h-5 text-yellow-600" />
+              <Trophy className="w-5 h-5 text-amber-600 drop-shadow-sm" />
               <div className="text-left">
-                <p className="font-bold text-gray-900 text-base">
+                <p className="font-bold text-amber-900 drop-shadow-sm text-base">
                   {players.length} Players
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-amber-800">
                   You: {currentUserRank}{getRankSuffix(currentUserRank)} {getRankIcon(currentUserRank)} • {currentUserScore}pts
                 </p>
               </div>
             </div>
-            <span className="text-2xl text-gray-700 font-bold">
+            <span className="text-2xl text-amber-900 drop-shadow-sm font-bold">
               {isExpanded ? '▼' : '▲'}
             </span>
           </div>
@@ -232,7 +232,7 @@ export const LiveLeaderboard = ({
 
         {/* Expanded State */}
         {isExpanded && (
-          <div className="bg-white border-t-2 border-yellow-400 px-4 py-3 space-y-2 max-h-[45vh] overflow-y-auto">
+          <div className="bg-white/20 backdrop-blur-xl border-t-2 border-white/40 px-4 py-3 space-y-2 max-h-[45vh] overflow-y-auto">
             {sortedPlayers.map((player, index) => {
               const rank = index + 1;
               // Identify current user by userId
@@ -243,21 +243,21 @@ export const LiveLeaderboard = ({
                   key={player.id}
                   className={`
                     flex items-center justify-between px-3 py-2.5 rounded-lg transition-all
-                    ${isCurrentUser 
-                      ? 'bg-yellow-400 text-black border-2 border-yellow-500' 
-                      : 'bg-gray-50 text-gray-900 border border-gray-200'
+                    ${isCurrentUser
+                      ? 'bg-yellow-400/80 backdrop-blur-md text-amber-900 border-2 border-yellow-500'
+                      : 'bg-white/20 backdrop-blur-sm text-amber-900 border border-white/30'
                     }
                   `}
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`text-xl font-bold ${isCurrentUser ? 'text-black' : 'text-gray-700'}`}>
+                    <span className={`text-xl font-bold ${isCurrentUser ? 'text-amber-900' : 'text-amber-800'}`}>
                       {getRankIcon(rank)}
                     </span>
-                    <p className={`font-bold ${isCurrentUser ? 'text-black' : 'text-gray-900'}`}>
+                    <p className={`font-bold drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
                       {isCurrentUser ? 'You' : player.name}
                     </p>
                   </div>
-                  <span className={`text-lg font-bold ${isCurrentUser ? 'text-black' : 'text-gray-900'}`}>
+                  <span className={`text-lg font-bold drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
                     {player.score}pts
                   </span>
                 </div>
@@ -368,26 +368,26 @@ export const LiveLeaderboard = ({
                       key={player.id}
                       className={`
                         flex items-center justify-between px-3 py-3 rounded-xl
-                        ${isCurrentUser 
-                          ? 'bg-yellow-400 text-black border-2 border-yellow-500' 
-                          : 'bg-gray-50 border-2 border-gray-200'
+                        ${isCurrentUser
+                          ? 'bg-yellow-400/80 backdrop-blur-md text-amber-900 border-2 border-yellow-500'
+                          : 'bg-white/20 backdrop-blur-sm border-2 border-white/30'
                         }
                       `}
                     >
                       <div className="flex items-center gap-3">
-                        <span className={`text-2xl font-bold ${isCurrentUser ? 'text-black' : 'text-gray-700'}`}>
+                        <span className={`text-2xl font-bold ${isCurrentUser ? 'text-amber-900' : 'text-amber-800'}`}>
                           {getRankIcon(rank)}
                         </span>
                         <div>
-                          <p className={`font-bold text-base ${isCurrentUser ? 'text-black' : 'text-gray-900'}`}>
+                          <p className={`font-bold text-base drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
                             {isCurrentUser ? 'You' : player.name}
                           </p>
-                          <p className={`text-xs ${isCurrentUser ? 'text-black/70' : 'text-gray-500'}`}>
+                          <p className={`text-xs ${isCurrentUser ? 'text-amber-800' : 'text-amber-700'}`}>
                             {rank}{getRankSuffix(rank)} place
                           </p>
                         </div>
                       </div>
-                      <span className={`text-xl font-bold ${isCurrentUser ? 'text-black' : 'text-gray-900'}`}>
+                      <span className={`text-xl font-bold drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
                         {player.score}pts
                       </span>
                     </div>

@@ -74,9 +74,9 @@ const SimpleTimer = ({ timeLeft, timeLimit }) => {
   if (timeLimit === 0) return null;
 
   const getTimerColor = () => {
-    if (timeLeft <= 5) return 'text-red-600';
-    if (timeLeft <= 10) return 'text-orange-600';
-    return 'text-green-600';
+    if (timeLeft <= 5) return 'text-red-700';
+    if (timeLeft <= 10) return 'text-orange-700';
+    return 'text-green-700';
   };
 
   return (
@@ -85,7 +85,7 @@ const SimpleTimer = ({ timeLeft, timeLimit }) => {
         <Clock className={`w-5 h-5 sm:w-6 sm:h-6 ${getTimerColor()}`} />
         <div>
           <div className={`text-sm sm:text-base font-bold ${getTimerColor()}`}>{timeLeft}s</div>
-          <div className="text-xs text-gray-700">Time Left</div>
+          <div className="text-xs text-black/70">Time Left</div>
         </div>
       </div>
     </div>
@@ -93,14 +93,14 @@ const SimpleTimer = ({ timeLeft, timeLimit }) => {
 };
 
 // Simple Stat Card
-const StatCard = ({ icon: Icon, value, label, iconColor = 'text-amber-900' }) => {
+const StatCard = ({ icon: Icon, value, label, iconColor = 'text-black' }) => {
   return (
     <div className="stat-card">
       <div className="flex items-center gap-2">
         <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${iconColor}`} />
         <div>
-          <div className="text-sm sm:text-base font-bold text-gray-900">{value}</div>
-          <div className="text-xs text-gray-700">{label}</div>
+          <div className="text-sm sm:text-base font-bold text-black">{value}</div>
+          <div className="text-xs text-black/70">{label}</div>
         </div>
       </div>
     </div>
@@ -158,8 +158,8 @@ const DifficultySlotCard = ({ difficulty, points, currentQuestion }) => {
         
         {/* Label */}
         <div>
-          <div className="text-sm sm:text-base font-bold text-gray-900">{difficultyInfo.label}</div>
-          <div className="text-xs text-gray-700">Worth {difficultyInfo.points} Points</div>
+          <div className="text-sm sm:text-base font-bold text-black">{difficultyInfo.label}</div>
+          <div className="text-xs text-black/70">Worth {difficultyInfo.points} Points</div>
         </div>
       </div>
     </div>
@@ -216,10 +216,10 @@ export const QuizGameHeader = ({
             <div className="flex items-center gap-3">
               <button
                 onClick={handleBackClick}
-                className="p-2.5 rounded-xl bg-white/20 hover:bg-white/30 transition-colors backdrop-blur-sm"
+                className="p-2.5 rounded-xl bg-white/30 backdrop-blur-md hover:bg-white/40 border border-white/40 transition-all shadow-lg"
                 title="Leave Quiz"
               >
-                <ArrowLeft className="w-5 h-5 text-white drop-shadow-lg" />
+                <ArrowLeft className="w-5 h-5 text-black" />
               </button>
               <h1 className="text-base font-bold text-black truncate flex-1 drop-shadow-sm">
                 {quiz.title}
@@ -231,9 +231,9 @@ export const QuizGameHeader = ({
               {/* Question */}
               <div className="stat-card">
                 <div className="flex flex-col items-center gap-0.5">
-                  <Target className="w-4 h-4 text-amber-900" />
-                  <div className="text-xs font-bold text-gray-900">{currentQuestion + 1}/{totalQuestions}</div>
-                  <div className="text-[9px] text-gray-700">Question</div>
+                  <Target className="w-4 h-4 text-black" />
+                  <div className="text-xs font-bold text-black">{currentQuestion + 1}/{totalQuestions}</div>
+                  <div className="text-[9px] text-black/70">Question</div>
                 </div>
               </div>
 
@@ -246,8 +246,8 @@ export const QuizGameHeader = ({
                         <Star key={idx} className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
                       ))}
                     </div>
-                    <div className="text-xs font-bold text-gray-900">+{points}</div>
-                    <div className="text-[9px] text-gray-700">{difficulty.toUpperCase()}</div>
+                    <div className="text-xs font-bold text-black">+{points}</div>
+                    <div className="text-[9px] text-black/70">{difficulty.toUpperCase()}</div>
                   </div>
                 </div>
               )}
@@ -255,18 +255,18 @@ export const QuizGameHeader = ({
               {/* Score */}
               <div className="stat-card">
                 <div className="flex flex-col items-center gap-0.5">
-                  <Trophy className="w-4 h-4 text-amber-600" />
-                  <div className="text-xs font-bold text-gray-900">{displayScore}/{maxPossibleScore}</div>
-                  <div className="text-[9px] text-gray-700">Score</div>
+                  <Trophy className="w-4 h-4 text-orange-600" />
+                  <div className="text-xs font-bold text-black">{displayScore}/{maxPossibleScore}</div>
+                  <div className="text-[9px] text-black/70">Score</div>
                 </div>
               </div>
 
               {/* Accuracy */}
               <div className="stat-card">
                 <div className="flex flex-col items-center gap-0.5">
-                  <Zap className="w-4 h-4 text-purple-600" />
-                  <div className="text-xs font-bold text-gray-900">{accuracy}%</div>
-                  <div className="text-[9px] text-gray-700">Accuracy</div>
+                  <Zap className="w-4 h-4 text-orange-600" />
+                  <div className="text-xs font-bold text-black">{accuracy}%</div>
+                  <div className="text-[9px] text-black/70">Accuracy</div>
                 </div>
               </div>
 
@@ -274,9 +274,9 @@ export const QuizGameHeader = ({
               {timeLimit !== 0 && (
                 <div className="stat-card">
                   <div className="flex flex-col items-center gap-0.5">
-                    <Clock className={`w-4 h-4 ${timeLeft <= 5 ? 'text-red-600' : timeLeft <= 10 ? 'text-orange-600' : 'text-green-600'}`} />
-                    <div className={`text-xs font-bold ${timeLeft <= 5 ? 'text-red-600' : timeLeft <= 10 ? 'text-orange-600' : 'text-green-600'}`}>{timeLeft}s</div>
-                    <div className="text-[9px] text-gray-700">Time</div>
+                    <Clock className={`w-4 h-4 ${timeLeft <= 5 ? 'text-red-700' : timeLeft <= 10 ? 'text-orange-700' : 'text-green-700'}`} />
+                    <div className={`text-xs font-bold ${timeLeft <= 5 ? 'text-red-700' : timeLeft <= 10 ? 'text-orange-700' : 'text-green-700'}`}>{timeLeft}s</div>
+                    <div className="text-[9px] text-black/70">Time</div>
                   </div>
                 </div>
               )}
@@ -290,16 +290,16 @@ export const QuizGameHeader = ({
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleBackClick}
-                  className="p-3 rounded-xl bg-white/20 hover:bg-white/30 transition-colors backdrop-blur-sm"
+                  className="p-3 rounded-xl bg-white/30 backdrop-blur-md hover:bg-white/40 border border-white/40 transition-all shadow-lg"
                   title="Leave Quiz"
                 >
-                  <ArrowLeft className="w-6 h-6 text-white drop-shadow-lg" />
+                  <ArrowLeft className="w-6 h-6 text-black" />
                 </button>
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold text-black truncate max-w-[300px] md:max-w-none drop-shadow-sm">
                     {quiz.title}
                   </h1>
-                  <p className="text-sm text-gray-800 flex items-center gap-2 drop-shadow-sm">
+                  <p className="text-sm text-black/70 flex items-center gap-2 drop-shadow-sm">
                     <span>Question {currentQuestion + 1} of {totalQuestions}</span>
                     {mode === 'battle' && (
                       <>
@@ -310,7 +310,7 @@ export const QuizGameHeader = ({
                     {adaptiveMode && (
                       <>
                         <span>•</span>
-                        <span className="text-purple-700 font-semibold flex items-center gap-1">
+                        <span className="text-orange-700 font-semibold flex items-center gap-1">
                           <Target className="w-3.5 h-3.5" />
                           Adaptive Mode
                         </span>
@@ -336,7 +336,7 @@ export const QuizGameHeader = ({
                   icon={Trophy}
                   value={`${displayScore}/${maxPossibleScore}`}
                   label="Score"
-                  iconColor="text-amber-600"
+                  iconColor="text-orange-600"
                 />
 
                 {/* Accuracy */}
@@ -344,7 +344,7 @@ export const QuizGameHeader = ({
                   icon={Zap}
                   value={`${accuracy}%`}
                   label="Accuracy"
-                  iconColor="text-purple-600"
+                  iconColor="text-orange-600"
                 />
 
                 {/* Timer - Only show if timeLimit is not 0 */}
@@ -355,17 +355,17 @@ export const QuizGameHeader = ({
         </div>
         
         {/* Progress bar */}
-        <div className="relative bg-black/20 h-2 overflow-hidden">
+        <div className="relative bg-amber-900/30 h-2 overflow-hidden">
           <div
             className="progress-bar h-2 transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
-          
+
           {/* Milestone markers */}
           {[25, 50, 75, 100].map((milestone) => (
             <div
               key={milestone}
-              className={`absolute top-0 bottom-0 w-0.5 bg-white/40 transition-opacity ${
+              className={`absolute top-0 bottom-0 w-0.5 bg-amber-900/50 transition-opacity ${
                 progress >= milestone ? 'opacity-100' : 'opacity-30'
               }`}
               style={{ left: `${milestone}%` }}

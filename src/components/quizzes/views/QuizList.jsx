@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit, Play, GripVertical, Trash2, MoreVertical, Share2, Plus, Sparkles, BookOpen, Users, Trophy, Circle, FileText, Clock, Target, Lock } from 'lucide-react';
+import { Edit, Play, GripVertical, Trash2, MoreVertical, Share2, Plus, Sparkles, BookOpen, Users, Trophy, Circle, FileText, Clock, Target, Lock, Link2 } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 
 // Utility: Get quiz accent color based on quiz ID
@@ -106,7 +106,7 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false, toast }) => {
     return (
       <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg sm:rounded-xl border-2 border-dashed border-yellow-300 p-3 sm:p-5 hover:border-yellow-400 transition-all">
         <div className="flex items-center gap-2 sm:gap-2 mb-2 sm:mb-3">
-            <span className="text-base sm:text-lg">🔗</span>
+          <Link2 className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
           <h3 className="text-sm sm:text-base font-semibold text-gray-900">Import Quiz</h3>
         </div>
         <p className="text-[10px] sm:text-xs text-gray-600 mb-2 sm:mb-3">Have a share code? Import a quiz from a friend</p>
