@@ -562,9 +562,9 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
                       </p>
                       <p className="text-gray-900 font-medium">
                         Status: {isAdaptive ? (
-                          <span className="text-purple-700">✅ Adaptive Mode Active</span>
+                          <span className="text-purple-700">Adaptive Mode Active</span>
                         ) : (
-                          <span className="text-amber-700">⚠️ Classic Mode</span>
+                          <span className="text-amber-700">Classic Mode</span>
                         )}
                       </p>
                     </>
