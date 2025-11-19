@@ -496,10 +496,6 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
                     <span className="text-gray-400">•</span>
                     <span>Student struggles → Gets easier</span>
                   </li>
-                  <li className="flex items-start gap-2 text-gray-700">
-                    <span className="text-gray-400">•</span>
-                    <span>Keeps students engaged at their level</span>
-                  </li>
                 </ul>
               </div>
             </div>
@@ -580,7 +576,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
               <p className="text-gray-800 flex items-start gap-2">
                 <span className="text-xl">💡</span>
                 <span>
-                  <strong>Tip:</strong> Mix Easy, Medium, and Hard questions to unlock Adaptive Mode for better student engagement!
+                  <strong>Tip:</strong> Mix Easy, Medium, and Hard questions to unlock Adaptive Mode for better experience!
                 </span>
               </p>
             </div>
