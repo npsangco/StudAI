@@ -531,7 +531,7 @@ export const QuizList = ({
 
   // Single container for both empty and list states
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]" data-tutorial="quiz-list">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full lg:h-[600px]" data-tutorial="quiz-list">
       {quizzes.length === 0 ? (
         /* ============================================ */
         /* EMPTY STATE - No Header, Import at Top */
