@@ -1006,7 +1006,7 @@ export const QuizEditor = ({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sticky Header Container */}
-      <div className="sticky top-0 z-[100] bg-white shadow-md" style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+      <div className="sticky top-0 z-10 bg-white shadow-md" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
         <PolishedHeader
           quiz={quiz}
           questions={questions}
