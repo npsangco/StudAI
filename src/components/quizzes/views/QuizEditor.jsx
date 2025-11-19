@@ -430,12 +430,12 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
   return (
     <>
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+      <div
+        className="fixed inset-0 bg-[rgba(107,114,128,0.6)] z-50 flex items-center justify-center p-4"
         onClick={onClose}
       >
         {/* Modal */}
-        <div 
+        <div
           className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
@@ -732,6 +732,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                     <button
                       onClick={() => setShowModesInfoModal(true)}
                       className="px-3 py-1.5 text-sm rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1.5 hover:bg-purple-200 transition-colors cursor-pointer"
+                      title="Click to learn how quiz modes work"
                     >
                       <Target className="w-3.5 h-3.5" />
                       <span>Adaptive Mode</span>
@@ -739,26 +740,15 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                     </button>
                   );
                 } else if (questionCount > 0) {
-                  // ❌ Classic Mode (with specific reason)
-                  let displayReason = '';
-                  
-                  if (questionCount < 5) {
-                    const remaining = 5 - questionCount;
-                    displayReason = `+${remaining} more`;
-                  } else if (adaptiveCheck.reason?.includes('same difficulty')) {
-                    displayReason = 'Same difficulty';
-                  } else {
-                    displayReason = 'Vary difficulty';
-                  }
-                  
+                  // ❌ Classic Mode
                   return (
                     <button
                       onClick={() => setShowModesInfoModal(true)}
                       className="px-3 py-1.5 text-sm rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1.5 hover:bg-amber-200 transition-colors cursor-pointer"
+                      title="Click to learn how quiz modes work"
                     >
                       <Circle className="w-3.5 h-3.5" />
                       <span>Classic Mode</span>
-                      <span className="text-xs opacity-75">({displayReason})</span>
                       <Info className="w-3.5 h-3.5 opacity-70" />
                     </button>
                   );
@@ -859,6 +849,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                     <button
                       onClick={() => setShowModesInfoModal(true)}
                       className="px-2 py-1 text-xs rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1 active:bg-purple-200"
+                      title="Click to learn how quiz modes work"
                     >
                       <Target className="w-3 h-3" />
                       <span>Adaptive</span>
@@ -866,22 +857,14 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                     </button>
                   );
                 } else if (questionCount > 0) {
-                  // Show reason inline for mobile
-                  let displayReason = '';
-                  if (questionCount < 5) {
-                    const remaining = 5 - questionCount;
-                    displayReason = ` +${remaining}`;
-                  } else if (adaptiveCheck.reason?.includes('same difficulty')) {
-                    displayReason = ' (vary)';
-                  }
-                  
                   return (
                     <button
                       onClick={() => setShowModesInfoModal(true)}
                       className="px-2 py-1 text-xs rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1 active:bg-amber-200"
+                      title="Click to learn how quiz modes work"
                     >
                       <Circle className="w-3 h-3" />
-                      <span>Classic{displayReason}</span>
+                      <span>Classic</span>
                       <Info className="w-3 h-3 opacity-70" />
                     </button>
                   );
