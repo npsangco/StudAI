@@ -630,6 +630,14 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
       });
     }
 
+    if (questions.length > 30) {
+      errors.push({
+        questionNumber: 0,
+        message: 'Too many questions',
+        details: `You have ${questions.length} questions. Maximum is 30 questions per quiz.`
+      });
+    }
+
     const questionErrors = validateQuestions(questions);
     errors.push(...questionErrors);
 
@@ -771,14 +779,9 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               {/* Add Question Button */}
               <button
                 onClick={onAddQuestion}
-                disabled={questions.length >= 30}
-                className={`px-4 py-2 text-sm rounded-lg font-medium transition-all ${
-                  questions.length >= 30
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-sm'
-                }`}
+                className="px-4 py-2 text-sm rounded-lg font-medium transition-all bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-sm"
               >
-                + Add Question {questions.length >= 30 && '(Max 30)'}
+                + Add Question
               </button>
 
               {/* Save Button - Yellow Primary */}
@@ -887,12 +890,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
             <div className="flex gap-2">
               <button
                 onClick={onAddQuestion}
-                disabled={questions.length >= 30}
-                className={`px-3 py-2 text-xs rounded-lg font-medium flex-1 ${
-                  questions.length >= 30
-                    ? 'bg-gray-200 text-gray-400'
-                    : 'bg-gray-200 text-gray-700'
-                }`}
+                className="px-3 py-2 text-xs rounded-lg font-medium flex-1 bg-gray-200 text-gray-700"
               >
                 + Add Q
               </button>
