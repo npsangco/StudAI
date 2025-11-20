@@ -24,6 +24,7 @@ import AuditLogs from "./pages/Admin/AuditLogs";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfUsePage from "./pages/TermsOfUsePage";
 import SupportPage from "./pages/SupportPage";
+import ZoomDocumentationPage from "./pages/ZoomDocumentationPage";
 import Footer from "./components/Footer";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import DevMenu from "./components/DevMenu";
@@ -98,6 +99,7 @@ function App() {
           <Route path="/privacypolicy" element={<PrivacyPolicyPage />} />
           <Route path="/termsofuse" element={<TermsOfUsePage />} />
           <Route path="/support" element={<SupportPage />} />
+          <Route path="/documentation" element={<ZoomDocumentationPage />} />
         </Routes>
       </div>
 
