@@ -74,22 +74,13 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
     ]
   }), []);
 
-  // Show message when triggered - only once per answer
+  // Show message when triggered - only once per answer, only for correct answers
   useEffect(() => {
-    if (showMessage && isCorrect !== null && !hasShownRef.current) {
+    if (showMessage && isCorrect === true && !hasShownRef.current) {
       hasShownRef.current = true; // Mark as shown
       
-      // Randomly choose from correct/incorrect OR encouragement
-      const useEncouragement = Math.random() < 0.15; // 15% chance for encouragement
-      
-      let messageType;
-      if (useEncouragement) {
-        messageType = 'encouragement';
-      } else {
-        messageType = isCorrect ? 'correct' : 'incorrect';
-      }
-      
-      const messages = motivatingMessages[messageType];
+      // Only show messages for correct answers
+      const messages = motivatingMessages.correct;
       const randomMessage = messages[Math.floor(Math.random() * messages.length)];
       
       setCurrentMessage(randomMessage);
@@ -141,7 +132,7 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
 
   return (
     <div 
-      className="fixed md:bottom-6 md:right-6 bottom-4 left-1/2 md:left-auto -translate-x-1/2 md:translate-x-0 z-50 flex flex-col items-center md:items-end pointer-events-none"
+      className="fixed md:bottom-6 md:right-6 bottom-2 left-1/2 md:left-auto -translate-x-1/2 md:translate-x-0 z-40 flex flex-col items-center md:items-end pointer-events-none"
       style={{ maxWidth: '320px' }}
     >
       {/* Speech Bubble - Only show when there's a message */}
