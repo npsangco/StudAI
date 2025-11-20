@@ -53,7 +53,7 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                             choices.map((choice, idx) => (
                                 <div
                                     key={idx}
-                                    className={`px-3 py-2 rounded-lg text-sm ${choice === question.correct_answer
+                                    className={`px-3 py-2 rounded-lg text-sm break-words ${choice === question.correct_answer
                                         ? 'bg-green-50 border border-green-200 text-green-800 font-medium'
                                         : 'bg-gray-50 border border-gray-200 text-gray-700'
                                         }`}
@@ -180,7 +180,7 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                                             </div>
 
                                             {/* Question Text */}
-                                            <p className="text-gray-900 font-medium mb-2">
+                                            <p className="text-gray-900 font-medium mb-2 break-words">
                                                 {question.question}
                                             </p>
 
