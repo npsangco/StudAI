@@ -98,10 +98,11 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
     }
   }, [showMessage, isCorrect, motivatingMessages, onMessageShown]);
   
-  // Reset tracking when moving to new question
+  // Reset tracking and clear message when moving to new question
   useEffect(() => {
     if (!showMessage) {
       hasShownRef.current = false;
+      setCurrentMessage(null); // Clear message immediately on new question
     }
   }, [showMessage]);
 
@@ -112,41 +113,23 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
     ? "/dog.gif" 
     : getCatSprite(pet.level);
 
-  const bubbleColor = isCorrect === null 
-    ? "bg-blue-50 border-blue-400"
-    : isCorrect 
-      ? "bg-green-50 border-green-400" 
-      : "bg-orange-50 border-orange-400";
-
-  const tailColor = isCorrect === null
-    ? "border-t-blue-400"
-    : isCorrect
-      ? "border-t-green-400"
-      : "border-t-orange-400";
-
-  const tailFillColor = isCorrect === null
-    ? "border-t-blue-50"
-    : isCorrect
-      ? "border-t-green-50"
-      : "border-t-orange-50";
-
   return (
     <div 
       className="fixed md:bottom-6 md:right-6 bottom-2 left-1/2 md:left-auto -translate-x-1/2 md:translate-x-0 z-40 flex flex-col items-center md:items-end pointer-events-none"
       style={{ maxWidth: '320px' }}
     >
-      {/* Speech Bubble - Only show when there's a message */}
+      {/* Speech Bubble - Only show for correct answers */}
       {currentMessage && (
         <div 
           key={messageKey}
-          className={`relative mb-2 border-2 rounded-2xl px-3 py-2 shadow-lg animate-bounce-in ${bubbleColor}`}
+          className="relative mb-2 border-2 rounded-2xl px-3 py-2 shadow-lg animate-bounce-in bg-green-50 border-green-400"
         >
           <p className="text-xs font-medium text-gray-800 text-center">
             {currentMessage}
           </p>
           {/* Speech bubble tail */}
-          <div className={`absolute -bottom-2 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent ${tailColor}`}></div>
-          <div className={`absolute -bottom-1.5 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-0 h-0 border-l-5 border-r-5 border-t-5 border-l-transparent border-r-transparent ${tailFillColor}`}></div>
+          <div className="absolute -bottom-2 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent border-t-green-400"></div>
+          <div className="absolute -bottom-1.5 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-0 h-0 border-l-5 border-r-5 border-t-5 border-l-transparent border-r-transparent border-t-green-50"></div>
         </div>
       )}
 
