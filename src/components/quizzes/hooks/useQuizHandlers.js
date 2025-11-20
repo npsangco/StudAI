@@ -511,11 +511,19 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       const pointsEarned = attemptData.points_earned || 0;
       const expEarned = attemptData.exp_earned || 0;
       
+      console.log('📊 Quiz Results - Backend Response:', {
+        points_earned: attemptData.points_earned,
+        exp_earned: attemptData.exp_earned,
+        petLevelUp: attemptData.petLevelUp,
+        fullResponse: attemptData
+      });
+      
       updateGameState({
         results: {
           ...results,
           points_earned: pointsEarned,
-          exp_earned: expEarned
+          exp_earned: expEarned,
+          petLevelUp: attemptData.petLevelUp
         }
       });
 
@@ -524,9 +532,15 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         toast.reward('Quiz completed!', pointsEarned, expEarned);
       }
 
-      // Trigger quest refresh
+      // Trigger quest refresh AND immediate pet refresh
       window.dispatchEvent(new Event('questActivity'));
+      
+      // Force immediate pet refresh with a slight delay to ensure backend update is complete
+      setTimeout(() => {
+        window.dispatchEvent(new Event('questActivity'));
+      }, 500);
     } else {
+      console.error('⚠️ Quiz submit failed - no attemptData received');
       updateGameState({ results });
     }
 

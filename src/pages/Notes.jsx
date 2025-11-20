@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText, 
-         MessageCircle, Edit3, ExternalLink, Pin, PinOff, FolderPlus, 
+import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText,
+         MessageCircle, Edit3, ExternalLink, Pin, PinOff, FolderPlus,
          Tag, Wifi, WifiOff, RefreshCw, FileDown, X, Check, Brain } from 'lucide-react';
 import { notesService } from '../utils/syncService';
 import { cacheSingleNote } from '../utils/indexedDB';
@@ -10,6 +10,7 @@ import TutorialOverlay from '../components/TutorialOverlay';
 import { notesApi, sharedNotesApi, quizApi } from '../api/api';
 import { exportNoteToPDF, exportMultipleNotesToPDF } from '../utils/pdfExport';
 import ToastContainer from '../components/ToastContainer';
+import AppLoader from '../components/AppLoader';
 import { useToast } from '../hooks/useToast';
 import { useTutorial } from '../hooks/useTutorial';
 import { notesTutorialSteps } from '../config/tutorialSteps';
@@ -50,11 +51,18 @@ const Notes = () => {
   const { toasts, removeToast, toast } = useToast();
   const { confirmState, confirm, closeConfirm } = useConfirm();
   const { showTutorial, completeTutorial, skipTutorial } = useTutorial('notes');
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    fetchNotesFromDatabase();
-    fetchMyShares();
-    fetchCategories();
+    const loadInitialData = async () => {
+      await Promise.all([
+        fetchNotesFromDatabase(),
+        fetchMyShares(),
+        fetchCategories()
+      ]);
+      setInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   useEffect(() => {
@@ -855,6 +863,10 @@ const Notes = () => {
         )}
       </>
     );
+  }
+
+  if (initialLoading) {
+    return <AppLoader message="Loading Notes..." />;
   }
 
   return (

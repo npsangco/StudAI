@@ -75,9 +75,9 @@ export const QuizQuestion = ({
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4 mt-6">
+    <div className="max-w-full sm:max-w-3xl lg:max-w-5xl mx-auto px-2 sm:px-4">
       {/* OVERLAPPING BADGE - Question Type Only */}
-      <div className="relative z-20">
+      <div className="relative z-20 mt-4 sm:mt-6">
         {/* Question Type Badge */}
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
           <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${config.color} text-white font-bold text-sm shadow-lg`}>
@@ -91,8 +91,8 @@ export const QuizQuestion = ({
 
         {/* Main Question Card - Frosted Glass Layers */}
         <div className={`relative transition-all duration-500 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`}>
-          {/* Floating glass shards orbiting the card */}
-          <div className="absolute inset-0 pointer-events-none overflow-visible">
+          {/* Floating glass shards orbiting the card - Reduced on mobile for performance */}
+          <div className="absolute inset-0 pointer-events-none overflow-visible hidden sm:block">
             {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
               <div
                 key={i}
@@ -106,6 +106,25 @@ export const QuizQuestion = ({
                   transform: `rotate(${i * 45}deg)`,
                   boxShadow: '0 0 12px rgba(255, 219, 0, 0.6)',
                   opacity: 0.6
+                }}
+              />
+            ))}
+          </div>
+          {/* Simplified mobile shards - Only 3 elements */}
+          <div className="absolute inset-0 pointer-events-none overflow-visible sm:hidden">
+            {[0, 2, 5].map((i) => (
+              <div
+                key={i}
+                className="absolute w-2 h-2 rounded-sm animate-float-shard"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 219, 0, 0.6), rgba(99, 102, 241, 0.4))',
+                  left: `${10 + i * 15}%`,
+                  top: i % 2 === 0 ? '-15px' : 'calc(100% + 15px)',
+                  animationDelay: `${i * 0.8}s`,
+                  animationDuration: `${6 + (i % 2)}s`,
+                  transform: `rotate(${i * 60}deg)`,
+                  boxShadow: '0 0 8px rgba(255, 219, 0, 0.4)',
+                  opacity: 0.5
                 }}
               />
             ))}
@@ -128,36 +147,41 @@ export const QuizQuestion = ({
           }} />
 
           {/* Glass Layer 3 - Front layer (main content) */}
-          <div className="relative rounded-3xl backdrop-blur-lg bg-white/60 border-2 border-white/70 p-8 sm:p-10" style={{
+          <div className="relative rounded-2xl sm:rounded-3xl backdrop-blur-lg bg-white/60 border-2 border-white/70 p-5 sm:p-8 lg:p-10" style={{
             boxShadow: '0 25px 50px rgba(255, 219, 0, 0.25), 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
           }}>
             {/* Top glass highlight */}
-            <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-3xl pointer-events-none" />
+            <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-2xl sm:rounded-t-3xl pointer-events-none" />
 
             {/* Question Number Badge - Frosted glass pill */}
             <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-              <div className="backdrop-blur-xl bg-white/40 border-2 border-white/60 rounded-full px-4 py-1.5 shadow-lg">
-                <span className="text-sm font-bold bg-gradient-to-r from-[#FFDB00] to-indigo-600 bg-clip-text text-transparent">
+              <div className="backdrop-blur-xl bg-white/40 border-2 border-white/60 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 shadow-lg">
+                <span className="text-xs sm:text-sm font-bold bg-gradient-to-r from-[#FFDB00] to-indigo-600 bg-clip-text text-transparent">
                   Question {(currentQuestionIndex ?? 0) + 1} of {totalQuestions || '?'}
                 </span>
               </div>
             </div>
 
-            {/* Question Text - sits between glass layers */}
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight relative z-10 text-center" style={{
-              textShadow: '0 1px 2px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.1)'
-            }}>
-              {currentQ.question}
-            </h2>
+            {/* Question Text - sits between glass layers with overflow handling */}
+            <div className="max-h-[200px] sm:max-h-[300px] lg:max-h-[400px] overflow-y-auto custom-scrollbar">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-snug sm:leading-tight relative z-10 text-center break-words" style={{
+                textShadow: '0 1px 2px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.1)',
+                overflowWrap: 'break-word',
+                wordWrap: 'break-word',
+                hyphens: 'auto'
+              }}>
+                {currentQ.question}
+              </h2>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Answer Options Section */}
-      <div className="mt-4">
+      {/* Answer Options Section - Increased gap with responsive spacing */}
+      <div className="mt-6 sm:mt-8 lg:mt-10">
         {/* Multiple Choice - Frosted Glass Panes */}
         {currentQ.type === 'Multiple Choice' && currentQ.choices && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 lg:gap-5">
             {currentQ.choices.map((choice, index) => {
               const isSelected = selectedAnswer === choice;
               const isCorrect = choice === currentQ.correctAnswer;
@@ -169,7 +193,8 @@ export const QuizQuestion = ({
                   onClick={() => handleAnswerClick(choice)}
                   disabled={!!selectedAnswer || isPaused}
                   className={`
-                    relative min-h-[100px] rounded-2xl p-5 sm:p-6
+                    relative min-h-[72px] sm:min-h-[90px] lg:min-h-[100px] max-h-[200px]
+                    rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6
                     transition-all duration-500 transform
                     disabled:cursor-not-allowed
                     group overflow-hidden
@@ -244,18 +269,24 @@ export const QuizQuestion = ({
                     </div>
                   )}
 
-                  {/* Choice text */}
-                  <span className={`relative z-10 block text-base sm:text-lg font-semibold leading-relaxed text-center transition-colors duration-300 ${
-                    isCorrect && selectedAnswer
-                      ? 'text-white drop-shadow-md'
-                      : isWrong
-                      ? 'text-white drop-shadow-md'
-                      : selectedAnswer && !isCorrect && !isWrong
-                      ? 'text-gray-400'
-                      : 'text-gray-900'
-                  }`}>
-                    {choice}
-                  </span>
+                  {/* Choice text with overflow handling */}
+                  <div className="relative z-10 max-h-[150px] overflow-y-auto custom-scrollbar-choice flex items-center justify-center">
+                    <span className={`block text-sm sm:text-base lg:text-lg font-semibold leading-snug sm:leading-relaxed text-center transition-colors duration-300 break-words ${
+                      isCorrect && selectedAnswer
+                        ? 'text-white drop-shadow-md'
+                        : isWrong
+                        ? 'text-white drop-shadow-md'
+                        : selectedAnswer && !isCorrect && !isWrong
+                        ? 'text-gray-400'
+                        : 'text-gray-900'
+                    }`} style={{
+                      overflowWrap: 'break-word',
+                      wordWrap: 'break-word',
+                      hyphens: 'auto'
+                    }}>
+                      {choice}
+                    </span>
+                  </div>
                 </button>
               );
             })}
@@ -264,7 +295,7 @@ export const QuizQuestion = ({
 
         {/* True/False - Frosted Glass Panes */}
         {currentQ.type === 'True/False' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-5">
             {['True', 'False'].map((choice) => {
               const isSelected = selectedAnswer === choice;
               const isCorrect = choice === currentQ.correctAnswer;
@@ -276,7 +307,8 @@ export const QuizQuestion = ({
                   onClick={() => handleAnswerClick(choice)}
                   disabled={!!selectedAnswer || isPaused}
                   className={`
-                    relative min-h-[140px] rounded-2xl p-8 sm:p-10
+                    relative min-h-[100px] sm:min-h-[120px] lg:min-h-[140px]
+                    rounded-xl sm:rounded-2xl p-6 sm:p-8 lg:p-10
                     transition-all duration-500 transform
                     disabled:cursor-not-allowed
                     group overflow-hidden
@@ -353,7 +385,7 @@ export const QuizQuestion = ({
                   )}
 
                   {/* Choice text */}
-                  <span className={`relative z-10 text-xl sm:text-2xl font-bold transition-colors duration-300 ${
+                  <span className={`relative z-10 text-lg sm:text-xl lg:text-2xl font-bold transition-colors duration-300 ${
                     isCorrect && selectedAnswer
                       ? 'text-white drop-shadow-md'
                       : isWrong
@@ -372,9 +404,9 @@ export const QuizQuestion = ({
 
         {/* Fill in the Blanks */}
         {currentQ.type === 'Fill in the blanks' && (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className={`
-              backdrop-blur-xl border-2 rounded-2xl p-5 sm:p-6 shadow-lg transition-all relative
+              backdrop-blur-xl border-2 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg transition-all relative
               ${userAnswer?.includes('_submitted')
                 ? isAnswerCorrect(currentQ, userAnswer.replace('_submitted', ''))
                   ? 'bg-gradient-to-br from-green-400/90 to-emerald-500/90 border-green-300 shadow-green-500/40'
@@ -382,8 +414,8 @@ export const QuizQuestion = ({
                 : 'bg-white/30 border-white/40 hover:bg-white/40 hover:shadow-xl'
               }
             `}>
-              <div className="flex items-center gap-3 mb-3">
-                <label className={`text-sm font-bold ${userAnswer?.includes('_submitted') ? 'text-white drop-shadow-sm' : 'text-black'}`}>Type your answer:</label>
+              <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                <label className={`text-xs sm:text-sm font-bold ${userAnswer?.includes('_submitted') ? 'text-white drop-shadow-sm' : 'text-black'}`}>Type your answer:</label>
               </div>
 
               <input
@@ -396,7 +428,7 @@ export const QuizQuestion = ({
                   }
                 }}
                 className={`
-                  w-full text-lg sm:text-xl font-semibold bg-transparent border-b-2 pb-2 outline-none
+                  w-full text-base sm:text-lg lg:text-xl font-semibold bg-transparent border-b-2 pb-2 outline-none
                   placeholder-black/50 focus:border-yellow-400 transition-colors
                   ${userAnswer?.includes('_submitted')
                     ? 'text-white drop-shadow-sm border-white'
@@ -419,9 +451,12 @@ export const QuizQuestion = ({
               
               {/* Show correct answer below input if wrong */}
               {userAnswer?.includes('_submitted') && !isAnswerCorrect(currentQ, userAnswer.replace('_submitted', '')) && (
-                <div className="mt-4 pt-4 border-t-2 border-white/50 -mx-5 -mb-5 px-5 pb-5 rounded-b-2xl sm:-mx-6 sm:-mb-6 sm:px-6 sm:pb-6">
-                  <p className="text-sm font-semibold text-white/90 mb-1">Correct Answer:</p>
-                  <p className="text-lg sm:text-xl font-bold text-white">{currentQ.answer}</p>
+                <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-white/50 -mx-4 -mb-4 px-4 pb-4 rounded-b-xl sm:-mx-5 sm:-mb-5 sm:px-5 sm:pb-5 sm:rounded-b-2xl lg:-mx-6 lg:-mb-6 lg:px-6 lg:pb-6">
+                  <p className="text-xs sm:text-sm font-semibold text-white/90 mb-1">Correct Answer:</p>
+                  <p className="text-base sm:text-lg lg:text-xl font-bold text-white break-words" style={{
+                    overflowWrap: 'break-word',
+                    wordWrap: 'break-word'
+                  }}>{currentQ.answer}</p>
                 </div>
               )}
             </div>
@@ -435,8 +470,8 @@ export const QuizQuestion = ({
                   className="
                     btn-branded-yellow
                     disabled:bg-white/20
-                    text-black font-bold text-lg px-10 py-4
-                    rounded-2xl shadow-xl hover:shadow-2xl
+                    text-black font-bold text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4
+                    rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl
                     transition-all duration-300 transform hover:scale-105
                     disabled:cursor-not-allowed disabled:hover:scale-100 disabled:text-black/50
                     border-2 border-white/40

@@ -682,7 +682,7 @@ export default function Planner() {
         cancelText={confirmState.cancelText}
         variant={confirmState.variant}
       />
-      {loading && <AppLoader message="Loading your planner" />}
+      {loading && <AppLoader message="Loading Planner..." />}
 
       {showTutorial && (
         <TutorialOverlay

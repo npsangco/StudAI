@@ -28,6 +28,7 @@ import {
   performAdaptiveCheck
 } from '../utils/adaptiveQuizManager';
 import { AdaptiveFeedback } from '../components/AdaptiveFeedback';
+import QuizPetCompanion from '../QuizPetCompanion';
 
 const QuizGame = ({
   quiz,
@@ -139,6 +140,12 @@ const QuizGame = ({
   const [recentAnsweredUsers, setRecentAnsweredUsers] = useState([]);
   const recentAnswersTimeoutRef = useRef(null);
 
+  // 🐾 PET COMPANION: Track when to show pet motivation
+  const [showPetMessage, setShowPetMessage] = useState(false);
+  const [petAnswerCorrect, setPetAnswerCorrect] = useState(null);
+  const [showEncouragement, setShowEncouragement] = useState(false);
+  const encouragementTimerRef = useRef(null);
+
   // 🎭 Listen to player progress for pulse effects only (not for waiting/syncing)
   useEffect(() => {
     if (mode !== 'battle' || !quiz?.gamePin) {
@@ -178,6 +185,34 @@ const QuizGame = ({
       }
     };
   }, [mode, quiz?.gamePin, game.currentQuestionIndex, recentAnsweredUsers]);
+
+  // 🐾 Start encouragement timer when question loads (if not answered within 5 seconds)
+  useEffect(() => {
+    // Clear any existing timer
+    if (encouragementTimerRef.current) {
+      clearTimeout(encouragementTimerRef.current);
+      encouragementTimerRef.current = null;
+    }
+    
+    // Reset encouragement state
+    setShowEncouragement(false);
+    
+    // Start new 5-second timer for encouragement
+    encouragementTimerRef.current = setTimeout(() => {
+      // Only show if user hasn't answered yet (no pet message showing)
+      if (!showPetMessage) {
+        setShowEncouragement(true);
+      }
+    }, 5000);
+    
+    // Cleanup on unmount or question change
+    return () => {
+      if (encouragementTimerRef.current) {
+        clearTimeout(encouragementTimerRef.current);
+        encouragementTimerRef.current = null;
+      }
+    };
+  }, [game.currentQuestionIndex, showPetMessage]);
 
   // Listen to real players in battle mode
   useEffect(() => {
@@ -599,6 +634,13 @@ const QuizGame = ({
   const handleAnswerSelect = (answer) => {
     if (game.selectedAnswer || game.isPaused || isProcessing) return;
 
+    // 🐾 Clear encouragement timer since user is answering
+    if (encouragementTimerRef.current) {
+      clearTimeout(encouragementTimerRef.current);
+      encouragementTimerRef.current = null;
+    }
+    setShowEncouragement(false);
+
     // 🔥 STRICT SYNC: Prevent re-answering already answered questions
     if (mode === 'battle' && quiz?.gamePin) {
       // Check if I already answered this question (my progress is beyond this question)
@@ -647,6 +689,10 @@ const QuizGame = ({
         onPlayerScoreUpdate(1, 1);
       }
     }
+
+    // 🐾 Show pet companion message
+    setPetAnswerCorrect(isCorrect);
+    setShowPetMessage(true);
     
     // Update progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
@@ -669,6 +715,13 @@ const QuizGame = ({
 
   const handleFillInAnswer = () => {
     if (!game.userAnswer?.trim() || game.userAnswer.includes('_submitted') || game.isPaused || isProcessing) return;
+    
+    // 🐾 Clear encouragement timer since user is answering
+    if (encouragementTimerRef.current) {
+      clearTimeout(encouragementTimerRef.current);
+      encouragementTimerRef.current = null;
+    }
+    setShowEncouragement(false);
     
     timeoutHandledRef.current = true;
     setIsProcessing(true);
@@ -711,6 +764,10 @@ const QuizGame = ({
         onPlayerScoreUpdate(1, 1);
       }
     }
+
+    // 🐾 Show pet companion message
+    setPetAnswerCorrect(isCorrect);
+    setShowPetMessage(true);
     
     // Update progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
@@ -733,6 +790,13 @@ const QuizGame = ({
 
   const handleMatchingSubmit = (matches) => {
     if (game.isPaused || isProcessing) return;
+
+    // 🐾 Clear encouragement timer since user is submitting
+    if (encouragementTimerRef.current) {
+      clearTimeout(encouragementTimerRef.current);
+      encouragementTimerRef.current = null;
+    }
+    setShowEncouragement(false);
 
     timeoutHandledRef.current = true;
     setIsProcessing(true);
@@ -757,13 +821,15 @@ const QuizGame = ({
       setCorrectAnswersCount(correctAnswersCountRef.current);
       
       // ADAPTIVE SCORING: Award points based on difficulty
-      const points = mode === 'solo' 
+      const points = mode === 'solo'
         ? getPointsForDifficulty(currentQ.difficulty)
         : 1; // Battle mode: flat 1 point per question
       
       game.updateScore(points);
-      
-      // 🔥 Update score in Firebase
+
+    // 🐾 Show pet companion message
+    setPetAnswerCorrect(isCorrect);
+    setShowPetMessage(true);      // 🔥 Update score in Firebase
       if (mode === 'battle' && quiz?.gamePin) {
         const newScore = game.scoreRef.current; // Already updated above with correct points
         updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
@@ -786,6 +852,9 @@ const QuizGame = ({
   };
 
   const handleNextQuestion = () => {
+    // 🐾 Reset pet message for next question
+    setShowPetMessage(false);
+    
     // 🔥 EDGE CASE 1: Skip adaptive check if feedback is already showing
     if (isShowingFeedbackRef.current) {
       console.log('⏭️ EDGE CASE: Skipping adaptive check - feedback already showing');
@@ -1348,6 +1417,15 @@ const QuizGame = ({
           playerName="You"
         />
       )}
+
+      {/* 🐾 PET COMPANION */}
+      <QuizPetCompanion
+        isCorrect={petAnswerCorrect}
+        showMessage={showPetMessage}
+        showEncouragement={showEncouragement}
+        onMessageShown={() => setShowPetMessage(false)}
+        onEncouragementShown={() => setShowEncouragement(false)}
+      />
     </div>
   );
 }
