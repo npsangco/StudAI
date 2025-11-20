@@ -801,6 +801,9 @@ const QuizGame = ({
   };
 
   const handleNextQuestion = () => {
+    // 🐾 Reset pet message for next question
+    setShowPetMessage(false);
+    
     // 🔥 EDGE CASE 1: Skip adaptive check if feedback is already showing
     if (isShowingFeedbackRef.current) {
       console.log('⏭️ EDGE CASE: Skipping adaptive check - feedback already showing');
