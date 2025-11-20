@@ -176,18 +176,21 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false, toast }) => {
 };
 
 // Mode Badge Component
-const ModeBadge = ({ questionCount }) => {
-  if (questionCount === 0) return null;
+const ModeBadge = ({ quiz }) => {
+  if (!quiz.questionCount || quiz.questionCount === 0) return null;
 
-  const isAdaptive = questionCount >= 5;
+  // Check if adaptive mode can be used (from backend calculation)
+  const canUseAdaptive = quiz.canUseAdaptive;
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-      isAdaptive
-        ? 'bg-purple-100 text-purple-700'
-        : 'bg-gray-100 text-gray-600'
-    }`}>
-      {isAdaptive ? (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+        canUseAdaptive
+          ? 'bg-purple-100 text-purple-700'
+          : 'bg-amber-100 text-amber-700'
+      }`}
+    >
+      {canUseAdaptive ? (
         <>
           <Target className="w-3 h-3" />
           <span>Adaptive</span>
@@ -329,7 +332,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
               {formatQuizDate(quiz.created_at || quiz.created)}
             </span>
             <span className="text-gray-400">•</span>
-            <ModeBadge questionCount={quiz.questionCount || 0} />
+            <ModeBadge quiz={quiz} />
           </div>
 
           {/* Action Buttons */}

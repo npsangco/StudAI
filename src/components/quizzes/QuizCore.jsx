@@ -18,6 +18,8 @@ export const QuizQuestion = ({
   isPaused = false,
   isAnswerCorrect,
   isWaiting = false,
+  currentQuestionIndex,
+  totalQuestions,
 }) => {
   const currentQ = question;
 
@@ -87,86 +89,171 @@ export const QuizQuestion = ({
           </div>
         </div>
 
-        {/* Main Question Card */}
-        <div className={`bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-gray-200 relative overflow-hidden pt-10 transition-all duration-300 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`} style={{ boxShadow: '0 25px 50px -12px rgba(255, 219, 0, 0.15)' }}>
-          {/* Decorative corner elements with branded yellow */}
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full -translate-y-16 translate-x-16 blur-2xl" style={{ backgroundColor: 'rgba(255, 219, 0, 0.3)' }} />
-          <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full translate-y-16 -translate-x-16 blur-2xl" style={{ backgroundColor: 'rgba(255, 219, 0, 0.25)' }} />
+        {/* Main Question Card - Frosted Glass Layers */}
+        <div className={`relative transition-all duration-500 ${isWaiting ? 'opacity-60 scale-[0.98]' : ''}`}>
+          {/* Floating glass shards orbiting the card */}
+          <div className="absolute inset-0 pointer-events-none overflow-visible">
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <div
+                key={i}
+                className="absolute w-3 h-3 rounded-sm animate-float-shard"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 219, 0, 0.8), rgba(99, 102, 241, 0.6))',
+                  left: `${5 + i * 12}%`,
+                  top: i % 2 === 0 ? '-20px' : 'calc(100% + 20px)',
+                  animationDelay: `${i * 0.6}s`,
+                  animationDuration: `${5 + (i % 3)}s`,
+                  transform: `rotate(${i * 45}deg)`,
+                  boxShadow: '0 0 12px rgba(255, 219, 0, 0.6)',
+                  opacity: 0.6
+                }}
+              />
+            ))}
+          </div>
 
-          {/* Question Text */}
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black drop-shadow-sm leading-tight relative z-10 text-center">
-            {currentQ.question}
-          </h2>
+          {/* Background gradient layer (shifts subtly) */}
+          <div className="absolute inset-0 rounded-3xl opacity-40 animate-gradient-shift" style={{
+            background: 'linear-gradient(135deg, #FFDB00 0%, #FFC700 25%, rgba(99, 102, 241, 0.3) 50%, #FFB800 75%, #FFDB00 100%)',
+            backgroundSize: '200% 200%'
+          }} />
+
+          {/* Glass Layer 1 - Back layer (heaviest blur) */}
+          <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/30 border-2 border-white/40 transform translate-y-2 translate-x-2" style={{
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)'
+          }} />
+
+          {/* Glass Layer 2 - Middle layer */}
+          <div className="absolute inset-0 rounded-3xl backdrop-blur-xl bg-white/40 border-2 border-white/50 transform translate-y-1 translate-x-1" style={{
+            boxShadow: '0 15px 30px rgba(0, 0, 0, 0.1)'
+          }} />
+
+          {/* Glass Layer 3 - Front layer (main content) */}
+          <div className="relative rounded-3xl backdrop-blur-lg bg-white/60 border-2 border-white/70 p-8 sm:p-10" style={{
+            boxShadow: '0 25px 50px rgba(255, 219, 0, 0.25), 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
+          }}>
+            {/* Top glass highlight */}
+            <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-3xl pointer-events-none" />
+
+            {/* Question Number Badge - Frosted glass pill */}
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+              <div className="backdrop-blur-xl bg-white/40 border-2 border-white/60 rounded-full px-4 py-1.5 shadow-lg">
+                <span className="text-sm font-bold bg-gradient-to-r from-[#FFDB00] to-indigo-600 bg-clip-text text-transparent">
+                  Question {(currentQuestionIndex ?? 0) + 1} of {totalQuestions || '?'}
+                </span>
+              </div>
+            </div>
+
+            {/* Question Text - sits between glass layers */}
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight relative z-10 text-center" style={{
+              textShadow: '0 1px 2px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.1)'
+            }}>
+              {currentQ.question}
+            </h2>
+          </div>
         </div>
       </div>
 
       {/* Answer Options Section */}
       <div className="mt-4">
-        {/* Multiple Choice */}
+        {/* Multiple Choice - Frosted Glass Panes */}
         {currentQ.type === 'Multiple Choice' && currentQ.choices && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
             {currentQ.choices.map((choice, index) => {
               const isSelected = selectedAnswer === choice;
               const isCorrect = choice === currentQ.correctAnswer;
               const isWrong = selectedAnswer && choice === selectedAnswer && !isCorrect;
 
-              let bgClass = 'bg-white/80 backdrop-blur-md hover:bg-white/90';
-              let borderClass = 'border-gray-300 hover:border-gray-400';
-              let textClass = 'text-black';
-              let shadowClass = 'shadow-lg hover:shadow-xl';
-              
-              if (selectedAnswer) {
-                if (isCorrect) {
-                  bgClass = 'bg-green-500';
-                  borderClass = 'border-green-400';
-                  textClass = 'text-white';
-                  shadowClass = 'shadow-2xl shadow-green-500/40';
-                } else if (isWrong) {
-                  bgClass = 'bg-red-500';
-                  borderClass = 'border-red-400';
-                  textClass = 'text-white';
-                  shadowClass = 'shadow-2xl shadow-red-500/40';
-                } else {
-                  bgClass = 'bg-white/40';
-                  borderClass = 'border-white/30';
-                  textClass = 'text-gray-500';
-                  shadowClass = 'shadow-sm';
-                }
-              } else if (isSelected) {
-                bgClass = 'bg-white';
-                borderClass = 'border-[#FFDB00]';
-                shadowClass = 'shadow-2xl';
-              }
-              
               return (
                 <button
                   key={index}
                   onClick={() => handleAnswerClick(choice)}
                   disabled={!!selectedAnswer || isPaused}
                   className={`
-                    ${bgClass} ${borderClass} ${textClass} ${shadowClass}
-                    backdrop-blur-xl border-2 rounded-2xl p-4 sm:p-5
-                    min-h-[90px] font-semibold text-base sm:text-lg
-                    transition-all duration-300 transform
-                    hover:scale-105 hover:-translate-y-1
-                    ${isSelected ? 'scale-105 -translate-y-1' : ''}
-                    disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0
-                    relative overflow-hidden group
+                    relative min-h-[100px] rounded-2xl p-5 sm:p-6
+                    transition-all duration-500 transform
+                    disabled:cursor-not-allowed
+                    group overflow-hidden
+                    ${!selectedAnswer ? 'hover:scale-[1.02] hover:-translate-y-1 cursor-pointer' : ''}
+                    ${isSelected && !selectedAnswer ? 'scale-[1.02] -translate-y-1' : ''}
                   `}
+                  style={{
+                    boxShadow: isCorrect && selectedAnswer
+                      ? '0 20px 40px rgba(34, 197, 94, 0.3)'
+                      : isWrong
+                      ? '0 20px 40px rgba(239, 68, 68, 0.3)'
+                      : '0 10px 30px rgba(0, 0, 0, 0.08)'
+                  }}
                 >
-                  {/* Horizontal shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                  {/* Gradient background behind glass */}
+                  <div className={`absolute inset-0 rounded-2xl transition-all duration-500 ${
+                    isCorrect && selectedAnswer
+                      ? 'opacity-100'
+                      : isWrong
+                      ? 'opacity-100'
+                      : 'opacity-0 group-hover:opacity-100'
+                  }`} style={{
+                    background: isCorrect && selectedAnswer
+                      ? 'linear-gradient(135deg, #10b981, #059669)'
+                      : isWrong
+                      ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+                      : 'linear-gradient(135deg, #FFDB00, rgba(99, 102, 241, 0.5))'
+                  }} />
 
-                  {/* Diagonal slash effect with branded yellow */}
-                  <div className="absolute inset-0 translate-x-[-100%] translate-y-[-100%] group-hover:translate-x-[100%] group-hover:translate-y-[100%] transition-transform duration-1000 ease-out opacity-0 group-hover:opacity-100" style={{ background: 'linear-gradient(to bottom right, transparent, rgba(255, 219, 0, 0.2), transparent)' }} />
+                  {/* Frosted glass pane - blur reduces on hover */}
+                  <div className={`absolute inset-0 rounded-2xl border-2 transition-all duration-500 ${
+                    selectedAnswer && !isCorrect && !isWrong
+                      ? 'backdrop-blur-2xl bg-white/70 border-white/50'
+                      : isCorrect && selectedAnswer
+                      ? 'backdrop-blur-none bg-transparent border-green-400 animate-glass-shatter'
+                      : isWrong
+                      ? 'backdrop-blur-sm bg-transparent border-red-400'
+                      : isSelected && !selectedAnswer
+                      ? 'backdrop-blur-md bg-white/50 border-indigo-500'
+                      : 'backdrop-blur-xl bg-white/80 border-white/60 group-hover:backdrop-blur-md group-hover:bg-white/50'
+                  }`}>
+                    {/* Top highlight for glass effect */}
+                    <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent rounded-t-2xl" />
 
-                  {/* Corner glow accent with branded yellow */}
-                  <div className="absolute top-0 right-0 w-0 h-0 group-hover:w-12 group-hover:h-12 transition-all duration-400 rounded-bl-full blur-sm" style={{ backgroundColor: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 219, 0, 0.2)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} />
+                    {/* Cracked glass effect for wrong answer */}
+                    {isWrong && (
+                      <svg className="absolute inset-0 w-full h-full opacity-60" style={{ filter: 'drop-shadow(0 0 2px rgba(239, 68, 68, 0.8))' }}>
+                        <line x1="50%" y1="50%" x2="10%" y2="10%" stroke="#dc2626" strokeWidth="2" />
+                        <line x1="50%" y1="50%" x2="90%" y2="20%" stroke="#dc2626" strokeWidth="2" />
+                        <line x1="50%" y1="50%" x2="80%" y2="90%" stroke="#dc2626" strokeWidth="2" />
+                        <line x1="50%" y1="50%" x2="20%" y2="85%" stroke="#dc2626" strokeWidth="2" />
+                        <line x1="50%" y1="50%" x2="60%" y2="5%" stroke="#dc2626" strokeWidth="1.5" />
+                        <line x1="50%" y1="50%" x2="5%" y2="50%" stroke="#dc2626" strokeWidth="1.5" />
+                      </svg>
+                    )}
+                  </div>
 
-                  {/* Bottom border light with branded yellow */}
-                  <div className="absolute bottom-0 left-0 right-0 h-0 group-hover:h-2 transition-all duration-300" style={{ background: 'linear-gradient(to top, rgba(255, 219, 0, 0), rgba(255, 219, 0, 0.4))' }} />
+                  {/* Sparkle particles for correct answer */}
+                  {isCorrect && selectedAnswer && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      {[...Array(8)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="absolute w-1 h-1 bg-white rounded-full animate-sparkle"
+                          style={{
+                            left: `${20 + i * 10}%`,
+                            top: `${30 + (i % 3) * 20}%`,
+                            animationDelay: `${i * 0.1}s`
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
 
-                  <span className="relative z-10 block leading-relaxed text-center">
+                  {/* Choice text */}
+                  <span className={`relative z-10 block text-base sm:text-lg font-semibold leading-relaxed text-center transition-colors duration-300 ${
+                    isCorrect && selectedAnswer
+                      ? 'text-white drop-shadow-md'
+                      : isWrong
+                      ? 'text-white drop-shadow-md'
+                      : selectedAnswer && !isCorrect && !isWrong
+                      ? 'text-gray-400'
+                      : 'text-gray-900'
+                  }`}>
                     {choice}
                   </span>
                 </button>
@@ -175,72 +262,108 @@ export const QuizQuestion = ({
           </div>
         )}
 
-        {/* True/False */}
+        {/* True/False - Frosted Glass Panes */}
         {currentQ.type === 'True/False' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
             {['True', 'False'].map((choice) => {
               const isSelected = selectedAnswer === choice;
               const isCorrect = choice === currentQ.correctAnswer;
               const isWrong = selectedAnswer && choice === selectedAnswer && !isCorrect;
 
-              let bgClass = 'bg-white/80 backdrop-blur-md hover:bg-white/90';
-              let borderClass = 'border-gray-300 hover:border-gray-400';
-              let textClass = 'text-black';
-              let shadowClass = 'shadow-lg hover:shadow-xl';
-
-              if (selectedAnswer) {
-                if (isCorrect) {
-                  bgClass = 'bg-green-500';
-                  borderClass = 'border-green-400';
-                  textClass = 'text-white drop-shadow-sm';
-                  shadowClass = 'shadow-2xl shadow-green-500/40';
-                } else if (isWrong) {
-                  bgClass = 'bg-red-500';
-                  borderClass = 'border-red-400';
-                  textClass = 'text-white drop-shadow-sm';
-                  shadowClass = 'shadow-2xl shadow-red-500/40';
-                } else {
-                  bgClass = 'bg-white/10 backdrop-blur-sm';
-                  borderClass = 'border-white/20';
-                  textClass = 'text-black/50';
-                  shadowClass = 'shadow-sm';
-                }
-              } else if (isSelected) {
-                bgClass = 'bg-yellow-400/50 backdrop-blur-md';
-                borderClass = 'border-yellow-500';
-                shadowClass = 'shadow-2xl shadow-yellow-500/40';
-              }
-              
               return (
                 <button
                   key={choice}
                   onClick={() => handleAnswerClick(choice)}
                   disabled={!!selectedAnswer || isPaused}
                   className={`
-                    ${bgClass} ${borderClass} ${textClass} ${shadowClass}
-                    backdrop-blur-xl border-2 rounded-2xl p-6 sm:p-8
-                    min-h-[120px] font-bold text-xl sm:text-2xl
-                    transition-all duration-300 transform
-                    hover:scale-105 hover:-translate-y-1
-                    ${isSelected ? 'scale-105 -translate-y-1' : ''}
+                    relative min-h-[140px] rounded-2xl p-8 sm:p-10
+                    transition-all duration-500 transform
                     disabled:cursor-not-allowed
-                    relative overflow-hidden group
+                    group overflow-hidden
                     flex items-center justify-center
+                    ${!selectedAnswer ? 'hover:scale-[1.02] hover:-translate-y-1 cursor-pointer' : ''}
+                    ${isSelected && !selectedAnswer ? 'scale-[1.02] -translate-y-1' : ''}
                   `}
+                  style={{
+                    boxShadow: isCorrect && selectedAnswer
+                      ? '0 20px 40px rgba(34, 197, 94, 0.3)'
+                      : isWrong
+                      ? '0 20px 40px rgba(239, 68, 68, 0.3)'
+                      : '0 10px 30px rgba(0, 0, 0, 0.08)'
+                  }}
                 >
-                  {/* Horizontal shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                  {/* Gradient background behind glass */}
+                  <div className={`absolute inset-0 rounded-2xl transition-all duration-500 ${
+                    isCorrect && selectedAnswer
+                      ? 'opacity-100'
+                      : isWrong
+                      ? 'opacity-100'
+                      : 'opacity-0 group-hover:opacity-100'
+                  }`} style={{
+                    background: isCorrect && selectedAnswer
+                      ? 'linear-gradient(135deg, #10b981, #059669)'
+                      : isWrong
+                      ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+                      : 'linear-gradient(135deg, #FFDB00, rgba(99, 102, 241, 0.5))'
+                  }} />
 
-                  {/* Diagonal slash effect with branded yellow */}
-                  <div className="absolute inset-0 translate-x-[-100%] translate-y-[-100%] group-hover:translate-x-[100%] group-hover:translate-y-[100%] transition-transform duration-1000 ease-out opacity-0 group-hover:opacity-100" style={{ background: 'linear-gradient(to bottom right, transparent, rgba(255, 219, 0, 0.2), transparent)' }} />
+                  {/* Frosted glass pane - blur reduces on hover */}
+                  <div className={`absolute inset-0 rounded-2xl border-2 transition-all duration-500 ${
+                    selectedAnswer && !isCorrect && !isWrong
+                      ? 'backdrop-blur-2xl bg-white/70 border-white/50'
+                      : isCorrect && selectedAnswer
+                      ? 'backdrop-blur-none bg-transparent border-green-400 animate-glass-shatter'
+                      : isWrong
+                      ? 'backdrop-blur-sm bg-transparent border-red-400'
+                      : isSelected && !selectedAnswer
+                      ? 'backdrop-blur-md bg-white/50 border-indigo-500'
+                      : 'backdrop-blur-xl bg-white/80 border-white/60 group-hover:backdrop-blur-md group-hover:bg-white/50'
+                  }`}>
+                    {/* Top highlight for glass effect */}
+                    <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent rounded-t-2xl" />
 
-                  {/* Corner glow accent with branded yellow */}
-                  <div className="absolute top-0 right-0 w-0 h-0 group-hover:w-12 group-hover:h-12 transition-all duration-400 rounded-bl-full blur-sm" style={{ backgroundColor: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 219, 0, 0.2)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} />
+                    {/* Cracked glass effect for wrong answer */}
+                    {isWrong && (
+                      <svg className="absolute inset-0 w-full h-full opacity-60" style={{ filter: 'drop-shadow(0 0 2px rgba(239, 68, 68, 0.8))' }}>
+                        <line x1="50%" y1="50%" x2="10%" y2="10%" stroke="#dc2626" strokeWidth="2" />
+                        <line x1="50%" y1="50%" x2="90%" y2="20%" stroke="#dc2626" strokeWidth="2" />
+                        <line x1="50%" y1="50%" x2="80%" y2="90%" stroke="#dc2626" strokeWidth="2" />
+                        <line x1="50%" y1="50%" x2="20%" y2="85%" stroke="#dc2626" strokeWidth="2" />
+                        <line x1="50%" y1="50%" x2="60%" y2="5%" stroke="#dc2626" strokeWidth="1.5" />
+                        <line x1="50%" y1="50%" x2="5%" y2="50%" stroke="#dc2626" strokeWidth="1.5" />
+                      </svg>
+                    )}
+                  </div>
 
-                  {/* Bottom border light with branded yellow */}
-                  <div className="absolute bottom-0 left-0 right-0 h-0 group-hover:h-2 transition-all duration-300" style={{ background: 'linear-gradient(to top, rgba(255, 219, 0, 0), rgba(255, 219, 0, 0.4))' }} />
+                  {/* Sparkle particles for correct answer */}
+                  {isCorrect && selectedAnswer && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      {[...Array(8)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="absolute w-1 h-1 bg-white rounded-full animate-sparkle"
+                          style={{
+                            left: `${20 + i * 10}%`,
+                            top: `${30 + (i % 3) * 20}%`,
+                            animationDelay: `${i * 0.1}s`
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
 
-                  <span className="relative z-10">{choice}</span>
+                  {/* Choice text */}
+                  <span className={`relative z-10 text-xl sm:text-2xl font-bold transition-colors duration-300 ${
+                    isCorrect && selectedAnswer
+                      ? 'text-white drop-shadow-md'
+                      : isWrong
+                      ? 'text-white drop-shadow-md'
+                      : selectedAnswer && !isCorrect && !isWrong
+                      ? 'text-gray-400'
+                      : 'text-gray-900'
+                  }`}>
+                    {choice}
+                  </span>
                 </button>
               );
             })}

@@ -73,6 +73,9 @@ import { requireAdmin } from "./middleware/adminAuthMiddleware.js";
 import { startEmailReminders } from "./services/emailScheduler.js";
 import { VerificationEmail, PasswordUpdateEmail, PasswordResetEmail} from "./services/emailService.js";
 
+// Battle cleanup (no Firebase Admin needed)
+import { startBattleCleanup } from "./services/battleCleanupSimple.js";
+
 // Import Note model after creating it
 let Note;
 try {
@@ -2008,4 +2011,14 @@ app.use((err, req, res, next) => {
 });
 
 // ----------------- START SERVER -----------------
-app.listen(PORT, () => console.log(`🚀 Server running on ${SERVER_URL}`));
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on ${SERVER_URL}`);
+    
+    // Start battle cleanup service (MySQL only - client handles Firebase)
+    try {
+        startBattleCleanup();
+    } catch (error) {
+        console.error('❌ Failed to start battle cleanup:', error.message);
+        console.error('   Battle cleanup will be disabled');
+    }
+});

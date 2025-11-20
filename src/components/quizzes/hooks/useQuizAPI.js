@@ -44,7 +44,11 @@ export function useQuizAPI(quizDataHook, toast) {
         share_code: quiz.share_code,
         shared_by_username: quiz.shared_by_username, // For imported quizzes
         timer_per_question: quiz.timer_per_question ?? 30,
-        creator: quiz.creator?.username || 'Unknown'
+        creator: quiz.creator?.username || 'Unknown',
+        // Adaptive mode data
+        difficultyDistribution: quiz.difficulty_distribution,
+        hasVariedDifficulty: quiz.has_varied_difficulty,
+        canUseAdaptive: quiz.can_use_adaptive
       }));
 
       updateQuizData({ list: formattedQuizzes });

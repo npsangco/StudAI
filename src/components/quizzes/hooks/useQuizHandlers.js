@@ -284,11 +284,17 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   };
 
   const handleSaveQuiz = async () => {
+    // Show immediate feedback
+    toast.info('Saving quiz...');
+
     const success = await quizAPI.saveQuiz();
 
     if (success) {
       toast.success('Quiz saved successfully!');
-      handleBackToList();
+      // Small delay to let user see the toast before navigating away
+      setTimeout(() => {
+        handleBackToList();
+      }, 500);
     } else {
       toast.error('Failed to save quiz. Please try again.');
     }
@@ -299,11 +305,6 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   // ============================================
 
   const handleAddQuestion = () => {
-    if (questions.length >= 30) {
-      toast.warning('Maximum 30 questions per quiz!');
-      return;
-    }
-
     const newQuestion = createNewQuestion('Multiple Choice', questions);
     setQuestions([...questions, newQuestion]);
   };
@@ -323,8 +324,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       // Deep copy choices if they exist
       choices: questionToDuplicate.choices ? [...questionToDuplicate.choices] : undefined,
       // Deep copy matching pairs if they exist
-      matchingPairs: questionToDuplicate.matchingPairs 
-        ? questionToDuplicate.matchingPairs.map(pair => ({ ...pair })) 
+      matchingPairs: questionToDuplicate.matchingPairs
+        ? questionToDuplicate.matchingPairs.map(pair => ({ ...pair }))
         : undefined
     };
 
