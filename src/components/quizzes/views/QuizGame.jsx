@@ -28,6 +28,8 @@ import {
   performAdaptiveCheck
 } from '../utils/adaptiveQuizManager';
 import { AdaptiveFeedback } from '../components/AdaptiveFeedback';
+import QuizPetCompanion from '../components/QuizPetCompanion';
+import { petApi } from '../../../api/api';
 
 const QuizGame = ({
   quiz,
@@ -98,9 +100,36 @@ const QuizGame = ({
 
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Pet Companion State
+  const [petData, setPetData] = useState(null);
+  const [lastAnswerCorrect, setLastAnswerCorrect] = useState(null);
+
+  // Load user's pet
+  useEffect(() => {
+    const loadPet = async () => {
+      try {
+        const res = await petApi.getPet();
+        if (!res.data.choosePet && res.data) {
+          setPetData({
+            name: res.data.pet_name,
+            type: res.data.pet_type
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load pet for quiz:', err);
+      }
+    };
+    loadPet();
+  }, []);
+
   // Track all answers for summary
   const [answersHistory, setAnswersHistory] = useState([]);
   const timeoutHandledRef = useRef(false);
+
+  // Reset pet feedback when moving to next question
+  useEffect(() => {
+    setLastAnswerCorrect(null);
+  }, [game.currentIndex]);
 
   // Track correct answers for accurate accuracy calculation
   // Use ref for synchronous updates to prevent flickering
@@ -612,6 +641,9 @@ const QuizGame = ({
     game.setSelectedAnswer(answer);
 
     const isCorrect = game.isAnswerCorrect(currentQ, answer);
+
+    // Update pet companion feedback
+    setLastAnswerCorrect(isCorrect);
 
     // Record answer
     const answerRecord = {
@@ -1128,6 +1160,16 @@ const QuizGame = ({
               feedbackTimeoutRef.current = null;
             }
           }}
+        />
+      )}
+
+      {/* Pet Companion - Motivational Support */}
+      {petData && (
+        <QuizPetCompanion
+          petType={petData.type}
+          petName={petData.name}
+          onAnswer={lastAnswerCorrect}
+          showEncouragement={true}
         />
       )}
 
