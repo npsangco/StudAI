@@ -352,63 +352,6 @@ async function checkStreakMilestones(userId, streak) {
     }
 }
 
-// ============================================
-// MODEL ASSOCIATIONS
-// ============================================
-
-// Add Session associations
-Session.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-User.hasMany(Session, { foreignKey: 'user_id', as: 'sessions' });
-
-Session.belongsTo(User, { foreignKey: 'user_id', as: 'host' });
-User.hasMany(Session, { foreignKey: 'user_id', as: 'hostedSessions' });
-
-// Your existing associations
-Quiz.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
-User.hasMany(Quiz, { foreignKey: 'created_by', as: 'quizzes' });
-
-Quiz.hasMany(Question, { foreignKey: 'quiz_id', as: 'questions' });
-Question.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
-
-QuizAttempt.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-User.hasMany(QuizAttempt, { foreignKey: 'user_id', as: 'attempts' });
-
-QuizAttempt.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
-Quiz.hasMany(QuizAttempt, { foreignKey: 'quiz_id', as: 'attempts' });
-
-QuizBattle.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
-Quiz.hasMany(QuizBattle, { foreignKey: 'quiz_id', as: 'battles' });
-
-QuizBattle.belongsTo(User, { foreignKey: 'host_id', as: 'host' });
-User.hasMany(QuizBattle, { foreignKey: 'host_id', as: 'hosted_battles' });
-
-QuizBattle.belongsTo(User, { foreignKey: 'winner_id', as: 'winner' });
-User.hasMany(QuizBattle, { foreignKey: 'winner_id', as: 'won_battles' });
-
-BattleParticipant.belongsTo(QuizBattle, { foreignKey: 'battle_id', as: 'battle' });
-QuizBattle.hasMany(BattleParticipant, { foreignKey: 'battle_id', as: 'participants' });
-
-BattleParticipant.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-User.hasMany(BattleParticipant, { foreignKey: 'user_id', as: 'battle_participations' });
-
-// Add ZoomToken association
-ZoomToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-User.hasOne(ZoomToken, { foreignKey: 'user_id', as: 'zoomToken' });
-
-if (Note) {
-    const NoteCategory = (await import('./models/NoteCategory.js')).default;
-
-    Note.belongsTo(NoteCategory, {
-        foreignKey: 'category_id',
-        as: 'category'
-    });
-
-    NoteCategory.hasMany(Note, {
-        foreignKey: 'category_id',
-        as: 'notes'
-    });
-}
-
 // ----------------- DB Connection -----------------
 sequelize.authenticate()
     .then(async () => {
