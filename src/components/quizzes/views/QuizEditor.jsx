@@ -185,7 +185,34 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
 };
 
 // ============================================
-// VALIDATION SYSTEM (Same as before)
+// TEXT LENGTH LIMITS
+// ============================================
+
+export const TEXT_LIMITS = {
+  QUESTION: {
+    recommended: 300,
+    maximum: 500,
+    warning: 400
+  },
+  CHOICE: {
+    recommended: 100,
+    maximum: 150,
+    warning: 120
+  },
+  FILL_ANSWER: {
+    recommended: 50,
+    maximum: 100,
+    warning: 80
+  },
+  MATCHING_ITEM: {
+    recommended: 80,
+    maximum: 120,
+    warning: 100
+  }
+};
+
+// ============================================
+// VALIDATION SYSTEM
 // ============================================
 
 export const validateQuestions = (questions) => {
@@ -194,11 +221,18 @@ export const validateQuestions = (questions) => {
   questions.forEach((question, index) => {
     const questionNumber = index + 1;
 
+    // Validate question text
     if (!question.question || question.question.trim() === '') {
       errors.push({
         questionNumber,
         message: `Question ${questionNumber}: Empty question text`,
         details: 'Please enter a question'
+      });
+    } else if (question.question.length > TEXT_LIMITS.QUESTION.maximum) {
+      errors.push({
+        questionNumber,
+        message: `Question ${questionNumber}: Text too long`,
+        details: `Question text is ${question.question.length} characters (max ${TEXT_LIMITS.QUESTION.maximum})`
       });
     }
 
@@ -253,9 +287,12 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
   }
 
   const emptyChoices = [];
+  const tooLongChoices = [];
   choices.forEach((choice, idx) => {
     if (!choice || choice.trim() === '') {
       emptyChoices.push(idx + 1);
+    } else if (choice.length > TEXT_LIMITS.CHOICE.maximum) {
+      tooLongChoices.push({ index: idx + 1, length: choice.length });
     }
   });
 
@@ -264,6 +301,17 @@ const validateMultipleChoice = (question, questionNumber, errors) => {
       questionNumber,
       message: `Question ${questionNumber}: Empty choice(s)`,
       details: `Option ${emptyChoices.join(', ')} ${emptyChoices.length === 1 ? 'is' : 'are'} empty`
+    });
+  }
+
+  if (tooLongChoices.length > 0) {
+    const details = tooLongChoices.map(c =>
+      `Option ${c.index}: ${c.length} chars (max ${TEXT_LIMITS.CHOICE.maximum})`
+    ).join(', ');
+    errors.push({
+      questionNumber,
+      message: `Question ${questionNumber}: Choice(s) too long`,
+      details
     });
   }
 
@@ -302,6 +350,12 @@ const validateFillInBlanks = (question, questionNumber, errors) => {
       questionNumber,
       message: `Question ${questionNumber}: No answer provided`,
       details: 'Please enter the correct answer'
+    });
+  } else if (question.answer.length > TEXT_LIMITS.FILL_ANSWER.maximum) {
+    errors.push({
+      questionNumber,
+      message: `Question ${questionNumber}: Answer too long`,
+      details: `Answer is ${question.answer.length} characters (max ${TEXT_LIMITS.FILL_ANSWER.maximum})`
     });
   }
 };
@@ -354,17 +408,28 @@ const validateMatching = (question, questionNumber, errors) => {
   }
 
   const emptyPairs = [];
+  const tooLongPairs = [];
+
   pairs.forEach((pair, idx) => {
     const pairNum = idx + 1;
     const leftEmpty = !pair.left || pair.left.trim() === '';
     const rightEmpty = !pair.right || pair.right.trim() === '';
 
+    // Check for empty pairs
     if (leftEmpty && rightEmpty) {
       emptyPairs.push(`Pair ${pairNum} (both sides empty)`);
     } else if (leftEmpty) {
       emptyPairs.push(`Pair ${pairNum} (left side empty)`);
     } else if (rightEmpty) {
       emptyPairs.push(`Pair ${pairNum} (right side empty)`);
+    }
+
+    // Check for too long text
+    if (pair.left && pair.left.length > TEXT_LIMITS.MATCHING_ITEM.maximum) {
+      tooLongPairs.push(`Pair ${pairNum} left: ${pair.left.length} chars (max ${TEXT_LIMITS.MATCHING_ITEM.maximum})`);
+    }
+    if (pair.right && pair.right.length > TEXT_LIMITS.MATCHING_ITEM.maximum) {
+      tooLongPairs.push(`Pair ${pairNum} right: ${pair.right.length} chars (max ${TEXT_LIMITS.MATCHING_ITEM.maximum})`);
     }
   });
 
@@ -373,6 +438,14 @@ const validateMatching = (question, questionNumber, errors) => {
       questionNumber,
       message: `Question ${questionNumber}: Empty matching items`,
       details: emptyPairs.join('; ')
+    });
+  }
+
+  if (tooLongPairs.length > 0) {
+    errors.push({
+      questionNumber,
+      message: `Question ${questionNumber}: Matching item(s) too long`,
+      details: tooLongPairs.join('; ')
     });
   }
 
