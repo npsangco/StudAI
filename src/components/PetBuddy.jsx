@@ -161,7 +161,8 @@ export default function PetBuddy() {
     setActionLoading(type);
     try {
       const res = await petApi.doAction({ actionType: type });
-      setPet(res.data);
+      // Force complete state replacement to avoid stale data
+      setPet(() => res.data);
       
       // Show success message based on action type
       const actionMessages = {
@@ -435,66 +436,66 @@ const PetBubbleDialog = ({ pet }) => {
   const dialogMessages = useMemo(() => ({
     // Critical needs (red stats < 20)
     critical_hunger: [
-      "I'm so hungry! 🍖 Feed me please!",
-      "My tummy is rumbling... 😢",
+      "I'm so hungry! Feed me please!",
+      "My tummy is rumbling...",
       "I really need some food!",
       "*stomach growls* I'm starving!",
     ],
     critical_happiness: [
-      "I'm feeling so lonely... 😢",
+      "I'm feeling so lonely...",
       "Can we play? I'm really sad...",
-      "I need some fun time! 🎾",
+      "I need some fun time!",
       "*whimpers* Please play with me...",
     ],
     critical_cleanliness: [
-      "I really need a bath! 🛁",
+      "I really need a bath!",
       "I'm so dirty... can you clean me?",
-      "Please help me get clean! 💧",
+      "Please help me get clean!",
       "*covered in dirt* I need cleaning!",
     ],
     // Low needs (20-40)
     low_hunger: [
-      "I could use a snack! 🍪",
+      "I could use a snack!",
       "Getting a bit hungry here...",
-      "Food would be nice! 😊",
+      "Food would be nice!",
     ],
     low_happiness: [
-      "Want to play soon? 🎾",
+      "Want to play soon?",
       "I'm getting a bit bored...",
       "Some playtime would be fun!",
     ],
     low_cleanliness: [
-      "Could use a little cleanup! 🧼",
+      "Could use a little cleanup!",
       "I'm getting a bit messy...",
       "A bath would be nice soon!",
     ],
     // Motivational messages (good stats 70+)
     motivated: [
-      "You're doing amazing! Keep it up! ⭐",
-      "I'm so proud of you! 💪",
-      "Great job studying today! 📚",
-      "You're crushing it! 🔥",
-      "Keep up the awesome work! ✨",
-      "I believe in you! 💖",
-      "You're making great progress! 🌟",
-      "Learning looks good on you! 🎓",
-      "You're unstoppable! 🚀",
-      "Focus and conquer! 💯",
+      "You're doing amazing! Keep it up!",
+      "I'm so proud of you!",
+      "Great job studying today!",
+      "You're crushing it!",
+      "Keep up the awesome work!",
+      "I believe in you!",
+      "You're making great progress!",
+      "Learning looks good on you!",
+      "You're unstoppable!",
+      "Focus and conquer!",
     ],
     // Level milestone messages
     level_milestone: [
-      `Wow! We're level ${pet.level}! 🎉`,
-      "We're growing stronger together! 💪",
-      "Look how far we've come! ⭐",
-      "This is exciting progress! 🌟",
+      `Wow! We're level ${pet.level}!`,
+      "We're growing stronger together!",
+      "Look how far we've come!",
+      "This is exciting progress!",
     ],
     // General happy messages
     happy: [
-      "I'm feeling great! 😊",
-      "Life is good! 🌈",
-      "Thanks for taking care of me! 💕",
-      "You're the best! 🥰",
-      "I love spending time with you! 💖",
+      "I'm feeling great!",
+      "Life is good!",
+      "Thanks for taking care of me!",
+      "You're the best!",
+      "I love spending time with you!",
     ],
   }), [pet.level]);
 
