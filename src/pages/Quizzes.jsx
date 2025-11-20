@@ -15,6 +15,7 @@ import { VIEWS, COUNTDOWN_SECONDS } from '../components/quizzes/utils/constants'
 import { validateAllQuestions } from '../components/quizzes/utils/validation';
 import { canUseAdaptiveMode } from '../components/quizzes/utils/adaptiveDifficultyEngine';
 import ToastContainer from "../components/ToastContainer";
+import AppLoader from '../components/AppLoader';
 import { useToast } from "../hooks/useToast";
 import { API_URL } from '../config/api.config';
 import { listenToQuizQuestions, storeQuizQuestions, listenToBattleStatus } from '../firebase/battleOperations';
@@ -442,14 +443,7 @@ function QuizzesPage() {
   // ============================================
 
   if (quizDataHook.loading && quizDataHook.uiState.currentView === VIEWS.LIST) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-          <p className="text-sm sm:text-base text-gray-600 font-medium">Loading quizzes...</p>
-        </div>
-      </div>
-    );
+    return <AppLoader message="Loading Quizzes..." />;
   }
 
   // ============================================
