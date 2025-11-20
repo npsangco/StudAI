@@ -1,10 +1,12 @@
 // noteRoutes.js - Updated with Pet Buddy v2.1 Points System
 import express from 'express';
+import fs from 'fs';
 import Note from '../models/Note.js';
 import SharedNote from '../models/SharedNote.js';
 import NoteCategory from '../models/NoteCategory.js';
 import User from '../models/User.js';
 import UserDailyStat from '../models/UserDailyStat.js';
+import File from '../models/File.js';
 import { validateNoteRequest, validateTitle, validateNumericId } from '../middleware/validationMiddleware.js';
 
 const router = express.Router();
@@ -458,8 +460,30 @@ router.delete('/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Note not found' });
     }
 
+    const attachedFileId = note.file_id;
     await note.destroy();
-    res.json({ message: 'Note deleted successfully' });
+
+    if (attachedFileId) {
+      try {
+        const fileRecord = await File.findOne({
+          where: {
+            file_id: attachedFileId,
+            user_id: req.session.userId
+          }
+        });
+
+        if (fileRecord) {
+          if (fileRecord.file_path && fs.existsSync(fileRecord.file_path)) {
+            fs.unlinkSync(fileRecord.file_path);
+          }
+          await fileRecord.destroy();
+        }
+      } catch (fileErr) {
+        console.error('Failed to delete attached file during note removal:', fileErr);
+      }
+    }
+
+    res.json({ message: 'Note deleted successfully', deletedFileId: attachedFileId || null });
   } catch (err) {
     console.error('Failed to delete note:', err);
     res.status(500).json({ error: 'Failed to delete note' });

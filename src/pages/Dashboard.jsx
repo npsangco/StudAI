@@ -363,10 +363,13 @@ Please format the summary in a clear, organized manner with proper headings and 
         withCredentials: true
       });
 
+      const uploadedFileId = uploadRes?.data?.file_id ?? null;
+
       const payload = {
         content: aiSummary,
         title: extractedContent.title,
         restrictions: restriction,
+        file_id: uploadedFileId,
         metadata: {
           source: extractedContent.source,
           wordCount: extractedContent.wordCount,
