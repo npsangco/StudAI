@@ -249,21 +249,23 @@ function clearUserCache(userId) {
 async function logDailyStats(userId, activityType, points, exp) {
   const today = new Date().toISOString().split('T')[0];
   
-  let dailyStat = await UserDailyStat.findOne({
-    where: { user_id: userId, last_reset_date: today }
-  });
-  
-  if (!dailyStat) {
-    dailyStat = await UserDailyStat.create({
+  // Use findOrCreate to ensure we only have one record per user per day
+  const [dailyStat, created] = await UserDailyStat.findOrCreate({
+    where: { 
+      user_id: userId, 
+      last_reset_date: today 
+    },
+    defaults: {
       user_id: userId,
       last_reset_date: today,
       notes_created_today: 0,
       quizzes_completed_today: 0,
       planner_updates_today: 0,
       points_earned_today: 0,
-      exp_earned_today: 0
-    });
-  }
+      exp_earned_today: 0,
+      streak_active: false
+    }
+  });
   
   const updates = {
     points_earned_today: dailyStat.points_earned_today + points,
@@ -280,6 +282,7 @@ async function logDailyStats(userId, activityType, points, exp) {
   }
   
   await dailyStat.update(updates);
+  await dailyStat.reload();
   return dailyStat;
 }
 

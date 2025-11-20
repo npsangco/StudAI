@@ -26,7 +26,14 @@ const UserDailyStat = sequelize.define('UserDailyStat', {
   tableName: 'user_daily_stats',
   timestamps: true,
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  indexes: [
+    {
+      unique: true,
+      fields: ['user_id', 'last_reset_date'],
+      name: 'unique_user_date'
+    }
+  ]
 });
 
 export default UserDailyStat;

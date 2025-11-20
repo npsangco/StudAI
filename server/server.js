@@ -1294,16 +1294,13 @@ app.get("/api/user/daily-stats", async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
         
-        let dailyStats = await UserDailyStat.findOne({
+        // Use findOrCreate to ensure we only have one record per user per day
+        const [dailyStats, created] = await UserDailyStat.findOrCreate({
             where: { 
                 user_id: req.session.userId,
                 last_reset_date: today
-            }
-        });
-
-        // Create daily stats if they don't exist for today
-        if (!dailyStats) {
-            dailyStats = await UserDailyStat.create({
+            },
+            defaults: {
                 user_id: req.session.userId,
                 notes_created_today: 0,
                 quizzes_completed_today: 0,
@@ -1311,8 +1308,8 @@ app.get("/api/user/daily-stats", async (req, res) => {
                 points_earned_today: 0,
                 exp_earned_today: 0,
                 last_reset_date: today
-            });
-        }
+            }
+        });
 
         res.json({
             notes_created_today: dailyStats.notes_created_today || 0,
