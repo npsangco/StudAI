@@ -1,6 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Heart, Sparkles, Star } from 'lucide-react';
 
+// Get cat sprite based on level (same as PetBuddy)
+const getCatSprite = (level) => {
+  if (level >= 1 && level <= 16) {
+    return "/cat-kitten.gif"; // Kitten (levels 1-16)
+  } else if (level >= 17 && level <= 33) {
+    return "/cat-teen.gif"; // Teen/Middle (levels 17-33)
+  } else {
+    return "/cat-adult.gif"; // Adult (levels 34-50)
+  }
+};
+
+// Get pet image based on type and level
+const getPetImage = (petType, level) => {
+  return petType === "Dog" 
+    ? "/dog.gif" 
+    : getCatSprite(level);
+};
+
 const MOTIVATIONAL_MESSAGES = {
   correct: [
     "Great job! You're doing amazing! 🌟",
@@ -45,21 +63,21 @@ const FloatingPetMotivator = ({ pet, onAnswer = null, showEncouragement = false 
   const [animation, setAnimation] = useState('float');
   const [showHeart, setShowHeart] = useState(false);
 
-  if (!pet || !pet.pet_name || !pet.pet_type) return null;
-
-  const petEmoji = pet.pet_type === 'Dog' ? '🐕' : '🐱';
+  // Early return after hooks to avoid "Cannot access before initialization" error
+  const isValidPet = pet && pet.pet_name && pet.pet_type && pet.level !== undefined;
 
   // Show initial encouragement message
   useEffect(() => {
+    if (!isValidPet) return;
     const randomEncouragement = MOTIVATIONAL_MESSAGES.encouragement[
       Math.floor(Math.random() * MOTIVATIONAL_MESSAGES.encouragement.length)
     ];
     setMessage(randomEncouragement);
-  }, []);
+  }, [isValidPet]);
 
   // Handle answer feedback
   useEffect(() => {
-    if (onAnswer === null) return;
+    if (!isValidPet || onAnswer === null) return;
 
     const messages = onAnswer 
       ? MOTIVATIONAL_MESSAGES.correct 
@@ -90,11 +108,11 @@ const FloatingPetMotivator = ({ pet, onAnswer = null, showEncouragement = false 
       ];
       setMessage(encouragement);
     }, 3000);
-  }, [onAnswer]);
+  }, [onAnswer, isValidPet]);
 
   // Show encouragement periodically
   useEffect(() => {
-    if (!showEncouragement) return;
+    if (!isValidPet || !showEncouragement) return;
 
     const interval = setInterval(() => {
       const randomEncouragement = MOTIVATIONAL_MESSAGES.encouragement[
@@ -104,7 +122,12 @@ const FloatingPetMotivator = ({ pet, onAnswer = null, showEncouragement = false 
     }, 15000);
 
     return () => clearInterval(interval);
-  }, [showEncouragement]);
+  }, [showEncouragement, isValidPet]);
+
+  // Return null after all hooks have been called
+  if (!isValidPet) return null;
+
+  const petImage = getPetImage(pet.pet_type, pet.level);
 
   return (
     <>
@@ -117,8 +140,12 @@ const FloatingPetMotivator = ({ pet, onAnswer = null, showEncouragement = false 
           )}
 
           <div className="relative">
-            <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full shadow-lg border-4 border-white flex items-center justify-center">
-              <span className="text-5xl">{petEmoji}</span>
+            <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full shadow-lg border-4 border-white flex items-center justify-center overflow-hidden">
+              <img 
+                src={petImage} 
+                alt={`${pet.pet_name} - Level ${pet.level}`}
+                className="w-full h-full object-contain"
+              />
             </div>
             
             {onAnswer === true && (
