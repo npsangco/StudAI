@@ -114,6 +114,7 @@ import {
     recordChatbotUsage,
     getUsageSnapshot
 } from "./services/aiUsageService.js";
+import { ensureContentIsSafe, ModerationError } from "./services/moderationService.js";
 
 // Import validation middleware
 import {
@@ -586,6 +587,13 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
             return res.status(400).json({ error: "Text content is required" });
         }
 
+        await ensureContentIsSafe(text, {
+            userId,
+            feature: 'ai-summary',
+            maxChars: 8000,
+            blockMessage: 'This content cannot be summarized because it violates our safety policies.'
+        });
+
         const openAiApiKey = process.env.OPENAI_API_KEY;
         console.log('🔑 [Server] OpenAI API Key status:', openAiApiKey ? 'Present ✓' : 'Missing ✗');
         if (!openAiApiKey) {
@@ -661,6 +669,12 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
             usage: snapshot
         });
     } catch (err) {
+        if (err instanceof ModerationError) {
+            return res.status(err.statusCode).json({
+                error: err.message,
+                details: err.details
+            });
+        }
         console.error("Error in AI summarization:", err);
         res.status(500).json({ error: "Failed to generate summary" });
     }
@@ -732,6 +746,13 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
         if (!latestUserMessage) {
             return res.status(400).json({ error: "userMessage is required" });
         }
+
+        await ensureContentIsSafe(latestUserMessage, {
+            userId,
+            feature: 'ai-chat',
+            maxChars: 4000,
+            blockMessage: 'Your message violates our safety policies and cannot be sent to the AI assistant.'
+        });
 
         const openAiApiKey = process.env.OPENAI_API_KEY;
         console.log('🔑 [Server] OpenAI API Key status:', openAiApiKey ? 'Present ✓' : 'Missing ✗');
@@ -841,6 +862,12 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             usage: snapshot
         });
     } catch (err) {
+        if (err instanceof ModerationError) {
+            return res.status(err.statusCode).json({
+                error: err.message,
+                details: err.details
+            });
+        }
         console.error("❌ [Server] Error in AI chat:", err);
         res.status(500).json({ error: "Failed to generate response" });
     }

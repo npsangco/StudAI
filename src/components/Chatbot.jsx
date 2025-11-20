@@ -265,21 +265,46 @@ IMPORTANT RULES:
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
       console.error("❌ [Chatbot] Error calling OpenAI API:", error);
+      let handledError = false;
       if (error.response) {
         console.error("❌ [Chatbot] Response status:", error.response.status);
         console.error("❌ [Chatbot] Response data:", error.response.data);
-        if (error.response.status === 429) {
+
+        if (error.response.status === 422) {
+          handledError = true;
+          const moderationMessage = error.response.data?.error || 'Your message was blocked by our safety filters. Please rephrase and try again.';
+          setHistoryError(moderationMessage);
+          const moderationReply = {
+            id: Date.now() + Math.random(),
+            type: 'bot',
+            content: moderationMessage,
+            timestamp: new Date().toISOString()
+          };
+          setMessages(prev => [...prev, moderationReply]);
+        } else if (error.response.status === 429) {
+          handledError = true;
           setTokenUsage((prev) => ({ ...prev, remaining: 0, used: prev.limit }));
-          setHistoryError(error.response.data?.error || 'Daily AI chatbot token limit reached. Try again tomorrow.');
+          const quotaMessage = error.response.data?.error || 'Daily AI chatbot token limit reached. Try again tomorrow.';
+          setHistoryError(quotaMessage);
+          const quotaReply = {
+            id: Date.now() + Math.random(),
+            type: 'bot',
+            content: quotaMessage,
+            timestamp: new Date().toISOString()
+          };
+          setMessages(prev => [...prev, quotaReply]);
         }
       }
-      const errorMessage = {
-        id: Date.now() + Math.random(),
-        type: 'bot',
-        content: "Oops! Something went wrong while contacting the AI service.",
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+
+      if (!handledError) {
+        const errorMessage = {
+          id: Date.now() + Math.random(),
+          type: 'bot',
+          content: "Oops! Something went wrong while contacting the AI service.",
+          timestamp: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
     } finally {
       setIsTyping(false);
     }

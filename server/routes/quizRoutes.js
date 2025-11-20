@@ -9,6 +9,7 @@ import BattleParticipant from '../models/BattleParticipant.js';
 import sequelize from '../db.js';
 import { validateQuizRequest, validateTitle, validateNumericId } from '../middleware/validationMiddleware.js';
 import { ensureQuizAvailable, recordQuizUsage, DAILY_AI_LIMITS, getUsageSnapshot } from '../services/aiUsageService.js';
+import { ensureContentIsSafe, ModerationError } from '../services/moderationService.js';
 
 const router = express.Router();
 
@@ -531,6 +532,13 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
       });
     }
 
+    await ensureContentIsSafe(noteContent, {
+      userId,
+      feature: 'ai-quiz',
+      maxChars: 8000,
+      blockMessage: 'Unable to generate a quiz because the provided note content violates our safety policies.'
+    });
+
     // AI-generated quizzes are always exactly 10 questions
     const targetQuestionCount = AI_QUIZ_RULES.requiredQuestionCount;
     if (questionCount && questionCount !== targetQuestionCount) {
@@ -841,6 +849,12 @@ Generate EXACTLY in this format - no variations:
     }
 
   } catch (err) {
+    if (err instanceof ModerationError) {
+      return res.status(err.statusCode).json({
+        error: err.message,
+        details: err.details
+      });
+    }
     console.error('❌ Generate from notes error:', err);
     res.status(500).json({ 
       error: 'Failed to generate quiz from notes',

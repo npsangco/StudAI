@@ -410,17 +410,20 @@ Please format the summary in a clear, organized manner with proper headings and 
       if (err.response) {
         console.error("❌ [Upload Process] Response status:", err.response.status);
         console.error("❌ [Upload Process] Response data:", err.response.data);
+        const status = err.response.status;
         
-        if (err.response.status === 409) {
+        if (status === 422) {
+          toast.error(err.response.data?.error || 'Content violated our safety policies. Please adjust and try again.');
+        } else if (status === 409) {
           toast.error("File with the same name already exists. Please rename your file.");
-        } else if (err.response.status === 401) {
+        } else if (status === 401) {
           toast.error("You must be logged in to upload files.");
-        } else if (err.response.status === 500) {
+        } else if (status === 500) {
           toast.error(`Server error: ${err.response.data.error || err.response.data.details || "Unknown error"}`);
         } else {
           toast.error(`Upload failed: ${err.response.data.error || err.message}`);
         }
-        if (err.response.status === 429) {
+        if (status === 429) {
           refreshAiUsage();
         }
       } else if (err.message.includes("OpenAI")) {
