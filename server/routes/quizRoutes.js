@@ -12,6 +12,11 @@ import { ensureQuizAvailable, recordQuizUsage, DAILY_AI_LIMITS, getUsageSnapshot
 
 const router = express.Router();
 
+const AI_QUIZ_RULES = {
+  requiredQuestionCount: 10,
+  validTypes: ['Multiple Choice', 'Fill in the blanks', 'True/False', 'Matching']
+};
+
 // ============================================
 // CONFIGURATION (Pet Buddy)
 // ============================================
@@ -38,6 +43,79 @@ const QUIZ_CONFIG = {
     }
   }
 };
+
+function normalizeAiQuestion(rawQuestion, index) {
+  if (!rawQuestion || typeof rawQuestion !== 'object') {
+    throw new Error(`Question ${index + 1} is not valid JSON data.`);
+  }
+
+  const questionText = typeof rawQuestion.question === 'string' ? rawQuestion.question.trim() : '';
+  if (!questionText) {
+    throw new Error(`Question ${index + 1} is missing the question text.`);
+  }
+
+  const type = AI_QUIZ_RULES.validTypes.includes(rawQuestion.type) ? rawQuestion.type : null;
+  if (!type) {
+    throw new Error(`Question ${index + 1} has an unsupported type: ${rawQuestion.type || 'undefined'}.`);
+  }
+
+  const normalized = { type, question: questionText };
+
+  if (type === 'Multiple Choice') {
+    const rawChoices = Array.isArray(rawQuestion.choices) ? rawQuestion.choices : [];
+    const cleanedChoices = rawChoices
+      .map(choice => (typeof choice === 'string' ? choice.trim() : ''))
+      .filter(choice => choice.length > 0);
+
+    if (cleanedChoices.length < 2) {
+      throw new Error(`Question ${index + 1} must provide at least two choices.`);
+    }
+
+    const rawCorrectAnswer = typeof rawQuestion.correctAnswer === 'string' ? rawQuestion.correctAnswer.trim() : '';
+    if (!rawCorrectAnswer) {
+      throw new Error(`Question ${index + 1} must include the correct answer.`);
+    }
+
+    const resolvedAnswer = cleanedChoices.find(
+      choice => choice.toLowerCase() === rawCorrectAnswer.toLowerCase()
+    );
+
+    if (!resolvedAnswer) {
+      throw new Error(`Question ${index + 1} correct answer must match one of the provided choices.`);
+    }
+
+    normalized.choices = cleanedChoices;
+    normalized.correctAnswer = resolvedAnswer;
+  } else if (type === 'True/False') {
+    const rawCorrectAnswer = typeof rawQuestion.correctAnswer === 'string' ? rawQuestion.correctAnswer.trim().toLowerCase() : '';
+    if (rawCorrectAnswer !== 'true' && rawCorrectAnswer !== 'false') {
+      throw new Error(`Question ${index + 1} must specify "True" or "False" as the correct answer.`);
+    }
+    normalized.correctAnswer = rawCorrectAnswer === 'true' ? 'True' : 'False';
+  } else if (type === 'Fill in the blanks') {
+    const answer = typeof rawQuestion.answer === 'string' ? rawQuestion.answer.trim() : '';
+    if (!answer) {
+      throw new Error(`Question ${index + 1} must specify the missing word or phrase.`);
+    }
+    normalized.answer = answer;
+  } else if (type === 'Matching') {
+    const rawPairs = Array.isArray(rawQuestion.matchingPairs) ? rawQuestion.matchingPairs : [];
+    const cleanedPairs = rawPairs
+      .map(pair => ({
+        left: typeof pair?.left === 'string' ? pair.left.trim() : '',
+        right: typeof pair?.right === 'string' ? pair.right.trim() : ''
+      }))
+      .filter(pair => pair.left && pair.right);
+
+    if (cleanedPairs.length === 0) {
+      throw new Error(`Question ${index + 1} must include at least one valid matching pair.`);
+    }
+
+    normalized.matchingPairs = cleanedPairs;
+  }
+
+  return normalized;
+}
 
 // ============================================
 // HELPER FUNCTIONS
@@ -454,9 +532,9 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
     }
 
     // AI-generated quizzes are always exactly 10 questions
-    const targetQuestionCount = 10;
-    if (questionCount && questionCount !== 10) {
-      return res.status(400).json({ error: 'AI-generated quizzes are exactly 10 questions' });
+    const targetQuestionCount = AI_QUIZ_RULES.requiredQuestionCount;
+    if (questionCount && questionCount !== targetQuestionCount) {
+      return res.status(400).json({ error: `AI-generated quizzes must have exactly ${targetQuestionCount} questions` });
     }
 
     // Create the quiz first
@@ -524,7 +602,7 @@ Generate EXACTLY in this format - no variations:
             }
           ],
           temperature: 0.7,
-          max_tokens: 2500,
+          max_tokens: 4000,
           top_p: 1.0,
           frequency_penalty: 0.5,
           presence_penalty: 0.5
@@ -621,66 +699,22 @@ Generate EXACTLY in this format - no variations:
         }
       }
       
-      // Ensure it's an array
+      // Ensure it's an array with the required number of questions
       if (!Array.isArray(questionsData)) {
-        questionsData = [questionsData];
+        throw new Error('AI response must be a JSON array of questions.');
       }
 
-      // Pad with default questions if fewer than 10 were generated
-      if (questionsData.length < 10) {
-        console.warn(`⚠️ AI generated ${questionsData.length} questions. Padding to 10...`);
-        
-        // Create filler questions based on the note content
-        const defaultQuestions = [
-          {
-            type: 'True/False',
-            question: 'The content discussed above is important to understand.',
-            correctAnswer: 'True'
-          },
-          {
-            type: 'Fill in the blanks',
-            question: 'The main topic of the note is about _______.',
-            answer: 'the subject matter'
-          },
-          {
-            type: 'Multiple Choice',
-            question: 'Which of the following is related to the note content?',
-            choices: ['All of the above', 'Some of the above', 'None of the above', 'Unclear'],
-            correctAnswer: 'All of the above'
-          },
-          {
-            type: 'True/False',
-            question: 'Understanding this material requires careful study.',
-            correctAnswer: 'True'
-          },
-          {
-            type: 'Multiple Choice',
-            question: 'What is the primary purpose of this note?',
-            choices: ['To inform', 'To educate', 'To document', 'To clarify'],
-            correctAnswer: 'To educate'
-          }
-        ];
-        
-        // Add filler questions until we reach 10
-        while (questionsData.length < 10 && defaultQuestions.length > 0) {
-          questionsData.push(defaultQuestions.shift());
-        }
+      if (questionsData.length !== targetQuestionCount) {
+        throw new Error(`AI must return exactly ${targetQuestionCount} questions. Received ${questionsData.length}. Please try again.`);
       }
-      
-      // Trim to exactly 10 if somehow we have more
-      if (questionsData.length > 10) {
-        console.warn(`⚠️ AI generated ${questionsData.length} questions. Trimming to 10...`);
-        questionsData = questionsData.slice(0, 10);
-      }
+
+      const normalizedQuestions = questionsData.map((questionData, index) => normalizeAiQuestion(questionData, index));
 
       // Create questions in the quiz
       const questions = [];
-      for (let i = 0; i < questionsData.length; i++) {
-        const questionData = questionsData[i];
-        
-        // Validate question type
-        const validTypes = ['Multiple Choice', 'Fill in the blanks', 'True/False', 'Matching'];
-        const questionType = validTypes.includes(questionData.type) ? questionData.type : 'Multiple Choice';
+      for (let i = 0; i < normalizedQuestions.length; i++) {
+        const questionData = normalizedQuestions[i];
+        const questionType = questionData.type;
 
         // Assign difficulty based on question order to create progression
         // Q1-3: Easy, Q4-7: Medium, Q8-10: Hard
@@ -691,25 +725,9 @@ Generate EXACTLY in this format - no variations:
           difficulty = 'hard';
         }
 
-        // Ensure correctAnswer is a string, not an array or object
-        let correctAnswer = null;
-        if (typeof questionData.correctAnswer === 'string') {
-          correctAnswer = questionData.correctAnswer;
-        } else if (Array.isArray(questionData.correctAnswer)) {
-          correctAnswer = questionData.correctAnswer[0] || null; // Take first element if array
-        }
-
-        // Ensure choices is an array, convert to JSON string for storage
-        let choicesData = null;
-        if (Array.isArray(questionData.choices) && questionData.choices.length > 0) {
-          choicesData = JSON.stringify(questionData.choices);
-        }
-
-        // Ensure matchingPairs is an array, convert to JSON string for storage
-        let matchingPairsData = null;
-        if (Array.isArray(questionData.matchingPairs) && questionData.matchingPairs.length > 0) {
-          matchingPairsData = JSON.stringify(questionData.matchingPairs);
-        }
+        const correctAnswer = questionData.correctAnswer || null;
+        const choicesData = questionData.choices ? JSON.stringify(questionData.choices) : null;
+        const matchingPairsData = questionData.matchingPairs ? JSON.stringify(questionData.matchingPairs) : null;
 
         const questionRecord = await Question.create({
           quiz_id: newQuiz.quiz_id,
