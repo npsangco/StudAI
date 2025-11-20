@@ -32,7 +32,8 @@ export default function Dashboard() {
   const [stats, setStats] = useState({
     totalNotes: 0,
     totalQuizzes: 0,
-    completedQuizzes: 0,
+    completedQuizzes: 0,  // Total quiz attempts
+    distinctQuizzes: 0,   // Distinct quizzes for rate calculation
     studyStreak: 0
   });
   const [aiUsage, setAiUsage] = useState(null);
@@ -182,7 +183,8 @@ export default function Dashboard() {
           setStats(prev => ({ 
             ...prev, 
             totalQuizzes: quizRes.data.quizzes.length,
-            completedQuizzes: attemptsRes.data.count
+            completedQuizzes: attemptsRes.data.totalAttempts || 0,     // Total attempts
+            distinctQuizzes: attemptsRes.data.distinctQuizzes || 0      // Distinct quizzes
           }));
         }
       } catch (err) {
@@ -943,7 +945,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                         <BookOpen className="w-3.5 h-3.5 text-blue-600" />
                       </div>
                       <p className="text-lg font-bold text-blue-900">
-                        {stats.totalQuizzes > 0 ? Math.round((stats.completedQuizzes / stats.totalQuizzes) * 100) : 0}%
+                        {stats.totalQuizzes > 0 ? Math.round((stats.distinctQuizzes / stats.totalQuizzes) * 100) : 0}%
                       </p>
                       <p className="text-xs text-blue-700 mt-0.5">Quiz rate</p>
                     </div>

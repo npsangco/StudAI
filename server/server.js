@@ -1922,16 +1922,24 @@ app.get('/api/quiz-attempts/count', async (req, res) => {
             return res.status(401).json({ error: 'Not authenticated' });
         }
 
-        // Count DISTINCT quizzes attempted (not total attempts)
+        // Count total quiz attempts (all completions)
+        const totalAttempts = await QuizAttempt.count({
+            where: { user_id: userId }
+        });
+
+        // Count DISTINCT quizzes attempted (for quiz rate calculation)
         const distinctQuizzes = await QuizAttempt.count({
             where: { user_id: userId },
             distinct: true,
             col: 'quiz_id'
         });
 
-        console.log(`User ${userId} has completed ${distinctQuizzes} distinct quizzes`);
+        console.log(`User ${userId} has ${totalAttempts} total attempts and completed ${distinctQuizzes} distinct quizzes`);
 
-        res.json({ count: distinctQuizzes });
+        res.json({ 
+            totalAttempts,      // Total number of quiz completions
+            distinctQuizzes     // Number of unique quizzes completed
+        });
     } catch (err) {
         console.error('Error fetching quiz attempts count:', err);
         res.status(500).json({ error: 'Failed to fetch quiz attempts count' });

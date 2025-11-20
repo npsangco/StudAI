@@ -21,6 +21,9 @@ import UserManagement from "./pages/Admin/UserManagement";
 import QuizManagement from "./pages/Admin/QuizManagement";
 import StudySessions from "./pages/Admin/StudySessions";
 import AuditLogs from "./pages/Admin/AuditLogs";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfUsePage from "./pages/TermsOfUsePage";
+import SupportPage from "./pages/SupportPage";
 import Footer from "./components/Footer";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import DevMenu from "./components/DevMenu";
@@ -92,6 +95,9 @@ function App() {
           <Route path="/verify-status" element={<EmailStatus />} />
           <Route path="/password-updated" element={<PasswordStatus type="success" />} />
           <Route path="/password-link-expired" element={<PasswordStatus type="error" />} />
+          <Route path="/privacypolicy" element={<PrivacyPolicyPage />} />
+          <Route path="/termsofuse" element={<TermsOfUsePage />} />
+          <Route path="/support" element={<SupportPage />} />
         </Routes>
       </div>
 
