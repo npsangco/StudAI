@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) => {
     const [deletingQuestionId, setDeletingQuestionId] = useState(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     if (!isOpen) return null;
 
@@ -16,6 +17,11 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
         setDeletingQuestionId(questionId);
         await onDeleteQuestion(questionId);
         setDeletingQuestionId(null);
+        setConfirmDeleteId(null);
+    };
+
+    const handleCancelDelete = () => {
+        setConfirmDeleteId(null);
     };
 
     const renderQuestionContent = (question) => {
@@ -189,13 +195,32 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                                         </div>
 
                                         {/* Delete Button */}
-                                        <button
-                                            onClick={() => handleDelete(question.question_id)}
-                                            disabled={deletingQuestionId === question.question_id}
-                                            className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        {confirmDeleteId === question.question_id ? (
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <button
+                                                    onClick={() => handleDelete(question.question_id)}
+                                                    disabled={deletingQuestionId === question.question_id}
+                                                    className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    Delete
+                                                </button>
+                                                <button
+                                                    onClick={handleCancelDelete}
+                                                    disabled={deletingQuestionId === question.question_id}
+                                                    className="px-3 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => setConfirmDeleteId(question.question_id)}
+                                                className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium shrink-0"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
