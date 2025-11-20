@@ -61,6 +61,7 @@ import UserAchievement from "./models/UserAchievement.js"; // ← ADD THIS
 import UserDailyStat from "./models/UserDailyStat.js";
 import AuditLog from "./models/AuditLog.js";
 import AIUsageStat from "./models/AIUsageStat.js";
+import JitsiSession from "./models/JitsiSession.js";
 import { Op } from "sequelize";
 import ChatMessage from "./models/ChatMessage.js";
 
