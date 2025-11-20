@@ -101,6 +101,7 @@ import quizRoutes from "./routes/quizRoutes.js";
 import SharedNote from "./models/SharedNote.js";
 import planRoutes from "./routes/planRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
+import jitsiRoutes from "./routes/jitsiRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
 import achievementRoutes from "./routes/achievementRoutes.js"
 import adminRoutes from "./routes/adminRoutes.js";
@@ -541,6 +542,7 @@ app.use("/api/notes", sessionLockCheck, noteRoutes);
 app.use("/api/plans", sessionLockCheck, planRoutes);
 app.use("/api/quizzes", sessionLockCheck, quizRoutes);
 app.use("/api/sessions", sessionLockCheck, sessionRoutes);
+app.use("/api/jitsi", sessionLockCheck, jitsiRoutes);
 app.use("/api/achievements", sessionLockCheck, achievementRoutes);
 app.use("/api/admin", requireAdmin, auditRoutes);
 app.use("/api/admin", requireAdmin, adminRoutes);

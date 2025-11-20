@@ -11,7 +11,8 @@ import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Notes from "./pages/Notes";
 import Quizzes from "./pages/Quizzes";
-import Sessions from "./pages/Sessions";
+import JitsiSessions from "./pages/JitsiSessions";
+import ZoomSessions from "./pages/ZoomSessions";
 import Planner from "./pages/Planner";
 import Profile from "./pages/Profile";
 import EmailStatus from "./components/confirmations/EmailStatus";
@@ -83,7 +84,8 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/quizzes" element={<Quizzes />} />
-          <Route path="/sessions" element={<Sessions />} />
+          <Route path="/sessions" element={<JitsiSessions />} />
+          <Route path="/zoom-sessions" element={<ZoomSessions />} />
           <Route path="/planner" element={<Planner />} />
           <Route path="/profile" element={<Profile />} />
 

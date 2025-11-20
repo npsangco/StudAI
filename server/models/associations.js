@@ -19,6 +19,7 @@ import PetItem from './PetItem.js';
 import UserPetItem from './UserPetItem.js';
 import ChatMessage from './ChatMessage.js';
 import AIUsageStat from './AIUsageStat.js';
+import JitsiSession from './JitsiSession.js';
 
 export function setupAssociations() {
   // ────────────────────────────────
@@ -388,5 +389,21 @@ export function setupAssociations() {
   UserPetItem.belongsTo(PetItem, {
     foreignKey: 'item_id',
     as: 'item'
+  });
+
+  // ────────────────────────────────
+  // 🎥 JITSI SESSION RELATIONSHIPS
+  // ────────────────────────────────
+
+  // User ↔ Jitsi Sessions (1:N)
+  User.hasMany(JitsiSession, {
+    foreignKey: 'user_id',
+    as: 'jitsiSessions',
+    onDelete: 'CASCADE'
+  });
+
+  JitsiSession.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'creator'
   });
 }
