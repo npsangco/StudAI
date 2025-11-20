@@ -2,10 +2,11 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { petApi } from '../../api/api';
 
-const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
+const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessageShown, onEncouragementShown }) => {
   const [pet, setPet] = useState(null);
   const [currentMessage, setCurrentMessage] = useState(null);
   const [messageKey, setMessageKey] = useState(0);
+  const [messageType, setMessageType] = useState(null);
   const hasShownRef = useRef(false); // Track if we already showed message for current answer
 
   // Load pet data once on mount
@@ -74,21 +75,24 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
     ]
   }), []);
 
-  // Show message when triggered - only once per answer, only for correct answers
+  // Show message when triggered - only once per answer, for both correct and incorrect
   useEffect(() => {
-    if (showMessage && isCorrect === true && !hasShownRef.current) {
+    if (showMessage && isCorrect !== null && !hasShownRef.current) {
       hasShownRef.current = true; // Mark as shown
       
-      // Only show messages for correct answers
-      const messages = motivatingMessages.correct;
+      // Show messages based on correct/incorrect
+      const msgType = isCorrect ? 'correct' : 'incorrect';
+      const messages = motivatingMessages[msgType];
       const randomMessage = messages[Math.floor(Math.random() * messages.length)];
       
+      setMessageType(msgType);
       setCurrentMessage(randomMessage);
       setMessageKey(prev => prev + 1); // Force animation reset
       
       // Clear message after display duration
       const timeout = setTimeout(() => {
         setCurrentMessage(null);
+        setMessageType(null);
         if (onMessageShown) {
           onMessageShown();
         }
@@ -98,13 +102,37 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
     }
   }, [showMessage, isCorrect, motivatingMessages, onMessageShown]);
   
+  // Show encouragement message when user is taking too long
+  useEffect(() => {
+    if (showEncouragement) {
+      const messages = motivatingMessages.encouragement;
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+      
+      setMessageType('encouragement');
+      setCurrentMessage(randomMessage);
+      setMessageKey(prev => prev + 1);
+      
+      // Auto-dismiss after 1 second
+      const timeout = setTimeout(() => {
+        setCurrentMessage(null);
+        setMessageType(null);
+        if (onEncouragementShown) {
+          onEncouragementShown();
+        }
+      }, 1000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [showEncouragement, motivatingMessages, onEncouragementShown]);
+  
   // Reset tracking and clear message when moving to new question
   useEffect(() => {
-    if (!showMessage) {
+    if (!showMessage && !showEncouragement) {
       hasShownRef.current = false;
-      setCurrentMessage(null); // Clear message immediately on new question
+      setCurrentMessage(null);
+      setMessageType(null);
     }
-  }, [showMessage]);
+  }, [showMessage, showEncouragement]);
 
   // Don't render if no pet
   if (!pet) return null;
@@ -113,23 +141,35 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
     ? "/dog.gif" 
     : getCatSprite(pet.level);
 
+  const getBubbleColors = () => {
+    if (messageType === 'correct') return 'bg-green-50 border-green-400';
+    if (messageType === 'incorrect') return 'bg-orange-50 border-orange-400';
+    return 'bg-blue-50 border-blue-400'; // encouragement
+  };
+  
+  const getTailColors = () => {
+    if (messageType === 'correct') return { outer: 'border-t-green-400', inner: 'border-t-green-50' };
+    if (messageType === 'incorrect') return { outer: 'border-t-orange-400', inner: 'border-t-orange-50' };
+    return { outer: 'border-t-blue-400', inner: 'border-t-blue-50' }; // encouragement
+  };
+
   return (
     <div 
-      className="fixed md:bottom-6 md:right-6 bottom-2 left-1/2 md:left-auto -translate-x-1/2 md:translate-x-0 z-40 flex flex-col items-center md:items-end pointer-events-none"
-      style={{ maxWidth: '320px' }}
+      className="fixed md:bottom-8 md:right-8 bottom-4 right-4 z-40 flex flex-col items-end pointer-events-none"
+      style={{ maxWidth: '280px' }}
     >
-      {/* Speech Bubble - Only show for correct answers */}
+      {/* Speech Bubble */}
       {currentMessage && (
         <div 
           key={messageKey}
-          className="relative mb-2 border-2 rounded-2xl px-3 py-2 shadow-lg animate-bounce-in bg-green-50 border-green-400"
+          className={`relative mb-3 border-2 rounded-2xl px-4 py-2.5 shadow-lg animate-bounce-in ${getBubbleColors()}`}
         >
-          <p className="text-xs font-medium text-gray-800 text-center">
+          <p className="text-sm font-medium text-gray-800 text-center">
             {currentMessage}
           </p>
           {/* Speech bubble tail */}
-          <div className="absolute -bottom-2 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent border-t-green-400"></div>
-          <div className="absolute -bottom-1.5 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-0 h-0 border-l-5 border-r-5 border-t-5 border-l-transparent border-r-transparent border-t-green-50"></div>
+          <div className={`absolute -bottom-2 right-8 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent ${getTailColors().outer}`}></div>
+          <div className={`absolute -bottom-1.5 right-8 w-0 h-0 border-l-5 border-r-5 border-t-5 border-l-transparent border-r-transparent ${getTailColors().inner}`}></div>
         </div>
       )}
 
@@ -138,7 +178,7 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
         <img 
           src={petImage} 
           alt={`${pet.pet_name}`}
-          className="w-[54px] h-[54px] object-contain drop-shadow-lg"
+          className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 object-contain drop-shadow-lg"
           loading="lazy"
         />
       </div>
