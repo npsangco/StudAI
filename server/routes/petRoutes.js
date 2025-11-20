@@ -17,10 +17,10 @@ const router = express.Router();
 
 const CONFIG = {
   stats: {
-    hunger: { decay: 10, interval: 180, max: 100 },      // 3 hours
-    happiness: { decay: 10, interval: 180, max: 100 },   // 3 hours
-    cleanliness: { decay: 5, interval: 240, max: 100 },  // 4 hours
-    energy: { replenish: 5, interval: 300, max: 100 }    // 5 minutes
+    hunger: { decay: 10, interval: 180, max: 100 },      // 10 decay per 180 minutes (3 hours)
+    happiness: { decay: 10, interval: 180, max: 100 },   // 10 decay per 180 minutes (3 hours)
+    cleanliness: { decay: 5, interval: 240, max: 100 },  // 5 decay per 240 minutes (4 hours)
+    energy: { replenish: 10, interval: 30, max: 100 }    // 10 energy per 30 minutes
   },
   exp: {
     perItem: 4,  // EXP per item used
@@ -88,11 +88,11 @@ async function applyStatDecay(pet) {
   const happinessDecay = calculateDecay(pet.last_played, now, 'happiness');
   const cleanlinessDecay = calculateDecay(pet.last_cleaned, now, 'cleanliness');
 
-  // Energy replenishment
+  // Energy replenishment (same calculation as decay - uses minutes)
   let energyReplenish = 0;
   if (pet.last_updated) {
-    const secondsElapsed = (now - new Date(pet.last_updated)) / 1000;
-    const replenishPeriods = Math.floor(secondsElapsed / CONFIG.stats.energy.interval);
+    const minutesElapsed = (now - new Date(pet.last_updated)) / (1000 * 60);
+    const replenishPeriods = Math.floor(minutesElapsed / CONFIG.stats.energy.interval);
     energyReplenish = replenishPeriods * CONFIG.stats.energy.replenish;
   }
 
