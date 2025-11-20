@@ -10,18 +10,16 @@ router.get("/audit-logs", async (req, res) => {
             include: [
                 {
                     model: User,
-                    attributes: ["username", "role"], // Add role to the attributes
+                    attributes: ["username", "role"], 
                 },
             ],
             order: [["log_id", "DESC"]], 
         });
 
-        // Format the logs to display "Admin" for admin users
         const formattedLogs = logs.map(log => {
             const logData = log.toJSON();
             
-            // Display "Admin" if the user has admin role, otherwise show username
-            const displayUsername = logData.User?.role === 'admin' 
+            const displayUsername = logData.User?.role === 'Admin' 
                 ? 'Admin' 
                 : (logData.User?.username || 'System');
 
