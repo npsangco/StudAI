@@ -27,7 +27,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
     refreshUsage();
   }, [refreshUsage]);
 
-  const quizLimit = usageSnapshot?.limits?.quiz ?? 1;
+  const quizLimit = usageSnapshot?.limits?.quiz ?? 2;
   const quizRemaining = usageSnapshot?.remaining?.quiz ?? quizLimit;
   const quizLimitReached = !isUsageLoading && quizRemaining <= 0;
   

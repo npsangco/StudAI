@@ -57,7 +57,7 @@ export default function Dashboard() {
     refreshAiUsage();
   }, [refreshAiUsage]);
 
-  const summaryLimit = aiUsage?.limits?.summary ?? 1;
+  const summaryLimit = aiUsage?.limits?.summary ?? 2;
   const summaryRemaining = aiUsage?.remaining?.summary ?? summaryLimit;
   const summaryLimitReached = !isUsageLoading && summaryRemaining <= 0;
 
