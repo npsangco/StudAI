@@ -1,12 +1,12 @@
 // QuizPetCompanion.jsx - Pet companion for quiz motivation
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { petApi } from '../../api/api';
 
 const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
   const [pet, setPet] = useState(null);
   const [currentMessage, setCurrentMessage] = useState(null);
   const [messageKey, setMessageKey] = useState(0);
-  const [lastShownKey, setLastShownKey] = useState(null); // Track if we already showed message
+  const hasShownRef = useRef(false); // Track if we already showed message for current answer
 
   // Load pet data once on mount
   useEffect(() => {
@@ -74,9 +74,11 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
     ]
   }), []);
 
-  // Show message when triggered
+  // Show message when triggered - only once per answer
   useEffect(() => {
-    if (showMessage && isCorrect !== null) {
+    if (showMessage && isCorrect !== null && !hasShownRef.current) {
+      hasShownRef.current = true; // Mark as shown
+      
       // Randomly choose from correct/incorrect OR encouragement
       const useEncouragement = Math.random() < 0.15; // 15% chance for encouragement
       
@@ -105,10 +107,10 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
     }
   }, [showMessage, isCorrect, motivatingMessages, onMessageShown]);
   
-  // Reset tracking when showMessage becomes false (new question)
+  // Reset tracking when moving to new question
   useEffect(() => {
     if (!showMessage) {
-      setLastShownKey(null);
+      hasShownRef.current = false;
     }
   }, [showMessage]);
 
