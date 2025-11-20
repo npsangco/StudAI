@@ -4,6 +4,7 @@ import { ValidationErrorModal } from '../QuizModal';
 import { Copy, Check, Clock, ChevronDown, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText, Info, X } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 import { canUseAdaptiveMode } from '../utils/adaptiveDifficultyEngine';
+import { TEXT_LIMITS } from '../utils/constants';
 
 // ============================================
 // COMPACT SETTINGS BAR COMPONENT
@@ -182,33 +183,6 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
       </div>
     </div>
   );
-};
-
-// ============================================
-// TEXT LENGTH LIMITS
-// ============================================
-
-export const TEXT_LIMITS = {
-  QUESTION: {
-    recommended: 300,
-    maximum: 500,
-    warning: 400
-  },
-  CHOICE: {
-    recommended: 100,
-    maximum: 150,
-    warning: 120
-  },
-  FILL_ANSWER: {
-    recommended: 50,
-    maximum: 100,
-    warning: 80
-  },
-  MATCHING_ITEM: {
-    recommended: 80,
-    maximum: 120,
-    warning: 100
-  }
 };
 
 // ============================================

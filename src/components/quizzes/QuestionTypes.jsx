@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, X, Check, Info, Link } from 'lucide-react';
-import { TEXT_LIMITS } from '../views/QuizEditor';
+import { TEXT_LIMITS } from './utils/constants';
 
 // Multiple Choice Question Component
 export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateChoice, onAddChoice }) => {

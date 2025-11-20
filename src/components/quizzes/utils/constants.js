@@ -33,3 +33,27 @@ export const QUESTION_TYPES = {
   TRUE_FALSE: 'True/False',
   MATCHING: 'Matching'
 };
+
+// Text length limits for quiz editor
+export const TEXT_LIMITS = {
+  QUESTION: {
+    recommended: 300,
+    maximum: 500,
+    warning: 400
+  },
+  CHOICE: {
+    recommended: 100,
+    maximum: 150,
+    warning: 120
+  },
+  FILL_ANSWER: {
+    recommended: 50,
+    maximum: 100,
+    warning: 80
+  },
+  MATCHING_ITEM: {
+    recommended: 80,
+    maximum: 120,
+    warning: 100
+  }
+};

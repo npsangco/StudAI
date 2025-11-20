@@ -6,7 +6,7 @@ import {
   TrueFalseQuestion,
   MatchingQuestion
 } from './QuestionTypes';
-import { TEXT_LIMITS } from './views/QuizEditor';
+import { TEXT_LIMITS } from './utils/constants';
 
 // Individual Question Card Component
 export const QuestionCard = ({
