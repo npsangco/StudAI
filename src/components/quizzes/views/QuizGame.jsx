@@ -28,8 +28,7 @@ import {
   performAdaptiveCheck
 } from '../utils/adaptiveQuizManager';
 import { AdaptiveFeedback } from '../components/AdaptiveFeedback';
-import FloatingPetMotivator from '../../../components/FloatingPetMotivator';
-import { petApi } from '../../../api/api';
+import QuizPetCompanion from '../QuizPetCompanion';
 
 const QuizGame = ({
   quiz,
@@ -100,33 +99,9 @@ const QuizGame = ({
 
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Pet Companion State
-  const [petData, setPetData] = useState(null);
-  const [lastAnswerCorrect, setLastAnswerCorrect] = useState(null);
-
-  // Load user's pet
-  useEffect(() => {
-    const loadPet = async () => {
-      try {
-        const res = await petApi.getPet();
-        if (!res.data.choosePet && res.data) {
-          setPetData(res.data);
-        }
-      } catch (err) {
-        console.error('Failed to load pet for quiz:', err);
-      }
-    };
-    loadPet();
-  }, []);
-
   // Track all answers for summary
   const [answersHistory, setAnswersHistory] = useState([]);
   const timeoutHandledRef = useRef(false);
-
-  // Reset pet feedback when moving to next question
-  useEffect(() => {
-    setLastAnswerCorrect(null);
-  }, [game.currentIndex]);
 
   // Track correct answers for accurate accuracy calculation
   // Use ref for synchronous updates to prevent flickering
@@ -164,6 +139,10 @@ const QuizGame = ({
   // 🎭 EMOJI REACTIONS: Track recent answers for pulse effect
   const [recentAnsweredUsers, setRecentAnsweredUsers] = useState([]);
   const recentAnswersTimeoutRef = useRef(null);
+
+  // 🐾 PET COMPANION: Track when to show pet motivation
+  const [showPetMessage, setShowPetMessage] = useState(false);
+  const [petAnswerCorrect, setPetAnswerCorrect] = useState(null);
 
   // 🎭 Listen to player progress for pulse effects only (not for waiting/syncing)
   useEffect(() => {
@@ -639,9 +618,6 @@ const QuizGame = ({
 
     const isCorrect = game.isAnswerCorrect(currentQ, answer);
 
-    // Update pet companion feedback
-    setLastAnswerCorrect(isCorrect);
-
     // Record answer
     const answerRecord = {
       question: currentQ.question,
@@ -676,6 +652,10 @@ const QuizGame = ({
         onPlayerScoreUpdate(1, 1);
       }
     }
+
+    // 🐾 Show pet companion message
+    setPetAnswerCorrect(isCorrect);
+    setShowPetMessage(true);
     
     // Update progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
@@ -740,6 +720,10 @@ const QuizGame = ({
         onPlayerScoreUpdate(1, 1);
       }
     }
+
+    // 🐾 Show pet companion message
+    setPetAnswerCorrect(isCorrect);
+    setShowPetMessage(true);
     
     // Update progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
@@ -786,13 +770,15 @@ const QuizGame = ({
       setCorrectAnswersCount(correctAnswersCountRef.current);
       
       // ADAPTIVE SCORING: Award points based on difficulty
-      const points = mode === 'solo' 
+      const points = mode === 'solo'
         ? getPointsForDifficulty(currentQ.difficulty)
         : 1; // Battle mode: flat 1 point per question
       
       game.updateScore(points);
-      
-      // 🔥 Update score in Firebase
+
+    // 🐾 Show pet companion message
+    setPetAnswerCorrect(isCorrect);
+    setShowPetMessage(true);      // 🔥 Update score in Firebase
       if (mode === 'battle' && quiz?.gamePin) {
         const newScore = game.scoreRef.current; // Already updated above with correct points
         updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
@@ -1160,15 +1146,6 @@ const QuizGame = ({
         />
       )}
 
-      {/* Pet Companion - Motivational Support */}
-      {petData && (
-        <FloatingPetMotivator
-          pet={petData}
-          onAnswer={lastAnswerCorrect}
-          showEncouragement={true}
-        />
-      )}
-
       {/* 🎭 EMOJI REACTIONS - Floating display */}
       {mode === 'battle' && (
         <EmojiReactions
@@ -1386,6 +1363,13 @@ const QuizGame = ({
           playerName="You"
         />
       )}
+
+      {/* 🐾 PET COMPANION */}
+      <QuizPetCompanion
+        isCorrect={petAnswerCorrect}
+        showMessage={showPetMessage}
+        onMessageShown={() => setShowPetMessage(false)}
+      />
     </div>
   );
 }
