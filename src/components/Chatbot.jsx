@@ -426,24 +426,6 @@ IMPORTANT RULES:
 
       {/* Message Input */}
       <div className="bg-white border-t border-slate-200 p-3 sm:p-4 flex-shrink-0">
-        {/* Deep Thinking Mode Toggle */}
-        <div className="mb-3 flex items-center gap-2">
-          <button
-            onClick={() => setDeepThinkingMode(!deepThinkingMode)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              deepThinkingMode
-                ? 'bg-purple-100 text-purple-700 border-2 border-purple-300'
-                : 'bg-slate-100 text-slate-600 border-2 border-slate-200 hover:bg-slate-200'
-            }`}
-          >
-            <Sparkles className={`w-4 h-4 ${deepThinkingMode ? 'animate-pulse' : ''}`} />
-            <span>Deep Thinking {deepThinkingMode ? 'ON' : 'OFF'}</span>
-          </button>
-          <p className="text-xs text-slate-500">
-            {deepThinkingMode ? 'AI can use external knowledge' : 'AI limited to note content only'}
-          </p>
-        </div>
-        
         <div className="flex gap-2 sm:gap-3 items-end">
           <div className="flex-1">
             <div className="relative">
@@ -454,17 +436,33 @@ IMPORTANT RULES:
                 onKeyPress={handleKeyPress}
                 placeholder={hasValidContent ? "Ask me anything about this note..." : "Add content to your note first..."}
                 disabled={!hasValidContent || tokenLimitReached}
-                className={`w-full p-3 sm:p-4 pr-11 sm:pr-12 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none text-sm ${
+                className={`w-full p-3 sm:p-4 pr-20 sm:pr-24 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none text-sm ${
                   (!hasValidContent || tokenLimitReached) ? 'bg-slate-50 cursor-not-allowed' : ''
                 }`}
                 rows="1"
                 style={{ minHeight: '48px', maxHeight: '120px' }}
               />
+              {/* Deep Thinking Toggle Button */}
+              <button
+                onClick={() => setDeepThinkingMode(!deepThinkingMode)}
+                disabled={!hasValidContent || tokenLimitReached}
+                className={`absolute right-12 sm:right-14 bottom-2 sm:bottom-3 p-2 rounded-full transition-all ${
+                  deepThinkingMode
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                } ${
+                  (!hasValidContent || tokenLimitReached) ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                title={deepThinkingMode ? 'Deep Thinking ON - AI can use external knowledge' : 'Deep Thinking OFF - AI limited to note only'}
+              >
+                <Sparkles className={`w-4 h-4 ${deepThinkingMode ? 'animate-pulse' : ''}`} />
+              </button>
+              {/* Send Button */}
               <button
                 onClick={handleSendMessage}
-                disabled={!inputMessage.trim() || isTyping || isHistoryLoading || tokenLimitReached || !hasValidContent}
+                disabled={!inputMessage.trim() || isTyping || tokenLimitReached || !hasValidContent}
                 className={`absolute right-2 sm:right-3 bottom-2 sm:bottom-3 p-2 rounded-full transition-all ${
-                  inputMessage.trim() && !isTyping && !isHistoryLoading && !tokenLimitReached && hasValidContent
+                  inputMessage.trim() && !isTyping && !tokenLimitReached && hasValidContent
                     ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-xl'
                     : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                 }`}
