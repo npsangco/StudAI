@@ -42,6 +42,12 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
   const pointsEarned = results?.points_earned ?? 0;
   const expEarned = results?.exp_earned ?? 0;
   
+  console.log('🎯 QuizResults Display:', {
+    pointsEarned,
+    expEarned,
+    resultsObject: results
+  });
+  
   // Calculate difficulty breakdown (SOLO MODE ONLY)
   const difficultyBreakdown = mode === 'solo' && questions.length > 0
     ? calculateDifficultyBreakdown(questions, answers)

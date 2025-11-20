@@ -56,6 +56,7 @@ export default function PetBuddy() {
   // Listen for quest/activity events to refresh pet (includes quiz completion)
   useEffect(() => {
     const handleActivityEvent = () => {
+      console.log('🐾 PetBuddy: Received questActivity event, refreshing stats...');
       refreshPetStats();
     };
 

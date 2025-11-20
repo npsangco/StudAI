@@ -148,7 +148,7 @@ async function awardPetExp(userId, expAmount) {
       return null; // No pet adopted
     }
     
-    const currentExp = pet.experience || 0;
+    const currentExp = pet.experience_points || 0;
     const currentLevel = pet.level || 1;
     
     // Calculate EXP needed for next level using formula: 100 * 1.08^(level-1)
@@ -179,7 +179,7 @@ async function awardPetExp(userId, expAmount) {
     }
     
     await pet.update({
-      experience: newExp,
+      experience_points: newExp,
       level: newLevel
     });
     
