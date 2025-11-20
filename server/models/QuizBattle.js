@@ -44,6 +44,16 @@ const QuizBattle = sequelize.define('QuizBattle', {
       key: 'user_id'
     }
   },
+  winner_ids: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    comment: 'Array of all winner user IDs (for tie support)'
+  },
+  is_tied: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'True if multiple winners with same score'
+  },
   started_at: {
     type: DataTypes.DATE,
     allowNull: true

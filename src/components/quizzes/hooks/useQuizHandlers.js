@@ -190,16 +190,58 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       // 2️⃣ Update battle status in Firebase to "in_progress"
       await updateBattleStatus(currentGamePin, 'in_progress');
 
-      // 3️⃣ Update battle status in MySQL
-      await quizAPI.startBattle(currentGamePin);
+      // 3️⃣ Update battle status in MySQL with comprehensive validation
+      const result = await quizAPI.startBattle(currentGamePin);
+      
+      if (!result.success) {
+        // Handle specific error cases
+        console.error('❌ Battle start validation failed:', result.errorCode);
+        
+        // Show user-friendly error message
+        switch (result.errorCode) {
+          case 'QUIZ_DELETED':
+            toast.error('Quiz was deleted. Battle cancelled.');
+            if (result.shouldCleanup) {
+              handleBackToList();
+            }
+            return;
+            
+          case 'NO_QUESTIONS':
+            toast.error(`Cannot start battle: Quiz has no questions`);
+            handleBackToList();
+            return;
+            
+          case 'NOT_ENOUGH_PLAYERS':
+            toast.error(`Need at least ${result.details?.minimumRequired || 2} players to start`);
+            return;
+            
+          case 'TOO_MANY_PLAYERS':
+            toast.error(`Too many players (${result.details?.currentPlayers}/${result.details?.maxPlayers})`);
+            return;
+            
+          case 'INVALID_STATUS':
+            toast.error(`Battle already ${result.details?.currentStatus}`);
+            handleBackToList();
+            return;
+            
+          case 'NOT_HOST':
+            toast.error('Only the host can start this battle');
+            return;
+            
+          default:
+            toast.error(result.errorMessage || 'Failed to start battle');
+            return;
+        }
+      }
       
       // 4️⃣ Transition to loading screen
+      console.log('✅ Battle started successfully');
       updateUiState({ currentView: VIEWS.LOADING_BATTLE });
       countdown.start();
       
     } catch (error) {
       console.error('❌ Error starting battle:', error);
-      setError('Failed to start battle. Please try again.');
+      toast.error('Failed to start battle. Please try again.');
     }
   };
 
