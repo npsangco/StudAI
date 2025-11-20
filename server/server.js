@@ -409,27 +409,6 @@ if (Note) {
     });
 }
 
-// Achievement associations
-Achievement.hasMany(UserAchievement, { 
-    foreignKey: 'achievement_id', 
-    as: 'userAchievements' 
-});
-
-UserAchievement.belongsTo(Achievement, { 
-    foreignKey: 'achievement_id', 
-    as: 'achievement' 
-});
-
-UserAchievement.belongsTo(User, { 
-    foreignKey: 'user_id', 
-    as: 'user' 
-});
-
-User.hasMany(UserAchievement, { 
-    foreignKey: 'user_id', 
-    as: 'userAchievements' 
-});
-
 // ----------------- DB Connection -----------------
 sequelize.authenticate()
     .then(async () => {
