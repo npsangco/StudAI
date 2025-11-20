@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Check, Info } from 'lucide-react';
+import { Plus, X, Check, Info, Link } from 'lucide-react';
 
 // Multiple Choice Question Component
 export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateChoice, onAddChoice }) => {
@@ -489,13 +489,13 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   const totalCount = parsedPairs.length;
   const percentage = Math.round((correctCount / totalCount) * 100);
 
-  // Get gradient colors based on score
-  const getGradientColors = () => {
-    if (percentage === 100) return 'from-green-400 to-green-500';
-    if (percentage >= 80) return 'from-green-400 to-yellow-400';
-    if (percentage >= 60) return 'from-yellow-400 to-orange-400';
-    if (percentage >= 40) return 'from-orange-400 to-red-400';
-    return 'from-red-400 to-red-500';
+  // Get solid color based on score
+  const getScoreColor = () => {
+    if (percentage === 100) return 'bg-green-500';
+    if (percentage >= 80) return 'bg-green-400';
+    if (percentage >= 60) return 'bg-yellow-500';
+    if (percentage >= 40) return 'bg-orange-500';
+    return 'bg-red-500';
   };
 
   // Get encouraging message
@@ -509,9 +509,10 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
   // Get question type config
   const config = {
-    gradient: 'from-orange-500 to-red-600',
+    color: 'bg-orange-500',
     bgPattern: 'from-orange-50 to-red-50',
-    label: 'Matching'
+    label: 'Matching',
+    icon: 'link'
   };
 
   return (
@@ -520,19 +521,64 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
       <div className="relative">
         {/* Question Type Badge */}
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${config.gradient} text-white font-bold text-sm shadow-lg`}>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${config.color} text-white font-bold text-sm shadow-lg`}>
+            <Link size={16} />
             <span>{config.label}</span>
           </div>
         </div>
 
-        {/* Question Card - Glass Theme */}
-        <div className="bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border-2 border-white/40 relative overflow-hidden pt-10">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/20 rounded-full -translate-y-16 translate-x-16" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-400/20 rounded-full translate-y-16 -translate-x-16" />
+        {/* Question Card - Frosted Glass Layers */}
+        <div className="relative">
+          {/* Floating glass shards orbiting the card */}
+          <div className="absolute inset-0 pointer-events-none overflow-visible">
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <div
+                key={i}
+                className="absolute w-3 h-3 rounded-sm animate-float-shard"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 219, 0, 0.8), rgba(99, 102, 241, 0.6))',
+                  left: `${5 + i * 12}%`,
+                  top: i % 2 === 0 ? '-20px' : 'calc(100% + 20px)',
+                  animationDelay: `${i * 0.6}s`,
+                  animationDuration: `${5 + (i % 3)}s`,
+                  transform: `rotate(${i * 45}deg)`,
+                  boxShadow: '0 0 12px rgba(255, 219, 0, 0.6)',
+                  opacity: 0.6
+                }}
+              />
+            ))}
+          </div>
 
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black drop-shadow-sm leading-tight relative z-10 text-center">
-            {question.question}
-          </h2>
+          {/* Background gradient layer (shifts subtly) */}
+          <div className="absolute inset-0 rounded-3xl opacity-40 animate-gradient-shift" style={{
+            background: 'linear-gradient(135deg, #FFDB00 0%, #FFC700 25%, rgba(99, 102, 241, 0.3) 50%, #FFB800 75%, #FFDB00 100%)',
+            backgroundSize: '200% 200%'
+          }} />
+
+          {/* Glass Layer 1 - Back layer (heaviest blur) */}
+          <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/30 border-2 border-white/40 transform translate-y-2 translate-x-2" style={{
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)'
+          }} />
+
+          {/* Glass Layer 2 - Middle layer */}
+          <div className="absolute inset-0 rounded-3xl backdrop-blur-xl bg-white/40 border-2 border-white/50 transform translate-y-1 translate-x-1" style={{
+            boxShadow: '0 15px 30px rgba(0, 0, 0, 0.1)'
+          }} />
+
+          {/* Glass Layer 3 - Front layer (main content) */}
+          <div className="relative rounded-3xl backdrop-blur-lg bg-white/60 border-2 border-white/70 p-8 sm:p-10" style={{
+            boxShadow: '0 25px 50px rgba(255, 219, 0, 0.25), 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
+          }}>
+            {/* Top glass highlight */}
+            <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-3xl pointer-events-none" />
+
+            {/* Question Text - sits between glass layers */}
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight relative z-10 text-center" style={{
+              textShadow: '0 1px 2px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.1)'
+            }}>
+              {question.question}
+            </h2>
+          </div>
         </div>
       </div>
         
@@ -652,9 +698,8 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
               onClick={handleSubmit}
               disabled={!canSubmit || isPaused}
               className="
-                bg-gradient-to-r from-yellow-400 to-amber-500
-                hover:from-yellow-500 hover:to-amber-600
-                disabled:bg-white/20 disabled:from-white/20 disabled:to-white/20
+                btn-branded-yellow
+                disabled:bg-white/20
                 text-black font-bold text-lg sm:text-xl px-10 sm:px-12 py-4 sm:py-5
                 rounded-2xl shadow-xl hover:shadow-2xl
                 transition-all duration-300 transform hover:scale-105
@@ -669,7 +714,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
       ) : (
         <div className="space-y-4">
           {/* Score Card */}
-          <div className={`relative overflow-hidden rounded-2xl shadow-2xl bg-gradient-to-r ${getGradientColors()} border-2 border-white/40`}>
+          <div className={`relative overflow-hidden rounded-2xl shadow-2xl ${getScoreColor()} border-2 border-white/40`}>
             <div className="absolute inset-0 bg-white/20 backdrop-blur-xl"></div>
             <div className="relative px-5 sm:px-6 py-5 sm:py-6">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">

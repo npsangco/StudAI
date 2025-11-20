@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, Loader, CheckCircle, AlertCircle, Brain } from 'lucide-react';
 import { quizApi } from '../api/api';
+import { aiUsageApi } from '../api/api';
 
 const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -8,6 +9,27 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const [quizTitle, setQuizTitle] = useState(`Quiz from "${note.title}"`);
   const [success, setSuccess] = useState(false);
   const [generatedQuizId, setGeneratedQuizId] = useState(null);
+  const [usageSnapshot, setUsageSnapshot] = useState(null);
+  const [isUsageLoading, setIsUsageLoading] = useState(true);
+
+  const refreshUsage = useCallback(async () => {
+    try {
+      const { data } = await aiUsageApi.getToday();
+      setUsageSnapshot(data);
+    } catch (err) {
+      console.error('Failed to fetch AI usage:', err);
+    } finally {
+      setIsUsageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshUsage();
+  }, [refreshUsage]);
+
+  const quizLimit = usageSnapshot?.limits?.quiz ?? 1;
+  const quizRemaining = usageSnapshot?.remaining?.quiz ?? quizLimit;
+  const quizLimitReached = !isUsageLoading && quizRemaining <= 0;
   
   // Fixed 10-question default
   const questionCount = 10;
@@ -17,6 +39,11 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
       setError('Please enter a quiz title');
       return;
     }
+
+     if (quizLimitReached) {
+       setError('Daily AI quiz limit reached. Try again tomorrow.');
+       return;
+     }
 
     setIsLoading(true);
     setError(null);
@@ -33,6 +60,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
       if (response.data && response.data.quiz) {
         setGeneratedQuizId(response.data.quiz.quiz_id);
         setSuccess(true);
+        refreshUsage();
 
         // Redirect to quiz after 2 seconds
         setTimeout(() => {
@@ -48,6 +76,9 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
         err.response?.data?.details || 
         'Failed to generate quiz. Please ensure your note has enough content and try again.';
       setError(errorMessage);
+      if (err.response?.status === 429) {
+        refreshUsage();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -138,9 +169,15 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
         {/* Daily Limit Info */}
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
           <p className="text-xs text-amber-800">
-            <strong>⏰ Daily Limit:</strong> You can generate <strong>1 AI quiz per day</strong>. Use it wisely!
+            <strong>⏰ Daily Limit:</strong> {quizLimit} AI quiz{quizLimit > 1 ? 'zes' : ''} per day. {quizLimitReached ? 'Limit reached for today.' : `${quizRemaining} left today.`}
           </p>
         </div>
+
+        {quizLimitReached && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6 text-sm text-red-700">
+            You have used your AI quiz generation for today. Please try again tomorrow.
+          </div>
+        )}
 
         {/* Info Message */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
@@ -160,7 +197,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
           </button>
           <button
             onClick={handleGenerateQuiz}
-            disabled={isLoading}
+            disabled={isLoading || quizLimitReached}
             className="flex-1 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (

@@ -111,10 +111,10 @@ export const LiveLeaderboard = ({
     return (
       <div className="w-full bg-white/20 backdrop-blur-xl rounded-2xl border-2 border-white/40 shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-yellow-400 to-amber-500 px-4 py-3 border-b-2 border-yellow-500">
+        <div className="bg-amber-500 px-4 py-3 border-b-2 border-amber-600">
           <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-900 drop-shadow-sm" />
-            <h3 className="text-lg font-bold text-amber-900 drop-shadow-sm">Leaderboard</h3>
+            <Trophy className="w-5 h-5 text-white drop-shadow-sm" />
+            <h3 className="text-lg font-bold text-white drop-shadow-sm">Leaderboard</h3>
           </div>
         </div>
 
@@ -178,7 +178,7 @@ export const LiveLeaderboard = ({
                     </div>
                     <div className={`h-1.5 rounded-full ${isCurrentUser ? 'bg-amber-900/20' : 'bg-white/20'} overflow-hidden`}>
                       <div
-                        className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 transition-all duration-500 ease-out shadow-lg"
+                        className="h-full bg-amber-500 transition-all duration-500 ease-out shadow-lg"
                         style={{ width: `${(player.currentQuestion / totalQuestions) * 100}%` }}
                       />
                     </div>

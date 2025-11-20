@@ -65,6 +65,7 @@ class NotesService {
         isPinned: n.is_pinned === true || n.is_pinned === 1,
         category: n.category || null,
         categoryId: n.category_id || null,
+        fileId: n.file_id || n.fileId || null,
       }));
       
       await cacheNotes(notes);
@@ -89,6 +90,7 @@ class NotesService {
       isPinned: false,
       category: null,
       categoryId: noteData.category_id || null,
+      fileId: noteData.file_id || null,
     };
 
     if (this.isOnline) {
@@ -105,6 +107,7 @@ class NotesService {
           isPinned: n.is_pinned === true || n.is_pinned === 1,
           category: n.category || null,
           categoryId: n.category_id || null,
+          fileId: n.file_id || n.fileId || null,
         };
         await cacheSingleNote(note);
         return { success: true, note };
@@ -141,6 +144,7 @@ class NotesService {
           isPinned: n.is_pinned === true || n.is_pinned === 1,
           category: n.category || null,
           categoryId: n.category_id || null,
+          fileId: n.file_id || n.fileId || null,
         };
         await cacheSingleNote(note);
         return { success: true, note };
@@ -218,6 +222,7 @@ class NotesService {
           isPinned: n.is_pinned === true || n.is_pinned === 1,
           category: n.category || null,
           categoryId: n.category_id || null,
+          fileId: n.file_id || n.fileId || null,
         });
         break;
       }

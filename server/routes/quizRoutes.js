@@ -8,6 +8,7 @@ import QuizBattle from '../models/QuizBattle.js';
 import BattleParticipant from '../models/BattleParticipant.js';
 import sequelize from '../db.js';
 import { validateQuizRequest, validateTitle, validateNumericId } from '../middleware/validationMiddleware.js';
+import { ensureQuizAvailable, recordQuizUsage, DAILY_AI_LIMITS, getUsageSnapshot } from '../services/aiUsageService.js';
 
 const router = express.Router();
 
@@ -253,7 +254,38 @@ router.get('/', requireAuth, async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
-    res.json({ quizzes });
+    // Enhance each quiz with difficulty distribution for adaptive mode check
+    const enhancedQuizzes = await Promise.all(quizzes.map(async (quiz) => {
+      const quizData = quiz.toJSON();
+      
+      // Get difficulty distribution
+      const [difficultyStats] = await sequelize.query(`
+        SELECT 
+          SUM(CASE WHEN LOWER(difficulty) = 'easy' THEN 1 ELSE 0 END) as easy_count,
+          SUM(CASE WHEN LOWER(difficulty) = 'medium' THEN 1 ELSE 0 END) as medium_count,
+          SUM(CASE WHEN LOWER(difficulty) = 'hard' THEN 1 ELSE 0 END) as hard_count,
+          COUNT(DISTINCT LOWER(difficulty)) as unique_difficulties
+        FROM questions 
+        WHERE quiz_id = ? AND difficulty IN ('easy', 'medium', 'hard', 'Easy', 'Medium', 'Hard')
+      `, {
+        replacements: [quiz.quiz_id]
+      });
+
+      const stats = difficultyStats[0] || { easy_count: 0, medium_count: 0, hard_count: 0, unique_difficulties: 0 };
+      
+      // Determine if adaptive mode is possible
+      quizData.difficulty_distribution = {
+        easy: parseInt(stats.easy_count) || 0,
+        medium: parseInt(stats.medium_count) || 0,
+        hard: parseInt(stats.hard_count) || 0
+      };
+      quizData.has_varied_difficulty = parseInt(stats.unique_difficulties) >= 2;
+      quizData.can_use_adaptive = quizData.total_questions >= 5 && quizData.has_varied_difficulty;
+      
+      return quizData;
+    }));
+
+    res.json({ quizzes: enhancedQuizzes });
   } catch (err) {
     console.error('❌ Get quizzes error:', err);
     res.status(500).json({ error: 'Failed to fetch quizzes' });
@@ -399,6 +431,15 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
     const { noteId, noteContent, noteTitle, quizTitle, questionCount } = req.body;
+
+    const quizQuota = await ensureQuizAvailable(userId);
+    if (!quizQuota.allowed) {
+      return res.status(429).json({
+        error: 'Daily AI quiz limit reached',
+        limits: DAILY_AI_LIMITS,
+        remaining: quizQuota.remaining
+      });
+    }
 
     // Validate inputs
     if (!quizTitle || !quizTitle.trim()) {
@@ -692,6 +733,17 @@ Generate EXACTLY in this format - no variations:
 
       console.log(`✅ AI Quiz created: ${newQuiz.quiz_id} with ${questions.length} questions`);
 
+      const recordResult = await recordQuizUsage(userId);
+      if (!recordResult.allowed) {
+        return res.status(429).json({
+          error: 'Daily AI quiz limit reached',
+          limits: DAILY_AI_LIMITS,
+          remaining: 0
+        });
+      }
+
+      const usageSnapshot = await getUsageSnapshot(userId);
+
       // Parse JSON fields in response (same as GET endpoint)
       const parsedQuestions = questions.map(q => {
         const qData = q.toJSON();
@@ -727,7 +779,8 @@ Generate EXACTLY in this format - no variations:
       res.status(201).json({
         quiz: newQuiz,
         questions: parsedQuestions,
-        message: `Successfully generated ${parsedQuestions.length} questions`
+        message: `Successfully generated ${parsedQuestions.length} questions`,
+        usage: usageSnapshot
       });
 
     } catch (aiError) {
@@ -1418,33 +1471,197 @@ router.post('/battle/:gamePin/ready', requireAuth, async (req, res) => {
   }
 });
 
-// 5. Start battle (HOST only)
+// 5. Start battle (HOST only) - WITH COMPREHENSIVE VALIDATIONS
 router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const gamePin = req.params.gamePin;
     const userId = req.session.userId;
     
+    console.log(`🎮 Start battle request: PIN=${gamePin}, Host=${userId}`);
+    
+    // ============================================
+    // VALIDATION 1: Battle exists
+    // ============================================
     const battle = await QuizBattle.findOne({
-      where: { game_pin: gamePin }
+      where: { game_pin: gamePin },
+      include: [{
+        model: Quiz,
+        as: 'quiz'
+      }],
+      lock: transaction.LOCK.UPDATE, // Lock row to prevent race conditions
+      transaction
     });
     
     if (!battle) {
-      return res.status(404).json({ error: 'Battle not found' });
+      await transaction.rollback();
+      return res.status(404).json({ 
+        error: 'Battle not found',
+        errorCode: 'BATTLE_NOT_FOUND'
+      });
     }
     
+    // ============================================
+    // VALIDATION 2: User is the host
+    // ============================================
     if (battle.host_id !== userId) {
-      return res.status(403).json({ error: 'Only host can start battle' });
+      await transaction.rollback();
+      return res.status(403).json({ 
+        error: 'Only the host can start this battle',
+        errorCode: 'NOT_HOST',
+        hostId: battle.host_id
+      });
     }
     
+    // ============================================
+    // VALIDATION 3: Battle is in waiting status
+    // ============================================
+    if (battle.status !== 'waiting') {
+      await transaction.rollback();
+      return res.status(400).json({ 
+        error: `Battle already ${battle.status}`,
+        errorCode: 'INVALID_STATUS',
+        currentStatus: battle.status
+      });
+    }
+    
+    // ============================================
+    // VALIDATION 4: Quiz still exists
+    // ============================================
+    if (!battle.quiz) {
+      await transaction.rollback();
+      console.error(`❌ Quiz ${battle.quiz_id} was deleted`);
+      
+      // Mark battle as invalid and cleanup
+      await QuizBattle.update(
+        { status: 'completed' },
+        { where: { battle_id: battle.battle_id } }
+      );
+      
+      return res.status(404).json({ 
+        error: 'Quiz no longer exists. Battle cancelled.',
+        errorCode: 'QUIZ_DELETED',
+        shouldCleanup: true
+      });
+    }
+    
+    // ============================================
+    // VALIDATION 5: Quiz has questions
+    // ============================================
+    const questionCount = await Question.count({
+      where: { quiz_id: battle.quiz_id },
+      transaction
+    });
+    
+    if (questionCount === 0) {
+      await transaction.rollback();
+      console.error(`❌ Quiz ${battle.quiz_id} has no questions`);
+      
+      return res.status(400).json({ 
+        error: 'Cannot start battle. Quiz has no questions.',
+        errorCode: 'NO_QUESTIONS',
+        currentCount: 0,
+        minimumRequired: 1
+      });
+    }
+    
+    console.log(`✅ Quiz has ${questionCount} questions`);
+    
+    // ============================================
+    // VALIDATION 6: Minimum player count
+    // ============================================
+    const currentPlayers = await BattleParticipant.count({
+      where: { battle_id: battle.battle_id },
+      transaction
+    });
+    
+    const MIN_PLAYERS = 2;
+    
+    if (currentPlayers < MIN_PLAYERS) {
+      await transaction.rollback();
+      console.error(`❌ Not enough players: ${currentPlayers}/${MIN_PLAYERS}`);
+      
+      return res.status(400).json({ 
+        error: `Need at least ${MIN_PLAYERS} players to start`,
+        errorCode: 'NOT_ENOUGH_PLAYERS',
+        currentPlayers,
+        minimumRequired: MIN_PLAYERS
+      });
+    }
+    
+    console.log(`✅ ${currentPlayers} players ready`);
+    
+    // ============================================
+    // VALIDATION 7: Player count doesn't exceed max
+    // ============================================
+    if (currentPlayers > battle.max_players) {
+      await transaction.rollback();
+      console.error(`❌ Too many players: ${currentPlayers}/${battle.max_players}`);
+      
+      return res.status(400).json({ 
+        error: 'Player count exceeds maximum',
+        errorCode: 'TOO_MANY_PLAYERS',
+        currentPlayers,
+        maxPlayers: battle.max_players
+      });
+    }
+    
+    // ============================================
+    // VALIDATION 8: Check player readiness (optional warning)
+    // ============================================
+    const readyPlayers = await BattleParticipant.count({
+      where: { 
+        battle_id: battle.battle_id,
+        is_ready: true
+      },
+      transaction
+    });
+    
+    const allReady = readyPlayers === currentPlayers;
+    
+    if (!allReady) {
+      console.warn(`⚠️ Not all players ready: ${readyPlayers}/${currentPlayers}`);
+      // Don't block - just warn
+    } else {
+      console.log(`✅ All ${currentPlayers} players ready`);
+    }
+    
+    // ============================================
+    // ALL VALIDATIONS PASSED - START BATTLE
+    // ============================================
     await battle.update({
       status: 'in_progress',
       started_at: new Date()
+    }, { transaction });
+    
+    await transaction.commit();
+    
+    console.log(`🎮 Battle ${gamePin} started successfully`);
+    console.log(`   Quiz: ${battle.quiz.title}`);
+    console.log(`   Players: ${currentPlayers}/${battle.max_players}`);
+    console.log(`   Questions: ${questionCount}`);
+    
+    res.json({ 
+      success: true,
+      message: 'Battle started successfully',
+      battle: {
+        gamePin: battle.game_pin,
+        quizTitle: battle.quiz.title,
+        totalQuestions: questionCount,
+        playerCount: currentPlayers,
+        allPlayersReady: allReady
+      }
     });
     
-    res.json({ message: 'Battle started' });
   } catch (err) {
+    await transaction.rollback();
     console.error('❌ Start battle error:', err);
-    res.status(500).json({ error: 'Failed to start battle' });
+    res.status(500).json({ 
+      error: 'Failed to start battle',
+      errorCode: 'SERVER_ERROR',
+      details: err.message
+    });
   }
 });
 
@@ -1514,10 +1731,13 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
       order: [['score', 'DESC']]
     });
     
+    // ✅ IMPROVED: Use is_winner flag from database (supports ties)
     res.json({
       battle: {
         quiz_title: battle.quiz.title,
-        status: battle.status
+        status: battle.status,
+        is_tied: battle.is_tied || false,
+        winner_ids: battle.winner_ids || [battle.winner_id]
       },
       results: participants.map((p, index) => ({
         rank: index + 1,
@@ -1525,7 +1745,7 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
         username: p.user.username,
         profile_picture: p.user.profile_picture,
         score: p.score,
-        is_winner: index === 0,
+        is_winner: p.is_winner, // ✅ Use database value (supports ties)
         points_earned: p.points_earned,
         exp_earned: p.exp_earned
       }))
@@ -1710,22 +1930,27 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     }
     
     // ============================================
-    // 4. UPDATE BATTLE STATUS
+    // 4. UPDATE BATTLE STATUS WITH TIE SUPPORT
     // ============================================
     
-    // For single winner: use winnerId
-    // For tied winners: use first winner's ID (just for DB constraint)
-    const primaryWinnerId = winnerIds[0];
+    // Determine if there's a tie
+    const isTied = winnerIds.length > 1;
+    const primaryWinnerId = winnerIds[0]; // Primary winner for legacy compatibility
     
+    // Store ALL winner IDs for proper tie handling
     await battle.update({
       status: 'completed',
-      winner_id: primaryWinnerId, // Store primary winner (for single or first of tied)
+      winner_id: primaryWinnerId, // Legacy field - stores first winner
+      winner_ids: winnerIds, // NEW: Store all tied winner IDs
+      is_tied: isTied, // NEW: Flag for tied battles
       completed_at: completedAt || new Date()
     }, { transaction });
     
-    console.log(`✅ Battle marked as completed with winner ${primaryWinnerId}`);
-    if (winnerIds.length > 1) {
-      console.log(`🤝 ${winnerIds.length} tied winners detected`);
+    if (isTied) {
+      console.log(`🤝 TIE DETECTED: ${winnerIds.length} winners with ${maxScore} points each`);
+      console.log(`   Winner IDs: ${winnerIds.join(', ')}`);
+    } else {
+      console.log(`✅ Battle completed with single winner: ${primaryWinnerId}`);
     }
     
     // ============================================
@@ -1741,7 +1966,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         const expEarned = player.score * 5;
         const isWinner = winnerIds.includes(player.userId);
         
-        console.log(`📝 Updating player ${player.userId}: score=${player.score}, points=${pointsEarned}`);
+        console.log(`📝 Updating player ${player.userId}: score=${player.score}, points=${pointsEarned}, isWinner=${isWinner}`);
         
         // Update participant record
         const [updateCount] = await BattleParticipant.update(
@@ -1749,7 +1974,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
             score: player.score,
             points_earned: pointsEarned,
             exp_earned: expEarned,
-            is_winner: isWinner
+            is_winner: isWinner // ✅ All tied winners get is_winner=true
           },
           { 
             where: { 
@@ -1774,6 +1999,11 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
           where: { user_id: player.userId },
           transaction
         });
+        
+        // ✅ NEW: Award achievements for ALL tied winners
+        if (isWinner) {
+          console.log(`🏆 Player ${player.userId} is a winner (tied: ${isTied})`);
+        }
         
         console.log(`✅ Updated player ${player.userId}`);
         
@@ -1813,9 +2043,15 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     // ============================================
     
     // Check achievements for all participants (points + battles_won)
+    // ✅ IMPORTANT: All tied winners should get "battles_won" achievements
     for (const player of players) {
       try {
         await checkAchievements(player.userId);
+        
+        const isWinner = winnerIds.includes(player.userId);
+        if (isWinner) {
+          console.log(`🎖️ Checking achievements for winner: ${player.userId}`);
+        }
       } catch (achievementError) {
         console.error(`Error checking achievements for user ${player.userId}:`, achievementError);
         // Don't fail the request if achievement check fails
@@ -1828,13 +2064,16 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     
     return res.json({ 
       success: true,
-      message: 'Battle results synced successfully',
+      message: isTied 
+        ? `Battle completed with ${winnerIds.length}-way tie!` 
+        : 'Battle results synced successfully',
       battleId: battle.battle_id,
-      winnerId: primaryWinnerId,
+      winnerId: primaryWinnerId, // Legacy field
       winnerIds: winnerIds, // All tied winners
       totalPlayers: players.length,
       updatedPlayers: updatedCount,
-      isTied: winnerIds.length > 1,
+      isTied: isTied,
+      maxScore: maxScore,
       timestamp: new Date().toISOString()
     });
     

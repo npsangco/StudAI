@@ -44,7 +44,11 @@ export function useQuizAPI(quizDataHook, toast) {
         share_code: quiz.share_code,
         shared_by_username: quiz.shared_by_username, // For imported quizzes
         timer_per_question: quiz.timer_per_question ?? 30,
-        creator: quiz.creator?.username || 'Unknown'
+        creator: quiz.creator?.username || 'Unknown',
+        // Adaptive mode data
+        difficultyDistribution: quiz.difficulty_distribution,
+        hasVariedDifficulty: quiz.has_varied_difficulty,
+        canUseAdaptive: quiz.can_use_adaptive
       }));
 
       updateQuizData({ list: formattedQuizzes });
@@ -284,19 +288,38 @@ export function useQuizAPI(quizDataHook, toast) {
   };
 
   /**
-   * Start battle
+   * Start battle - with comprehensive error handling
    */
   const startBattle = async (gamePin) => {
     try {
       setLoading(true);
       
-      await quizApi.startBattle(gamePin);
-
-      return true;
+      const response = await quizApi.startBattle(gamePin);
+      
+      return { success: true, data: response.data };
     } catch (err) {
       console.error('Start battle error:', err);
-      setError(err.response?.data?.error || 'Failed to start battle');
-      return false;
+      
+      const errorData = err.response?.data || {};
+      const errorCode = errorData.errorCode || 'UNKNOWN_ERROR';
+      const errorMessage = errorData.error || 'Failed to start battle';
+      
+      // Log specific error details for debugging
+      console.error('❌ Battle start failed:', {
+        errorCode,
+        message: errorMessage,
+        details: errorData
+      });
+      
+      setError(errorMessage);
+      
+      return { 
+        success: false, 
+        errorCode,
+        errorMessage,
+        shouldCleanup: errorData.shouldCleanup || false,
+        details: errorData
+      };
     } finally {
       setLoading(false);
     }

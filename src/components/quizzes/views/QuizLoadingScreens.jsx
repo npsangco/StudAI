@@ -165,7 +165,7 @@ const FloatingBubblesPattern = () => {
 };
 
 // Solo Loading Screen Component
-export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
+export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false }) => {
   const proTips = [
     "💪 Read each question carefully!",
     "🎯 Trust your first instinct!",
@@ -173,35 +173,161 @@ export const SoloLoadingScreen = ({ countdown, quizTitle }) => {
     "🧠 Stay calm and focused!",
     "✨ Every question is an opportunity!"
   ];
-  
+
   const [randomTip] = useState(() => proTips[Math.floor(Math.random() * proTips.length)]);
-  
+
+  // Memoize particle positions to prevent flickering on countdown changes
+  const [particles] = useState(() =>
+    Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      delay: i * 0.3,
+      duration: 3 + Math.random() * 4
+    }))
+  );
+
   return (
     <>
       <style>{styles}</style>
-      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 flex items-center justify-center overflow-hidden">
-        <DefaultQuizPattern />
+      <div className="fixed inset-0 w-full h-full flex items-center justify-center overflow-hidden" style={{
+        background: 'linear-gradient(to bottom, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)'
+      }}>
+        {/* Subtle dot pattern */}
+        <div className="fixed inset-0 pointer-events-none opacity-30" style={{
+          backgroundImage: 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
+          backgroundSize: '40px 40px'
+        }} />
 
-        <div className="text-center animate-fade-in z-10 relative px-4">
-          <div className="mb-6 relative">
-            <div className="w-32 h-32 mx-auto bg-white rounded-full flex items-center justify-center shadow-2xl">
-              <div className="text-8xl font-bold text-yellow-500 animate-bounce">
+        {/* Animated particles - Yellow, Orange, and Indigo */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {particles.map((particle) => {
+            const colorType = particle.id % 3;
+            const background = colorType === 0 ? '#fbbf24' : colorType === 1 ? '#f97316' : '#818cf8';
+            const boxShadow = colorType === 0
+              ? '0 0 12px rgba(251, 191, 36, 0.8)'
+              : colorType === 1
+              ? '0 0 12px rgba(249, 115, 22, 0.8)'
+              : '0 0 12px rgba(129, 140, 248, 0.8)';
+
+            return (
+              <div
+                key={particle.id}
+                className="absolute w-2 h-2 rounded-full animate-float-shard"
+                style={{
+                  background,
+                  left: `${particle.left}%`,
+                  top: `${particle.top}%`,
+                  animationDelay: `${particle.delay}s`,
+                  animationDuration: `${particle.duration}s`,
+                  opacity: 0.6,
+                  boxShadow
+                }}
+              />
+            );
+          })}
+        </div>
+
+        {/* Radial glow effects */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-yellow-400/15 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
+        </div>
+
+        <div className="text-center animate-fade-in z-10 relative px-4 max-w-2xl">
+          {/* Mode Badge */}
+          <div className="mb-8 flex justify-center">
+            <div className={`backdrop-blur-xl border-2 rounded-2xl px-6 py-3 shadow-2xl ${
+              isAdaptiveMode
+                ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-orange-400'
+                : 'bg-white/60 border-white'
+            }`}>
+              <div className="flex items-center gap-3">
+                {isAdaptiveMode ? (
+                  <>
+                    <svg className="w-6 h-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <div className="text-left">
+                      <div className="text-orange-700 font-bold text-sm">ADAPTIVE MODE</div>
+                      <div className="text-orange-600/80 text-xs">Difficulty adjusts to your performance</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="text-left">
+                      <div className="text-gray-900 font-bold text-sm">CLASSIC MODE</div>
+                      <div className="text-gray-700 text-xs">All questions in original order</div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Countdown Circle - Frosted Glass */}
+          <div className="mb-8 relative">
+            {/* Glass layers */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-48 h-48 rounded-full backdrop-blur-2xl bg-white/20 border-2 border-white/40 transform translate-y-2 translate-x-2" style={{
+                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)'
+              }} />
+            </div>
+            <div className="relative w-48 h-48 mx-auto rounded-full backdrop-blur-xl bg-white/40 border-2 border-white/60 flex items-center justify-center" style={{
+              boxShadow: '0 25px 50px rgba(255, 219, 0, 0.25), 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
+            }}>
+              {/* Pulsing rings */}
+              <div className="absolute inset-0 rounded-full border-4 border-yellow-400/40 animate-ping" style={{ animationDuration: '2s' }} />
+              <div className="absolute inset-4 rounded-full border-2 border-yellow-400/60" />
+
+              {/* Countdown number */}
+              <div className="text-9xl font-black bg-gradient-to-b from-yellow-500 to-yellow-600 bg-clip-text text-transparent animate-bounce drop-shadow-lg">
                 {countdown}
               </div>
             </div>
           </div>
 
-          <h2 className="text-4xl font-bold text-black mb-3 drop-shadow-lg">
+          {/* Get Ready Text */}
+          <h2 className="text-5xl sm:text-6xl font-black mb-4 bg-gradient-to-r from-gray-900 via-yellow-600 to-gray-900 bg-clip-text text-transparent drop-shadow-sm">
             Get Ready!
           </h2>
-          <p className="text-gray-800 text-xl font-semibold mb-6">
+
+          <p className="text-gray-700 text-xl sm:text-2xl font-semibold mb-8 drop-shadow-sm">
             {quizTitle}
           </p>
 
-          <div className="mt-8 max-w-md mx-auto">
-            <div className="bg-white bg-opacity-90 rounded-2xl p-4 shadow-lg">
-              <p className="text-sm text-gray-700 font-medium">
-                <span className="font-bold">Pro Tip:</span> {randomTip}
+          {/* Mechanics Icons */}
+          <div className="flex justify-center gap-6 mb-8">
+            <div className="backdrop-blur-lg bg-white/60 border-2 border-white/70 rounded-xl p-4 flex flex-col items-center gap-2 shadow-lg">
+              <svg className="w-8 h-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-gray-700 text-xs font-semibold">Timed</span>
+            </div>
+            <div className="backdrop-blur-lg bg-white/60 border-2 border-white/70 rounded-xl p-4 flex flex-col items-center gap-2 shadow-lg">
+              <svg className="w-8 h-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+              <span className="text-gray-700 text-xs font-semibold">Score</span>
+            </div>
+            {isAdaptiveMode && (
+              <div className="backdrop-blur-lg bg-orange-100 border-2 border-orange-300 rounded-xl p-4 flex flex-col items-center gap-2 shadow-lg">
+                <svg className="w-8 h-8 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                <span className="text-orange-700 text-xs font-semibold">Adaptive</span>
+              </div>
+            )}
+          </div>
+
+          {/* Pro Tip */}
+          <div className="max-w-md mx-auto">
+            <div className="backdrop-blur-xl bg-white/60 border-2 border-white/70 rounded-2xl p-4 shadow-2xl">
+              <p className="text-sm text-gray-800 font-medium">
+                <span className="font-bold text-yellow-700">Pro Tip:</span> <span className="text-gray-900">{randomTip}</span>
               </p>
             </div>
           </div>

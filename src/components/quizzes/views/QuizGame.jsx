@@ -103,6 +103,8 @@ const QuizGame = ({
   const timeoutHandledRef = useRef(false);
 
   // Track correct answers for accurate accuracy calculation
+  // Use ref for synchronous updates to prevent flickering
+  const correctAnswersCountRef = useRef(0);
   const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
   
   // Calculate max possible score based on mode
@@ -623,8 +625,9 @@ const QuizGame = ({
     setAnswersHistory(newAnswersHistory);
 
     if (isCorrect) {
-      // Track correct answers
-      setCorrectAnswersCount(prev => prev + 1);
+      // Track correct answers (sync ref + state)
+      correctAnswersCountRef.current += 1;
+      setCorrectAnswersCount(correctAnswersCountRef.current);
       
       // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo' 
@@ -686,8 +689,9 @@ const QuizGame = ({
     game.setUserAnswer(actualAnswer + '_submitted');
     
     if (isCorrect) {
-      // Track correct answers
-      setCorrectAnswersCount(prev => prev + 1);
+      // Track correct answers (sync ref + state)
+      correctAnswersCountRef.current += 1;
+      setCorrectAnswersCount(correctAnswersCountRef.current);
       
       // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo' 
@@ -748,8 +752,9 @@ const QuizGame = ({
     setAnswersHistory(newAnswersHistory);
     
     if (isCorrect) {
-      // Track correct answers
-      setCorrectAnswersCount(prev => prev + 1);
+      // Track correct answers (sync ref + state)
+      correctAnswersCountRef.current += 1;
+      setCorrectAnswersCount(correctAnswersCountRef.current);
       
       // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo' 
@@ -1023,12 +1028,12 @@ const QuizGame = ({
     // In battle mode, questions might still be loading from Firebase
     if (mode === 'battle') {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-400 flex items-center justify-center">
+        <div className="min-h-screen bg-white flex items-center justify-center">
           <div className="text-center bg-white/20 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border-2 border-white/40">
             <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <h2 className="text-2xl font-bold text-black drop-shadow-sm mb-2">Loading questions...</h2>
             <p className="text-black/70 mb-4">Please wait while we load the quiz questions</p>
-            <button onClick={onBack} className="bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-bold px-6 py-3 rounded-xl hover:from-yellow-500 hover:to-amber-600 transition-all shadow-lg hover:shadow-xl border-2 border-white/40">
+            <button onClick={onBack} className="btn-branded-yellow text-black font-bold px-6 py-3 rounded-xl transition-all shadow-lg hover:shadow-xl border-2 border-white/40">
               Cancel
             </button>
           </div>
@@ -1038,10 +1043,10 @@ const QuizGame = ({
 
     // Solo mode: No questions means error
     return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-400 flex items-center justify-center">
+      <div className="min-h-screen bg-amber-50 flex items-center justify-center">
         <div className="text-center bg-white/20 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border-2 border-white/40">
           <h2 className="text-2xl font-bold text-black drop-shadow-sm mb-4">No questions available</h2>
-          <button onClick={onBack} className="bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-bold px-6 py-3 rounded-xl hover:from-yellow-500 hover:to-amber-600 transition-all shadow-lg hover:shadow-xl border-2 border-white/40">
+          <button onClick={onBack} className="bg-amber-500 text-white font-bold px-6 py-3 rounded-xl hover:bg-amber-600 transition-all shadow-lg hover:shadow-xl border-2 border-white/40">
             Go Back
           </button>
         </div>
@@ -1050,7 +1055,44 @@ const QuizGame = ({
   }
   
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-400">
+    <div className="min-h-screen relative overflow-hidden" style={{
+      background: 'linear-gradient(to bottom, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)'
+    }}>
+      {/* Subtle dot pattern for texture */}
+      <div className="fixed inset-0 pointer-events-none opacity-30" style={{
+        backgroundImage: 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
+        backgroundSize: '40px 40px'
+      }} />
+
+      {/* Radial gradient overlay with branded yellow - stronger */}
+      <div className="fixed inset-0 pointer-events-none" style={{
+        background: 'radial-gradient(circle at 50% 20%, rgba(255, 219, 0, 0.15), transparent 60%)'
+      }} />
+
+      {/* Radial gradient overlay with indigo - bottom */}
+      <div className="fixed inset-0 pointer-events-none" style={{
+        background: 'radial-gradient(circle at 50% 100%, rgba(99, 102, 241, 0.08), transparent 50%)'
+      }} />
+
+      {/* Floating sparkles with branded yellow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {[...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 rounded-full animate-float blur-sm"
+            style={{
+              left: `${(i * 15 + 10)}%`,
+              top: `${(i * 12 + 5)}%`,
+              animationDelay: `${i * 0.7}s`,
+              animationDuration: `${4 + (i % 3)}s`,
+              backgroundColor: 'rgba(255, 219, 0, 0.6)'
+            }}
+          >
+            <div className="absolute inset-0 bg-white/40 rounded-full animate-ping" style={{ animationDuration: `${2 + (i % 2)}s` }} />
+          </div>
+        ))}
+      </div>
+
       {/* DYNAMIC PATTERNS based on question type */}
       <QuizBackgroundPattern questionType={currentQ?.type} />
 
@@ -1066,7 +1108,7 @@ const QuizGame = ({
         playersCount={allPlayers.length}
         onBack={handleBackOrForfeit}
         currentQuestionData={currentQ}
-        correctAnswersCount={correctAnswersCount}
+        correctAnswersCount={correctAnswersCountRef.current}
         maxPossibleScore={maxPossibleScore}
         adaptiveMode={useAdaptiveMode}
       />
@@ -1140,7 +1182,7 @@ const QuizGame = ({
                   <div className="text-center mt-6">
                     <button
                       onClick={handleManualNext}
-                      className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
+                      className="px-8 py-3 btn-branded-yellow text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
                     >
                       {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
                     </button>
@@ -1197,7 +1239,7 @@ const QuizGame = ({
                 <div className="text-center mt-6 mb-32">
                   <button
                     onClick={handleManualNext}
-                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
+                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600 hover:from-yellow-500 hover:via-amber-600 hover:to-orange-600 text-white rounded-2xl font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-600/40 transition-all transform hover:scale-105 border-2 border-white/40"
                   >
                     {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
                   </button>
@@ -1241,7 +1283,7 @@ const QuizGame = ({
                 <div className="text-center mt-6 mb-32">
                   <button
                     onClick={handleManualNext}
-                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
+                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600 hover:from-yellow-500 hover:via-amber-600 hover:to-orange-600 text-white rounded-2xl font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-600/40 transition-all transform hover:scale-105 border-2 border-white/40"
                   >
                     {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
                   </button>
@@ -1286,7 +1328,7 @@ const QuizGame = ({
             <div className="text-center mt-6">
               <button
                 onClick={handleManualNext}
-                className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-amber-900 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
+                className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
               >
                 {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
               </button>

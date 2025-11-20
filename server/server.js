@@ -60,7 +60,9 @@ import Achievement from "./models/Achievement.js"; // ← ADD THIS
 import UserAchievement from "./models/UserAchievement.js"; // ← ADD THIS
 import UserDailyStat from "./models/UserDailyStat.js";
 import AuditLog from "./models/AuditLog.js";
+import AIUsageStat from "./models/AIUsageStat.js";
 import { Op } from "sequelize";
+import ChatMessage from "./models/ChatMessage.js";
 
 // Middleware
 import { auditMiddleware } from "./middleware/auditMiddleware.js";
@@ -70,6 +72,9 @@ import { requireAdmin } from "./middleware/adminAuthMiddleware.js";
 // Emails
 import { startEmailReminders } from "./services/emailScheduler.js";
 import { VerificationEmail, PasswordUpdateEmail, PasswordResetEmail} from "./services/emailService.js";
+
+// Battle cleanup (no Firebase Admin needed)
+import { startBattleCleanup } from "./services/battleCleanupSimple.js";
 
 // Import Note model after creating it
 let Note;
@@ -99,6 +104,16 @@ import sessionRoutes from "./routes/sessionRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
 import achievementRoutes from "./routes/achievementRoutes.js"
 import adminRoutes from "./routes/adminRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
+import {
+    DAILY_AI_LIMITS,
+    ensureSummaryAvailable,
+    recordSummaryUsage,
+    ensureChatbotTokensAvailable,
+    estimateTokensFromMessages,
+    recordChatbotUsage,
+    getUsageSnapshot
+} from "./services/aiUsageService.js";
 
 // Import validation middleware
 import {
@@ -111,6 +126,7 @@ const app = express();
 
 // Trust proxy - required for Digital Ocean App Platform
 app.set('trust proxy', 1);
+
 
 // ============================================
 // ACHIEVEMENT INITIALIZATION
@@ -182,6 +198,56 @@ async function initializeDefaultAchievements() {
   } catch (error) {
     console.error('Error initializing achievements:', error);
   }
+}
+
+async function ensureChatbotForeignKey() {
+    try {
+        const dbName = sequelize.config?.database || process.env.DB_NAME;
+
+        if (!dbName) {
+            console.warn('⚠️ Skipping chatbot FK validation because DB name is undefined');
+            return;
+        }
+
+        const [constraints] = await sequelize.query(
+            `SELECT CONSTRAINT_NAME, REFERENCED_TABLE_NAME
+             FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA = :dbName
+               AND TABLE_NAME = 'chatbot'
+               AND COLUMN_NAME = 'note_id'
+               AND REFERENCED_TABLE_NAME IS NOT NULL`,
+            { replacements: { dbName } }
+        );
+
+        let hasCorrectConstraint = false;
+
+        for (const constraint of constraints) {
+            if (constraint.REFERENCED_TABLE_NAME === 'note') {
+                hasCorrectConstraint = true;
+                continue;
+            }
+
+            await sequelize.getQueryInterface().removeConstraint('chatbot', constraint.CONSTRAINT_NAME);
+            console.log(`🧹 Removed invalid chatbot FK constraint ${constraint.CONSTRAINT_NAME}`);
+        }
+
+        if (!hasCorrectConstraint) {
+            await sequelize.getQueryInterface().addConstraint('chatbot', {
+                fields: ['note_id'],
+                type: 'foreign key',
+                name: 'fk_chatbot_note_id',
+                references: {
+                    table: 'note',
+                    field: 'note_id',
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
+            });
+            console.log('✅ Added chatbot.note_id -> note.note_id foreign key');
+        }
+    } catch (err) {
+        console.error('❌ Failed to enforce chatbot.note_id foreign key:', err);
+    }
 }
 
 // ============================================
@@ -368,6 +434,11 @@ sequelize.authenticate()
         
         // Initialize default achievements if they don't exist
         await initializeDefaultAchievements();
+        await ChatMessage.sync();
+        console.log("✅ Chatbot table ensured");
+        await AIUsageStat.sync();
+        console.log("✅ AI usage table ensured");
+        await ensureChatbotForeignKey();
         
         startEmailReminders();
         // console.log("📅 Email reminder scheduler started!"); for email testing
@@ -472,6 +543,22 @@ app.use("/api/sessions", sessionLockCheck, sessionRoutes);
 app.use("/api/achievements", sessionLockCheck, achievementRoutes);
 app.use("/api/admin", requireAdmin, auditRoutes);
 app.use("/api/admin", requireAdmin, adminRoutes);
+app.use("/api/chat", sessionLockCheck, chatRoutes);
+
+app.get("/api/ai-usage/today", sessionLockCheck, async (req, res) => {
+    try {
+        const userId = req.session?.userId;
+        if (!userId) {
+            return res.status(401).json({ error: "Not logged in" });
+        }
+
+        const snapshot = await getUsageSnapshot(userId);
+        res.json(snapshot);
+    } catch (error) {
+        console.error("Failed to fetch AI usage snapshot:", error);
+        res.status(500).json({ error: "Failed to fetch AI usage" });
+    }
+});
 
 // ----------------- OPENAI API ROUTES -----------------
 // AI Summarization endpoint
@@ -479,6 +566,20 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
     try {
         console.log('🤖 [Server] AI Summarization request received');
         const { text, systemPrompt } = req.body;
+        const userId = req.session?.userId;
+
+        if (!userId) {
+            return res.status(401).json({ error: "Not logged in" });
+        }
+
+        const summaryQuota = await ensureSummaryAvailable(userId);
+        if (!summaryQuota.allowed) {
+            return res.status(429).json({
+                error: "Daily AI summary limit reached",
+                limits: DAILY_AI_LIMITS,
+                remaining: summaryQuota.remaining
+            });
+        }
 
         if (!text) {
             console.error('❌ [Server] No text provided in request');
@@ -543,7 +644,22 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         }
 
         console.log('✅ [Server] Summary generated successfully, length:', summary.length);
-        res.json({ summary });
+        const recordResult = await recordSummaryUsage(userId);
+
+        if (!recordResult.allowed) {
+            return res.status(429).json({
+                error: "Daily AI summary limit reached",
+                limits: DAILY_AI_LIMITS,
+                remaining: 0
+            });
+        }
+
+        const snapshot = await getUsageSnapshot(userId);
+
+        res.json({
+            summary,
+            usage: snapshot
+        });
     } catch (err) {
         console.error("Error in AI summarization:", err);
         res.status(500).json({ error: "Failed to generate summary" });
@@ -554,11 +670,67 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
 app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
     try {
         console.log('🤖 [Server] AI Chat request received');
-        const { messages } = req.body;
+        const { messages, noteId, fileId, userMessage } = req.body;
+        const userId = req.session?.userId;
+
+        if (!userId) {
+            return res.status(401).json({ error: "Not logged in" });
+        }
 
         if (!messages || !Array.isArray(messages)) {
             console.error('❌ [Server] Invalid messages format in request');
             return res.status(400).json({ error: "Messages array is required" });
+        }
+
+        let normalizedNoteId = null;
+
+        if (noteId !== undefined && noteId !== null) {
+            normalizedNoteId = parseInt(noteId, 10);
+            if (Number.isNaN(normalizedNoteId)) {
+                return res.status(400).json({ error: "noteId must be numeric" });
+            }
+        }
+
+        if (normalizedNoteId === null && fileId !== undefined && fileId !== null) {
+            const parsedFileId = parseInt(fileId, 10);
+            if (Number.isNaN(parsedFileId)) {
+                return res.status(400).json({ error: "fileId must be numeric" });
+            }
+
+            if (!Note) {
+                console.error('❌ [Server] Note model unavailable while resolving fileId');
+                return res.status(500).json({ error: "Note model unavailable" });
+            }
+
+            const relatedNote = await Note.findOne({
+                where: {
+                    file_id: parsedFileId,
+                    user_id: req.session.userId
+                }
+            });
+
+            if (!relatedNote) {
+                return res.status(404).json({ error: "No note found for provided fileId" });
+            }
+
+            normalizedNoteId = relatedNote.note_id;
+        }
+
+        if (normalizedNoteId === null) {
+            console.error('❌ [Server] noteId missing in chat request');
+            return res.status(400).json({ error: "noteId is required" });
+        }
+
+        const latestUserMessage = typeof userMessage === 'string' && userMessage.trim().length > 0
+            ? userMessage.trim()
+            : (() => {
+                const reversed = [...messages].reverse();
+                const found = reversed.find((msg) => msg.role === 'user');
+                return found?.content?.trim() || '';
+            })();
+
+        if (!latestUserMessage) {
+            return res.status(400).json({ error: "userMessage is required" });
         }
 
         const openAiApiKey = process.env.OPENAI_API_KEY;
@@ -566,6 +738,16 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
         if (!openAiApiKey) {
             console.error('❌ [Server] OpenAI API key not configured in environment variables');
             return res.status(500).json({ error: "OpenAI API key not configured" });
+        }
+
+        const approxTokens = estimateTokensFromMessages(messages);
+        const tokenQuota = await ensureChatbotTokensAvailable(userId, approxTokens);
+        if (!tokenQuota.allowed) {
+            return res.status(429).json({
+                error: "Chatbot daily token limit reached",
+                limits: DAILY_AI_LIMITS,
+                remainingTokens: tokenQuota.remaining
+            });
         }
 
         const APIBody = {
@@ -607,8 +789,57 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             return res.status(500).json({ error: "Failed to generate response" });
         }
 
+        let chatRecord = null;
+        try {
+            chatRecord = await ChatMessage.create({
+                user_id: userId,
+                note_id: normalizedNoteId,
+                message: latestUserMessage,
+                response: reply
+            });
+            console.log('📝 [Server] Chat interaction stored with ID:', chatRecord.chat_id);
+        } catch (storeErr) {
+            const missingTable = storeErr?.original?.code === 'ER_NO_SUCH_TABLE';
+            if (missingTable) {
+                console.warn('⚠️ [Server] chatbot table missing. Attempting to recreate via sync...');
+                try {
+                    await ChatMessage.sync();
+                    chatRecord = await ChatMessage.create({
+                        user_id: userId,
+                        note_id: normalizedNoteId,
+                        message: latestUserMessage,
+                        response: reply
+                    });
+                    console.log('📝 [Server] Chat interaction stored after table sync. ID:', chatRecord.chat_id);
+                } catch (retryErr) {
+                    console.error('❌ [Server] Retry storing chat history failed:', retryErr);
+                }
+            } else {
+                console.error('❌ [Server] Failed to store chat history:', storeErr);
+            }
+        }
+
+        const totalTokens = data.usage?.total_tokens || approxTokens;
+        const usageResult = await recordChatbotUsage(userId, totalTokens);
+
+        if (!usageResult.allowed) {
+            return res.status(429).json({
+                error: "Chatbot daily token limit reached",
+                limits: DAILY_AI_LIMITS,
+                remainingTokens: 0
+            });
+        }
+
+        const snapshot = await getUsageSnapshot(userId);
+
         console.log('✅ [Server] Chat response generated successfully, length:', reply.length);
-        res.json({ reply });
+        res.json({
+            reply,
+            chat: chatRecord,
+            remainingTokens: usageResult.remaining,
+            limits: DAILY_AI_LIMITS,
+            usage: snapshot
+        });
     } catch (err) {
         console.error("❌ [Server] Error in AI chat:", err);
         res.status(500).json({ error: "Failed to generate response" });
@@ -1780,4 +2011,14 @@ app.use((err, req, res, next) => {
 });
 
 // ----------------- START SERVER -----------------
-app.listen(PORT, () => console.log(`🚀 Server running on ${SERVER_URL}`));
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on ${SERVER_URL}`);
+    
+    // Start battle cleanup service (MySQL only - client handles Firebase)
+    try {
+        startBattleCleanup();
+    } catch (error) {
+        console.error('❌ Failed to start battle cleanup:', error.message);
+        console.error('   Battle cleanup will be disabled');
+    }
+});

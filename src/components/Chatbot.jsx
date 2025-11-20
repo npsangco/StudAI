@@ -1,20 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowLeft, Send, MessageCircle, FileText, Bot, User, Copy, ThumbsUp, ThumbsDown, MoreVertical, Menu, X } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../config/api.config';
+import { chatApi, aiUsageApi } from '../api/api';
+
+const buildIntroMessage = (note) => ({
+  id: `intro-${note?.note_id || note?.id || 'default'}`,
+  type: 'bot',
+  content: `Hi! I'm here to help you with your note "${note?.title || 'Untitled Note'}". What would you like to know or discuss about it?`,
+  timestamp: new Date().toISOString()
+});
 const Chatbot = ({ currentNote, notes = [], onBack }) => {
   const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: 'bot',
-      content: `Hi! I'm here to help you with your note "${currentNote?.title || 'Untitled Note'}". What would you like to know or discuss about it?`,
-      timestamp: new Date().toISOString()
-    }
-  ]);
+    buildIntroMessage(currentNote)
+  ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [selectedNote, setSelectedNote] = useState(currentNote);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState(null);
+  const [tokenUsage, setTokenUsage] = useState({ limit: 5000, remaining: 5000, used: 0 });
+  const [isTokenUsageLoading, setIsTokenUsageLoading] = useState(true);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   // Default notes if none provided
@@ -41,36 +48,142 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
       content: 'Understanding React component patterns...'
     }
   ];
-  const displayNotes = notes.length > 0 ? notes : defaultNotes;
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-  // Close sidebar on mobile when clicking outside
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setIsSidebarOpen(false);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
-    const userMessage = {
-      id: Date.now() + Math.random(),
-      type: 'user',
-      content: inputMessage,
-      timestamp: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage('');
-    setIsTyping(true);
-    await callOpenAIAPI(userMessage.content);
-  };
+  const displayNotes = notes.length > 0 ? notes : defaultNotes;
+
+  const normalizeId = (value) => {
+    if (value === undefined || value === null) return null;
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+  useEffect(() => {
+    setSelectedNote(currentNote);
+    setMessages([buildIntroMessage(currentNote)]);
+  }, [currentNote]);
+
+  const loadChatHistory = useCallback(async (note) => {
+    if (!note) {
+      setMessages([buildIntroMessage()]);
+      setIsHistoryLoading(false);
+      return;
+    }
+
+    const noteIdentifier = normalizeId(note.id || note.note_id);
+    if (!noteIdentifier) {
+      setMessages([buildIntroMessage(note)]);
+      setIsHistoryLoading(false);
+      return;
+    }
+
+    setIsHistoryLoading(true);
+    setHistoryError(null);
+    setMessages([buildIntroMessage(note)]);
+
+    try {
+      const { data } = await chatApi.getHistory(noteIdentifier);
+      const historyEntries = data?.history || [];
+
+      if (!historyEntries.length) {
+        setMessages([buildIntroMessage(note)]);
+        setIsHistoryLoading(false);
+        return;
+      }
+
+      const flattened = historyEntries.flatMap((entry) => {
+        const timestamp = entry.timestamp || new Date().toISOString();
+        return [
+          {
+            id: `chat-${entry.chat_id}-user`,
+            type: 'user',
+            content: entry.message,
+            timestamp
+          },
+          {
+            id: `chat-${entry.chat_id}-bot`,
+            type: 'bot',
+            content: entry.response,
+            timestamp
+          }
+        ];
+      });
+
+      setMessages(flattened);
+    } catch (error) {
+      console.error('❌ [Chatbot] Failed to load chat history:', error);
+      setHistoryError('Unable to load previous conversation. Starting fresh.');
+      setMessages([buildIntroMessage(note)]);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedNote) {
+      loadChatHistory(selectedNote);
+    }
+  }, [selectedNote, loadChatHistory]);
+
+  const fetchTokenUsage = useCallback(async () => {
+    try {
+      const { data } = await aiUsageApi.getToday();
+      const limit = data?.limits?.chatbotTokens ?? 5000;
+      const remaining = data?.remaining?.chatbotTokens ?? limit;
+      setTokenUsage({
+        limit,
+        remaining,
+        used: Math.max(limit - remaining, 0)
+      });
+    } catch (error) {
+      console.error('❌ [Chatbot] Failed to fetch AI usage snapshot:', error);
+    } finally {
+      setIsTokenUsageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTokenUsage();
+  }, [fetchTokenUsage]);
+
+  const tokenLimitReached = !isTokenUsageLoading && tokenUsage.remaining <= 0;
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Close sidebar on mobile when clicking outside
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || !selectedNote) return;
+
+    const noteIdentifier = normalizeId(selectedNote.id || selectedNote.note_id);
+    if (!noteIdentifier) return;
+
+    if (tokenLimitReached) {
+      setHistoryError('Daily AI chatbot token limit reached. Try again tomorrow.');
+      return;
+    }
+
+    const userMessage = {
+      id: Date.now() + Math.random(),
+      type: 'user',
+      content: inputMessage,
+      timestamp: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsTyping(true);
+    await callOpenAIAPI(userMessage.content, noteIdentifier);
+  };
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -78,15 +191,9 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
     }
   };
   const switchNote = (note) => {
-    setSelectedNote(note);
-    setIsSidebarOpen(false); // Close sidebar on mobile after selection
-    const switchMessage = {
-      id: Date.now() + Math.random(),
-      type: 'bot',
-      content: `Now helping you with "${note.title}". What would you like to know about this note?`,
-      timestamp: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, switchMessage]);
+    if (!note) return;
+    setSelectedNote(note);
+    setIsSidebarOpen(false);
   };
   const formatTime = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -94,10 +201,10 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
-  async function callOpenAIAPI(userQuestion) {
+  async function callOpenAIAPI(userQuestion, noteIdentifier) {
     try {
 
-      const messages = [
+      const conversation = [
         {
           role: "system",
           content: `You are a helpful assistant that answers questions about the following note: "${selectedNote?.content || ''}"`
@@ -110,16 +217,39 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
 
       const response = await axios.post(
         `${API_URL}/api/openai/chat`,
-        { messages },
+        {
+          messages: conversation,
+          noteId: noteIdentifier,
+          userMessage: userQuestion
+        },
         { withCredentials: true }
       );
 
+      const limitsFromResponse = response.data?.limits || response.data?.usage?.limits;
+      const remainingTokensFromResponse = response.data?.remainingTokens ?? response.data?.usage?.remaining?.chatbotTokens;
+      if (remainingTokensFromResponse !== undefined || limitsFromResponse?.chatbotTokens) {
+        setTokenUsage((prev) => {
+          const limit = limitsFromResponse?.chatbotTokens ?? prev.limit;
+          const remaining = remainingTokensFromResponse !== undefined
+            ? Math.max(remainingTokensFromResponse, 0)
+            : Math.max(prev.remaining, 0);
+          return {
+            limit,
+            remaining,
+            used: Math.max(limit - remaining, 0)
+          };
+        });
+      } else {
+        fetchTokenUsage();
+      }
+
       const botReply = response.data?.reply || "Sorry, I couldn't generate a response.";
+      const chatRecord = response.data?.chat;
       const botMessage = {
-        id: Date.now() + Math.random(),
+        id: chatRecord?.chat_id ? `chat-${chatRecord.chat_id}-bot` : Date.now() + Math.random(),
         type: 'bot',
         content: botReply,
-        timestamp: new Date().toISOString()
+        timestamp: chatRecord?.timestamp || new Date().toISOString()
       };
       
       setMessages(prev => [...prev, botMessage]);
@@ -128,6 +258,10 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
       if (error.response) {
         console.error("❌ [Chatbot] Response status:", error.response.status);
         console.error("❌ [Chatbot] Response data:", error.response.data);
+        if (error.response.status === 429) {
+          setTokenUsage((prev) => ({ ...prev, remaining: 0, used: prev.limit }));
+          setHistoryError(error.response.data?.error || 'Daily AI chatbot token limit reached. Try again tomorrow.');
+        }
       }
       const errorMessage = {
         id: Date.now() + Math.random(),
@@ -139,7 +273,8 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
     } finally {
       setIsTyping(false);
     }
-  }return (
+  }
+  return (
     <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex relative">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
@@ -235,7 +370,7 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Chat Header */}
-        <div className="bg-white border-b border-slate-200 p-3 sm:p-4 shadow-sm">
+      <div className="bg-white border-b border-slate-200 p-3 sm:p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               {/* Mobile menu button */}
@@ -256,21 +391,41 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <div className="hidden sm:flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 Online
               </div>
               <div className="sm:hidden w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+             <div className={`hidden sm:flex items-center gap-1 text-xs px-2 py-1 rounded-full border ${tokenLimitReached ? 'text-red-700 bg-red-50 border-red-100' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
+               <Bot className={`w-3 h-3 ${tokenLimitReached ? 'text-red-500' : 'text-purple-500'}`} />
+               {tokenUsage.remaining}/{tokenUsage.limit} tokens left
+             </div>
               <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
                 <MoreVertical className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
+      <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 text-xs sm:text-sm text-slate-600 flex items-center justify-between">
+        <span>Daily chatbot tokens: {tokenUsage.limit}</span>
+        <span className={tokenLimitReached ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
+          {tokenLimitReached ? 'Limit reached' : `${tokenUsage.remaining} left`}
+        </span>
+      </div>
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
-          {messages.map((message) => (
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
+          {historyError && (
+            <div className="text-xs sm:text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg">
+              {historyError}
+            </div>
+          )}
+          {isHistoryLoading && (
+            <div className="text-xs sm:text-sm text-slate-500 bg-slate-50 border border-slate-200 p-3 rounded-lg">
+              Loading your previous conversation...
+            </div>
+          )}
+          {messages.map((message, index) => (
             <div
               key={message.id || index}
               className={`flex gap-2 sm:gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -356,20 +511,23 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
                   rows="1"
                   style={{ minHeight: '48px' }}
                 />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!inputMessage.trim() || isTyping}
-                  className={`absolute right-2 sm:right-3 bottom-2 sm:bottom-3 p-2 rounded-full transition-all ${
-                    inputMessage.trim() && !isTyping
-                      ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-xl'
-                      : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  }`}
-                >
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!inputMessage.trim() || isTyping || isHistoryLoading || tokenLimitReached}
+                  className={`absolute right-2 sm:right-3 bottom-2 sm:bottom-3 p-2 rounded-full transition-all ${
+                    inputMessage.trim() && !isTyping && !isHistoryLoading && !tokenLimitReached
+                      ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-xl'
+                      : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  }`}
+                >
                   <Send className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
+          {tokenLimitReached && (
+            <p className="text-xs text-red-600 font-semibold mt-2">Daily AI chatbot token limit reached. Try again tomorrow.</p>
+          )}
           <div className="hidden sm:flex items-center justify-between mt-2 px-1">
             <p className="text-xs text-slate-500">
               Press Enter to send, Shift + Enter for new line

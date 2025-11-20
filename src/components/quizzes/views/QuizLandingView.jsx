@@ -55,10 +55,10 @@ export const QuizLandingView = ({
       </div>
 
       {/* TABLET VIEW (md to lg) - Single View with Top Pill Navigation */}
-      <div className="hidden md:flex lg:hidden flex-col min-h-screen max-h-screen bg-gray-50 overflow-hidden">
+      <div className="hidden md:flex lg:hidden flex-col min-h-screen bg-gray-50">
         {/* Sticky Top Navigation Pills - Fixed Height */}
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
-          <div className="max-w-4xl mx-auto flex gap-2 overflow-x-hidden">
+          <div className="max-w-4xl mx-auto flex gap-2">
             <button
               onClick={() => setActiveView('quizzes')}
               className={`nav-pill flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
@@ -85,68 +85,58 @@ export const QuizLandingView = ({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-hidden p-4 min-h-0">
-          <div className="max-w-4xl mx-auto h-full overflow-x-hidden">
+        <div className="p-4">
+          <div className="max-w-4xl mx-auto">
             {activeView === 'quizzes' ? (
-              <div className="h-full w-full overflow-hidden">
-                <QuizList
-                  quizzes={quizData.list}
-                  draggedIndex={quizData.draggedIndex}
-                  onDragStart={handlers.handleDragStart}
-                  onDragOver={handlers.handleDragOver}
-                  onDrop={handlers.handleDrop}
-                  onEditQuiz={handlers.handleEditQuiz}
-                  onQuizSelect={handlers.handleQuizSelect}
-                  onDeleteQuiz={handlers.handleDeleteQuiz}
-                  onCreateQuiz={handlers.handleCreateQuiz}
-                  onImportQuiz={onQuizImported}
-                  toast={toast}
-                />
-              </div>
+              <QuizList
+                quizzes={quizData.list}
+                draggedIndex={quizData.draggedIndex}
+                onDragStart={handlers.handleDragStart}
+                onDragOver={handlers.handleDragOver}
+                onDrop={handlers.handleDrop}
+                onEditQuiz={handlers.handleEditQuiz}
+                onQuizSelect={handlers.handleQuizSelect}
+                onDeleteQuiz={handlers.handleDeleteQuiz}
+                onCreateQuiz={handlers.handleCreateQuiz}
+                onImportQuiz={onQuizImported}
+                toast={toast}
+              />
             ) : (
-              <div className="h-full w-full overflow-hidden">
-                <QuizBattles
-                  gamePin={gamePin}
-                  setGamePin={setGamePin}
-                  onJoinSuccess={onJoinSuccess}
-                />
-              </div>
+              <QuizBattles
+                gamePin={gamePin}
+                setGamePin={setGamePin}
+                onJoinSuccess={onJoinSuccess}
+              />
             )}
           </div>
         </div>
       </div>
 
       {/* MOBILE VIEW (below md) - Single View with Bottom Tab Bar */}
-      <div className="flex md:hidden flex-col min-h-screen max-h-screen bg-gray-50 overflow-hidden">
+      <div className="flex md:hidden flex-col min-h-screen bg-gray-50 pb-16">
         {/* Content Area */}
-        <div className="flex-1 overflow-hidden min-h-0 pb-14">
-          <div className="h-full p-3 overflow-x-hidden">
-            {activeView === 'quizzes' ? (
-              <div className="h-full w-full overflow-hidden">
-                <QuizList
-                  quizzes={quizData.list}
-                  draggedIndex={quizData.draggedIndex}
-                  onDragStart={handlers.handleDragStart}
-                  onDragOver={handlers.handleDragOver}
-                  onDrop={handlers.handleDrop}
-                  onEditQuiz={handlers.handleEditQuiz}
-                  onQuizSelect={handlers.handleQuizSelect}
-                  onDeleteQuiz={handlers.handleDeleteQuiz}
-                  onCreateQuiz={handlers.handleCreateQuiz}
-                  onImportQuiz={onQuizImported}
-                  toast={toast}
-                />
-              </div>
-            ) : (
-              <div className="h-full w-full overflow-hidden">
-                <QuizBattles
-                  gamePin={gamePin}
-                  setGamePin={setGamePin}
-                  onJoinSuccess={onJoinSuccess}
-                />
-              </div>
-            )}
-          </div>
+        <div className="p-3">
+          {activeView === 'quizzes' ? (
+            <QuizList
+              quizzes={quizData.list}
+              draggedIndex={quizData.draggedIndex}
+              onDragStart={handlers.handleDragStart}
+              onDragOver={handlers.handleDragOver}
+              onDrop={handlers.handleDrop}
+              onEditQuiz={handlers.handleEditQuiz}
+              onQuizSelect={handlers.handleQuizSelect}
+              onDeleteQuiz={handlers.handleDeleteQuiz}
+              onCreateQuiz={handlers.handleCreateQuiz}
+              onImportQuiz={onQuizImported}
+              toast={toast}
+            />
+          ) : (
+            <QuizBattles
+              gamePin={gamePin}
+              setGamePin={setGamePin}
+              onJoinSuccess={onJoinSuccess}
+            />
+          )}
         </div>
 
         {/* Bottom Tab Bar (iOS Style) */}

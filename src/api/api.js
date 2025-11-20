@@ -185,4 +185,19 @@ export const achievementsApi = {
   getUserAchievements: () => api.get('/achievements/user-achievements'),
 };
 
+// Chat History API
+export const chatApi = {
+  getHistory: (noteId) => {
+    if (!noteId) {
+      throw new Error('noteId is required to fetch chat history');
+    }
+
+    return api.get('/chat/history', { params: { noteId } });
+  }
+};
+
+export const aiUsageApi = {
+  getToday: () => api.get('/ai-usage/today')
+};
+
 export default api;
