@@ -583,132 +583,159 @@ Generate EXACTLY in this format - no variations:
 {"type":"Matching","question":"Match these","matchingPairs":[{"left":"A","right":"1"},{"left":"B","right":"2"}]}
 ]`;
 
-      const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openAiApiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert educator that creates well-structured quiz questions. Return only valid JSON.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 4000,
-          top_p: 1.0,
-          frequency_penalty: 0.5,
-          presence_penalty: 0.5
-        })
-      });
+      const maxAiAttempts = 3;
+      let normalizedQuestions = null;
+      let lastErrorMessage = 'AI failed to generate quiz questions.';
+      let retryInstruction = '';
 
-      if (!openAiResponse.ok) {
-        const errorData = await openAiResponse.json();
-        console.error('OpenAI API error:', errorData);
-        throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
-      }
+      for (let attempt = 1; attempt <= maxAiAttempts; attempt++) {
+        const attemptPrompt = retryInstruction ? `${prompt}\n${retryInstruction}` : prompt;
 
-      const aiData = await openAiResponse.json();
-      const generatedText = aiData.choices[0]?.message?.content;
-
-      if (!generatedText) {
-        throw new Error('No response from OpenAI');
-      }
-
-      // Extract JSON from markdown code blocks if present
-      let jsonText = generatedText.trim();
-      
-      // Remove markdown code blocks if present (```json ... ```)
-      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        jsonText = jsonMatch[1].trim();
-      }
-
-      // Try to parse JSON with error handling
-      let questionsData;
-      try {
-        questionsData = JSON.parse(jsonText);
-      } catch (parseError) {
-        console.error('Initial JSON parse error:', parseError.message);
-        console.error('Position:', parseError.message.match(/position (\d+)/) ? parseError.message.match(/position (\d+)/)[1] : 'unknown');
-        console.error('Attempting to fix common JSON issues...');
-        
-        let fixedJson = jsonText;
-        
-        // Remove control characters and bad escapes
-        fixedJson = fixedJson.replace(/[\x00-\x1f\x7f]/g, '');
-        
-        // Remove all escaped quotes (they break JSON)
-        fixedJson = fixedJson.replace(/\\"/g, '"');
-        fixedJson = fixedJson.replace(/\\\"/g, '"');
-        
-        // Handle newlines within quoted strings - replace with spaces
-        fixedJson = fixedJson.replace(/"([^"]*(?:\n[^"]*)*)"/g, (match) => {
-          return match.replace(/\n\s+/g, ' ').replace(/[\r\n]+/g, ' ');
+        const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openAiApiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are an expert educator that creates well-structured quiz questions. Return only valid JSON.'
+              },
+              {
+                role: 'user',
+                content: attemptPrompt
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 4000,
+            top_p: 1.0,
+            frequency_penalty: 0.5,
+            presence_penalty: 0.5
+          })
         });
-        
-        // Replace single quotes with double quotes
-        fixedJson = fixedJson.replace(/'/g, '"');
-        
-        // Fix _blank fields - more aggressive approach
-        // Find and remove entire objects that have _blank fields instead of standard fields
-        fixedJson = fixedJson.replace(/\{\s*"_blank\d+_"\s*:[^}]*\}/g, '');
-        fixedJson = fixedJson.replace(/,\s*\{\s*"_blank\d+_"/g, '');
-        
-        // Convert remaining _blank fields to "answer" for safety
-        fixedJson = fixedJson.replace(/"_blank\d+_"/g, '"answer"');
-        
-        // Fix trailing commas
-        fixedJson = fixedJson.replace(/,(\s*[\]\}])/g, '$1');
-        
-        // Fix missing commas between objects
-        fixedJson = fixedJson.replace(/\}\s*\{/g, '},{');
-        fixedJson = fixedJson.replace(/\]\s*\{/g, '],[{');
-        
-        // Fix unquoted keys
-        fixedJson = fixedJson.replace(/([{,]\s*)([a-zA-Z_]\w*)(\s*:)/g, '$1"$2"$3');
-        
-        // Ensure all bracket pairs match
-        const openBrackets = (fixedJson.match(/\[/g) || []).length;
-        const closeBrackets = (fixedJson.match(/\]/g) || []).length;
-        const openBraces = (fixedJson.match(/\{/g) || []).length;
-        const closeBraces = (fixedJson.match(/\}/g) || []).length;
-        
-        if (openBrackets > closeBrackets) {
-          fixedJson = fixedJson + ']'.repeat(openBrackets - closeBrackets);
+
+        if (!openAiResponse.ok) {
+          const errorData = await openAiResponse.json();
+          console.error('OpenAI API error:', errorData);
+          throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
         }
-        if (openBraces > closeBraces) {
-          fixedJson = fixedJson + '}'.repeat(openBraces - closeBraces);
+
+        const aiData = await openAiResponse.json();
+        const generatedText = aiData.choices[0]?.message?.content;
+
+        if (!generatedText) {
+          lastErrorMessage = 'No response from OpenAI';
+          retryInstruction = 'Previous response was empty. Return ONLY a JSON array with 10 quiz questions.';
+          continue;
         }
+
+        // Extract JSON from markdown code blocks if present
+        let jsonText = generatedText.trim();
         
+        // Remove markdown code blocks if present (```json ... ```)
+        const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          jsonText = jsonMatch[1].trim();
+        }
+
+        // Try to parse JSON with error handling
+        let questionsData;
         try {
-          questionsData = JSON.parse(fixedJson);
-          console.log('✅ JSON fixed and parsed successfully');
-        } catch (secondError) {
-          console.error('Failed to parse JSON even after fixes:', secondError.message);
-          console.error('Raw response (first 1000 chars):', jsonText.substring(0, 1000));
-          console.error('Fixed response (first 1000 chars):', fixedJson.substring(0, 1000));
-          throw new Error('AI response was not valid JSON. Please try again.');
+          questionsData = JSON.parse(jsonText);
+        } catch (parseError) {
+          console.error('Initial JSON parse error:', parseError.message);
+          console.error('Position:', parseError.message.match(/position (\d+)/) ? parseError.message.match(/position (\d+)/)[1] : 'unknown');
+          console.error('Attempting to fix common JSON issues...');
+          
+          let fixedJson = jsonText;
+          
+          // Remove control characters and bad escapes
+          fixedJson = fixedJson.replace(/[\x00-\x1f\x7f]/g, '');
+          
+          // Remove all escaped quotes (they break JSON)
+          fixedJson = fixedJson.replace(/\\"/g, '"');
+          fixedJson = fixedJson.replace(/\\\"/g, '"');
+          
+          // Handle newlines within quoted strings - replace with spaces
+          fixedJson = fixedJson.replace(/"([^"]*(?:\n[^"]*)*)"/g, (match) => {
+            return match.replace(/\n\s+/g, ' ').replace(/[\r\n]+/g, ' ');
+          });
+          
+          // Replace single quotes with double quotes
+          fixedJson = fixedJson.replace(/'/g, '"');
+          
+          // Fix _blank fields - more aggressive approach
+          // Find and remove entire objects that have _blank fields instead of standard fields
+          fixedJson = fixedJson.replace(/\{\s*"_blank\d+_"\s*:[^}]*\}/g, '');
+          fixedJson = fixedJson.replace(/,\s*\{\s*"_blank\d+_"/g, '');
+          
+          // Convert remaining _blank fields to "answer" for safety
+          fixedJson = fixedJson.replace(/"_blank\d+_"/g, '"answer"');
+          
+          // Fix trailing commas
+          fixedJson = fixedJson.replace(/,(\s*[\]\}])/g, '$1');
+          
+          // Fix missing commas between objects
+          fixedJson = fixedJson.replace(/\}\s*\{/g, '},{');
+          fixedJson = fixedJson.replace(/\]\s*\{/g, '],[{');
+          
+          // Fix unquoted keys
+          fixedJson = fixedJson.replace(/([{,]\s*)([a-zA-Z_]\w*)(\s*:)/g, '$1"$2"$3');
+          
+          // Ensure all bracket pairs match
+          const openBrackets = (fixedJson.match(/\[/g) || []).length;
+          const closeBrackets = (fixedJson.match(/\]/g) || []).length;
+          const openBraces = (fixedJson.match(/\{/g) || []).length;
+          const closeBraces = (fixedJson.match(/\}/g) || []).length;
+          
+          if (openBrackets > closeBrackets) {
+            fixedJson = fixedJson + ']'.repeat(openBrackets - closeBrackets);
+          }
+          if (openBraces > closeBraces) {
+            fixedJson = fixedJson + '}'.repeat(openBraces - closeBraces);
+          }
+          
+          try {
+            questionsData = JSON.parse(fixedJson);
+            console.log('✅ JSON fixed and parsed successfully');
+          } catch (secondError) {
+            console.error('Failed to parse JSON even after fixes:', secondError.message);
+            console.error('Raw response (first 1000 chars):', jsonText.substring(0, 1000));
+            console.error('Fixed response (first 1000 chars):', fixedJson.substring(0, 1000));
+            lastErrorMessage = 'AI response was not valid JSON. Please try again.';
+            retryInstruction = 'Return ONLY valid JSON array data with 10 quiz questions. No prose, no markdown.';
+            continue;
+          }
+        }
+        
+        // Ensure it's an array with the required number of questions
+        if (!Array.isArray(questionsData)) {
+          lastErrorMessage = 'AI response must be a JSON array of questions.';
+          retryInstruction = `Respond ONLY with a JSON array containing ${targetQuestionCount} question objects.`;
+          continue;
+        }
+
+        if (questionsData.length !== targetQuestionCount) {
+          lastErrorMessage = `AI must return exactly ${targetQuestionCount} questions. Received ${questionsData.length}.`;
+          retryInstruction = `You returned ${questionsData.length} questions. Regenerate and return EXACTLY ${targetQuestionCount} fully-valid questions.`;
+          continue;
+        }
+
+        try {
+          normalizedQuestions = questionsData.map((questionData, index) => normalizeAiQuestion(questionData, index));
+          break;
+        } catch (validationError) {
+          lastErrorMessage = validationError.message;
+          retryInstruction = `Validation error: ${validationError.message}. Fix all issues and return ${targetQuestionCount} valid questions.`;
         }
       }
-      
-      // Ensure it's an array with the required number of questions
-      if (!Array.isArray(questionsData)) {
-        throw new Error('AI response must be a JSON array of questions.');
-      }
 
-      if (questionsData.length !== targetQuestionCount) {
-        throw new Error(`AI must return exactly ${targetQuestionCount} questions. Received ${questionsData.length}. Please try again.`);
+      if (!normalizedQuestions) {
+        throw new Error(lastErrorMessage);
       }
-
-      const normalizedQuestions = questionsData.map((questionData, index) => normalizeAiQuestion(questionData, index));
 
       // Create questions in the quiz
       const questions = [];
