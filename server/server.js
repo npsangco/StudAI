@@ -60,6 +60,7 @@ import Achievement from "./models/Achievement.js"; // ← ADD THIS
 import UserAchievement from "./models/UserAchievement.js"; // ← ADD THIS
 import UserDailyStat from "./models/UserDailyStat.js";
 import AuditLog from "./models/AuditLog.js";
+import AIUsageStat from "./models/AIUsageStat.js";
 import { Op } from "sequelize";
 import ChatMessage from "./models/ChatMessage.js";
 
@@ -101,6 +102,15 @@ import auditRoutes from "./routes/auditRoutes.js";
 import achievementRoutes from "./routes/achievementRoutes.js"
 import adminRoutes from "./routes/adminRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import {
+    DAILY_AI_LIMITS,
+    ensureSummaryAvailable,
+    recordSummaryUsage,
+    ensureChatbotTokensAvailable,
+    estimateTokensFromMessages,
+    recordChatbotUsage,
+    getUsageSnapshot
+} from "./services/aiUsageService.js";
 
 // Import validation middleware
 import {
@@ -423,6 +433,8 @@ sequelize.authenticate()
         await initializeDefaultAchievements();
         await ChatMessage.sync();
         console.log("✅ Chatbot table ensured");
+        await AIUsageStat.sync();
+        console.log("✅ AI usage table ensured");
         await ensureChatbotForeignKey();
         
         startEmailReminders();
@@ -530,12 +542,41 @@ app.use("/api/admin", requireAdmin, auditRoutes);
 app.use("/api/admin", requireAdmin, adminRoutes);
 app.use("/api/chat", sessionLockCheck, chatRoutes);
 
+app.get("/api/ai-usage/today", sessionLockCheck, async (req, res) => {
+    try {
+        const userId = req.session?.userId;
+        if (!userId) {
+            return res.status(401).json({ error: "Not logged in" });
+        }
+
+        const snapshot = await getUsageSnapshot(userId);
+        res.json(snapshot);
+    } catch (error) {
+        console.error("Failed to fetch AI usage snapshot:", error);
+        res.status(500).json({ error: "Failed to fetch AI usage" });
+    }
+});
+
 // ----------------- OPENAI API ROUTES -----------------
 // AI Summarization endpoint
 app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
     try {
         console.log('🤖 [Server] AI Summarization request received');
         const { text, systemPrompt } = req.body;
+        const userId = req.session?.userId;
+
+        if (!userId) {
+            return res.status(401).json({ error: "Not logged in" });
+        }
+
+        const summaryQuota = await ensureSummaryAvailable(userId);
+        if (!summaryQuota.allowed) {
+            return res.status(429).json({
+                error: "Daily AI summary limit reached",
+                limits: DAILY_AI_LIMITS,
+                remaining: summaryQuota.remaining
+            });
+        }
 
         if (!text) {
             console.error('❌ [Server] No text provided in request');
@@ -600,7 +641,22 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         }
 
         console.log('✅ [Server] Summary generated successfully, length:', summary.length);
-        res.json({ summary });
+        const recordResult = await recordSummaryUsage(userId);
+
+        if (!recordResult.allowed) {
+            return res.status(429).json({
+                error: "Daily AI summary limit reached",
+                limits: DAILY_AI_LIMITS,
+                remaining: 0
+            });
+        }
+
+        const snapshot = await getUsageSnapshot(userId);
+
+        res.json({
+            summary,
+            usage: snapshot
+        });
     } catch (err) {
         console.error("Error in AI summarization:", err);
         res.status(500).json({ error: "Failed to generate summary" });
@@ -612,8 +668,9 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
     try {
         console.log('🤖 [Server] AI Chat request received');
         const { messages, noteId, fileId, userMessage } = req.body;
+        const userId = req.session?.userId;
 
-        if (!req.session || !req.session.userId) {
+        if (!userId) {
             return res.status(401).json({ error: "Not logged in" });
         }
 
@@ -680,6 +737,16 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             return res.status(500).json({ error: "OpenAI API key not configured" });
         }
 
+        const approxTokens = estimateTokensFromMessages(messages);
+        const tokenQuota = await ensureChatbotTokensAvailable(userId, approxTokens);
+        if (!tokenQuota.allowed) {
+            return res.status(429).json({
+                error: "Chatbot daily token limit reached",
+                limits: DAILY_AI_LIMITS,
+                remainingTokens: tokenQuota.remaining
+            });
+        }
+
         const APIBody = {
             model: "gpt-3.5-turbo",
             messages: messages,
@@ -722,7 +789,7 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
         let chatRecord = null;
         try {
             chatRecord = await ChatMessage.create({
-                user_id: req.session.userId,
+                user_id: userId,
                 note_id: normalizedNoteId,
                 message: latestUserMessage,
                 response: reply
@@ -735,7 +802,7 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
                 try {
                     await ChatMessage.sync();
                     chatRecord = await ChatMessage.create({
-                        user_id: req.session.userId,
+                        user_id: userId,
                         note_id: normalizedNoteId,
                         message: latestUserMessage,
                         response: reply
@@ -749,8 +816,27 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             }
         }
 
+        const totalTokens = data.usage?.total_tokens || approxTokens;
+        const usageResult = await recordChatbotUsage(userId, totalTokens);
+
+        if (!usageResult.allowed) {
+            return res.status(429).json({
+                error: "Chatbot daily token limit reached",
+                limits: DAILY_AI_LIMITS,
+                remainingTokens: 0
+            });
+        }
+
+        const snapshot = await getUsageSnapshot(userId);
+
         console.log('✅ [Server] Chat response generated successfully, length:', reply.length);
-        res.json({ reply, chat: chatRecord });
+        res.json({
+            reply,
+            chat: chatRecord,
+            remainingTokens: usageResult.remaining,
+            limits: DAILY_AI_LIMITS,
+            usage: snapshot
+        });
     } catch (err) {
         console.error("❌ [Server] Error in AI chat:", err);
         res.status(500).json({ error: "Failed to generate response" });

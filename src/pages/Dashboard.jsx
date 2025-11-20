@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import TextExtractor from '../components/TextExtractor';
 import PetBuddy from '../components/PetBuddy';
@@ -10,6 +10,7 @@ import { useToast } from '../hooks/useToast';
 import { useTutorial } from '../hooks/useTutorial';
 import { dashboardTutorialSteps } from '../config/tutorialSteps';
 import { API_URL } from '../config/api.config';
+import { aiUsageApi } from '../api/api';
 import { FileText, BookOpen, Trophy, TrendingUp, Clock, Calendar, Target, Zap } from 'lucide-react';
 
 export default function Dashboard() {
@@ -34,9 +35,30 @@ export default function Dashboard() {
     completedQuizzes: 0,
     studyStreak: 0
   });
+  const [aiUsage, setAiUsage] = useState(null);
+  const [isUsageLoading, setIsUsageLoading] = useState(true);
   
   const { toasts, removeToast, toast } = useToast();
   const { showTutorial, completeTutorial, skipTutorial } = useTutorial();
+
+  const refreshAiUsage = useCallback(async () => {
+    try {
+      const { data } = await aiUsageApi.getToday();
+      setAiUsage(data);
+    } catch (err) {
+      console.error('Failed to fetch AI usage:', err);
+    } finally {
+      setIsUsageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshAiUsage();
+  }, [refreshAiUsage]);
+
+  const summaryLimit = aiUsage?.limits?.summary ?? 1;
+  const summaryRemaining = aiUsage?.remaining?.summary ?? summaryLimit;
+  const summaryLimitReached = !isUsageLoading && summaryRemaining <= 0;
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -299,6 +321,11 @@ Please format the summary in a clear, organized manner with proper headings and 
       return;
     }
 
+    if (summaryLimitReached) {
+      toast.error("You've reached your daily AI summary limit. Try again tomorrow.");
+      return;
+    }
+
     setShowModal(true);
   };
 
@@ -310,6 +337,11 @@ Please format the summary in a clear, organized manner with proper headings and 
 
     if (!extractedContent) {
       toast.warning("Content extraction incomplete. Please wait.");
+      return;
+    }
+
+    if (summaryLimitReached) {
+      toast.error("You've reached your daily AI summary limit. Try again tomorrow.");
       return;
     }
 
@@ -350,6 +382,7 @@ Please format the summary in a clear, organized manner with proper headings and 
       );
 
       toast.success("Summary generated and saved successfully!");
+      refreshAiUsage();
       
       // Clear the uploaded files and reset state
       setUploadedFiles([]);
@@ -381,6 +414,9 @@ Please format the summary in a clear, organized manner with proper headings and 
           toast.error(`Server error: ${err.response.data.error || err.response.data.details || "Unknown error"}`);
         } else {
           toast.error(`Upload failed: ${err.response.data.error || err.message}`);
+        }
+        if (err.response.status === 429) {
+          refreshAiUsage();
         }
       } else if (err.message.includes("OpenAI")) {
         toast.error("AI summarization failed. Please check your API key and try again.");
@@ -430,6 +466,19 @@ Please format the summary in a clear, organized manner with proper headings and 
           </div>
         )}
 
+        <div className="mb-4 bg-gray-50 border border-gray-200 p-3 rounded-lg text-sm text-gray-700 flex items-center justify-between">
+          <span>Daily AI summaries: {summaryLimit}</span>
+          <span className={summaryLimitReached ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
+            {summaryLimitReached ? 'Limit reached' : `${summaryRemaining} left`}
+          </span>
+        </div>
+
+        {summaryLimitReached && (
+          <div className="mb-4 bg-red-50 border border-red-200 p-3 rounded-lg text-sm text-red-700">
+            Daily AI summary limit reached. Try again tomorrow.
+          </div>
+        )}
+
         <div className="space-y-4 mb-8">
           <label className="flex items-start space-x-3 cursor-pointer group">
             <input
@@ -471,7 +520,7 @@ Please format the summary in a clear, organized manner with proper headings and 
           </button>
           <button
             onClick={handleUploadAndGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || summaryLimitReached}
             className="flex-1 bg-indigo-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm"
           >
             Generate
@@ -636,6 +685,13 @@ Please format the summary in a clear, organized manner with proper headings and 
                 </div>
               </div>
 
+              <div className="flex items-center justify-between text-xs font-medium text-gray-600 mb-4">
+                <span>Daily AI summaries: {summaryLimit}</span>
+                <span className={summaryLimitReached ? 'text-red-600' : 'text-green-600'}>
+                  {summaryLimitReached ? 'Limit reached' : `${summaryRemaining} left today`}
+                </span>
+              </div>
+
               <div
                 className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all ${
                   dragActive
@@ -732,9 +788,9 @@ Please format the summary in a clear, organized manner with proper headings and 
               <button
                 type='button'
                 onClick={handleGenerate}
-                disabled={uploadedFiles.length === 0 || isExtracting || !extractedContent || isGenerating}
+                disabled={uploadedFiles.length === 0 || isExtracting || !extractedContent || isGenerating || summaryLimitReached}
                 className={`mt-6 w-full py-3.5 rounded-xl font-medium transition-all ${
-                  uploadedFiles.length > 0 && !isExtracting && extractedContent
+                  uploadedFiles.length > 0 && !isExtracting && extractedContent && !summaryLimitReached
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow-md'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
@@ -751,6 +807,12 @@ Please format the summary in a clear, organized manner with proper headings and 
                   'Generate Summary'
                 )}
               </button>
+
+              {summaryLimitReached && (
+                <p className="mt-3 text-sm text-red-600 text-center font-medium">
+                  Daily AI summary limit reached. Try again tomorrow.
+                </p>
+              )}
             </div>
 
             {/* Recent Activity Section */}

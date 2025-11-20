@@ -8,6 +8,7 @@ import QuizBattle from '../models/QuizBattle.js';
 import BattleParticipant from '../models/BattleParticipant.js';
 import sequelize from '../db.js';
 import { validateQuizRequest, validateTitle, validateNumericId } from '../middleware/validationMiddleware.js';
+import { ensureQuizAvailable, recordQuizUsage, DAILY_AI_LIMITS, getUsageSnapshot } from '../services/aiUsageService.js';
 
 const router = express.Router();
 
@@ -400,6 +401,15 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
     const userId = req.session.userId;
     const { noteId, noteContent, noteTitle, quizTitle, questionCount } = req.body;
 
+    const quizQuota = await ensureQuizAvailable(userId);
+    if (!quizQuota.allowed) {
+      return res.status(429).json({
+        error: 'Daily AI quiz limit reached',
+        limits: DAILY_AI_LIMITS,
+        remaining: quizQuota.remaining
+      });
+    }
+
     // Validate inputs
     if (!quizTitle || !quizTitle.trim()) {
       return res.status(400).json({ error: 'Quiz title is required' });
@@ -692,6 +702,17 @@ Generate EXACTLY in this format - no variations:
 
       console.log(`✅ AI Quiz created: ${newQuiz.quiz_id} with ${questions.length} questions`);
 
+      const recordResult = await recordQuizUsage(userId);
+      if (!recordResult.allowed) {
+        return res.status(429).json({
+          error: 'Daily AI quiz limit reached',
+          limits: DAILY_AI_LIMITS,
+          remaining: 0
+        });
+      }
+
+      const usageSnapshot = await getUsageSnapshot(userId);
+
       // Parse JSON fields in response (same as GET endpoint)
       const parsedQuestions = questions.map(q => {
         const qData = q.toJSON();
@@ -727,7 +748,8 @@ Generate EXACTLY in this format - no variations:
       res.status(201).json({
         quiz: newQuiz,
         questions: parsedQuestions,
-        message: `Successfully generated ${parsedQuestions.length} questions`
+        message: `Successfully generated ${parsedQuestions.length} questions`,
+        usage: usageSnapshot
       });
 
     } catch (aiError) {

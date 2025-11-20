@@ -196,4 +196,8 @@ export const chatApi = {
   }
 };
 
+export const aiUsageApi = {
+  getToday: () => api.get('/ai-usage/today')
+};
+
 export default api;

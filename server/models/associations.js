@@ -18,6 +18,7 @@ import PetCompanion from './PetCompanion.js';
 import PetItem from './PetItem.js';
 import UserPetItem from './UserPetItem.js';
 import ChatMessage from './ChatMessage.js';
+import AIUsageStat from './AIUsageStat.js';
 
 export function setupAssociations() {
   // ────────────────────────────────
@@ -81,6 +82,17 @@ export function setupAssociations() {
   ChatMessage.belongsTo(User, {
     foreignKey: 'user_id',
     as: 'author'
+  });
+
+  User.hasMany(AIUsageStat, {
+    foreignKey: 'user_id',
+    as: 'aiUsageStats',
+    onDelete: 'CASCADE'
+  });
+
+  AIUsageStat.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'owner'
   });
 
   // ────────────────────────────────

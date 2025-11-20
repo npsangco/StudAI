@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowLeft, Send, MessageCircle, FileText, Bot, User, Copy, ThumbsUp, ThumbsDown, MoreVertical, Menu, X } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../config/api.config';
-import { chatApi } from '../api/api';
+import { chatApi, aiUsageApi } from '../api/api';
 
 const buildIntroMessage = (note) => ({
   id: `intro-${note?.note_id || note?.id || 'default'}`,
@@ -20,6 +20,8 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState(null);
+  const [tokenUsage, setTokenUsage] = useState({ limit: 5000, remaining: 5000, used: 0 });
+  const [isTokenUsageLoading, setIsTokenUsageLoading] = useState(true);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   // Default notes if none provided
@@ -119,6 +121,29 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
       loadChatHistory(selectedNote);
     }
   }, [selectedNote, loadChatHistory]);
+
+  const fetchTokenUsage = useCallback(async () => {
+    try {
+      const { data } = await aiUsageApi.getToday();
+      const limit = data?.limits?.chatbotTokens ?? 5000;
+      const remaining = data?.remaining?.chatbotTokens ?? limit;
+      setTokenUsage({
+        limit,
+        remaining,
+        used: Math.max(limit - remaining, 0)
+      });
+    } catch (error) {
+      console.error('❌ [Chatbot] Failed to fetch AI usage snapshot:', error);
+    } finally {
+      setIsTokenUsageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTokenUsage();
+  }, [fetchTokenUsage]);
+
+  const tokenLimitReached = !isTokenUsageLoading && tokenUsage.remaining <= 0;
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -142,6 +167,11 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
 
     const noteIdentifier = normalizeId(selectedNote.id || selectedNote.note_id);
     if (!noteIdentifier) return;
+
+    if (tokenLimitReached) {
+      setHistoryError('Daily AI chatbot token limit reached. Try again tomorrow.');
+      return;
+    }
 
     const userMessage = {
       id: Date.now() + Math.random(),
@@ -195,6 +225,24 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
         { withCredentials: true }
       );
 
+      const limitsFromResponse = response.data?.limits || response.data?.usage?.limits;
+      const remainingTokensFromResponse = response.data?.remainingTokens ?? response.data?.usage?.remaining?.chatbotTokens;
+      if (remainingTokensFromResponse !== undefined || limitsFromResponse?.chatbotTokens) {
+        setTokenUsage((prev) => {
+          const limit = limitsFromResponse?.chatbotTokens ?? prev.limit;
+          const remaining = remainingTokensFromResponse !== undefined
+            ? Math.max(remainingTokensFromResponse, 0)
+            : Math.max(prev.remaining, 0);
+          return {
+            limit,
+            remaining,
+            used: Math.max(limit - remaining, 0)
+          };
+        });
+      } else {
+        fetchTokenUsage();
+      }
+
       const botReply = response.data?.reply || "Sorry, I couldn't generate a response.";
       const chatRecord = response.data?.chat;
       const botMessage = {
@@ -210,6 +258,10 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
       if (error.response) {
         console.error("❌ [Chatbot] Response status:", error.response.status);
         console.error("❌ [Chatbot] Response data:", error.response.data);
+        if (error.response.status === 429) {
+          setTokenUsage((prev) => ({ ...prev, remaining: 0, used: prev.limit }));
+          setHistoryError(error.response.data?.error || 'Daily AI chatbot token limit reached. Try again tomorrow.');
+        }
       }
       const errorMessage = {
         id: Date.now() + Math.random(),
@@ -318,7 +370,7 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Chat Header */}
-        <div className="bg-white border-b border-slate-200 p-3 sm:p-4 shadow-sm">
+      <div className="bg-white border-b border-slate-200 p-3 sm:p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               {/* Mobile menu button */}
@@ -339,18 +391,28 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <div className="hidden sm:flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 Online
               </div>
               <div className="sm:hidden w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+             <div className={`hidden sm:flex items-center gap-1 text-xs px-2 py-1 rounded-full border ${tokenLimitReached ? 'text-red-700 bg-red-50 border-red-100' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
+               <Bot className={`w-3 h-3 ${tokenLimitReached ? 'text-red-500' : 'text-purple-500'}`} />
+               {tokenUsage.remaining}/{tokenUsage.limit} tokens left
+             </div>
               <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
                 <MoreVertical className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
+      <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 text-xs sm:text-sm text-slate-600 flex items-center justify-between">
+        <span>Daily chatbot tokens: {tokenUsage.limit}</span>
+        <span className={tokenLimitReached ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
+          {tokenLimitReached ? 'Limit reached' : `${tokenUsage.remaining} left`}
+        </span>
+      </div>
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
           {historyError && (
@@ -451,9 +513,9 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
                 />
                 <button
                   onClick={handleSendMessage}
-                  disabled={!inputMessage.trim() || isTyping || isHistoryLoading}
+                  disabled={!inputMessage.trim() || isTyping || isHistoryLoading || tokenLimitReached}
                   className={`absolute right-2 sm:right-3 bottom-2 sm:bottom-3 p-2 rounded-full transition-all ${
-                    inputMessage.trim() && !isTyping && !isHistoryLoading
+                    inputMessage.trim() && !isTyping && !isHistoryLoading && !tokenLimitReached
                       ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-xl'
                       : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                   }`}
@@ -463,6 +525,9 @@ const Chatbot = ({ currentNote, notes = [], onBack }) => {
               </div>
             </div>
           </div>
+          {tokenLimitReached && (
+            <p className="text-xs text-red-600 font-semibold mt-2">Daily AI chatbot token limit reached. Try again tomorrow.</p>
+          )}
           <div className="hidden sm:flex items-center justify-between mt-2 px-1">
             <p className="text-xs text-slate-500">
               Press Enter to send, Shift + Enter for new line
