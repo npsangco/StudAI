@@ -6,6 +6,7 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
   const [pet, setPet] = useState(null);
   const [currentMessage, setCurrentMessage] = useState(null);
   const [messageKey, setMessageKey] = useState(0);
+  const [lastShownKey, setLastShownKey] = useState(null); // Track if we already showed message
 
   // Load pet data once on mount
   useEffect(() => {
@@ -75,7 +76,13 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
 
   // Show message when triggered
   useEffect(() => {
-    if (showMessage && isCorrect !== null) {
+    // Create a unique key for this answer
+    const currentKey = `${isCorrect}-${showMessage}`;
+    
+    // Only show if we haven't shown this exact message yet
+    if (showMessage && isCorrect !== null && lastShownKey !== currentKey) {
+      setLastShownKey(currentKey); // Mark as shown
+      
       // Randomly choose from correct/incorrect OR encouragement
       const useEncouragement = Math.random() < 0.15; // 15% chance for encouragement
       
@@ -102,7 +109,7 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
       
       return () => clearTimeout(timeout);
     }
-  }, [showMessage, isCorrect, motivatingMessages, onMessageShown]);
+  }, [showMessage, isCorrect, motivatingMessages, onMessageShown, lastShownKey]);
 
   // Don't render if no pet
   if (!pet) return null;
