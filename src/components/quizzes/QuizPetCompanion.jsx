@@ -37,52 +37,46 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
   // Motivating messages for quiz
   const motivatingMessages = useMemo(() => ({
     correct: [
-      "Amazing! You got it right! 🌟",
-      "Perfect! Keep it up! ⭐",
-      "Brilliant! You're on fire! 🔥",
-      "Yes! That's correct! 💯",
-      "Fantastic work! 🎉",
-      "You're crushing it! 💪",
-      "Excellent! Keep going! ✨",
-      "Nailed it! 🎯",
-      "Superb answer! 🏆",
-      "You're a star! ⭐",
+      "Amazing! You got it right!",
+      "Perfect! Keep it up!",
+      "Brilliant! You're on fire!",
+      "Yes! That's correct!",
+      "Fantastic work!",
+      "You're crushing it!",
+      "Excellent! Keep going!",
+      "Nailed it!",
+      "Superb answer!",
+      "You're a star!",
     ],
     incorrect: [
-      "Don't worry! Keep trying! 💪",
-      "You'll get the next one! 🌟",
-      "Keep going! You're learning! 📚",
-      "It's okay! Stay focused! ✨",
-      "Every mistake is a lesson! 💡",
-      "You've got this! Keep pushing! 🔥",
-      "Stay positive! Next one's yours! 🎯",
-      "Learning is a journey! 🚀",
-      "Shake it off! You can do it! 💪",
-      "Stay determined! 🌈",
+      "Don't worry! Keep trying!",
+      "You'll get the next one!",
+      "Keep going! You're learning!",
+      "It's okay! Stay focused!",
+      "Every mistake is a lesson!",
+      "You've got this! Keep pushing!",
+      "Stay positive! Next one's yours!",
+      "Learning is a journey!",
+      "Shake it off! You can do it!",
+      "Stay determined!",
     ],
     encouragement: [
-      "I believe in you! 💫",
-      "You're doing great! ✨",
-      "Keep up the good work! 🌟",
-      "I'm here with you! 📣",
-      "You've got this! 🎯",
-      "Stay focused! 👀",
-      "You're amazing! 🚀",
-      "Trust yourself! 💪",
-      "Keep going! 🏃",
-      "You can do it! ❤️",
+      "I believe in you!",
+      "You're doing great!",
+      "Keep up the good work!",
+      "I'm here with you!",
+      "You've got this!",
+      "Stay focused!",
+      "You're amazing!",
+      "Trust yourself!",
+      "Keep going!",
+      "You can do it!",
     ]
   }), []);
 
   // Show message when triggered
   useEffect(() => {
-    // Create a unique key for this answer
-    const currentKey = `${isCorrect}-${showMessage}`;
-    
-    // Only show if we haven't shown this exact message yet
-    if (showMessage && isCorrect !== null && lastShownKey !== currentKey) {
-      setLastShownKey(currentKey); // Mark as shown
-      
+    if (showMessage && isCorrect !== null) {
       // Randomly choose from correct/incorrect OR encouragement
       const useEncouragement = Math.random() < 0.15; // 15% chance for encouragement
       
@@ -109,7 +103,14 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
       
       return () => clearTimeout(timeout);
     }
-  }, [showMessage, isCorrect, motivatingMessages, onMessageShown, lastShownKey]);
+  }, [showMessage, isCorrect, motivatingMessages, onMessageShown]);
+  
+  // Reset tracking when showMessage becomes false (new question)
+  useEffect(() => {
+    if (!showMessage) {
+      setLastShownKey(null);
+    }
+  }, [showMessage]);
 
   // Don't render if no pet
   if (!pet) return null;
@@ -138,21 +139,21 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
 
   return (
     <div 
-      className="fixed bottom-6 right-6 z-50 flex flex-col items-end pointer-events-none"
+      className="fixed md:bottom-6 md:right-6 bottom-4 left-1/2 md:left-auto -translate-x-1/2 md:translate-x-0 z-50 flex flex-col items-center md:items-end pointer-events-none"
       style={{ maxWidth: '320px' }}
     >
       {/* Speech Bubble - Only show when there's a message */}
       {currentMessage && (
         <div 
           key={messageKey}
-          className={`relative mb-3 border-2 rounded-2xl px-4 py-3 shadow-lg animate-bounce-in ${bubbleColor}`}
+          className={`relative mb-2 border-2 rounded-2xl px-3 py-2 shadow-lg animate-bounce-in ${bubbleColor}`}
         >
-          <p className="text-sm font-medium text-gray-800 text-center">
+          <p className="text-xs font-medium text-gray-800 text-center">
             {currentMessage}
           </p>
           {/* Speech bubble tail */}
-          <div className={`absolute -bottom-2 right-12 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent ${tailColor}`}></div>
-          <div className={`absolute -bottom-1.5 right-12 w-0 h-0 border-l-7 border-r-7 border-t-7 border-l-transparent border-r-transparent ${tailFillColor}`}></div>
+          <div className={`absolute -bottom-2 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent ${tailColor}`}></div>
+          <div className={`absolute -bottom-1.5 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-0 h-0 border-l-5 border-r-5 border-t-5 border-l-transparent border-r-transparent ${tailFillColor}`}></div>
         </div>
       )}
 
@@ -161,7 +162,7 @@ const QuizPetCompanion = ({ isCorrect, showMessage, onMessageShown }) => {
         <img 
           src={petImage} 
           alt={`${pet.pet_name}`}
-          className="w-32 h-32 object-contain drop-shadow-lg"
+          className="w-[54px] h-[54px] object-contain drop-shadow-lg"
           loading="lazy"
         />
       </div>
