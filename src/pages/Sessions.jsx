@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Video, LogOut, Clock, Copy, Check, RefreshCw, Lock, Globe, Trash2, Eye, EyeOff } from 'lucide-react';
 import ToastContainer from '../components/ToastContainer';
+import AppLoader from '../components/AppLoader';
 import { useToast } from '../hooks/useToast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useConfirm } from '../hooks/useConfirm';
@@ -17,6 +18,7 @@ const Sessions = () => {
   const [mySessions, setMySessions] = useState([]);
   const [publicSessions, setPublicSessions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [copiedUrl, setCopiedUrl] = useState('');
@@ -42,20 +44,27 @@ const Sessions = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const zoomConnected = urlParams.get('zoom_connected');
     const error = urlParams.get('error');
-    
+
     if (zoomConnected) {
       toast.success('Successfully connected to Zoom!');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-    
+
     if (error) {
       toast.error(`Zoom connection failed: ${error}`);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    checkUserAndZoomStatus();
-    loadMySessions();
-    loadPublicSessions();
+    const loadInitialData = async () => {
+      await Promise.all([
+        checkUserAndZoomStatus(),
+        loadMySessions(),
+        loadPublicSessions()
+      ]);
+      setInitialLoading(false);
+    };
+
+    loadInitialData();
   }, []);
 
   const checkUserAndZoomStatus = async () => {
@@ -433,6 +442,10 @@ const Sessions = () => {
         </div>
       </div>
     );
+  }
+
+  if (initialLoading) {
+    return <AppLoader message="Loading Sessions..." />;
   }
 
   return (
