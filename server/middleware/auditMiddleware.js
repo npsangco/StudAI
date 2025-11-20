@@ -85,6 +85,13 @@ const actionMap = {
 
     // === ACHIEVEMENTS ===
     "POST /api/achievements/equip": { action: "Equip Achievement", target: "Achievement" },
+
+    // === ADMIN ACTIONS ===
+    "POST /api/admin/users/:userId/lock": { action: "Lock User", target: "User" },
+    "POST /api/admin/users/:userId/unlock": { action: "Unlock User", target: "User" },
+    "DELETE /api/admin/quizzes/:quizId": { action: "Delete Quiz (Admin)", target: "Quiz" },
+    "DELETE /api/admin/questions/:questionId": { action: "Delete Question (Admin)", target: "Quiz Question" },
+    "PUT /api/admin/sessions/:sessionId/end": { action: "End Study Session (Admin)", target: "Study Session" },
 };
 
 export async function auditMiddleware(req, res, next) {
@@ -95,9 +102,8 @@ export async function auditMiddleware(req, res, next) {
             const key = `${req.method} ${req.baseUrl}${req.route?.path}`;
             const mapping = actionMap[key];
 
-            // only save successful actions with mappings
             if (res.statusCode < 400 && mapping) {
-                const record_id = req.params?.id || req.params?.gamePin || req.body?.id || null;
+                const record_id = req.params?.id || req.params?.userId || req.params?.quizId || req.params?.questionId || req.params?.sessionId || req.params?.gamePin || req.body?.id || null;
 
                 await AuditLog.create({
                     user_id,

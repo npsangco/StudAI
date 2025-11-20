@@ -11,16 +11,6 @@ import Question from "../models/Question.js"
 
 const router = express.Router();
 
-// Helper function to create admin audit log
-const createAdminLog = async (action, tableName, recordId, adminUserId) => {
-    await AuditLog.create({
-        user_id: adminUserId,
-        action: action,
-        table_name: tableName,
-        record_id: recordId,
-    });
-};
-
 router.get("/users", async (req, res) => {
     try {
         const users = await User.findAll({
@@ -96,8 +86,6 @@ router.post("/users/:userId/lock", async (req, res) => {
             { where: { user_id: userId } }
         );
 
-        await createAdminLog("LOCK_USER", "User", userId, req.user?.user_id);
-
         res.json({ message: "User locked successfully" });
     } catch (error) {
         console.error("Error locking user:", error);
@@ -114,8 +102,6 @@ router.post("/users/:userId/unlock", async (req, res) => {
             { status: "active" },
             { where: { user_id: userId } }
         );
-
-        await createAdminLog("UNLOCK_USER", "User", userId, req.user?.user_id);
 
         res.json({ message: "User unlocked successfully" });
     } catch (error) {
@@ -186,8 +172,6 @@ router.delete("/quizzes/:quizId", async (req, res) => {
             where: { quiz_id: quizId }
         });
 
-        await createAdminLog("DELETE_QUIZ", "Quiz", quizId, req.user?.user_id);
-
         res.json({ message: "Quiz deleted successfully" });
     } catch (error) {
         console.error("Error deleting quiz:", error);
@@ -235,8 +219,6 @@ router.delete("/questions/:questionId", async (req, res) => {
             where: { quiz_id: quizId }
         });
 
-        await createAdminLog("DELETE_QUESTION", "Question", questionId, req.user?.user_id);
-
         res.json({ success: true, message: "Question deleted successfully" });
     } catch (error) {
         console.error("Error deleting question:", error);
@@ -262,8 +244,7 @@ router.get("/sessions", async (req, res) => {
         const formattedSessions = await Promise.all(sessions.map(async (session) => {
             const sessionData = session.toJSON();
 
-            // Count participants (you'll need to implement this based on your participant tracking)
-            // This is a placeholder - adjust based on your actual participant model
+            // Count participants
             const participantCount = await sequelize.query(
                 `SELECT COUNT(DISTINCT user_id) as count 
                  FROM session_participants 
@@ -335,12 +316,10 @@ router.put("/sessions/:sessionId/end", async (req, res) => {
         await Session.update(
             {
                 status: "ended",
-                scheduled_end: new Date() // Set end time to now
+                scheduled_end: new Date()
             },
             { where: { session_id: sessionId } }
         );
-
-        await createAdminLog("END_SESSION", "Session", sessionId, req.user?.user_id);
 
         res.json({ message: "Session ended successfully" });
     } catch (error) {
@@ -354,7 +333,7 @@ router.get("/stats", async (req, res) => {
     try {
         const totalUsers = await User.count();
         const totalQuizzes = await Quiz.count();
-        const totalNotes = await Note.count(); // make sure Note model is imported
+        const totalNotes = await Note.count();
         const activeSessions = await Session.count({ where: { status: "Active" } });
 
         res.json({
@@ -438,6 +417,5 @@ router.get("/recent-sessions", async (req, res) => {
         res.status(500).json({ error: "Failed to fetch recent sessions" });
     }
 });
-
 
 export default router;
