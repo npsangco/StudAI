@@ -44,6 +44,7 @@ import cors from "cors";
 
 // 🗄️ Database + Models
 import sequelize from "./db.js";
+import { setupAssociations } from "./models/associations.js";
 import User from "./models/User.js";
 import PendingUser from "./models/PendingUser.js";
 import File from "./models/File.js";
@@ -2068,6 +2069,9 @@ app.use((err, req, res, next) => {
         method: req.method
     });
 });
+
+// ----------------- SETUP ASSOCIATIONS -----------------
+setupAssociations();
 
 // ----------------- START SERVER -----------------
 app.listen(PORT, () => {

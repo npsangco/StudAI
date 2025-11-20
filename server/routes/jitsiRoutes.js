@@ -73,32 +73,42 @@ router.post('/sessions', requireAuth, async (req, res) => {
 router.get('/sessions/my', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
+    console.log('Fetching sessions for user:', userId);
 
     const sessions = await JitsiSession.findAll({
       where: { user_id: userId },
-      order: [['start_time', 'DESC']],
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['user_id', 'username', 'email']
-      }]
+      order: [['start_time', 'DESC']]
+    });
+
+    console.log(`Found ${sessions.length} sessions for user ${userId}`);
+
+    // Get user info separately to avoid association issues
+    const user = await User.findByPk(userId, {
+      attributes: ['user_id', 'username', 'email']
     });
 
     const sessionsWithUrl = sessions.map(session => ({
       ...session.toJSON(),
-      jitsi_url: `https://meet.jit.si/${session.room_id}`
+      jitsi_url: `https://meet.jit.si/${session.room_id}`,
+      creator: user ? {
+        user_id: user.user_id,
+        username: user.username,
+        email: user.email
+      } : null
     }));
 
     res.json({ sessions: sessionsWithUrl });
   } catch (err) {
     console.error('Error fetching user sessions:', err);
-    res.status(500).json({ error: 'Failed to fetch sessions' });
+    res.status(500).json({ error: 'Failed to fetch sessions', details: err.message });
   }
 });
 
 // Get public sessions
 router.get('/sessions/public', requireAuth, async (req, res) => {
   try {
+    console.log('Fetching public sessions...');
+    
     const sessions = await JitsiSession.findAll({
       where: {
         is_private: false,
@@ -107,25 +117,33 @@ router.get('/sessions/public', requireAuth, async (req, res) => {
           [Op.in]: ['scheduled', 'active']
         }
       },
-      order: [['start_time', 'ASC']],
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['user_id', 'username', 'email']
-      }]
+      order: [['start_time', 'ASC']]
     });
 
-    const sessionsWithUrl = sessions.map(session => ({
-      ...session.toJSON(),
-      jitsi_url: `https://meet.jit.si/${session.room_id}`,
-      // Hide password from public view
-      session_password: session.session_password ? '••••••••' : null
+    console.log(`Found ${sessions.length} public sessions`);
+
+    // Get creators separately
+    const sessionsWithUrl = await Promise.all(sessions.map(async (session) => {
+      const creator = await User.findByPk(session.user_id, {
+        attributes: ['user_id', 'username', 'email']
+      });
+
+      return {
+        ...session.toJSON(),
+        jitsi_url: `https://meet.jit.si/${session.room_id}`,
+        session_password: session.session_password ? '••••••••' : null,
+        creator: creator ? {
+          user_id: creator.user_id,
+          username: creator.username,
+          email: creator.email
+        } : null
+      };
     }));
 
     res.json({ sessions: sessionsWithUrl });
   } catch (err) {
     console.error('Error fetching public sessions:', err);
-    res.status(500).json({ error: 'Failed to fetch public sessions' });
+    res.status(500).json({ error: 'Failed to fetch public sessions', details: err.message });
   }
 });
 

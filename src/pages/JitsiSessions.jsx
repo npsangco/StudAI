@@ -52,10 +52,16 @@ const JitsiSessions = () => {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('My Sessions Response:', data);
         setMySessions(data.sessions || []);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to load my sessions:', response.status, errorData);
+        toast.error('Failed to load your sessions');
       }
     } catch (err) {
       console.error('Failed to load sessions:', err);
+      toast.error('Error loading sessions');
     }
   };
 
@@ -67,7 +73,11 @@ const JitsiSessions = () => {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Public Sessions Response:', data);
         setPublicSessions(data.sessions || []);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to load public sessions:', response.status, errorData);
       }
     } catch (err) {
       console.error('Failed to load public sessions:', err);
@@ -99,7 +109,12 @@ const JitsiSessions = () => {
 
       if (response.ok) {
         const data = await response.json();
-        toast.success('Session created! It will be visible to others in 1 minute.');
+        toast.success('Session created! Opening meeting room...');
+        
+        // Open the meeting link in a new tab
+        if (data.session && data.session.jitsi_url) {
+          window.open(data.session.jitsi_url, '_blank');
+        }
         
         setSessionForm({
           topic: '',
@@ -109,6 +124,8 @@ const JitsiSessions = () => {
           session_password: ''
         });
 
+        // Switch to My Sessions tab and reload
+        setActiveTab('my-sessions');
         await loadMySessions();
         
         // Show publishing delay message
