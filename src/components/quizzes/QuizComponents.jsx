@@ -190,11 +190,9 @@ export const QuestionCard = ({
         <textarea
           value={question.question}
           onChange={(e) => onUpdateQuestion(question.id, 'question', e.target.value)}
-          maxLength={TEXT_LIMITS.QUESTION.maximum}
           className="w-full p-3 border-2 border-gray-200 rounded-lg text-base resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           rows="3"
           placeholder="Enter your question here..."
-          title={`Max ${TEXT_LIMITS.QUESTION.maximum} characters`}
         />
       </div>
 

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Plus, X, Check, Info, Link } from 'lucide-react';
-import { TEXT_LIMITS } from './utils/constants';
 
 // Multiple Choice Question Component
 export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateChoice, onAddChoice }) => {
@@ -85,12 +84,10 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
                     onUpdateQuestion(question.id, 'correctAnswer', newValue);
                   }
                 }}
-                maxLength={TEXT_LIMITS.CHOICE.maximum}
                 className={`flex-1 bg-transparent border-0 text-xs sm:text-sm focus:outline-none focus:ring-0 ${
                   isCorrect ? 'text-green-900 font-medium placeholder-green-300' : 'text-gray-800 placeholder-gray-400'
                 }`}
                 placeholder={`Option ${choiceIndex + 1}`}
-                title={`Max ${TEXT_LIMITS.CHOICE.maximum} characters`}
               />
 
               {/* Remove Button */}
@@ -138,10 +135,8 @@ export const FillInBlanksQuestion = ({ question, onUpdateQuestion }) => (
       type="text"
       value={question.answer || ''}
       onChange={(e) => onUpdateQuestion(question.id, 'answer', e.target.value)}
-      maxLength={TEXT_LIMITS.FILL_ANSWER.maximum}
       className="w-full px-2 sm:px-3 py-2 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
       placeholder="Correct answer"
-      title={`Max ${TEXT_LIMITS.FILL_ANSWER.maximum} characters`}
     />
   </div>
 );
@@ -201,10 +196,8 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
                 type="text"
                 value={pair.left || ''}
                 onChange={(e) => onUpdateMatchingPair(question.id, index, 'left', e.target.value)}
-                maxLength={TEXT_LIMITS.MATCHING_ITEM.maximum}
                 className="w-full p-2 sm:p-3 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder={`Left item ${index + 1}`}
-                title={`Max ${TEXT_LIMITS.MATCHING_ITEM.maximum} characters`}
               />
             </div>
           ))}
@@ -218,10 +211,8 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
                 type="text"
                 value={pair.right || ''}
                 onChange={(e) => onUpdateMatchingPair(question.id, index, 'right', e.target.value)}
-                maxLength={TEXT_LIMITS.MATCHING_ITEM.maximum}
                 className="flex-1 p-2 sm:p-3 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder={`Right item ${index + 1}`}
-                title={`Max ${TEXT_LIMITS.MATCHING_ITEM.maximum} characters`}
               />
               {pairs.length > 1 && (
                 <button
