@@ -146,12 +146,44 @@
 }
 
 /* ================================
+   MOBILE PERFORMANCE OPTIMIZATIONS
+   ================================ */
+@media (max-width: 640px) {
+  /* Reduce animation complexity on mobile */
+  .animate-float-shard {
+    animation-duration: 8s !important;
+  }
+
+  .animate-gradient-shift {
+    animation: none;
+  }
+
+  /* Simplify backdrop blur on mobile for better performance */
+  .backdrop-blur-2xl {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .backdrop-blur-xl {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .backdrop-blur-lg {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}
+
+/* ================================
    ACCESSIBILITY
    ================================ */
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse-timer,
   .progress-bar::after,
-  .star-pop {
+  .star-pop,
+  .animate-float-shard,
+  .animate-gradient-shift {
     animation: none !important;
   }
 }
@@ -213,6 +245,59 @@
 .btn-branded-yellow:not(:disabled):hover {
   background: linear-gradient(to right, #FFE500, #FFD000, #FFA700);
   box-shadow: 0 20px 25px -5px rgba(255, 219, 0, 0.4);
+}
+
+/* ================================
+   CUSTOM SCROLLBAR STYLING
+   ================================ */
+
+/* Custom scrollbar for question text */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 219, 0, 0.5) rgba(255, 255, 255, 0.2);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 219, 0, 0.5);
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 219, 0, 0.7);
+}
+
+/* Custom scrollbar for choice text */
+.custom-scrollbar-choice {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.4) rgba(255, 255, 255, 0.2);
+}
+
+.custom-scrollbar-choice::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar-choice::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.custom-scrollbar-choice::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+  border-radius: 8px;
+}
+
+.custom-scrollbar-choice::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
 }
 
 /* ================================

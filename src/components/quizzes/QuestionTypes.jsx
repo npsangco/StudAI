@@ -516,9 +516,9 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4">
+    <div className="max-w-full sm:max-w-3xl lg:max-w-5xl mx-auto px-2 sm:px-4">
       {/* OVERLAPPING BADGE */}
-      <div className="relative">
+      <div className="relative mt-4 sm:mt-6">
         {/* Question Type Badge */}
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
           <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${config.color} text-white font-bold text-sm shadow-lg`}>
@@ -529,8 +529,8 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
         {/* Question Card - Frosted Glass Layers */}
         <div className="relative">
-          {/* Floating glass shards orbiting the card */}
-          <div className="absolute inset-0 pointer-events-none overflow-visible">
+          {/* Floating glass shards orbiting the card - Reduced on mobile for performance */}
+          <div className="absolute inset-0 pointer-events-none overflow-visible hidden sm:block">
             {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
               <div
                 key={i}
@@ -544,6 +544,25 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                   transform: `rotate(${i * 45}deg)`,
                   boxShadow: '0 0 12px rgba(255, 219, 0, 0.6)',
                   opacity: 0.6
+                }}
+              />
+            ))}
+          </div>
+          {/* Simplified mobile shards - Only 3 elements */}
+          <div className="absolute inset-0 pointer-events-none overflow-visible sm:hidden">
+            {[0, 2, 5].map((i) => (
+              <div
+                key={i}
+                className="absolute w-2 h-2 rounded-sm animate-float-shard"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 219, 0, 0.6), rgba(99, 102, 241, 0.4))',
+                  left: `${10 + i * 15}%`,
+                  top: i % 2 === 0 ? '-15px' : 'calc(100% + 15px)',
+                  animationDelay: `${i * 0.8}s`,
+                  animationDuration: `${6 + (i % 2)}s`,
+                  transform: `rotate(${i * 60}deg)`,
+                  boxShadow: '0 0 8px rgba(255, 219, 0, 0.4)',
+                  opacity: 0.5
                 }}
               />
             ))}
@@ -566,34 +585,39 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
           }} />
 
           {/* Glass Layer 3 - Front layer (main content) */}
-          <div className="relative rounded-3xl backdrop-blur-lg bg-white/60 border-2 border-white/70 p-8 sm:p-10" style={{
+          <div className="relative rounded-2xl sm:rounded-3xl backdrop-blur-lg bg-white/60 border-2 border-white/70 p-5 sm:p-8 lg:p-10" style={{
             boxShadow: '0 25px 50px rgba(255, 219, 0, 0.25), 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
           }}>
             {/* Top glass highlight */}
-            <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-3xl pointer-events-none" />
+            <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-2xl sm:rounded-t-3xl pointer-events-none" />
 
-            {/* Question Text - sits between glass layers */}
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight relative z-10 text-center" style={{
-              textShadow: '0 1px 2px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.1)'
-            }}>
-              {question.question}
-            </h2>
+            {/* Question Text - sits between glass layers with overflow handling */}
+            <div className="max-h-[200px] sm:max-h-[300px] lg:max-h-[400px] overflow-y-auto custom-scrollbar">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-snug sm:leading-tight relative z-10 text-center break-words" style={{
+                textShadow: '0 1px 2px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.1)',
+                overflowWrap: 'break-word',
+                wordWrap: 'break-word',
+                hyphens: 'auto'
+              }}>
+                {question.question}
+              </h2>
+            </div>
           </div>
         </div>
       </div>
-        
+
       {!isSubmitted ? (
-        <div className="space-y-4">
+        <div className="mt-6 sm:mt-8 lg:mt-10 space-y-3 sm:space-y-4">
           {/* Instructions */}
-          <p className="text-base sm:text-lg text-black drop-shadow-sm px-2 font-bold text-center">
+          <p className="text-sm sm:text-base lg:text-lg text-black drop-shadow-sm px-2 font-bold text-center">
             Drag items from one column and drop them on matching items in the other column
           </p>
 
           {/* Matching Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
             {/* Left Column */}
-            <div className="space-y-3">
-              <h3 className="text-lg sm:text-xl font-bold text-black drop-shadow-sm text-center px-2">
+            <div className="space-y-2 sm:space-y-3">
+              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-black drop-shadow-sm text-center px-2">
                 Column A
               </h3>
               {leftItems.map((item, index) => {
@@ -601,7 +625,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                 const matched = isMatched(item, 'left');
                 const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'left';
                 const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'left' && draggedItem?.side !== 'left';
-                
+
                 return (
                   <div
                     key={index}
@@ -618,11 +642,13 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                     onTouchEnd={(e) => handleTouchEnd(e, item, 'left')}
                     onClick={() => matched && handleUnmatch(item, 'left')}
                     className={`
-                      bg-white/30 backdrop-blur-md border-2 rounded-2xl p-4 sm:p-5
-                      font-semibold text-base sm:text-lg
+                      bg-white/30 backdrop-blur-md border-2 rounded-xl sm:rounded-2xl
+                      p-3 sm:p-4 lg:p-5 min-h-[56px] sm:min-h-[64px] max-h-[120px]
+                      overflow-y-auto custom-scrollbar-choice
+                      font-semibold text-sm sm:text-base lg:text-lg leading-snug
                       transition-all duration-300 transform cursor-grab active:cursor-grabbing
                       hover:scale-102 hover:-translate-y-1 hover:shadow-xl hover:bg-white/40
-                      touch-none select-none
+                      touch-none select-none break-words
                       ${matched ? 'border-2' : 'border-white/40 hover:border-white/60'}
                       ${isDraggedItem ? 'opacity-50 scale-95' : ''}
                       ${isDropZone ? 'border-yellow-400 bg-yellow-400/30 scale-105' : ''}
@@ -632,8 +658,15 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                     style={matched ? {
                       backgroundColor: match.color.bg,
                       borderColor: match.color.border,
-                      color: match.color.text
-                    } : {}}
+                      color: match.color.text,
+                      overflowWrap: 'break-word',
+                      wordWrap: 'break-word',
+                      hyphens: 'auto'
+                    } : {
+                      overflowWrap: 'break-word',
+                      wordWrap: 'break-word',
+                      hyphens: 'auto'
+                    }}
                   >
                     {item}
                   </div>
@@ -642,8 +675,8 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
             </div>
 
             {/* Right Column */}
-            <div className="space-y-3">
-              <h3 className="text-lg sm:text-xl font-bold text-black drop-shadow-sm text-center px-2">
+            <div className="space-y-2 sm:space-y-3">
+              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-black drop-shadow-sm text-center px-2">
                 Column B
               </h3>
               {rightItems.map((item, index) => {
@@ -651,7 +684,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                 const matched = isMatched(item, 'right');
                 const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'right';
                 const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'right' && draggedItem?.side !== 'right';
-                
+
                 return (
                   <div
                     key={index}
@@ -668,11 +701,13 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                     onTouchEnd={(e) => handleTouchEnd(e, item, 'right')}
                     onClick={() => matched && handleUnmatch(item, 'right')}
                     className={`
-                      bg-white/30 backdrop-blur-md border-2 rounded-2xl p-4 sm:p-5
-                      font-semibold text-base sm:text-lg
+                      bg-white/30 backdrop-blur-md border-2 rounded-xl sm:rounded-2xl
+                      p-3 sm:p-4 lg:p-5 min-h-[56px] sm:min-h-[64px] max-h-[120px]
+                      overflow-y-auto custom-scrollbar-choice
+                      font-semibold text-sm sm:text-base lg:text-lg leading-snug
                       transition-all duration-300 transform cursor-grab active:cursor-grabbing
                       hover:scale-102 hover:-translate-y-1 hover:shadow-xl hover:bg-white/40
-                      touch-none select-none
+                      touch-none select-none break-words
                       ${matched ? 'border-2' : 'border-white/40 hover:border-white/60'}
                       ${isDraggedItem ? 'opacity-50 scale-95' : ''}
                       ${isDropZone ? 'border-yellow-400 bg-yellow-400/30 scale-105' : ''}
@@ -682,8 +717,15 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                     style={matched ? {
                       backgroundColor: match.color.bg,
                       borderColor: match.color.border,
-                      color: match.color.text
-                    } : {}}
+                      color: match.color.text,
+                      overflowWrap: 'break-word',
+                      wordWrap: 'break-word',
+                      hyphens: 'auto'
+                    } : {
+                      overflowWrap: 'break-word',
+                      wordWrap: 'break-word',
+                      hyphens: 'auto'
+                    }}
                   >
                     {item}
                   </div>
@@ -693,15 +735,16 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-center pt-4">
+          <div className="flex justify-center pt-3 sm:pt-4">
             <button
               onClick={handleSubmit}
               disabled={!canSubmit || isPaused}
               className="
                 btn-branded-yellow
                 disabled:bg-white/20
-                text-black font-bold text-lg sm:text-xl px-10 sm:px-12 py-4 sm:py-5
-                rounded-2xl shadow-xl hover:shadow-2xl
+                text-black font-bold text-base sm:text-lg lg:text-xl
+                px-8 sm:px-10 lg:px-12 py-3 sm:py-4 lg:py-5
+                rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl
                 transition-all duration-300 transform hover:scale-105
                 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:text-black/50
                 border-2 border-white/40
