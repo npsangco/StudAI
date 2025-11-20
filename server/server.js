@@ -1798,18 +1798,40 @@ app.post("/api/generate-summary", async (req, res) => {
             return res.status(503).json({ error: "Notes feature not available" });
         }
 
-        const { content, title, restrictions, metadata } = req.body;
-        console.log('📝 [Server] Request data:', { title, contentLength: content?.length, restrictions, metadata });
+        const { content, title, restrictions, metadata, file_id, fileId } = req.body;
+        console.log('📝 [Server] Request data:', { title, contentLength: content?.length, restrictions, metadata, file_id: file_id ?? fileId });
 
         if (!content || !title) {
             console.error('❌ [Server] Missing required fields');
             return res.status(400).json({ error: "Missing required fields" });
         }
 
+        let attachedFileId = null;
+        const rawFileId = file_id ?? fileId;
+        if (rawFileId !== undefined && rawFileId !== null) {
+            const parsedFileId = parseInt(rawFileId, 10);
+            if (Number.isNaN(parsedFileId)) {
+                return res.status(400).json({ error: "file_id must be numeric" });
+            }
+
+            const uploadedFile = await File.findOne({
+                where: {
+                    file_id: parsedFileId,
+                    user_id: userId
+                }
+            });
+
+            if (!uploadedFile) {
+                return res.status(404).json({ error: "Uploaded file not found for this user" });
+            }
+
+            attachedFileId = parsedFileId;
+        }
+
         console.log('📝 [Server] Creating note in database...');
         const newNote = await Note.create({
             user_id: userId,
-            file_id: null,
+            file_id: attachedFileId,
             title: title,
             content: content
         });
