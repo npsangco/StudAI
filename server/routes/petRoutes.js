@@ -91,9 +91,15 @@ async function applyStatDecay(pet) {
   // Energy replenishment (same calculation as decay - uses minutes)
   let energyReplenish = 0;
   if (pet.last_updated) {
-    const minutesElapsed = (now - new Date(pet.last_updated)) / (1000 * 60);
+    const lastUpdated = new Date(pet.last_updated);
+    const minutesElapsed = (now - lastUpdated) / (1000 * 60);
     const replenishPeriods = Math.floor(minutesElapsed / CONFIG.stats.energy.interval);
     energyReplenish = replenishPeriods * CONFIG.stats.energy.replenish;
+    
+    console.log(`[Pet Energy] User ${pet.user_id}: ${minutesElapsed.toFixed(1)} min elapsed, ${replenishPeriods} periods, +${energyReplenish} energy`);
+  } else {
+    // If last_updated is null, set it now
+    console.log(`[Pet Energy] User ${pet.user_id}: last_updated was null, initializing`);
   }
 
   const updatedStats = {
