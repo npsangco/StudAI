@@ -19,7 +19,7 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
     };
 
     const renderQuestionContent = (question) => {
-        // Parse JSON fields if they're strings
+
         const choices = typeof question.choices === 'string'
             ? JSON.parse(question.choices)
             : question.choices;
