@@ -171,7 +171,7 @@ export function setupAssociations() {
 
   SharedNote.belongsTo(Note, {
     foreignKey: 'note_id',
-    as: 'note',
+    as: 'sharedNote',
     onDelete: 'CASCADE'
   });
 

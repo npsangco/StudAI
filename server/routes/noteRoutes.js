@@ -566,7 +566,7 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
       },
       include: [{
         model: Note,
-        as: 'note'
+        as: 'sharedNote'
       }]
     });
 
@@ -574,7 +574,7 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Shared note not found or expired' });
     }
 
-    const originalNote = sharedNote.note;
+    const originalNote = sharedNote.sharedNote;
 
     const existingNote = await Note.findOne({
       where: {
