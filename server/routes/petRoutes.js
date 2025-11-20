@@ -8,6 +8,7 @@ import User from "../models/User.js";
 import UserDailyStat from "../models/UserDailyStat.js";
 import rateLimit from "express-rate-limit";
 import NodeCache from "node-cache";
+import { getPhilippinesTime } from "../utils/timezone.js";
 
 const router = express.Router();
 
@@ -76,13 +77,20 @@ function calculateDecay(lastActionTime, currentTime, statType) {
   
   const config = CONFIG.stats[statType];
   const minutesElapsed = (currentTime - new Date(lastActionTime)) / (1000 * 60);
+  
+  // Prevent negative decay if timestamps are in the future (timezone issues)
+  if (minutesElapsed < 0) {
+    console.warn(`[Pet Decay] Negative time elapsed for ${statType}: ${minutesElapsed.toFixed(1)} minutes`);
+    return 0;
+  }
+  
   const decayPeriods = Math.floor(minutesElapsed / config.interval);
   
   return decayPeriods * config.decay;
 }
 
 async function applyStatDecay(pet) {
-  const now = new Date();
+  const now = getPhilippinesTime();
 
   const hungerDecay = calculateDecay(pet.last_fed, now, 'hunger');
   const happinessDecay = calculateDecay(pet.last_played, now, 'happiness');
@@ -93,10 +101,17 @@ async function applyStatDecay(pet) {
   if (pet.last_updated) {
     const lastUpdated = new Date(pet.last_updated);
     const minutesElapsed = (now - lastUpdated) / (1000 * 60);
-    const replenishPeriods = Math.floor(minutesElapsed / CONFIG.stats.energy.interval);
-    energyReplenish = replenishPeriods * CONFIG.stats.energy.replenish;
     
-    console.log(`[Pet Energy] User ${pet.user_id}: ${minutesElapsed.toFixed(1)} min elapsed, ${replenishPeriods} periods, +${energyReplenish} energy`);
+    // Prevent negative replenishment if timestamps are in the future
+    if (minutesElapsed < 0) {
+      console.warn(`[Pet Energy] User ${pet.user_id}: Negative time elapsed: ${minutesElapsed.toFixed(1)} minutes`);
+      energyReplenish = 0;
+    } else {
+      const replenishPeriods = Math.floor(minutesElapsed / CONFIG.stats.energy.interval);
+      energyReplenish = replenishPeriods * CONFIG.stats.energy.replenish;
+      
+      console.log(`[Pet Energy] User ${pet.user_id}: ${minutesElapsed.toFixed(1)} min elapsed, ${replenishPeriods} periods, +${energyReplenish} energy`);
+    }
   } else {
     // If last_updated is null, set it now
     console.log(`[Pet Energy] User ${pet.user_id}: last_updated was null, initializing`);
@@ -253,7 +268,7 @@ function clearUserCache(userId) {
 // ============================================
 
 async function logDailyStats(userId, activityType, points, exp) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getPhilippinesTime().toISOString().split('T')[0];
   
   // Use findOrCreate to ensure we only have one record per user per day
   const [dailyStat, created] = await UserDailyStat.findOrCreate({
@@ -380,7 +395,7 @@ router.post("/", generalLimiter, requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Pet name cannot exceed 20 characters." });
     }
 
-    const now = new Date();
+    const now = getPhilippinesTime();
     const newPet = await PetCompanion.create({
       user_id: userId,
       pet_type: petType,
@@ -425,7 +440,7 @@ router.put("/name", generalLimiter, requireAuth, async (req, res) => {
 
     await pet.update({
       pet_name: petName.trim(),
-      last_updated: new Date(),
+      last_updated: getPhilippinesTime(),
     });
 
     clearUserCache(userId);
@@ -448,7 +463,7 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
 
     pet = await applyStatDecay(pet);
 
-    const now = new Date();
+    const now = getPhilippinesTime();
     const updates = { last_updated: now };
     let totalExpGain = 0;
     let itemsUsed = [];
