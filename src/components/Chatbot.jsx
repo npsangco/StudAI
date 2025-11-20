@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, Send, MessageCircle, Bot, User, Copy, ThumbsUp, ThumbsDown, MoreVertical, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Send, MessageCircle, Bot, User, Copy, AlertCircle, Sparkles } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../config/api.config';
 import { chatApi, aiUsageApi } from '../api/api';
@@ -8,11 +8,11 @@ const buildIntroMessage = (note) => {
   const noteContent = note?.content || '';
   const wordCount = noteContent.trim().split(/\s+/).filter(w => w.length > 0).length;
   
-  if (!noteContent || wordCount < 10) {
+  if (!noteContent || wordCount < 30) {
     return {
       id: `intro-${note?.note_id || note?.id || 'default'}`,
       type: 'bot',
-      content: `⚠️ This note "${note?.title || 'Untitled Note'}" doesn't have enough content for me to assist with. Please add at least 10 words to your note before using the AI assistant.`,
+      content: `⚠️ This note "${note?.title || 'Untitled Note'}" doesn't have enough content for me to assist with. Please add at least 30 words to your note before using the AI assistant.`,
       timestamp: new Date().toISOString()
     };
   }
@@ -33,13 +33,14 @@ const Chatbot = ({ currentNote, onBack }) => {
   const [historyError, setHistoryError] = useState(null);
   const [tokenUsage, setTokenUsage] = useState({ limit: 5000, remaining: 5000, used: 0 });
   const [isTokenUsageLoading, setIsTokenUsageLoading] = useState(true);
+  const [deepThinkingMode, setDeepThinkingMode] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   
   // Check if note has sufficient content
   const noteContent = currentNote?.content || '';
   const wordCount = noteContent.trim().split(/\s+/).filter(w => w.length > 0).length;
-  const hasValidContent = noteContent.trim().length > 0 && wordCount >= 10;
+  const hasValidContent = noteContent.trim().length > 0 && wordCount >= 30;
 
   const normalizeId = (value) => {
     if (value === undefined || value === null) return null;
@@ -130,13 +131,16 @@ const Chatbot = ({ currentNote, onBack }) => {
 
   const tokenLimitReached = !isTokenUsageLoading && tokenUsage.remaining <= 0;
   
+  // Only scroll to bottom when user sends message or receives response
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > 1) { // Skip initial intro message scroll
+      const lastMessage = messages[messages.length - 1];
+      const isRecentMessage = Date.now() - new Date(lastMessage.timestamp).getTime() < 1000;
+      if (isRecentMessage) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
   
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !currentNote) return;
@@ -145,12 +149,12 @@ const Chatbot = ({ currentNote, onBack }) => {
     if (!noteIdentifier) return;
     
     if (!hasValidContent) {
-      setHistoryError('This note doesn\'t have enough content. Please add at least 10 words to your note.');
+      setHistoryError('This note doesn\'t have enough content. Please add at least 30 words to your note.');
       return;
     }
 
     if (tokenLimitReached) {
-      setHistoryError('Daily AI chatbot token limit reached (5000 tokens across all notes). Try again tomorrow.');
+      setHistoryError('AI chatbot token limit reached. Try again tomorrow.');
       return;
     }
 
@@ -179,10 +183,22 @@ const Chatbot = ({ currentNote, onBack }) => {
   
   async function callOpenAIAPI(userQuestion, noteIdentifier) {
     try {
-      const conversation = [
-        {
-          role: "system",
-          content: `You are an AI study assistant that ONLY answers questions about this specific note. 
+      const systemPrompt = deepThinkingMode
+        ? `You are an AI study assistant helping with this note. You can use external knowledge to provide comprehensive answers.
+
+Note Title: "${currentNote?.title || 'Untitled Note'}"
+Note Content:
+"""
+${currentNote?.content || ''}
+"""
+
+You are in DEEP THINKING mode:
+1. Answer questions about the note content
+2. You may supplement with external knowledge and sources when helpful
+3. Provide detailed explanations with context from broader knowledge
+4. Help connect note concepts to real-world applications
+5. Suggest additional resources or related topics when relevant`
+        : `You are an AI study assistant that ONLY answers questions about this specific note. 
 
 Note Title: "${currentNote?.title || 'Untitled Note'}"
 Note Content:
@@ -196,7 +212,12 @@ IMPORTANT RULES:
 3. Do not provide information from external sources or general knowledge
 4. Stay focused on explaining, summarizing, or clarifying concepts FROM THE NOTE ONLY
 5. If the note content is insufficient to answer, say so clearly
-6. Help with studying, understanding, and memorizing the note content`
+6. Help with studying, understanding, and memorizing the note content`;
+
+      const conversation = [
+        {
+          role: "system",
+          content: systemPrompt
         },
         {
           role: "user",
@@ -265,9 +286,9 @@ IMPORTANT RULES:
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col overflow-hidden">
       {/* Chat Header */}
-      <div className="bg-white border-b border-slate-200 p-3 sm:p-4 shadow-sm">
+      <div className="bg-white border-b border-slate-200 p-3 sm:p-4 shadow-sm flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <button
@@ -288,44 +309,33 @@ IMPORTANT RULES:
               </p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            <div className="hidden sm:flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              Online
-            </div>
-            <div className="sm:hidden w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
-              <MoreVertical className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       </div>
 
       {/* Token Usage Banner */}
-      <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 text-xs sm:text-sm">
+      <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 text-xs sm:text-sm flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bot className={`w-4 h-4 ${tokenLimitReached ? 'text-red-500' : 'text-purple-500'}`} />
             <span className="text-slate-700">
-              Daily Tokens (All Notes): <span className="font-semibold">{tokenUsage.used}/{tokenUsage.limit}</span>
+              Tokens Used: <span className="font-semibold">{tokenUsage.used}/{tokenUsage.limit}</span>
             </span>
           </div>
           <span className={`font-semibold ${tokenLimitReached ? 'text-red-600' : 'text-green-600'}`}>
-            {tokenLimitReached ? 'Limit reached' : `${tokenUsage.remaining} left`}
+            {tokenLimitReached ? 'Limit reached' : `${tokenUsage.remaining} remaining`}
           </span>
         </div>
       </div>
 
       {/* Content Warning (if note too short) */}
       {!hasValidContent && (
-        <div className="bg-yellow-50 border-b border-yellow-200 px-3 py-3">
+        <div className="bg-yellow-50 border-b border-yellow-200 px-3 py-3 flex-shrink-0">
           <div className="flex items-start gap-2">
             <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
+              <div className="flex-1">
               <p className="text-sm font-semibold text-yellow-800">Content Too Short</p>
               <p className="text-xs text-yellow-700 mt-1">
-                This note needs at least 10 words before the AI assistant can help. Please add more content to your note.
+                This note needs at least 30 words before the AI assistant can help. Please add more content to your note.
               </p>
             </div>
           </div>
@@ -333,7 +343,7 @@ IMPORTANT RULES:
       )}
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 min-h-0">
         {historyError && (
           <div className="text-xs sm:text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg">
             {historyError}
@@ -376,17 +386,13 @@ IMPORTANT RULES:
                 </span>
                 
                 {message.type === 'bot' && (
-                  <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-1 text-slate-400 hover:text-green-600 rounded transition-colors">
-                      <ThumbsUp className="w-3 h-3" />
-                    </button>
-                    <button className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors">
-                      <ThumbsDown className="w-3 h-3" />
-                    </button>
-                    <button className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors">
-                      <Copy className="w-3 h-3" />
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(message.content)}
+                    className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors opacity-0 group-hover:opacity-100"
+                    title="Copy message"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
                 )}
               </div>
             </div>
@@ -419,7 +425,25 @@ IMPORTANT RULES:
       </div>
 
       {/* Message Input */}
-      <div className="bg-white border-t border-slate-200 p-3 sm:p-4 safe-area-pb">
+      <div className="bg-white border-t border-slate-200 p-3 sm:p-4 flex-shrink-0">
+        {/* Deep Thinking Mode Toggle */}
+        <div className="mb-3 flex items-center gap-2">
+          <button
+            onClick={() => setDeepThinkingMode(!deepThinkingMode)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              deepThinkingMode
+                ? 'bg-purple-100 text-purple-700 border-2 border-purple-300'
+                : 'bg-slate-100 text-slate-600 border-2 border-slate-200 hover:bg-slate-200'
+            }`}
+          >
+            <Sparkles className={`w-4 h-4 ${deepThinkingMode ? 'animate-pulse' : ''}`} />
+            <span>Deep Thinking {deepThinkingMode ? 'ON' : 'OFF'}</span>
+          </button>
+          <p className="text-xs text-slate-500">
+            {deepThinkingMode ? 'AI can use external knowledge' : 'AI limited to note content only'}
+          </p>
+        </div>
+        
         <div className="flex gap-2 sm:gap-3 items-end">
           <div className="flex-1">
             <div className="relative">
@@ -430,11 +454,11 @@ IMPORTANT RULES:
                 onKeyPress={handleKeyPress}
                 placeholder={hasValidContent ? "Ask me anything about this note..." : "Add content to your note first..."}
                 disabled={!hasValidContent || tokenLimitReached}
-                className={`w-full p-3 sm:p-4 pr-11 sm:pr-12 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none max-h-32 text-sm ${
+                className={`w-full p-3 sm:p-4 pr-11 sm:pr-12 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none text-sm ${
                   (!hasValidContent || tokenLimitReached) ? 'bg-slate-50 cursor-not-allowed' : ''
                 }`}
                 rows="1"
-                style={{ minHeight: '48px' }}
+                style={{ minHeight: '48px', maxHeight: '120px' }}
               />
               <button
                 onClick={handleSendMessage}
@@ -452,12 +476,12 @@ IMPORTANT RULES:
         </div>
         {tokenLimitReached && (
           <p className="text-xs text-red-600 font-semibold mt-2">
-            Daily AI chatbot token limit reached (5000 tokens across all notes). Try again tomorrow.
+            Token limit reached. Try again tomorrow.
           </p>
         )}
         {!hasValidContent && !tokenLimitReached && (
           <p className="text-xs text-yellow-600 font-semibold mt-2">
-            Please add at least 10 words to your note before using the chatbot.
+            Please add at least 30 words to your note before using the chatbot.
           </p>
         )}
         <div className="hidden sm:flex items-center justify-between mt-2 px-1">

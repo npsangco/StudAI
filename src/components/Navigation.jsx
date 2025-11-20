@@ -27,6 +27,7 @@ export default function Navigation() {
   const { toasts, toast, removeToast } = useToast()
   const [userPhoto, setUserPhoto] = useState(null)
   const [showQuests, setShowQuests] = useState(false)
+  const [isChatbotActive, setIsChatbotActive] = useState(false)
   const questsRef = useRef(null)
 
   useEffect(() => {
@@ -64,6 +65,23 @@ export default function Navigation() {
       window.removeEventListener("questActivity", handleQuestActivity);
     };
   }, [showQuests]);
+
+  // Observe body class to detect when chatbot is active
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsChatbotActive(document.body.classList.contains('chatbot-active'));
+    });
+
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    // Check initial state
+    setIsChatbotActive(document.body.classList.contains('chatbot-active'));
+
+    return () => observer.disconnect();
+  }, []);
 
 
   const handleLogout = async () => {
@@ -199,19 +217,21 @@ export default function Navigation() {
       </DisclosurePanel>
     </Disclosure>
 
-    {/* Floating Daily Quest Button */}
-    <button
-      onClick={() => setShowQuests(true)}
-      className={`fixed bottom-24 right-6 z-50 p-4 rounded-full bg-black transition-all shadow-lg hover:shadow-2xl group ${questsRef.current?.isAllComplete() ? '' : 'animate-bounce'}`}
-      title="Daily Quests"
-    >
-      <Target className="w-6 h-6 text-white" />
-      {!questsRef.current?.isAllComplete() && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-          !
-        </span>
-      )}
-    </button>
+    {/* Floating Daily Quest Button - Hidden when chatbot is active */}
+    {!isChatbotActive && (
+      <button
+        onClick={() => setShowQuests(true)}
+        className={`fixed bottom-24 right-6 z-50 p-4 rounded-full bg-black transition-all shadow-lg hover:shadow-2xl group ${questsRef.current?.isAllComplete() ? '' : 'animate-bounce'}`}
+        title="Daily Quests"
+      >
+        <Target className="w-6 h-6 text-white" />
+        {!questsRef.current?.isAllComplete() && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+            !
+          </span>
+        )}
+      </button>
+    )}
 
     {/* Daily Quests Modal */}
     <DailyQuests ref={questsRef} isOpen={showQuests} onClose={() => setShowQuests(false)} />
