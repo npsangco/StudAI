@@ -28,7 +28,7 @@ import {
   performAdaptiveCheck
 } from '../utils/adaptiveQuizManager';
 import { AdaptiveFeedback } from '../components/AdaptiveFeedback';
-import QuizPetCompanion from '../components/QuizPetCompanion';
+import FloatingPetMotivator from '../../../components/FloatingPetMotivator';
 import { petApi } from '../../../api/api';
 
 const QuizGame = ({
@@ -110,10 +110,7 @@ const QuizGame = ({
       try {
         const res = await petApi.getPet();
         if (!res.data.choosePet && res.data) {
-          setPetData({
-            name: res.data.pet_name,
-            type: res.data.pet_type
-          });
+          setPetData(res.data);
         }
       } catch (err) {
         console.error('Failed to load pet for quiz:', err);
@@ -1165,9 +1162,8 @@ const QuizGame = ({
 
       {/* Pet Companion - Motivational Support */}
       {petData && (
-        <QuizPetCompanion
-          petType={petData.type}
-          petName={petData.name}
+        <FloatingPetMotivator
+          pet={petData}
           onAnswer={lastAnswerCorrect}
           showEncouragement={true}
         />

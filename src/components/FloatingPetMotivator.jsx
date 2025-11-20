@@ -40,11 +40,14 @@ const MOTIVATIONAL_MESSAGES = {
   ]
 };
 
-const QuizPetCompanion = ({ petType = 'Dog', petName = 'Buddy', onAnswer = null, showEncouragement = false }) => {
+const FloatingPetMotivator = ({ pet, onAnswer = null, showEncouragement = false }) => {
   const [message, setMessage] = useState('');
-  const [isVisible, setIsVisible] = useState(true);
   const [animation, setAnimation] = useState('float');
   const [showHeart, setShowHeart] = useState(false);
+
+  if (!pet || !pet.pet_name || !pet.pet_type) return null;
+
+  const petEmoji = pet.pet_type === 'Dog' ? '🐕' : '🐱';
 
   // Show initial encouragement message
   useEffect(() => {
@@ -98,105 +101,93 @@ const QuizPetCompanion = ({ petType = 'Dog', petName = 'Buddy', onAnswer = null,
         Math.floor(Math.random() * MOTIVATIONAL_MESSAGES.encouragement.length)
       ];
       setMessage(randomEncouragement);
-    }, 15000); // Every 15 seconds
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [showEncouragement]);
 
-  if (!isVisible) return null;
-
-  // Pet emoji based on type
-  const petEmoji = petType === 'Dog' ? '🐕' : '🐱';
-
   return (
-    <div className="fixed right-4 top-24 z-40 pointer-events-none">
-      {/* Pet Container */}
-      <div className={`relative ${animation === 'float' ? 'animate-float' : ''} ${animation === 'jump' ? 'animate-jump' : ''} ${animation === 'shake' ? 'animate-shake' : ''}`}>
-        {/* Floating Hearts */}
-        {showHeart && (
-          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 animate-float-up">
-            <Heart className="w-6 h-6 text-red-500 fill-red-500" />
-          </div>
-        )}
-
-        {/* Pet Avatar */}
-        <div className="relative">
-          <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full shadow-lg border-4 border-white flex items-center justify-center">
-            <span className="text-5xl">{petEmoji}</span>
-          </div>
-          
-          {/* Sparkle effect for correct answers */}
-          {onAnswer === true && (
-            <div className="absolute -top-2 -right-2 animate-spin-slow">
-              <Sparkles className="w-6 h-6 text-yellow-400 fill-yellow-400" />
+    <>
+      <div className="fixed right-4 top-24 z-40 pointer-events-none">
+        <div className={`relative ${animation === 'float' ? 'animate-pet-float' : ''} ${animation === 'jump' ? 'animate-pet-jump' : ''} ${animation === 'shake' ? 'animate-pet-shake' : ''}`}>
+          {showHeart && (
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 animate-pet-float-up">
+              <Heart className="w-6 h-6 text-red-500 fill-red-500" />
             </div>
           )}
-        </div>
 
-        {/* Speech Bubble */}
-        <div className="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 w-64 pointer-events-auto">
-          <div className="bg-white rounded-2xl shadow-xl p-4 relative border-2 border-purple-200">
-            {/* Speech bubble tail */}
-            <div className="absolute left-0 top-1/2 transform -translate-x-2 -translate-y-1/2">
-              <div className="w-0 h-0 border-t-8 border-t-transparent border-b-8 border-b-transparent border-r-8 border-r-purple-200"></div>
-              <div className="w-0 h-0 border-t-7 border-t-transparent border-b-7 border-b-transparent border-r-7 border-r-white absolute top-0.5 left-0.5"></div>
+          <div className="relative">
+            <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full shadow-lg border-4 border-white flex items-center justify-center">
+              <span className="text-5xl">{petEmoji}</span>
             </div>
+            
+            {onAnswer === true && (
+              <div className="absolute -top-2 -right-2 animate-pet-spin">
+                <Sparkles className="w-6 h-6 text-yellow-400 fill-yellow-400" />
+              </div>
+            )}
+          </div>
 
-            {/* Pet Name */}
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-bold text-purple-600">{petName}</span>
-              {onAnswer === true && <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />}
+          <div className="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 w-64 pointer-events-auto">
+            <div className="bg-white rounded-2xl shadow-xl p-4 relative border-2 border-purple-200">
+              <div className="absolute left-0 top-1/2 transform -translate-x-2 -translate-y-1/2">
+                <div className="w-0 h-0 border-t-8 border-t-transparent border-b-8 border-b-transparent border-r-8 border-r-purple-200"></div>
+                <div className="w-0 h-0 border-t-[7px] border-t-transparent border-b-[7px] border-b-transparent border-r-[7px] border-r-white absolute top-[1px] left-[1px]"></div>
+              </div>
+
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-bold text-purple-600">{pet.pet_name}</span>
+                {onAnswer === true && <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />}
+              </div>
+
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {message}
+              </p>
             </div>
-
-            {/* Message */}
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {message}
-            </p>
           </div>
         </div>
       </div>
 
-      {/* Animations */}
-      <style jsx>{`
-        @keyframes float {
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes pet-float {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-10px); }
         }
-        @keyframes jump {
+        @keyframes pet-jump {
           0%, 100% { transform: translateY(0px) scale(1); }
           50% { transform: translateY(-20px) scale(1.1); }
         }
-        @keyframes shake {
+        @keyframes pet-shake {
           0%, 100% { transform: translateX(0px); }
           25% { transform: translateX(-5px); }
           75% { transform: translateX(5px); }
         }
-        @keyframes float-up {
+        @keyframes pet-float-up {
           0% { opacity: 1; transform: translateY(0px); }
           100% { opacity: 0; transform: translateY(-30px); }
         }
-        @keyframes spin-slow {
+        @keyframes pet-spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
+        .animate-pet-float {
+          animation: pet-float 3s ease-in-out infinite;
         }
-        .animate-jump {
-          animation: jump 0.6s ease-in-out;
+        .animate-pet-jump {
+          animation: pet-jump 0.6s ease-in-out;
         }
-        .animate-shake {
-          animation: shake 0.5s ease-in-out;
+        .animate-pet-shake {
+          animation: pet-shake 0.5s ease-in-out;
         }
-        .animate-float-up {
-          animation: float-up 1s ease-out forwards;
+        .animate-pet-float-up {
+          animation: pet-float-up 1s ease-out forwards;
         }
-        .animate-spin-slow {
-          animation: spin-slow 2s linear infinite;
+        .animate-pet-spin {
+          animation: pet-spin 2s linear infinite;
         }
-      `}</style>
-    </div>
+      `}} />
+    </>
   );
 };
 
-export default QuizPetCompanion;
+export default FloatingPetMotivator;
