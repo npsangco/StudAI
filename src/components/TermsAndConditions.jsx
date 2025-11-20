@@ -142,8 +142,7 @@ export default function TermsModal() {
                     If you have any questions or concerns about these Terms, please contact us at:  
                   </p>
                   <ul className="list-none space-y-1 mt-2">
-                    <li>[support email]</li>
-                    <li>[Company name and address]</li>
+                    <li>studai.service@gmail.com</li>
                   </ul>
                 </div>
               </div>

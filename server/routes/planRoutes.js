@@ -63,12 +63,13 @@ async function getDailyStats(userId) {
 async function logDailyStats(userId, activityType, points, exp = 0) {
   const today = new Date().toISOString().split('T')[0];
   
-  let dailyStat = await UserDailyStat.findOne({
-    where: { user_id: userId, last_reset_date: today }
-  });
-  
-  if (!dailyStat) {
-    dailyStat = await UserDailyStat.create({
+  // Use findOrCreate to ensure we only have one record per user per day
+  const [dailyStat, created] = await UserDailyStat.findOrCreate({
+    where: { 
+      user_id: userId, 
+      last_reset_date: today 
+    },
+    defaults: {
       user_id: userId,
       last_reset_date: today,
       notes_created_today: 0,
@@ -77,8 +78,8 @@ async function logDailyStats(userId, activityType, points, exp = 0) {
       points_earned_today: 0,
       exp_earned_today: 0,
       streak_active: false
-    });
-  }
+    }
+  });
   
   const updates = {
     points_earned_today: dailyStat.points_earned_today + points,

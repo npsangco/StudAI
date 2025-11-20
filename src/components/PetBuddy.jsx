@@ -53,6 +53,19 @@ export default function PetBuddy() {
     return () => clearTimeout(timeout);
   }, [pet]);
 
+  // Listen for quest/activity events to refresh pet (includes quiz completion)
+  useEffect(() => {
+    const handleActivityEvent = () => {
+      refreshPetStats();
+    };
+
+    window.addEventListener('questActivity', handleActivityEvent);
+
+    return () => {
+      window.removeEventListener('questActivity', handleActivityEvent);
+    };
+  }, []);
+
   const refreshPetStats = async () => {
     try {
       const res = await petApi.getPet();

@@ -53,30 +53,31 @@ const requireAuth = (req, res, next) => {
 async function logDailyStats(userId, activityType, points, exp) {
   const today = new Date().toISOString().split('T')[0];
   
-  let dailyStat = await UserDailyStat.findOne({
-    where: { user_id: userId, last_reset_date: today } // FIXED: Changed from stat_date to last_reset_date
-  });
-  
-  if (!dailyStat) {
-    dailyStat = await UserDailyStat.create({
+  // Use findOrCreate to ensure we only have one record per user per day
+  const [dailyStat, created] = await UserDailyStat.findOrCreate({
+    where: { 
+      user_id: userId, 
+      last_reset_date: today 
+    },
+    defaults: {
       user_id: userId,
-      last_reset_date: today, // FIXED: Changed from stat_date to last_reset_date
-      notes_created_today: 0, // FIXED: Match actual column names
+      last_reset_date: today,
+      notes_created_today: 0,
       quizzes_completed_today: 0,
       planner_updates_today: 0,
       points_earned_today: 0,
       exp_earned_today: 0,
       streak_active: false
-    });
-  }
+    }
+  });
   
   const updates = {
-    points_earned_today: dailyStat.points_earned_today + points, // FIXED: Updated column name
-    exp_earned_today: dailyStat.exp_earned_today + exp // FIXED: Updated column name
+    points_earned_today: dailyStat.points_earned_today + points,
+    exp_earned_today: dailyStat.exp_earned_today + exp
   };
   
   if (activityType === 'quiz') {
-    updates.quizzes_completed_today = dailyStat.quizzes_completed_today + 1; // FIXED: Updated column name
+    updates.quizzes_completed_today = dailyStat.quizzes_completed_today + 1;
   }
   
   await dailyStat.update(updates);

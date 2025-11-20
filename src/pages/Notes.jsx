@@ -77,6 +77,19 @@ const Notes = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Add/remove body class when chatbot is active
+  useEffect(() => {
+    if (currentView === 'chatbot') {
+      document.body.classList.add('chatbot-active');
+    } else {
+      document.body.classList.remove('chatbot-active');
+    }
+
+    return () => {
+      document.body.classList.remove('chatbot-active');
+    };
+  }, [currentView]);
+
   const fetchCategories = async () => {
     try {
       const response = await notesApi.getCategories();
