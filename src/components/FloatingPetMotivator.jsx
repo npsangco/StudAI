@@ -127,7 +127,7 @@ const FloatingPetMotivator = ({ pet, onAnswer = null, showEncouragement = false 
   // Return null after all hooks have been called
   if (!isValidPet) return null;
 
-  const petImage = getPetImage(pet.pet_type, pet.level);
+  const petImage = getPetImage(pet.pet_type, pet.level || 1);
 
   return (
     <>
