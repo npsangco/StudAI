@@ -6,6 +6,8 @@ import { API_URL } from "../../config/api.config";
 
 export default function UserManagement() {
     const [users, setUsers] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const usersPerPage = 14;
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -39,6 +41,14 @@ export default function UserManagement() {
             console.error(`Failed to ${action} user:`, err);
         }
     };
+
+    const indexOfLastUser = currentPage * usersPerPage;
+    const indexOfFirstUser = indexOfLastUser - usersPerPage;
+    const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
+    const totalPages = Math.ceil(users.length / usersPerPage);
+
+    const handleNext = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
+    const handlePrev = () => currentPage > 1 && setCurrentPage(currentPage - 1);
 
     return (
         <div className="flex min-h-screen bg-gray-100">
@@ -78,8 +88,8 @@ export default function UserManagement() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {users.length > 0 ? (
-                                        users.map((user) => (
+                                    {currentUsers.length > 0 ? (
+                                        currentUsers.map((user) => (
                                             <tr key={user.user_id} className="border-b border-gray-100">
                                                 <td className="py-2 px-3">{user.user_id}</td>
                                                 <td className="py-2 px-3 font-medium">{user.username}</td>
@@ -87,8 +97,8 @@ export default function UserManagement() {
                                                 <td className="py-2 px-3">
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-medium ${user.status === "Active"
-                                                                ? "bg-green-100 text-green-800"
-                                                                : "bg-red-100 text-red-800"
+                                                            ? "bg-green-100 text-green-800"
+                                                            : "bg-red-100 text-red-800"
                                                             }`}
                                                     >
                                                         {user.status}
@@ -130,6 +140,30 @@ export default function UserManagement() {
                             </table>
                         </div>
                     </div>
+
+                    {totalPages > 1 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 sm:p-2 gap-3">
+                            <button
+                                onClick={handlePrev}
+                                disabled={currentPage === 1}
+                                className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-300"
+                            >
+                                Previous
+                            </button>
+
+                            <span className="text-sm text-gray-700">
+                                Page {currentPage} of {totalPages}
+                            </span>
+
+                            <button
+                                onClick={handleNext}
+                                disabled={currentPage === totalPages}
+                                className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-300"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

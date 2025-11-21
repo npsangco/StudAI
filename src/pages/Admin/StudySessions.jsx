@@ -11,6 +11,8 @@ export default function StudySessions() {
     const { toasts, toast, removeToast } = useToast();
     const { confirmState, confirm, closeConfirm } = useConfirm();
     const [sessions, setSessions] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const sessionsPerPage = 14;
 
     useEffect(() => {
         const fetchSessions = async () => {
@@ -54,6 +56,14 @@ export default function StudySessions() {
         });
     };
 
+    const indexOfLastSession = currentPage * sessionsPerPage;
+    const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
+    const currentSessions = sessions.slice(indexOfFirstSession, indexOfLastSession);
+    const totalPages = Math.ceil(sessions.length / sessionsPerPage);
+
+    const handleNext = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
+    const handlePrev = () => currentPage > 1 && setCurrentPage(currentPage - 1);
+
     return (
         <div className="flex min-h-screen bg-gray-100">
             <ToastContainer toasts={toasts} removeToast={removeToast} />
@@ -69,7 +79,6 @@ export default function StudySessions() {
             />
             {/* Sidebar */}
             <div className="hidden md:block fixed top-0 left-0 h-screen">
-
                 <Sidebar />
             </div>
 
@@ -104,8 +113,8 @@ export default function StudySessions() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {sessions.length > 0 ? (
-                                        sessions.map((session) => (
+                                    {currentSessions.length > 0 ? (
+                                        currentSessions.map((session) => (
                                             <tr key={session.session_id} className="border-b border-gray-100">
                                                 <td className="py-2 px-3">{session.session_id}</td>
                                                 <td className="py-2 px-3 font-medium">{session.host}</td>
@@ -151,6 +160,30 @@ export default function StudySessions() {
                             </table>
                         </div>
                     </div>
+
+                    {totalPages > 1 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 sm:p-2 gap-3">
+                            <button
+                                onClick={handlePrev}
+                                disabled={currentPage === 1}
+                                className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-300"
+                            >
+                                Previous
+                            </button>
+
+                            <span className="text-sm text-gray-700">
+                                Page {currentPage} of {totalPages}
+                            </span>
+
+                            <button
+                                onClick={handleNext}
+                                disabled={currentPage === totalPages}
+                                className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-300"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
