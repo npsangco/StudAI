@@ -155,6 +155,32 @@ const QuizGame = ({
   const [showEncouragement, setShowEncouragement] = useState(false);
   const encouragementTimerRef = useRef(null);
 
+  // 🔒 SUBMISSION MUTEX: Prevent race condition between timer and manual submission
+  const submissionLockRef = useRef({ locked: false, timestamp: 0 });
+
+  // 🔒 Helper function to acquire submission lock
+  const acquireSubmissionLock = () => {
+    const now = Date.now();
+    const LOCK_DURATION = 1000; // 1 second lock duration
+    
+    // Check if lock is currently held
+    if (submissionLockRef.current.locked && 
+        now - submissionLockRef.current.timestamp < LOCK_DURATION) {
+      return false; // Lock denied - someone else is submitting
+    }
+    
+    // Acquire lock
+    submissionLockRef.current = { locked: true, timestamp: now };
+    return true; // Lock acquired
+  };
+
+  // 🔒 Helper function to release submission lock
+  const releaseSubmissionLock = () => {
+    setTimeout(() => {
+      submissionLockRef.current = { locked: false, timestamp: 0 };
+    }, 1000); // Auto-release after 1 second
+  };
+
   // 🎭 Listen to player progress for pulse effects only (not for waiting/syncing)
   useEffect(() => {
     if (mode !== 'battle' || !quiz?.gamePin) {
@@ -568,8 +594,16 @@ const QuizGame = ({
   }, [mode, quiz?.gamePin, quiz?.currentUserId]);
 
   const handleTimeUp = () => {
+    // Acquire submission lock to prevent race condition
+    if (!acquireSubmissionLock()) {
+      return; // Another submission is already in progress
+    }
+
     // Prevent multiple timeout recordings
-    if (timeoutHandledRef.current) return;
+    if (timeoutHandledRef.current) {
+      releaseSubmissionLock();
+      return;
+    }
     timeoutHandledRef.current = true;
     
     // Record timeout as incorrect answer
@@ -611,14 +645,19 @@ const QuizGame = ({
   const handleAnswerSelect = (answer) => {
     if (game.selectedAnswer || game.isPaused || isProcessing) return;
 
-    // 🐾 Clear encouragement timer since user is answering
+    // Acquire submission lock to prevent race condition
+    if (!acquireSubmissionLock()) {
+      return; // Timer already submitted or another submission in progress
+    }
+
+    // Clear encouragement timer since user is answering
     if (encouragementTimerRef.current) {
       clearTimeout(encouragementTimerRef.current);
       encouragementTimerRef.current = null;
     }
     setShowEncouragement(false);
 
-    // 🔥 STRICT SYNC: Prevent re-answering already answered questions
+    // STRICT SYNC: Prevent re-answering already answered questions
     if (mode === 'battle' && quiz?.gamePin) {
       // Check if I already answered this question (my progress is beyond this question)
       // This can happen when reconnecting ahead of others
@@ -667,7 +706,7 @@ const QuizGame = ({
       }
     }
 
-    // 🐾 Show pet companion message
+    // Show pet companion message
     setPetAnswerCorrect(isCorrect);
     setShowPetMessage(true);
     
@@ -693,7 +732,12 @@ const QuizGame = ({
   const handleFillInAnswer = () => {
     if (!game.userAnswer?.trim() || game.userAnswer.includes('_submitted') || game.isPaused || isProcessing) return;
     
-    // 🐾 Clear encouragement timer since user is answering
+    // Acquire submission lock to prevent race condition
+    if (!acquireSubmissionLock()) {
+      return; // Timer already submitted or another submission in progress
+    }
+
+    // Clear encouragement timer since user is answering
     if (encouragementTimerRef.current) {
       clearTimeout(encouragementTimerRef.current);
       encouragementTimerRef.current = null;
@@ -742,7 +786,7 @@ const QuizGame = ({
       }
     }
 
-    // 🐾 Show pet companion message
+    // Show pet companion message
     setPetAnswerCorrect(isCorrect);
     setShowPetMessage(true);
     
@@ -767,6 +811,11 @@ const QuizGame = ({
 
   const handleMatchingSubmit = (matches) => {
     if (game.isPaused || isProcessing) return;
+
+    // Acquire submission lock to prevent race condition
+    if (!acquireSubmissionLock()) {
+      return; // Timer already submitted or another submission in progress
+    }
 
     if (encouragementTimerRef.current) {
       clearTimeout(encouragementTimerRef.current);
@@ -833,10 +882,10 @@ const QuizGame = ({
   };
 
   const handleNextQuestion = () => {
-    // 🐾 Reset pet message for next question
+    // Reset pet message for next question
     setShowPetMessage(false);
     
-    // 🔥 EDGE CASE 1: Skip adaptive check if feedback is already showing
+    // EDGE CASE 1: Skip adaptive check if feedback is already showing
     if (isShowingFeedbackRef.current) {
 
       // Just proceed with normal transition
@@ -852,10 +901,10 @@ const QuizGame = ({
       return;
     }
 
-    // 🔥 OPTION 1: Adaptive reordering logic
+    // OPTION 1: Adaptive reordering logic
     let shouldShowFeedback = false;
 
-    // 🔥 EDGE CASE 2: Only run adaptive check if we have valid state and enough answers
+    // EDGE CASE 2: Only run adaptive check if we have valid state and enough answers
     if (useAdaptiveMode && adaptiveState && answersHistory.length >= 2) {
       const result = performAdaptiveCheck({
         questionsAnswered: game.currentQuestionIndex + 1,
@@ -881,22 +930,22 @@ const QuizGame = ({
         setAdaptiveState(updatedAdaptiveState);
       }
 
-      // 🔥 REORDER questions if needed
+      // REORDER questions if needed
       if (result.shouldReorder && result.reorderedQuestions.length > 0) {
         setQuestions(result.reorderedQuestions);
 
       }
 
       // Show feedback if we have a message
-      // 🔥 EDGE CASE 3: Only show feedback for actual difficulty changes or staying messages
+      // EDGE CASE 3: Only show feedback for actual difficulty changes or staying messages
       if (result.messageKey) {
-        // 🔥 BULLETPROOF: Clear any existing feedback timeout first
+        // BULLETPROOF: Clear any existing feedback timeout first
         if (feedbackTimeoutRef.current) {
           clearTimeout(feedbackTimeoutRef.current);
           feedbackTimeoutRef.current = null;
         }
 
-        // 🔥 BULLETPROOF: Force clear previous feedback immediately
+        // BULLETPROOF: Force clear previous feedback immediately
         setAdaptiveFeedbackMessage(null);
         setAdaptiveFeedbackAction(null);
         isShowingFeedbackRef.current = false;
@@ -911,18 +960,18 @@ const QuizGame = ({
         };
         const messageArray = messages[result.messageKey] || [];
 
-        // 🔥 EDGE CASE 4: Validate message exists before showing
+        // EDGE CASE 4: Validate message exists before showing
         if (messageArray.length > 0) {
           const randomMessage = messageArray[Math.floor(Math.random() * messageArray.length)];
 
-          // 🔥 BULLETPROOF: Small delay to ensure state clears, then show new feedback
+          // BULLETPROOF: Small delay to ensure state clears, then show new feedback
           setTimeout(() => {
             setAdaptiveFeedbackMessage(randomMessage);
             setAdaptiveFeedbackAction(result.action);
             shouldShowFeedback = true;
             isShowingFeedbackRef.current = true;
 
-            // 🔥 BULLETPROOF: Force clear feedback after max duration (failsafe)
+            // BULLETPROOF: Force clear feedback after max duration (failsafe)
             feedbackTimeoutRef.current = setTimeout(() => {
               setAdaptiveFeedbackMessage(null);
               setAdaptiveFeedbackAction(null);
@@ -938,12 +987,12 @@ const QuizGame = ({
     setIsProcessing(false);
     timeoutHandledRef.current = false;
 
-    // 🔥 EDGE CASE: If showing adaptive feedback, delay question transition
+    // EDGE CASE: If showing adaptive feedback, delay question transition
     // Shorter delay (2.5s total) for faster flow while ensuring feedback completes
     const transitionDelay = shouldShowFeedback ? 2500 : 0;
 
     setTimeout(() => {
-      // 🔥 EDGE CASE 5: Ensure questions array is valid before transitioning
+      // EDGE CASE 5: Ensure questions array is valid before transitioning
       if (!questions || questions.length === 0) {
 
         finishQuiz();
@@ -957,7 +1006,7 @@ const QuizGame = ({
         finishQuiz();
       }
 
-      // 🔥 EDGE CASE 6: Reset feedback flag after transition completes
+      // EDGE CASE 6: Reset feedback flag after transition completes
       if (shouldShowFeedback) {
         isShowingFeedbackRef.current = false;
       }
@@ -1029,7 +1078,7 @@ const QuizGame = ({
   const [leaderboardMode, setLeaderboardMode] = useState('desktop');
 
   // ============================================
-  // 🎭 EMOJI REACTION HANDLER
+  // EMOJI REACTION HANDLER
   // ============================================
 
   const handleEmojiSelect = async (emojiData) => {
@@ -1171,7 +1220,7 @@ const QuizGame = ({
           message={adaptiveFeedbackMessage}
           action={adaptiveFeedbackAction}
           onComplete={() => {
-            // 🔥 BULLETPROOF: Force clear all feedback state
+            // BULLETPROOF: Force clear all feedback state
             setAdaptiveFeedbackMessage(null);
             setAdaptiveFeedbackAction(null);
             isShowingFeedbackRef.current = false;
@@ -1183,7 +1232,7 @@ const QuizGame = ({
         />
       )}
 
-      {/* 🎭 EMOJI REACTIONS - Floating display */}
+      {/* EMOJI REACTIONS - Floating display */}
       {mode === 'battle' && (
         <EmojiReactions
           gamePin={quiz?.gamePin}
@@ -1191,7 +1240,7 @@ const QuizGame = ({
         />
       )}
 
-      {/* 🎭 EMOJI PICKER - Mobile/Tablet only (Desktop uses inline below) */}
+      {/* EMOJI PICKER - Mobile/Tablet only (Desktop uses inline below) */}
       {mode === 'battle' && leaderboardMode !== 'desktop' && (
         <div className="fixed bottom-6 right-6 z-50">
           <EmojiPicker
@@ -1243,7 +1292,7 @@ const QuizGame = ({
               </div>
               
               <div className="w-80 xl:w-96 h-[calc(100vh-6rem)] sticky top-24 flex flex-col gap-3 overflow-hidden">
-                {/* 🎭 INLINE EMOJI PICKER - Desktop only */}
+                {/* INLINE EMOJI PICKER - Desktop only */}
                 <div className="flex-shrink-0">
                   <EmojiPicker
                     onEmojiSelect={handleEmojiSelect}

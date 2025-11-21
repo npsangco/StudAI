@@ -1575,8 +1575,31 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
     }
     
     // ============================================
-    // VALIDATION 3: Battle is in waiting status
+    // VALIDATION 3: Battle is in waiting status (with idempotency)
+    // Handle duplicate start requests gracefully
     // ============================================
+    if (battle.status === 'in_progress') {
+      // Idempotency: Battle already started, return success
+      await transaction.rollback();
+      console.log(`⏭️ IDEMPOTENT: Battle ${gamePin} already started`);
+      
+      const questionCount = await Question.count({ where: { quiz_id: battle.quiz_id } });
+      const currentPlayers = await BattleParticipant.count({ where: { battle_id: battle.battle_id } });
+      
+      return res.status(200).json({ 
+        success: true,
+        message: 'Battle already started',
+        alreadyStarted: true,
+        battle: {
+          gamePin: battle.game_pin,
+          quizTitle: battle.quiz?.title,
+          totalQuestions: questionCount,
+          playerCount: currentPlayers,
+          allPlayersReady: true
+        }
+      });
+    }
+    
     if (battle.status !== 'waiting') {
       await transaction.rollback();
       return res.status(400).json({ 
@@ -1791,7 +1814,7 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
       order: [['score', 'DESC']]
     });
     
-    // ✅ IMPROVED: Use is_winner flag from database (supports ties)
+    // Use is_winner flag from database (supports ties)
     res.json({
       battle: {
         quiz_title: battle.quiz.title,
@@ -1924,6 +1947,14 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     console.log(`🎯 ${winners.length} winner(s) with ${maxScore} points`);
     
     // ============================================
+    // Handle all-forfeit scenario
+    // ============================================
+    const allForfeited = maxScore === 0;
+    if (allForfeited) {
+      console.log('⚠️ All players forfeited (score = 0), no winner will be declared');
+    }
+    
+    // ============================================
     // START TRANSACTION
     // ============================================
     
@@ -1953,7 +1984,34 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     console.log('✅ Battle found and locked:', battle.battle_id);
     
     // ============================================
-    // 2. SECURITY: VERIFY REQUESTER IS HOST
+    // 2. IDEMPOTENCY: CHECK IF ALREADY SYNCED (IMMEDIATELY AFTER LOCK)
+    // Check status IMMEDIATELY after acquiring lock
+    // This prevents race condition where multiple hosts spam "View Results"
+    // ============================================
+    
+    if (battle.status === 'completed') {
+      // Battle already synced - return success (idempotent)
+      await transaction.rollback();
+      console.log('⏭️ IDEMPOTENT: Battle already synced:', gamePin);
+      
+      const totalPlayers = await BattleParticipant.count({
+        where: { battle_id: battle.battle_id }
+      });
+      
+      return res.status(200).json({ 
+        success: true,
+        message: 'Battle already synced',
+        alreadySynced: true,
+        battleId: battle.battle_id,
+        winnerId: battle.winner_id,
+        winnerIds: battle.winner_ids || [battle.winner_id],
+        isTied: battle.is_tied || false,
+        totalPlayers: totalPlayers
+      });
+    }
+    
+    // ============================================
+    // 3. SECURITY: VERIFY REQUESTER IS HOST
     // ============================================
     
     if (battle.host_id !== userId) {
@@ -1966,32 +2024,50 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     }
     
     // ============================================
-    // 3. IDEMPOTENCY: CHECK IF ALREADY SYNCED
+    // 4. UPDATE BATTLE STATUS WITH TIE SUPPORT
+    // Handle all-forfeit edge case
     // ============================================
     
-    // Get total players count
-    const totalPlayers = await BattleParticipant.count({
-      where: { battle_id: battle.battle_id },
-      transaction
-    });
-    
-    if (battle.status === 'completed' && battle.winner_id) {
-      await transaction.rollback();
-      console.log('⏭️ Battle already synced:', gamePin);
-      return res.status(200).json({ 
+    // Handle all-forfeit scenario
+    if (allForfeited) {
+      await battle.update({
+        status: 'completed',
+        winner_id: null,
+        winner_ids: [],
+        is_tied: false,
+        completed_at: completedAt || new Date()
+      }, { transaction });
+      
+      console.log('⚠️ Battle ended with no winner (all forfeited)');
+      
+      // Update all participants without awarding winner status
+      for (const player of players) {
+        await BattleParticipant.update(
+          { 
+            score: 0,
+            points_earned: 0,
+            exp_earned: 0,
+            is_winner: false
+          },
+          { 
+            where: { 
+              battle_id: battle.battle_id, 
+              user_id: player.userId 
+            },
+            transaction 
+          }
+        );
+      }
+      
+      await transaction.commit();
+      
+      return res.json({
         success: true,
-        message: 'Battle already synced',
-        alreadySynced: true,
-        battleId: battle.battle_id,
-        winnerId: battle.winner_id,
-        winnerIds: winnerIds,
-        totalPlayers: totalPlayers
+        message: 'Battle completed with no winner (all forfeited)',
+        noWinner: true,
+        battleId: battle.battle_id
       });
     }
-    
-    // ============================================
-    // 4. UPDATE BATTLE STATUS WITH TIE SUPPORT
-    // ============================================
     
     // Determine if there's a tie
     const isTied = winnerIds.length > 1;
@@ -2034,7 +2110,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
             score: player.score,
             points_earned: pointsEarned,
             exp_earned: expEarned,
-            is_winner: isWinner // ✅ All tied winners get is_winner=true
+            is_winner: isWinner // All tied winners get is_winner=true
           },
           { 
             where: { 
@@ -2060,7 +2136,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
           transaction
         });
         
-        // ✅ NEW: Award achievements for ALL tied winners
+        // Award achievements for ALL tied winners
         if (isWinner) {
           console.log(`🏆 Player ${player.userId} is a winner (tied: ${isTied})`);
         }
@@ -2071,7 +2147,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         console.error(`❌ Error updating player ${player.userId}:`, playerError);
         updateErrors.push(`Failed to update player ${player.userId}: ${playerError.message}`);
         
-        // CRITICAL: If any player fails, rollback entire transaction
+        // If any player fails, rollback entire transaction
         throw playerError;
       }
     }
@@ -2103,7 +2179,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     // ============================================
     
     // Check achievements for all participants (points + battles_won)
-    // ✅ IMPORTANT: All tied winners should get "battles_won" achievements
+    // All tied winners should get "battles_won" achievements
     for (const player of players) {
       try {
         await checkAchievements(player.userId);
@@ -2217,7 +2293,7 @@ router.get('/battle/:gamePin/verify-sync', requireAuth, async (req, res) => {
 // QUIZ SHARING ROUTES
 // ============================================
 
-// ✅ FIX: Toggle quiz public/private status WITHOUT regenerating share code
+// Toggle quiz public/private status WITHOUT regenerating share code
 router.post('/:id/toggle-public', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -2234,7 +2310,7 @@ router.post('/:id/toggle-public', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to modify this quiz' });
     }
 
-    // ✅ FIX: Only generate share code if:
+    // Only generate share code if:
     // 1. Making public AND
     // 2. No share code exists yet
     let shareCode = quiz.share_code;
@@ -2267,7 +2343,7 @@ router.post('/:id/toggle-public', requireAuth, async (req, res) => {
   }
 });
 
-// ✅ WORKING: Import quiz via share code
+// Import quiz via share code
 router.post('/import', requireAuth, async (req, res) => {
   const transaction = await sequelize.transaction();
   
@@ -2385,7 +2461,7 @@ router.post('/import', requireAuth, async (req, res) => {
   }
 });
 
-// ✅ NEW: Backfill share codes for existing public quizzes
+// Backfill share codes for existing public quizzes
 router.post('/admin/backfill-share-codes', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
