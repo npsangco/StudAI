@@ -116,7 +116,7 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
   return (
     <div className="bg-gray-50 border-b border-gray-200">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-3">
-        <div className="flex flex-row items-center gap-2 md:gap-4 overflow-x-auto">
+        <div className="flex flex-row items-center gap-2 md:gap-4 overflow-x-auto overflow-y-visible">
           {/* Privacy Section */}
           <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
             <span className="text-xs md:text-sm font-medium text-gray-700">Privacy:</span>
@@ -187,9 +187,9 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
               })()}
             </button>
 
-            {/* Timer Dropdown Menu */}
+            {/* Timer Dropdown Menu - Opens Downward */}
             {showTimerDropdown && (
-              <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[140px]">
+              <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[100] min-w-[140px]">
                 {timerOptions.map((option) => {
                   const IconComponent = option.icon;
                   return (
@@ -523,7 +523,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-[rgba(107,114,128,0.6)] z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-[rgba(107,114,128,0.6)] z-[999] flex items-center justify-center p-4"
         onClick={onClose}
       >
         {/* Modal */}

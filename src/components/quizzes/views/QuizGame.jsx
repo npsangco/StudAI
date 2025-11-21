@@ -1126,9 +1126,10 @@ const QuizGame = ({
 
             {/* Loading Tip for Battle */}
             <div className="bg-blue-500/20 border border-blue-300/50 rounded-lg p-3 mb-4 text-left">
-              <p className="text-xs sm:text-sm font-medium text-black/90 mb-1">💡 Did you know?</p>
+              <p className="text-xs sm:text-sm font-medium text-black/90 mb-1">💡 Quiz Info</p>
               <p className="text-xs text-black/70">
-                Battle mode: All players get the same 10 questions for fair competition!
+                Timer: <strong>{quizTimer === 0 ? 'No Limit' : `${quizTimer}s per question`}</strong><br/>
+                Battle mode: All players get the same 10 questions!
               </p>
             </div>
 
