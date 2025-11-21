@@ -532,14 +532,14 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <div className="sticky top-0 bg-yellow-50 border-b border-yellow-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Info className="w-5 h-5 text-blue-600" />
+              <Info className="w-5 h-5 text-yellow-600" />
               Quiz Modes: How It Works
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-yellow-100 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -589,15 +589,15 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
             </div>
 
             {/* LAYER 2 & 3: QUIZ MODES + DIFFICULTY TYPES */}
-            <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-5 space-y-4">
-              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <Target className="w-5 h-5" />
+            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-5 space-y-4">
+              <h3 className="text-lg font-bold text-yellow-900 flex items-center gap-2">
+                <Target className="w-5 h-5 text-yellow-700" />
                 LAYER 2: QUIZ MODES
               </h3>
 
               {/* SOLO MODE */}
-              <div className="bg-white border-2 border-blue-300 rounded-lg p-4 space-y-3">
-                <h4 className="font-bold text-blue-900 text-base">Solo Mode</h4>
+              <div className="bg-white border-2 border-yellow-400 rounded-lg p-4 space-y-3">
+                <h4 className="font-bold text-gray-900 text-base">Solo Mode</h4>
                 <p className="text-sm text-gray-600">Play alone with difficulty that adapts to your performance</p>
 
                 {/* LAYER 3: Difficulty Types within Solo */}
@@ -607,7 +607,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
                   {/* ADAPTIVE */}
                   <div className="bg-purple-50 border-l-4 border-purple-500 rounded p-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <Target className="w-4 h-4 text-purple-700" />
+                      <Zap className="w-4 h-4 text-purple-700" />
                       <h5 className="font-bold text-purple-900 text-sm">Adaptive Difficulty</h5>
                     </div>
                     <p className="text-xs text-gray-700 mb-2">Smart difficulty adjustment based on performance</p>
@@ -636,8 +636,8 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
               </div>
 
               {/* BATTLE MODE */}
-              <div className="bg-white border-2 border-red-300 rounded-lg p-4">
-                <h4 className="font-bold text-red-900 text-base mb-2">Battle Mode</h4>
+              <div className="bg-white border-2 border-yellow-400 rounded-lg p-4">
+                <h4 className="font-bold text-gray-900 text-base mb-2">Battle Mode</h4>
                 <p className="text-sm text-gray-700">
                   Compete with others - all players get the <strong>same 10 questions</strong> for fair competition. Always uses <strong>Classic difficulty</strong>.
                 </p>
@@ -645,9 +645,9 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
             </div>
 
             {/* Current Quiz Status */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4">
               <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Info className="w-5 h-5 text-yellow-700 mt-0.5 flex-shrink-0" />
                 <div className="space-y-1">
                   <p className="font-semibold text-gray-900">Your Current Quiz:</p>
                   {questionCount > 0 ? (
@@ -1122,44 +1122,55 @@ export const QuizEditor = ({
 
       <div className="max-w-5xl mx-auto p-4 md:p-6">
         {questions.length === 0 ? (
-          <div className="bg-yellow-50 rounded-xl p-8 md:p-12 text-center border-2 border-dashed border-yellow-400 shadow-sm">
-            <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-yellow-300">
-              <FileText className="w-10 h-10 text-yellow-700" />
-            </div>
+          <div className="text-center">
             <h3 className="text-2xl font-bold text-gray-800 mb-2">
-              No Questions Yet
+              Your Quiz Library Awaits
             </h3>
-            <p className="text-gray-600 mb-4">
-              Start building your quiz by adding your first question
+            <p className="text-gray-600 mb-8">
+              Start creating interactive quizzes, challenge friends in real-time battles, and earn rewards as you study!
             </p>
 
-            {/* Question Bank Foundation Info */}
-            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-6 max-w-2xl mx-auto text-left shadow-sm">
-              <div className="flex items-start gap-2 mb-3">
-                <FileText className="w-5 h-5 text-yellow-700 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-yellow-900 text-base mb-1">QUESTION BANK FOUNDATION</p>
-                  <p className="text-xs text-yellow-800">The core system that powers all quiz modes</p>
+            {/* Card Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto mb-8">
+              {/* Row 1: Question Bank (Full Width) */}
+              <div className="md:col-span-2 bg-yellow-50 rounded-xl p-6 text-left border border-yellow-200 shadow-sm">
+                <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center mb-4">
+                  <FileText className="w-6 h-6 text-white" />
                 </div>
+                <h4 className="font-bold text-gray-900 text-lg mb-2">Question Bank</h4>
+                <p className="text-gray-700 text-sm mb-3">
+                  Build a pool of 15+ questions - system randomly selects 10 per attempt to prevent memorization and create variety
+                </p>
               </div>
 
-              <div className="bg-white rounded-md p-3 border border-yellow-200">
-                <ul className="text-sm text-gray-800 space-y-2">
-                  <li className="flex items-start gap-2">
-                    <span className="text-yellow-600 flex-shrink-0 font-bold">✓</span>
-                    <span><strong>Minimum 15 questions required</strong> to prevent memorization</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-yellow-600 flex-shrink-0">•</span>
-                    <span>Creates variety - different questions each retry</span>
-                  </li>
-                </ul>
+              {/* Row 2: Quiz Modes */}
+              <div className="bg-blue-50 rounded-xl p-6 text-left border border-blue-200 shadow-sm">
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-4">
+                  <Target className="w-6 h-6 text-white" />
+                </div>
+                <h4 className="font-bold text-gray-900 text-lg mb-2">Quiz Modes</h4>
+                <p className="text-gray-700 text-sm">
+                  <strong>Solo:</strong> Practice alone with random 10 questions each retry<br/>
+                  <strong>Battle:</strong> Challenge up to 5 players - all get the same 10 questions
+                </p>
+              </div>
+
+              {/* Row 2: Difficulty Types */}
+              <div className="bg-purple-50 rounded-xl p-6 text-left border border-purple-200 shadow-sm">
+                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-4">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <h4 className="font-bold text-gray-900 text-lg mb-2">Difficulty Types</h4>
+                <p className="text-gray-700 text-sm">
+                  <strong className="text-purple-700">Adaptive:</strong> AI adjusts difficulty based on your performance (2+ difficulty levels)<br/>
+                  <strong className="text-amber-700">Classic:</strong> Fixed difficulty throughout
+                </p>
               </div>
             </div>
 
             <button
               onClick={onAddQuestion}
-              className="flex items-center gap-2 bg-yellow-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-all transform hover:scale-105 shadow-md mx-auto"
+              className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105 shadow-md mx-auto"
             >
               <Sparkles className="w-5 h-5" />
               <span>Add First Question</span>
