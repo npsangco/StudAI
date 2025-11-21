@@ -52,16 +52,29 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
   
   useEffect(() => {
     console.log('🔍 useReconnection useEffect triggered:', { isActive, gamePin, userId, hasInitialized: hasInitializedRef.current });
-    
-    // Prevent double initialization
-    if (!isActive || !gamePin || !userId || hasInitializedRef.current) {
-      console.log('⏭️ Skipping connection init - Condition failed:', { 
-        isActive, 
-        gamePin, 
-        userId, 
-        hasInitialized: hasInitializedRef.current,
-        reason: !isActive ? 'isActive=false' : !gamePin ? 'no gamePin' : !userId ? 'no userId' : 'already initialized'
+
+    // 🔥 FIX: Allow re-initialization if isActive changes from false to true
+    // This handles cases where the component mounts before battle data is ready
+    if (!isActive || !gamePin || !userId) {
+      console.log('⏭️ Skipping connection init - Missing requirements:', {
+        isActive,
+        gamePin,
+        userId
       });
+
+      // If we were previously initialized but now inactive, cleanup
+      if (hasInitializedRef.current && !isActive) {
+        console.log('🧹 Cleaning up previous initialization due to isActive=false');
+        cleanup();
+        hasInitializedRef.current = false;
+      }
+
+      return;
+    }
+
+    // Prevent duplicate initialization for the same session
+    if (hasInitializedRef.current) {
+      console.log('⏭️ Already initialized, skipping');
       return;
     }
 
@@ -111,8 +124,18 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
     }
-    
-    // Send heartbeat every 5 seconds
+
+    // 🔥 FIX: Send initial heartbeat immediately BEFORE starting interval
+    // This prevents double-sending at T=0
+    if (gamePin && userId) {
+      sendHeartbeat(gamePin, userId);
+      setConnectionState(prev => ({
+        ...prev,
+        lastHeartbeat: Date.now()
+      }));
+    }
+
+    // Send heartbeat every 5 seconds (starting at T=5s)
     heartbeatIntervalRef.current = setInterval(() => {
       if (gamePin && userId) {
         sendHeartbeat(gamePin, userId);
@@ -122,11 +145,6 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
         }));
       }
     }, 5000);
-    
-    // Send initial heartbeat
-    if (gamePin && userId) {
-      sendHeartbeat(gamePin, userId);
-    }
   }, [gamePin, userId]);
   
   const stopHeartbeat = useCallback(() => {
@@ -269,6 +287,10 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
       return { success: false, error: 'Missing game info' };
     }
 
+    // 🔥 CRITICAL FIX: Stop grace period monitoring IMMEDIATELY when reconnection starts
+    // This prevents the forfeit timer from firing during reconnection
+    stopGracePeriodMonitoring();
+
     setConnectionState(prev => ({
       ...prev,
       isReconnecting: true
@@ -277,27 +299,28 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
     try {
       // Get stored token
       const storedToken = getStoredReconnectionToken(gamePin, userId);
-      
+
       if (!storedToken) {
         throw new Error('No reconnection token found');
       }
-      
+
       // Verify token with Firebase
       const verification = await verifyReconnectionToken(
         gamePin,
         userId,
         storedToken.token
       );
-      
+
       if (!verification.valid) {
         throw new Error(verification.error || 'Invalid token');
       }
-      
-      // Attempt to rejoin battle
+
+      // 🔥 CRITICAL FIX: Attempt to rejoin battle (this also checks if battle exists)
       const rejoinResult = await rejoinBattle(gamePin, userId);
-      
+
       if (!rejoinResult.success) {
-        throw new Error(rejoinResult.error || 'Failed to rejoin');
+        // Battle doesn't exist or can't be rejoined
+        throw new Error(rejoinResult.error || 'Battle no longer available');
       }
       
       // Restore saved game state

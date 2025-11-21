@@ -37,6 +37,8 @@ const QuizGame = ({
   onComplete,
   onPlayerScoreUpdate
 }) => {
+  console.log('🚀 QuizGame RENDERED:', { mode, hasQuiz: !!quiz, gamePin: quiz?.gamePin });
+  
   const rawQuestions = quiz?.questions || [];
 
   // ADAPTIVE DIFFICULTY: Check if adaptive mode can be used
@@ -330,14 +332,16 @@ const QuizGame = ({
     }
   );
   
-  // ENSURE GAME STARTS UNPAUSED
+  // ENSURE GAME STARTS UNPAUSED (unless reconnecting)
   useEffect(() => {
     if (mode === 'battle') {
-      // On initial mount, ensure game is NOT paused
-      game.setIsPaused(false);
-
+      // Only unpause if we're NOT in the middle of a reconnection
+      if (!reconnection.connectionState.isReconnecting &&
+          !reconnection.connectionState.reconnectionAvailable) {
+        game.setIsPaused(false);
+      }
     }
-  }, []); // Empty dependency array = runs once on mount
+  }, [mode]); // Only depend on mode, not reconnection state (to avoid loops)
 
   // ============================================
   // RECONNECTION HANDLERS 
@@ -413,14 +417,21 @@ const QuizGame = ({
 
               }
 
-              if (targetQuestion >= 0 && targetQuestion < questions.length) {
+              // 🔥 BULLETPROOF: Validate target question is within valid range
+              const validTargetQuestion = Math.max(0, Math.min(targetQuestion, questions.length - 1));
+
+              if (validTargetQuestion !== targetQuestion) {
+                console.warn(`⚠️ Target question ${targetQuestion} out of bounds, clamping to ${validTargetQuestion}`);
+              }
+
+              if (validTargetQuestion >= 0 && validTargetQuestion < questions.length) {
 
 
                 // ✅ USE SETTER to trigger re-render!
-                game.setCurrentQuestionIndex(targetQuestion);
+                game.setCurrentQuestionIndex(validTargetQuestion);
 
-                // 🔥 FIX: Update progress AND check if we should be waiting
-                await updatePlayerProgress(quiz.gamePin, quiz.currentUserId, targetQuestion);
+                // 🔥 FIX: Update progress AND check if we should be waiting (use validated question)
+                await updatePlayerProgress(quiz.gamePin, quiz.currentUserId, validTargetQuestion);
 
                 // Reset timer for this question
                 resetTimer(quizTimer);
@@ -444,7 +455,7 @@ const QuizGame = ({
                       );
 
                       const playersWhoAnsweredTarget = latestActivePlayers.filter(
-                        p => (p.currentQuestion || 0) >= targetQuestion + 1
+                        p => (p.currentQuestion || 0) >= validTargetQuestion + 1
                       ).length;
 
                       if (playersWhoAnsweredTarget === latestActivePlayers.length && latestActivePlayers.length > 0) {
@@ -580,16 +591,26 @@ const QuizGame = ({
           reason: 'beforeunload'
         };
         
-        // Use sendBeacon for reliable delivery
+        // 🔥 FIX: Use PATCH for partial updates (Firebase REST API requirement)
         if (navigator.sendBeacon) {
-          const blob = new Blob([JSON.stringify(disconnectData)], { type: 'application/json' });
+          // sendBeacon uses POST by default, but we need PATCH for Firebase
+          // For Firebase REST API, we can use PUT but only if we include all fields
+          // Better approach: Use the full object structure
+          const fullDisconnectData = {
+            userId: quiz.currentUserId,
+            isOnline: false,
+            disconnectedAt: Date.now(),
+            reason: 'beforeunload',
+            gracePeriodActive: true
+          };
+          const blob = new Blob([JSON.stringify(fullDisconnectData)], { type: 'application/json' });
           navigator.sendBeacon(connectionUrl, blob);
 
         } else {
-          // Fallback: synchronous XHR
+          // Fallback: synchronous XHR with PATCH
           try {
             const xhr = new XMLHttpRequest();
-            xhr.open('PUT', connectionUrl, false); // synchronous PUT
+            xhr.open('PATCH', connectionUrl, false); // 🔥 CHANGED: synchronous PATCH
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.send(JSON.stringify(disconnectData));
 

@@ -1,4 +1,4 @@
-import { ref, onValue, onDisconnect, set, get, serverTimestamp } from 'firebase/database';
+import { ref, onValue, onDisconnect, set, get, update, serverTimestamp } from 'firebase/database';
 import { realtimeDb } from './config';
 
 /**
