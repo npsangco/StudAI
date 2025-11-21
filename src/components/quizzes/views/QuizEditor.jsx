@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
-import { Copy, Check, Clock, ChevronDown, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText, Info, X } from 'lucide-react';
+import { Copy, Check, Clock, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText, Info, X, Users } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 import { canUseAdaptiveMode } from '../utils/adaptiveDifficultyEngine';
 import { TEXT_LIMITS } from '../utils/constants';
@@ -19,7 +19,6 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
 
   const initialTimer = quiz.timer_per_question ?? quiz.timerPerQuestion ?? 30;
   const [timerValue, setTimerValue] = useState(initialTimer);
-  const [showTimerDropdown, setShowTimerDropdown] = useState(false);
 
   const isTempQuiz = quiz.isTemp || quiz.id?.toString().startsWith('temp-');
 
@@ -33,18 +32,6 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
     setShareCode(updatedShareCode);
     setTimerValue(updatedTimer);
   }, [quiz.isPublic, quiz.is_public, quiz.share_code, quiz.timer_per_question, quiz.timerPerQuestion]);
-
-  // Close dropdown when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showTimerDropdown && !event.target.closest('.timer-dropdown-container')) {
-        setShowTimerDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showTimerDropdown]);
 
   const handleToggle = async () => {
     if (isTempQuiz) {
@@ -116,14 +103,16 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
   return (
     <div className="bg-gray-50 border-b border-gray-200">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-3">
-        <div className="relative z-20 flex flex-row items-center gap-2 md:gap-4 overflow-x-auto overflow-y-visible">
+        {/* Desktop: Same row | Mobile: Stacked */}
+        <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+
           {/* Privacy Section */}
-          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-            <span className="text-xs md:text-sm font-medium text-gray-700">Privacy:</span>
+          <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
+            <span className="text-xs md:text-sm font-medium text-gray-700 flex-shrink-0">Privacy:</span>
             <button
               onClick={handleToggle}
               disabled={loading || isTempQuiz}
-              className={`flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all ${
+              className={`flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all flex-shrink-0 ${
                 isPublic
                   ? 'bg-green-100 text-green-700 hover:bg-green-200'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -144,7 +133,7 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
             </button>
 
             {isPublic && shareCode && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-300 shadow-sm">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-300 shadow-sm flex-shrink-0">
                 <span className="text-xs text-gray-500">Code:</span>
                 <code className="text-sm font-mono font-bold text-blue-600">{shareCode}</code>
                 <button
@@ -162,57 +151,33 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
             )}
           </div>
 
-          {/* Divider */}
-          <div className="w-px h-6 bg-gray-300 flex-shrink-0"></div>
-
           {/* Timer Section */}
-          <div className="relative flex items-center gap-2 md:gap-3 timer-dropdown-container flex-shrink-0">
-            <span className="text-xs md:text-sm font-medium text-gray-700">Timer:</span>
+          <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
+            <span className="text-xs md:text-sm font-medium text-gray-700 flex-shrink-0">Timer:</span>
 
-            {/* Timer Dropdown Trigger */}
-            <button
-              onClick={() => setShowTimerDropdown(!showTimerDropdown)}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-medium bg-white border border-gray-300 hover:border-yellow-500 hover:bg-yellow-50 transition-all"
-            >
-              {(() => {
-                const selected = timerOptions.find(opt => opt.value === timerValue);
-                const IconComponent = selected?.icon || Clock;
+            {/* Timer Buttons - Horizontal */}
+            <div className="flex items-center gap-1.5">
+              {timerOptions.map((option) => {
+                const IconComponent = option.icon;
+                const isSelected = timerValue === option.value;
                 return (
-                  <>
+                  <button
+                    key={option.value}
+                    onClick={() => handleTimerChange(option.value)}
+                    className={`flex items-center gap-1 px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 ${
+                      isSelected
+                        ? 'bg-yellow-400 text-gray-900 shadow-sm'
+                        : 'bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:bg-yellow-50'
+                    }`}
+                  >
                     <IconComponent className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                    <span>{selected?.label || '30s'}</span>
-                    <ChevronDown className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                  </>
+                    <span className="whitespace-nowrap">{option.label}</span>
+                  </button>
                 );
-              })()}
-            </button>
-
-            {/* Timer Dropdown Menu - Opens Downward */}
-            {showTimerDropdown && (
-              <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[100] min-w-[140px]">
-                {timerOptions.map((option) => {
-                  const IconComponent = option.icon;
-                  return (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        handleTimerChange(option.value);
-                        setShowTimerDropdown(false);
-                      }}
-                      className={`w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
-                        timerValue === option.value
-                          ? 'bg-yellow-100 text-yellow-900 font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <IconComponent className="w-4 h-4" />
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+              })}
+            </div>
           </div>
+
         </div>
       </div>
     </div>
