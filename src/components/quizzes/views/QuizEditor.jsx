@@ -116,7 +116,7 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
   return (
     <div className="bg-gray-50 border-b border-gray-200">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-3">
-        <div className="flex flex-row items-center gap-2 md:gap-4 overflow-x-auto overflow-y-visible">
+        <div className="relative z-20 flex flex-row items-center gap-2 md:gap-4 overflow-x-auto overflow-y-visible">
           {/* Privacy Section */}
           <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
             <span className="text-xs md:text-sm font-medium text-gray-700">Privacy:</span>
@@ -523,170 +523,100 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-[rgba(107,114,128,0.6)] z-[999] flex items-center justify-center p-4"
+        className="fixed inset-0 bg-[rgba(107,114,128,0.6)] z-[999] flex items-center justify-center p-3"
         onClick={onClose}
       >
-        {/* Modal */}
+        {/* Modal - Minified */}
         <div
-          className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          className="bg-white rounded-xl shadow-2xl max-w-xl w-full max-h-[85vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="sticky top-0 bg-yellow-50 border-b border-yellow-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Info className="w-5 h-5 text-yellow-600" />
+          {/* Header - Compact */}
+          <div className="sticky top-0 bg-yellow-50 border-b border-yellow-200 px-4 py-2.5 flex items-center justify-between rounded-t-xl">
+            <h2 className="text-base font-bold text-gray-900 flex items-center gap-1.5">
+              <Info className="w-4 h-4 text-yellow-600" />
               Quiz Modes: How It Works
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-yellow-100 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-yellow-100 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className="w-4 h-4 text-gray-500" />
             </button>
           </div>
 
-          {/* Content */}
-          <div className="p-6 space-y-6">
-            {/* Intro */}
-            <p className="text-gray-700 text-sm">
-              StudAI's quiz system has 3 layers: <strong>Foundation → Quiz Modes → Difficulty Types</strong>
-            </p>
-
-            {/* LAYER 1: FOUNDATION */}
-            <div className="bg-yellow-50 border-3 border-yellow-400 rounded-xl p-5 shadow-md space-y-3">
-              <div className="flex items-center gap-2">
-                <FileText className="w-6 h-6 text-yellow-700" />
-                <h3 className="text-xl font-bold text-yellow-900">LAYER 1: QUESTION BANK FOUNDATION</h3>
-              </div>
-
-              <p className="text-gray-800 font-medium text-sm">
-                The core system that powers all quiz modes below
+          {/* Content - Simple & Clean */}
+          <div className="p-4 space-y-3">
+            {/* How It Works */}
+            <div className="space-y-2">
+              <p className="text-gray-700 text-xs leading-relaxed">
+                Every quiz randomly selects <strong>10 questions</strong> from your question bank to keep things fresh. Need at least <strong>15 questions</strong> to start.
               </p>
-
-              <div className="bg-white rounded-lg p-3 border border-yellow-200">
-                <p className="font-semibold text-gray-900 text-sm mb-2">Requirements:</p>
-                <ul className="space-y-1.5 ml-1">
-                  <li className="flex items-start gap-2 text-gray-700 text-sm">
-                    <span className="text-yellow-600 font-bold mt-0.5">✓</span>
-                    <span>Minimum <strong>15 questions</strong> in your pool</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="bg-white rounded-lg p-3 border border-yellow-200">
-                <p className="font-semibold text-gray-900 text-sm mb-2">How it works:</p>
-                <ul className="space-y-1.5 ml-1 text-sm">
-                  <li className="flex items-start gap-2 text-gray-700">
-                    <span className="text-yellow-600">•</span>
-                    <span>System randomly selects 10 questions per quiz attempt</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-gray-700">
-                    <span className="text-yellow-600">•</span>
-                    <span>Prevents memorization through variety</span>
-                  </li>
-                </ul>
-              </div>
             </div>
 
-            {/* LAYER 2 & 3: QUIZ MODES + DIFFICULTY TYPES */}
-            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-5 space-y-4">
-              <h3 className="text-lg font-bold text-yellow-900 flex items-center gap-2">
-                <Target className="w-5 h-5 text-yellow-700" />
-                LAYER 2: QUIZ MODES
-              </h3>
+            {/* Quiz Modes */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Quiz Modes</h3>
 
-              {/* SOLO MODE */}
-              <div className="bg-white border-2 border-yellow-400 rounded-lg p-4 space-y-3">
-                <h4 className="font-bold text-gray-900 text-base">Solo Mode</h4>
-                <p className="text-sm text-gray-600">Play alone with difficulty that adapts to your performance</p>
-
-                {/* LAYER 3: Difficulty Types within Solo */}
-                <div className="space-y-3 ml-2 mt-3">
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Difficulty Types:</p>
-
-                  {/* ADAPTIVE */}
-                  <div className="bg-purple-50 border-l-4 border-purple-500 rounded p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Zap className="w-4 h-4 text-purple-700" />
-                      <h5 className="font-bold text-purple-900 text-sm">Adaptive Difficulty</h5>
-                    </div>
-                    <p className="text-xs text-gray-700 mb-2">Smart difficulty adjustment based on performance</p>
-                    <div className="text-xs text-gray-700 space-y-1">
-                      <p className="font-semibold">Requirements:</p>
-                      <p className="ml-3">✓ 2+ difficulty levels (Easy, Medium, Hard mix)</p>
-                      <p className="font-semibold mt-2">Behavior:</p>
-                      <p className="ml-3">• 100% → Harder | 50% → Same | 0% → Easier</p>
-                    </div>
+              {/* Solo Mode */}
+              <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center flex-shrink-0">
+                    <Zap className="w-3.5 h-3.5 text-white" />
                   </div>
-
-                  {/* CLASSIC */}
-                  <div className="bg-amber-50 border-l-4 border-amber-500 rounded p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Circle className="w-4 h-4 text-amber-700" />
-                      <h5 className="font-bold text-amber-900 text-sm">Classic Difficulty</h5>
-                    </div>
-                    <p className="text-xs text-gray-700 mb-2">No adjustment - standard quiz experience</p>
-                    <div className="text-xs text-gray-700 space-y-1">
-                      <p className="font-semibold">Used when:</p>
-                      <p className="ml-3">• All questions same difficulty level</p>
-                      <p className="ml-3">• Standard assessment needed</p>
-                    </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-gray-900 text-xs mb-1">Solo Mode</h4>
+                    <p className="text-[10px] text-gray-600 leading-relaxed mb-1.5">
+                      Practice at your own pace. Quiz adapts difficulty based on your performance.
+                    </p>
+                    <p className="text-[10px] text-purple-700">
+                      <strong>Adaptive:</strong> Needs 2+ difficulty levels • Adjusts every 2 questions<br/>
+                      <strong>Classic:</strong> Fixed difficulty throughout
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* BATTLE MODE */}
-              <div className="bg-white border-2 border-yellow-400 rounded-lg p-4">
-                <h4 className="font-bold text-gray-900 text-base mb-2">Battle Mode</h4>
-                <p className="text-sm text-gray-700">
-                  Compete with others - all players get the <strong>same 10 questions</strong> for fair competition. Always uses <strong>Classic difficulty</strong>.
-                </p>
+              {/* Battle Mode */}
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center flex-shrink-0">
+                    <Users className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-gray-900 text-xs mb-1">Battle Mode</h4>
+                    <p className="text-[10px] text-gray-600 leading-relaxed">
+                      Compete with friends. Everyone gets the same 10 questions for fair competition. Always uses Classic difficulty.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Current Quiz Status */}
-            <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-yellow-700 mt-0.5 flex-shrink-0" />
-                <div className="space-y-1">
-                  <p className="font-semibold text-gray-900">Your Current Quiz:</p>
-                  {questionCount > 0 ? (
-                    <>
-                      <p className="text-gray-700">
-                        {questionCount} question{questionCount !== 1 ? 's' : ''}
-                        {distribution && ` • Easy (${distribution.easy}), Medium (${distribution.medium}), Hard (${distribution.hard})`}
-                      </p>
-                      <p className="text-gray-900 font-medium">
-                        Status: {isAdaptive ? (
-                          <span className="text-purple-700">Adaptive Difficulty Enabled</span>
-                        ) : (
-                          <span className="text-amber-700">Classic Difficulty</span>
-                        )}
-                      </p>
-                    </>
+            {questionCount > 0 && (
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <p className="text-[10px] text-gray-600 mb-1">Your Quiz:</p>
+                <p className="text-xs font-medium text-gray-900">
+                  {questionCount} question{questionCount !== 1 ? 's' : ''}
+                  {distribution && ` • E:${distribution.easy} M:${distribution.medium} H:${distribution.hard}`}
+                </p>
+                <p className="text-[10px] mt-1">
+                  {isAdaptive ? (
+                    <span className="text-purple-700 font-medium">✓ Adaptive Enabled</span>
                   ) : (
-                    <p className="text-gray-700">No questions added yet</p>
+                    <span className="text-gray-600">Classic Mode</span>
                   )}
-                </div>
+                </p>
               </div>
-            </div>
-
-            {/* Tip */}
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4">
-              <p className="text-gray-800 flex items-start gap-2">
-                <span className="text-xl">💡</span>
-                <span>
-                  <strong>Tip:</strong> Create 15+ questions with mixed difficulties (Easy, Medium, Hard) for the best learning experience!
-                </span>
-              </p>
-            </div>
+            )}
           </div>
 
-          {/* Footer */}
-          <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end rounded-b-2xl">
+          {/* Footer - Compact */}
+          <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-4 py-2.5 flex justify-end rounded-b-xl">
             <button
               onClick={onClose}
-              className="px-6 py-2.5 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition-colors shadow-sm"
+              className="px-4 py-1.5 bg-yellow-500 text-white text-sm font-semibold rounded-lg hover:bg-yellow-600 transition-colors shadow-sm"
             >
               Got it!
             </button>
