@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
-import { Copy, Check, Clock, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText, Info, X, Users } from 'lucide-react';
+import { Copy, Check, Clock, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText, Info, X } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 import { canUseAdaptiveMode } from '../utils/adaptiveDifficultyEngine';
 import { TEXT_LIMITS } from '../utils/constants';
@@ -510,69 +510,75 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
             </button>
           </div>
 
-          {/* Content - Simple & Clean */}
-          <div className="p-4 space-y-3">
-            {/* How It Works */}
-            <div className="space-y-2">
-              <p className="text-gray-700 text-xs leading-relaxed">
-                Every quiz randomly selects <strong>10 questions</strong> from your question bank to keep things fresh. Need at least <strong>15 questions</strong> to start.
-              </p>
-            </div>
-
-            {/* Quiz Modes */}
-            <div className="space-y-2">
-              <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Quiz Modes</h3>
-
-              {/* Solo Mode */}
-              <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
-                <div className="flex items-start gap-2">
-                  <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center flex-shrink-0">
-                    <Zap className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-900 text-xs mb-1">Solo Mode</h4>
-                    <p className="text-[10px] text-gray-600 leading-relaxed mb-1.5">
-                      Practice at your own pace. Quiz adapts difficulty based on your performance.
-                    </p>
-                    <p className="text-[10px] text-purple-700">
-                      <strong>Adaptive:</strong> Needs 2+ difficulty levels • Adjusts every 2 questions<br/>
-                      <strong>Classic:</strong> Fixed difficulty throughout
-                    </p>
-                  </div>
+          {/* Content - 4 Tiles */}
+          <div className="p-4 space-y-2">
+            {/* Question Bank Tile */}
+            <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 bg-yellow-500 rounded flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-3.5 h-3.5 text-white" />
                 </div>
-              </div>
-
-              {/* Battle Mode */}
-              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <div className="flex items-start gap-2">
-                  <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center flex-shrink-0">
-                    <Users className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-900 text-xs mb-1">Battle Mode</h4>
-                    <p className="text-[10px] text-gray-600 leading-relaxed">
-                      Compete with friends. Everyone gets the same 10 questions for fair competition. Always uses Classic difficulty.
-                    </p>
-                  </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900 text-xs mb-1">Question Bank</h4>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    Every quiz randomly selects <strong>10 questions</strong> from your bank to keep things fresh. Need at least <strong>15 questions</strong> to start.
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Current Quiz Status */}
+            {/* Classic Tile */}
+            <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 bg-amber-500 rounded flex items-center justify-center flex-shrink-0">
+                  <Circle className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900 text-xs mb-1">Classic Difficulty</h4>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    Fixed difficulty throughout. Used in Battle Mode or when all questions are the same difficulty level.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Adaptive Tile */}
+            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center flex-shrink-0">
+                  <Zap className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900 text-xs mb-1">Adaptive Difficulty</h4>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    Adjusts difficulty based on your performance every 2 questions. Needs <strong>2+ difficulty levels</strong> in your question bank.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Your Quiz Status Tile */}
             {questionCount > 0 && (
               <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <p className="text-[10px] text-gray-600 mb-1">Your Quiz:</p>
-                <p className="text-xs font-medium text-gray-900">
-                  {questionCount} question{questionCount !== 1 ? 's' : ''}
-                  {distribution && ` • E:${distribution.easy} M:${distribution.medium} H:${distribution.hard}`}
-                </p>
-                <p className="text-[10px] mt-1">
-                  {isAdaptive ? (
-                    <span className="text-purple-700 font-medium">✓ Adaptive Enabled</span>
-                  ) : (
-                    <span className="text-gray-600">Classic Mode</span>
-                  )}
-                </p>
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 bg-gray-400 rounded flex items-center justify-center flex-shrink-0">
+                    <Info className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-gray-900 text-xs mb-1">Your Quiz</h4>
+                    <p className="text-[10px] text-gray-600 leading-relaxed">
+                      {questionCount} question{questionCount !== 1 ? 's' : ''}
+                      {distribution && ` • Easy: ${distribution.easy}, Medium: ${distribution.medium}, Hard: ${distribution.hard}`}
+                    </p>
+                    <p className="text-[10px] text-gray-600 mt-0.5">
+                      {isAdaptive ? (
+                        <span className="text-purple-700 font-medium">✓ Adaptive Enabled</span>
+                      ) : (
+                        <span className="text-gray-600">Classic Mode</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
