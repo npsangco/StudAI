@@ -253,17 +253,30 @@ export const ValidationErrorModal = ({ isOpen, onClose, errors }) => {
         </div>
 
         {/* Scrollable Error List - REDESIGNED */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <p className="text-gray-600 mb-4 font-medium">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <p className="text-gray-600 mb-4 font-medium text-sm sm:text-base">
             Please fix the following issues:
           </p>
-          
+
           <div className="space-y-3">
             {Object.keys(groupedErrors).sort((a, b) => a - b).map((questionNum) => {
               const questionErrors = groupedErrors[questionNum];
-              
+              const isGlobalError = questionNum == 0;
+
               return (
                 <div key={questionNum}>
+                  {/* Global Error Header */}
+                  {isGlobalError && (
+                    <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3 sm:p-4 mb-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                        <span className="text-xs sm:text-sm font-bold text-yellow-900 uppercase tracking-wider">
+                          Quiz Requirement
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Question Header - Only if questionNum > 0 */}
                   {questionNum > 0 && (
                     <div className="flex items-center gap-2 mb-2">

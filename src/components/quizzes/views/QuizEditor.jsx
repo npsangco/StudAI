@@ -192,6 +192,17 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
 export const validateQuestions = (questions) => {
   const errors = [];
 
+  // Question Bank validation: Minimum 15 questions required
+  const MIN_QUESTIONS_FOR_BANK = 15;
+  if (questions.length < MIN_QUESTIONS_FOR_BANK) {
+    errors.push({
+      questionNumber: null,
+      message: `Question Bank requires minimum ${MIN_QUESTIONS_FOR_BANK} questions`,
+      details: `Currently: ${questions.length} question${questions.length !== 1 ? 's' : ''}. Add ${MIN_QUESTIONS_FOR_BANK - questions.length} more question${MIN_QUESTIONS_FOR_BANK - questions.length !== 1 ? 's' : ''} to enable variety and prevent memorization.`,
+      isGlobalError: true
+    });
+  }
+
   questions.forEach((question, index) => {
     const questionNumber = index + 1;
 
@@ -504,18 +515,58 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
           <div className="p-6 space-y-6">
             {/* Intro */}
             <p className="text-gray-700">
-              Your quiz will automatically use the best mode based on your questions:
+              StudAI uses <strong>Question Banks</strong> with smart difficulty modes for effective learning:
             </p>
+
+            {/* Question Bank Section */}
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-700" />
+                <h3 className="text-lg font-bold text-blue-900">QUESTION BANK SYSTEM</h3>
+              </div>
+
+              <p className="text-gray-700">
+                Create a pool of questions that prevents memorization and ensures variety
+              </p>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-gray-900">Requirements:</p>
+                <ul className="space-y-1.5 ml-1">
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-green-600 font-bold mt-0.5">✓</span>
+                    <span>Minimum <strong>15 questions</strong> in your pool</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-gray-900">How it works:</p>
+                <ul className="space-y-1.5 ml-1">
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-blue-600">•</span>
+                    <span><strong>Solo mode:</strong> Students get 10 random questions each attempt</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-blue-600">•</span>
+                    <span><strong>Battle mode:</strong> All players get the same 10 questions (fair!)</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-blue-600">•</span>
+                    <span>Prevents memorization - different questions each retry</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
 
             {/* Adaptive Mode Section */}
             <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-5 space-y-3">
               <div className="flex items-center gap-2">
                 <Target className="w-5 h-5 text-purple-700" />
-                <h3 className="text-lg font-bold text-purple-900">ADAPTIVE MODE</h3>
+                <h3 className="text-lg font-bold text-purple-900">ADAPTIVE DIFFICULTY</h3>
               </div>
-              
+
               <p className="text-gray-700">
-                Questions automatically adjust difficulty based on student performance
+                Questions automatically adjust difficulty based on student performance (Solo mode only)
               </p>
 
               <div className="space-y-2">
@@ -536,12 +587,20 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
                 <p className="font-semibold text-gray-900">How it works:</p>
                 <ul className="space-y-1.5 ml-1">
                   <li className="flex items-start gap-2 text-gray-700">
-                    <span className="text-gray-400">•</span>
-                    <span>Student answers correctly → Gets harder</span>
+                    <span className="text-purple-600">•</span>
+                    <span>Checks accuracy every 2 questions</span>
                   </li>
                   <li className="flex items-start gap-2 text-gray-700">
-                    <span className="text-gray-400">•</span>
-                    <span>Student struggles → Gets easier</span>
+                    <span className="text-purple-600">•</span>
+                    <span>100% correct → Difficulty increases</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-purple-600">•</span>
+                    <span>0% correct → Difficulty decreases</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-purple-600">•</span>
+                    <span>50% correct → Stays at current level (learning!)</span>
                   </li>
                 </ul>
               </div>
@@ -551,23 +610,27 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
             <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-5 space-y-3">
               <div className="flex items-center gap-2">
                 <Circle className="w-5 h-5 text-amber-700" />
-                <h3 className="text-lg font-bold text-amber-900">CLASSIC MODE</h3>
+                <h3 className="text-lg font-bold text-amber-900">STANDARD DIFFICULTY</h3>
               </div>
-              
+
               <p className="text-gray-700">
-                All students get the same questions in the same order
+                No difficulty adjustment - questions follow their assigned difficulty
               </p>
 
               <div className="space-y-2">
                 <p className="font-semibold text-gray-900">Used when:</p>
                 <ul className="space-y-1.5 ml-1">
                   <li className="flex items-start gap-2 text-gray-700">
-                    <span className="text-gray-400">•</span>
+                    <span className="text-amber-600">•</span>
                     <span>Less than 5 questions</span>
                   </li>
                   <li className="flex items-start gap-2 text-gray-700">
-                    <span className="text-gray-400">•</span>
+                    <span className="text-amber-600">•</span>
                     <span>All questions same difficulty</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-gray-700">
+                    <span className="text-amber-600">•</span>
+                    <span>Battle mode (fairness over adaptation)</span>
                   </li>
                 </ul>
               </div>
@@ -576,15 +639,15 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
                 <p className="font-semibold text-gray-900">How it works:</p>
                 <ul className="space-y-1.5 ml-1">
                   <li className="flex items-start gap-2 text-gray-700">
-                    <span className="text-gray-400">•</span>
-                    <span>Fixed question order</span>
+                    <span className="text-amber-600">•</span>
+                    <span>Questions maintain assigned difficulty</span>
                   </li>
                   <li className="flex items-start gap-2 text-gray-700">
-                    <span className="text-gray-400">•</span>
-                    <span>No difficulty adjustment</span>
+                    <span className="text-amber-600">•</span>
+                    <span>Still uses Question Bank (if 15+ questions)</span>
                   </li>
                   <li className="flex items-start gap-2 text-gray-700">
-                    <span className="text-gray-400">•</span>
+                    <span className="text-amber-600">•</span>
                     <span>Standard quiz experience</span>
                   </li>
                 </ul>
@@ -605,9 +668,9 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
                       </p>
                       <p className="text-gray-900 font-medium">
                         Status: {isAdaptive ? (
-                          <span className="text-purple-700">Adaptive Mode Active</span>
+                          <span className="text-purple-700">Adaptive Difficulty Enabled</span>
                         ) : (
-                          <span className="text-amber-700">Classic Mode</span>
+                          <span className="text-amber-700">Standard Difficulty</span>
                         )}
                       </p>
                     </>
@@ -623,7 +686,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
               <p className="text-gray-800 flex items-start gap-2">
                 <span className="text-xl">💡</span>
                 <span>
-                  <strong>Tip:</strong> Mix Easy, Medium, and Hard questions to unlock Adaptive Mode for better experience!
+                  <strong>Tip:</strong> Create 15+ questions with mixed difficulties (Easy, Medium, Hard) for the best learning experience!
                 </span>
               </p>
             </div>
@@ -778,28 +841,30 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 const adaptiveCheck = canUseAdaptiveMode(questions);
                 
                 if (adaptiveCheck.enabled) {
-                  // ✅ Adaptive Mode Enabled
+                  // ✅ Adaptive Difficulty Enabled
                   return (
                     <button
                       onClick={() => setShowModesInfoModal(true)}
                       className="px-3 py-1.5 text-sm rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1.5 hover:bg-purple-200 transition-colors cursor-pointer"
-                      title="Click to learn how quiz modes work"
+                      title="Click to learn how Question Bank and difficulty modes work"
                     >
                       <Target className="w-3.5 h-3.5" />
-                      <span>Adaptive Mode</span>
+                      <span className="hidden sm:inline">Adaptive Difficulty</span>
+                      <span className="sm:hidden">Adaptive</span>
                       <Info className="w-3.5 h-3.5 opacity-70" />
                     </button>
                   );
                 } else if (questionCount > 0) {
-                  // ❌ Classic Mode
+                  // ❌ Standard Difficulty
                   return (
                     <button
                       onClick={() => setShowModesInfoModal(true)}
                       className="px-3 py-1.5 text-sm rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1.5 hover:bg-amber-200 transition-colors cursor-pointer"
-                      title="Click to learn how quiz modes work"
+                      title="Click to learn how Question Bank and difficulty modes work"
                     >
                       <Circle className="w-3.5 h-3.5" />
-                      <span>Classic Mode</span>
+                      <span className="hidden sm:inline">Standard Difficulty</span>
+                      <span className="sm:hidden">Standard</span>
                       <Info className="w-3.5 h-3.5 opacity-70" />
                     </button>
                   );
@@ -1074,9 +1139,38 @@ export const QuizEditor = ({
             <h3 className="text-2xl font-bold text-gray-800 mb-2">
               No Questions Yet
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-3">
               Start building your quiz by adding your first question
             </p>
+
+            {/* Question Bank Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-6 max-w-2xl mx-auto text-left">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs sm:text-sm">
+                  <p className="font-semibold text-blue-900 mb-2">Understanding Question Banks</p>
+                  <ul className="text-blue-800 space-y-1.5">
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 flex-shrink-0">•</span>
+                      <span><strong>Minimum 15 questions required</strong> to prevent memorization</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 flex-shrink-0">•</span>
+                      <span><strong>Solo mode:</strong> Students get 10 random questions each attempt</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 flex-shrink-0">•</span>
+                      <span><strong>Battle mode:</strong> All players get the same 10 questions (fair!)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 flex-shrink-0">•</span>
+                      <span><strong>Adaptive:</strong> Mix Easy, Medium, Hard for smart difficulty</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
             <button
               onClick={onAddQuestion}
               className="flex items-center gap-2 bg-yellow-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-all transform hover:scale-105 shadow-md mx-auto"

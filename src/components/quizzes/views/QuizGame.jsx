@@ -47,15 +47,31 @@ const QuizGame = ({
   const [questions, setQuestions] = useState(() => {
     if (useAdaptiveMode) {
       // Initialize adaptive queue with ALL questions in optimal order
-      const { orderedQuestions, startingDifficulty } = initializeAdaptiveQueue(rawQuestions);
+      const { orderedQuestions, startingDifficulty} = initializeAdaptiveQueue(rawQuestions);
 
       console.log(`🎯 OPTION 1 INITIALIZED: ${orderedQuestions.length} questions loaded (Starting: ${startingDifficulty})`);
       console.log(`📊 Student will see: "Question 1 of ${orderedQuestions.length}"`);
 
       return orderedQuestions;
     }
-    // Classic mode: sort by difficulty or use original order
-    return mode === 'solo' ? sortQuestionsByDifficulty(rawQuestions) : rawQuestions;
+
+    // Battle mode: Random 10 questions from Question Bank
+    if (mode === 'battle') {
+      const BATTLE_QUESTION_COUNT = 10;
+
+      // Shuffle questions randomly
+      const shuffled = [...rawQuestions].sort(() => Math.random() - 0.5);
+
+      // Take first 10 (or all if less than 10)
+      const selected = shuffled.slice(0, Math.min(BATTLE_QUESTION_COUNT, shuffled.length));
+
+      console.log(`⚔️ BATTLE MODE: Selected ${selected.length} random questions from ${rawQuestions.length} total`);
+
+      return selected;
+    }
+
+    // Solo Classic mode: sort by difficulty
+    return sortQuestionsByDifficulty(rawQuestions);
   });
 
   // Adaptive state tracking
@@ -1094,14 +1110,27 @@ const QuizGame = ({
   }, []);
   
   if (!currentQ) {
+    // Check if adaptive mode is enabled for tips
+    const adaptiveCheck = canUseAdaptiveMode(questions);
+    const isAdaptiveEnabled = adaptiveCheck.enabled;
+
     // In battle mode, questions might still be loading from Firebase
     if (mode === 'battle') {
       return (
-        <div className="min-h-screen bg-white flex items-center justify-center">
-          <div className="text-center bg-white/20 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border-2 border-white/40">
+        <div className="min-h-screen bg-white flex items-center justify-center px-4">
+          <div className="text-center bg-white/20 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-white/40 max-w-md">
             <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <h2 className="text-2xl font-bold text-black drop-shadow-sm mb-2">Loading questions...</h2>
-            <p className="text-black/70 mb-4">Please wait while we load the quiz questions</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-black drop-shadow-sm mb-2">Loading questions...</h2>
+            <p className="text-sm sm:text-base text-black/70 mb-4">Please wait while we load the quiz questions</p>
+
+            {/* Loading Tip for Battle */}
+            <div className="bg-blue-500/20 border border-blue-300/50 rounded-lg p-3 mb-4 text-left">
+              <p className="text-xs sm:text-sm font-medium text-black/90 mb-1">💡 Did you know?</p>
+              <p className="text-xs text-black/70">
+                Battle mode: All players get the same 10 questions for fair competition!
+              </p>
+            </div>
+
             <button onClick={onBack} className="btn-branded-yellow text-black font-bold px-6 py-3 rounded-xl transition-all shadow-lg hover:shadow-xl border-2 border-white/40">
               Cancel
             </button>
