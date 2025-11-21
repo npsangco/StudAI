@@ -9,7 +9,8 @@ import {
     Clock,
     FileText,
     LogOut,
-    User
+    User,
+    X
 } from "lucide-react";
 import ToastContainer from "./ToastContainer";
 import { useToast } from "../hooks/useToast";
@@ -46,7 +47,7 @@ function classNames(...classes) {
     return classes.filter(Boolean).join(" ");
 }
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
     const location = useLocation();
     const navigate = useNavigate();
     const [userPhoto, setUserPhoto] = useState(null);
@@ -92,6 +93,13 @@ export default function Sidebar() {
         }
     };
 
+    const handleLinkClick = () => {
+        // Close sidebar on mobile when a link is clicked
+        if (onClose) {
+            onClose();
+        }
+    };
+
     return (
         <>
             <ToastContainer toasts={toasts} onDismiss={removeToast} />
@@ -99,9 +107,20 @@ export default function Sidebar() {
             <div className="flex flex-col h-screen w-64 bg-gradient-to-b from-yellow-400 via-yellow-500 to-yellow-600 text-black shadow-xl">
                 {/* Logo Section */}
                 <div className="px-6 py-6 border-b border-black/10">
+                    {/* Close button for mobile */}
+                    {onClose && (
+                        <button
+                            onClick={onClose}
+                            className="md:hidden absolute top-4 right-4 p-2 rounded-lg hover:bg-white/20 transition-colors"
+                        >
+                            <X className="w-6 h-6 text-gray-900" />
+                        </button>
+                    )}
+
                     <Link
                         to="/admin/dashboard"
                         className="flex items-center justify-center group"
+                        onClick={handleLinkClick}
                     >
                         <img
                             src="/StudAI_Logo-black.png"
@@ -126,6 +145,7 @@ export default function Sidebar() {
                             <Link
                                 key={item.name}
                                 to={item.href}
+                                onClick={handleLinkClick}
                                 className={classNames(
                                     isCurrent
                                         ? "bg-black text-white shadow-lg"
