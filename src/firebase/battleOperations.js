@@ -250,6 +250,10 @@ export const storeQuizQuestions = async (gamePin, questions) => {
     const questionsRef = ref(realtimeDb, `battles/${gamePin}/questions`);
     await set(questionsRef, questions);
     
+    // ALSO update metadata with actual question count
+    const metadataRef = ref(realtimeDb, `battles/${gamePin}/metadata/totalQuestions`);
+    await set(metadataRef, questions.length);
+    
   } catch (error) {
     console.error('❌ Error storing questions:', error);
     throw error;

@@ -53,15 +53,19 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
   useEffect(() => {
     // Prevent double initialization
     if (!isActive || !gamePin || !userId || hasInitializedRef.current) {
+      console.log('⏭️ Skipping connection init:', { isActive, gamePin, userId, hasInitialized: hasInitializedRef.current });
       return;
     }
 
+    console.log('🔌 Initializing connection tracking:', { gamePin, userId });
     hasInitializedRef.current = true;
     
     const init = async () => {
       try {
         // Initialize Firebase connection tracking
+        console.log('🚀 Calling initializeConnectionTracking...');
         await initializeConnectionTracking(gamePin, userId);
+        console.log('✅ Connection tracking initialized');
         
         // Create reconnection token
         if (playerData) {

@@ -256,18 +256,28 @@ const QuizGame = ({
       const unsubscribe = listenToPlayers(quiz.gamePin, (firebasePlayers) => {
         // Transform and sort by score
         const players = firebasePlayers
-          .map(p => ({
-            id: p.userId,
-            name: p.name,
-            initial: p.initial,
-            score: p.score || 0,
-            forfeited: p.forfeited || false, // Include forfeit status
-            isOnline: p.isOnline !== undefined ? p.isOnline : true, // Connection status
-            inGracePeriod: p.inGracePeriod || false, // Grace period status
-            currentQuestion: p.currentQuestion || 0 // Player progress
-          }))
+          .map(p => {
+            console.log('🔍 Player data from Firebase:', {
+              name: p.name,
+              isOnline: p.isOnline,
+              inGracePeriod: p.inGracePeriod,
+              forfeited: p.forfeited
+            });
+            
+            return {
+              id: p.userId,
+              name: p.name,
+              initial: p.initial,
+              score: p.score || 0,
+              forfeited: p.forfeited || false, // Include forfeit status
+              isOnline: p.isOnline !== undefined ? p.isOnline : true, // Connection status
+              inGracePeriod: p.inGracePeriod || false, // Grace period status
+              currentQuestion: p.currentQuestion || 0 // Player progress
+            };
+          })
           .sort((a, b) => b.score - a.score);
 
+        console.log('👥 Transformed players:', players);
         setRealPlayers(players);
       });
       
