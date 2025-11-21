@@ -574,11 +574,11 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
                 <ul className="space-y-1.5 ml-1">
                   <li className="flex items-start gap-2 text-gray-700">
                     <span className="text-green-600 font-bold mt-0.5">✓</span>
-                    <span>At least <strong>5 questions</strong></span>
+                    <span>At least <strong>2 different difficulty levels</strong> (Easy, Medium, or Hard)</span>
                   </li>
                   <li className="flex items-start gap-2 text-gray-700">
-                    <span className="text-green-600 font-bold mt-0.5">✓</span>
-                    <span>At least <strong>2 different difficulty levels</strong> (Easy, Medium, or Hard)</span>
+                    <span className="text-gray-400 text-xs mt-0.5">→</span>
+                    <span className="text-sm text-gray-600"><em>Question Bank minimum (15) already satisfies quantity requirement</em></span>
                   </li>
                 </ul>
               </div>

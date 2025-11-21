@@ -43,35 +43,36 @@ const QuizGame = ({
   const adaptiveCheck = mode === 'solo' ? canUseAdaptiveMode(rawQuestions) : { enabled: false };
   const useAdaptiveMode = adaptiveCheck.enabled;
 
-  // 🔥 OPTION 1: Load ALL questions upfront with adaptive ordering
+  // 🔥 Question Bank: Random 10 selection for all modes
   const [questions, setQuestions] = useState(() => {
-    if (useAdaptiveMode) {
-      // Initialize adaptive queue with ALL questions in optimal order
-      const { orderedQuestions, startingDifficulty} = initializeAdaptiveQueue(rawQuestions);
+    const QUESTION_BANK_SIZE = 10;
 
-      console.log(`🎯 OPTION 1 INITIALIZED: ${orderedQuestions.length} questions loaded (Starting: ${startingDifficulty})`);
-      console.log(`📊 Student will see: "Question 1 of ${orderedQuestions.length}"`);
+    // Step 1: Randomly select 10 questions from Question Bank
+    const shuffled = [...rawQuestions].sort(() => Math.random() - 0.5);
+    const selectedQuestions = shuffled.slice(0, Math.min(QUESTION_BANK_SIZE, shuffled.length));
+
+    console.log(`🎲 Question Bank: Selected ${selectedQuestions.length} random questions from ${rawQuestions.length} total`);
+
+    // Step 2: Apply mode-specific ordering/logic
+    if (useAdaptiveMode) {
+      // Solo Adaptive: Initialize adaptive queue with selected 10
+      const { orderedQuestions, startingDifficulty} = initializeAdaptiveQueue(selectedQuestions);
+
+      console.log(`🎯 ADAPTIVE MODE: ${orderedQuestions.length} questions (Starting: ${startingDifficulty})`);
 
       return orderedQuestions;
     }
 
-    // Battle mode: Random 10 questions from Question Bank
     if (mode === 'battle') {
-      const BATTLE_QUESTION_COUNT = 10;
-
-      // Shuffle questions randomly
-      const shuffled = [...rawQuestions].sort(() => Math.random() - 0.5);
-
-      // Take first 10 (or all if less than 10)
-      const selected = shuffled.slice(0, Math.min(BATTLE_QUESTION_COUNT, shuffled.length));
-
-      console.log(`⚔️ BATTLE MODE: Selected ${selected.length} random questions from ${rawQuestions.length} total`);
-
-      return selected;
+      // Battle: Use selected 10 as-is (all players get same random 10)
+      console.log(`⚔️ BATTLE MODE: ${selectedQuestions.length} questions`);
+      return selectedQuestions;
     }
 
-    // Solo Classic mode: sort by difficulty
-    return sortQuestionsByDifficulty(rawQuestions);
+    // Solo Classic: Sort selected 10 by difficulty
+    const sorted = sortQuestionsByDifficulty(selectedQuestions);
+    console.log(`📚 SOLO CLASSIC: ${sorted.length} questions (sorted by difficulty)`);
+    return sorted;
   });
 
   // Adaptive state tracking
