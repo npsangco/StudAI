@@ -188,32 +188,8 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
   // ============================================
   // DISCONNECT HANDLING WITH GRACE PERIOD
   // ============================================
-  
-  const handleDisconnect = useCallback(async () => {
 
-    setConnectionState(prev => ({
-      ...prev,
-      isOnline: false,
-      reconnectionAvailable: true,
-      inGracePeriod: true,
-      gracePeriodTimeRemaining: 90 // 90 seconds
-    }));
-    
-    // Save current game state for reconnection
-    if (gamePin && userId && gameState) {
-      await savePlayerState(gamePin, userId, gameState);
-    }
-    
-    // Stop heartbeat
-    stopHeartbeat();
-    
-    // Start grace period countdown
-    startGracePeriodMonitoring();
-    
-    // Show reconnection opportunity
-    // (UI will detect reconnectionAvailable flag)
-  }, [stopHeartbeat, gamePin, userId, gameState]);
-  
+  // 🔥 MOVED BEFORE handleDisconnect to fix circular dependency
   const startGracePeriodMonitoring = useCallback(() => {
     // Clear any existing timer
     if (gracePeriodTimerRef.current) {
@@ -277,7 +253,32 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
       gracePeriodCheckIntervalRef.current = null;
     }
   }, []);
-  
+
+  const handleDisconnect = useCallback(async () => {
+
+    setConnectionState(prev => ({
+      ...prev,
+      isOnline: false,
+      reconnectionAvailable: true,
+      inGracePeriod: true,
+      gracePeriodTimeRemaining: 90 // 90 seconds
+    }));
+
+    // Save current game state for reconnection
+    if (gamePin && userId && gameState) {
+      await savePlayerState(gamePin, userId, gameState);
+    }
+
+    // Stop heartbeat
+    stopHeartbeat();
+
+    // Start grace period countdown
+    startGracePeriodMonitoring();
+
+    // Show reconnection opportunity
+    // (UI will detect reconnectionAvailable flag)
+  }, [stopHeartbeat, gamePin, userId, gameState, startGracePeriodMonitoring]);
+
   // ============================================
   // RECONNECTION LOGIC
   // ============================================
