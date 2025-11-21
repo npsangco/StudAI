@@ -990,7 +990,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 onClick={onAddQuestion}
                 className="px-3 py-2 text-xs rounded-lg font-medium flex-1 bg-gray-200 text-gray-700"
               >
-                + Add Q
+                + Add Question
               </button>
 
               <button
@@ -1101,7 +1101,7 @@ export const QuizEditor = ({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sticky Header Container */}
+      {/* Sticky Header Container - Minimal */}
       <div className="sticky top-0 z-10 bg-white shadow-md" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
         <PolishedHeader
           quiz={quiz}
@@ -1110,13 +1110,6 @@ export const QuizEditor = ({
           onAddQuestion={onAddQuestion}
           onSave={onSave}
           onUpdateTitle={onUpdateTitle}
-        />
-
-        <CompactSettingsBar
-          quiz={quiz}
-          onPublicStatusChange={onUpdatePublicStatus}
-          onTimerChange={onUpdateTimer}
-          toast={toast}
         />
       </div>
 
@@ -1171,39 +1164,52 @@ export const QuizEditor = ({
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {questions.map((question, index) => (
-              <div
-                key={question.id}
-                data-question-wrapper={index}
-                onDragOver={(e) => handleQuestionDragOver(e, index)}
-                onDragLeave={handleQuestionDragLeave}
-                onDrop={(e) => handleQuestionDrop(e, index)}
-                className={`transition-all ${
-                  draggedQuestionIndex === index ? 'opacity-50 scale-95' : ''
-                } ${
-                  dragOverQuestionIndex === index && draggedQuestionIndex !== index
-                    ? 'scale-[1.02] border-2 border-blue-400 rounded-lg'
-                    : ''
-                }`}
-              >
-                <QuestionCard
-                  question={question}
-                  index={index}
-                  onUpdateQuestion={onUpdateQuestion}
-                  onUpdateChoice={onUpdateChoice}
-                  onAddChoice={onAddChoice}
-                  onDeleteQuestion={onDeleteQuestion}
-                  onDuplicateQuestion={onDuplicateQuestion}
-                  onAddMatchingPair={onAddMatchingPair}
-                  onUpdateMatchingPair={onUpdateMatchingPair}
-                  onRemoveMatchingPair={onRemoveMatchingPair}
-                  onDragStart={(e) => handleQuestionDragStart(e, index)}
-                  onDragEnd={handleQuestionDragEnd}
-                />
-              </div>
-            ))}
-          </div>
+          <>
+            {/* Settings Bar - Only shows when there are questions */}
+            <div className="mb-4">
+              <CompactSettingsBar
+                quiz={quiz}
+                onPublicStatusChange={onUpdatePublicStatus}
+                onTimerChange={onUpdateTimer}
+                toast={toast}
+              />
+            </div>
+
+            {/* Questions List */}
+            <div className="space-y-4">
+              {questions.map((question, index) => (
+                <div
+                  key={question.id}
+                  data-question-wrapper={index}
+                  onDragOver={(e) => handleQuestionDragOver(e, index)}
+                  onDragLeave={handleQuestionDragLeave}
+                  onDrop={(e) => handleQuestionDrop(e, index)}
+                  className={`transition-all ${
+                    draggedQuestionIndex === index ? 'opacity-50 scale-95' : ''
+                  } ${
+                    dragOverQuestionIndex === index && draggedQuestionIndex !== index
+                      ? 'scale-[1.02] border-2 border-blue-400 rounded-lg'
+                      : ''
+                  }`}
+                >
+                  <QuestionCard
+                    question={question}
+                    index={index}
+                    onUpdateQuestion={onUpdateQuestion}
+                    onUpdateChoice={onUpdateChoice}
+                    onAddChoice={onAddChoice}
+                    onDeleteQuestion={onDeleteQuestion}
+                    onDuplicateQuestion={onDuplicateQuestion}
+                    onAddMatchingPair={onAddMatchingPair}
+                    onUpdateMatchingPair={onUpdateMatchingPair}
+                    onRemoveMatchingPair={onRemoveMatchingPair}
+                    onDragStart={(e) => handleQuestionDragStart(e, index)}
+                    onDragEnd={handleQuestionDragEnd}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
