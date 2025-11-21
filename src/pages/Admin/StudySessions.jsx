@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Menu } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import ToastContainer from "../../components/ToastContainer";
 import { useToast } from "../../hooks/useToast";
@@ -12,7 +13,8 @@ export default function StudySessions() {
     const { confirmState, confirm, closeConfirm } = useConfirm();
     const [sessions, setSessions] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const sessionsPerPage = 14;
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const sessionsPerPage = 13;
 
     useEffect(() => {
         const fetchSessions = async () => {
@@ -65,7 +67,7 @@ export default function StudySessions() {
     const handlePrev = () => currentPage > 1 && setCurrentPage(currentPage - 1);
 
     return (
-        <div className="flex min-h-screen bg-gray-100">
+        <div className="flex w-full min-h-screen bg-gray-100 relative">
             <ToastContainer toasts={toasts} removeToast={removeToast} />
             <ConfirmDialog
                 isOpen={confirmState.isOpen}
@@ -77,71 +79,95 @@ export default function StudySessions() {
                 cancelText={confirmState.cancelText}
                 variant={confirmState.variant}
             />
-            {/* Sidebar */}
-            <div className="hidden md:block fixed top-0 left-0 h-screen">
+
+            {/* Desktop Sidebar */}
+            <div className="hidden md:block fixed top-0 left-0 h-screen w-64 bg-yellow-400">
                 <Sidebar />
             </div>
 
+            {/* Mobile Sidebar Overlay */}
+            <div
+                className={`fixed inset-0 bg-black bg-opacity-40 z-50 md:hidden transition-opacity ${sidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
+                    }`}
+                onClick={() => setSidebarOpen(false)}
+            >
+                <div
+                    className={`absolute top-0 left-0 h-full w-64 bg-yellow-400 shadow-lg transform transition-transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                        }`}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+                </div>
+            </div>
+
             {/* Main Content */}
-            <div className="flex-1 flex flex-col md:ml-64">
+            <div className="flex-1 flex flex-col md:ml-64 min-h-screen">
                 {/* Header */}
                 <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-                    <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                        <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-                            Study Sessions
-                        </h1>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <button
+                                className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+                                onClick={() => setSidebarOpen(true)}
+                            >
+                                <Menu className="w-6 h-6 text-gray-800" />
+                            </button>
+                            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
+                                Study Sessions
+                            </h1>
+                        </div>
                     </div>
                 </div>
 
                 {/* Table */}
-                <div className="flex-1 overflow-y-auto px-4 md:px-6 py-8">
-                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 py-6 sm:py-8">
+                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-6">
+                        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                             Active & Past Sessions
                         </h2>
 
                         <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm text-left">
+                            <table className="min-w-full table-fixed text-xs sm:text-sm text-left">
                                 <thead>
                                     <tr className="border-b border-gray-200 text-gray-600">
-                                        <th className="py-2 px-3">Session ID</th>
-                                        <th className="py-2 px-3">Host</th>
-                                        <th className="py-2 px-3">Participants</th>
-                                        <th className="py-2 px-3">Duration</th>
-                                        <th className="py-2 px-3">Status</th>
-                                        <th className="py-2 px-3">Action</th>
+                                        <th className="py-2 px-2 sm:px-3 w-24">Session ID</th>
+                                        <th className="py-2 px-2 sm:px-3 w-32">Host</th>
+                                        <th className="py-2 px-2 sm:px-3 w-28">Participants</th>
+                                        <th className="py-2 px-2 sm:px-3 w-24">Duration</th>
+                                        <th className="py-2 px-2 sm:px-3 w-24">Status</th>
+                                        <th className="py-2 px-2 sm:px-3 w-24">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {currentSessions.length > 0 ? (
                                         currentSessions.map((session) => (
                                             <tr key={session.session_id} className="border-b border-gray-100">
-                                                <td className="py-2 px-3">{session.session_id}</td>
-                                                <td className="py-2 px-3 font-medium">{session.host}</td>
-                                                <td className="py-2 px-3">{session.participants}</td>
-                                                <td className="py-2 px-3">{session.duration}</td>
-                                                <td className="py-2 px-3">
+                                                <td className="py-2 px-2 sm:px-3 truncate">{session.session_id}</td>
+                                                <td className="py-2 px-2 sm:px-3 font-medium truncate">{session.host}</td>
+                                                <td className="py-2 px-2 sm:px-3 truncate">{session.participants}</td>
+                                                <td className="py-2 px-2 sm:px-3 truncate">{session.duration}</td>
+                                                <td className="py-2 px-2 sm:px-3">
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-medium ${session.status === "Active"
-                                                            ? "bg-green-100 text-green-800"
-                                                            : "bg-gray-200 text-gray-700"
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-gray-200 text-gray-700"
                                                             }`}
                                                     >
                                                         {session.status}
                                                     </span>
                                                 </td>
-                                                <td className="py-2 px-3">
+                                                <td className="py-2 px-2 sm:px-3">
                                                     {session.status === "Active" ? (
                                                         <button
                                                             onClick={() => handleEndSession(session.session_id)}
-                                                            className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
+                                                            className="bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
                                                         >
                                                             End
                                                         </button>
                                                     ) : (
                                                         <button
                                                             disabled
-                                                            className="bg-gray-300 text-gray-600 px-3 py-1.5 rounded-lg text-xs cursor-not-allowed"
+                                                            className="bg-gray-300 text-gray-600 px-2 sm:px-3 py-1.5 rounded-lg text-xs cursor-not-allowed"
                                                         >
                                                             Ended
                                                         </button>

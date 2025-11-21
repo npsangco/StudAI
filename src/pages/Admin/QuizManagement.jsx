@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Eye, Trash2 } from "lucide-react";
+import { Eye, Trash2, Menu } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import ToastContainer from "../../components/ToastContainer";
 import { useToast } from "../../hooks/useToast";
@@ -14,7 +14,8 @@ export default function QuizManagement() {
     const { confirmState, confirm, closeConfirm } = useConfirm();
     const [quizzes, setQuizzes] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const quizzesPerPage = 14;
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const quizzesPerPage = 13;
     const [questionsModalState, setQuestionsModalState] = useState({
         isOpen: false,
         quiz: null,
@@ -56,13 +57,11 @@ export default function QuizManagement() {
                 withCredentials: true,
             });
 
-            // Update the questions list in the modal
             setQuestionsModalState(prev => ({
                 ...prev,
                 questions: prev.questions.filter(q => q.question_id !== questionId)
             }));
 
-            // Update the quiz's question count in the main list
             setQuizzes(prev => prev.map(quiz =>
                 quiz.quiz_id === questionsModalState.quiz.quiz_id
                     ? { ...quiz, questions: quiz.questions - 1 }
@@ -115,7 +114,7 @@ export default function QuizManagement() {
     const handlePrev = () => currentPage > 1 && setCurrentPage(currentPage - 1);
 
     return (
-        <div className="flex min-h-screen bg-gray-100">
+        <div className="flex w-full min-h-screen bg-gray-100 relative">
             <ToastContainer toasts={toasts} removeToast={removeToast} />
             <ConfirmDialog
                 isOpen={confirmState.isOpen}
@@ -135,83 +134,108 @@ export default function QuizManagement() {
                 onDeleteQuestion={handleDeleteQuestion}
             />
 
-            {/* Sidebar */}
-            <div className="hidden md:block fixed top-0 left-0 h-screen">
+            {/* Desktop Sidebar */}
+            <div className="hidden md:block fixed top-0 left-0 h-screen w-64 bg-yellow-400">
                 <Sidebar />
             </div>
 
+            {/* Mobile Sidebar Overlay */}
+            <div
+                className={`fixed inset-0 bg-black bg-opacity-40 z-50 md:hidden transition-opacity ${sidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
+                    }`}
+                onClick={() => setSidebarOpen(false)}
+            >
+                <div
+                    className={`absolute top-0 left-0 h-full w-64 bg-yellow-400 shadow-lg transform transition-transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                        }`}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+                </div>
+            </div>
+
             {/* Main Content */}
-            <div className="flex-1 flex flex-col md:ml-64">
+            <div className="flex-1 flex flex-col md:ml-64 min-h-screen">
                 {/* Header */}
                 <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-                    <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                        <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-                            Quiz Management
-                        </h1>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <button
+                                className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+                                onClick={() => setSidebarOpen(true)}
+                            >
+                                <Menu className="w-6 h-6 text-gray-800" />
+                            </button>
+                            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
+                                Quiz Management
+                            </h1>
+                        </div>
                     </div>
                 </div>
 
                 {/* Table Section */}
-                <div className="flex-1 overflow-y-auto px-4 md:px-6 py-8">
-                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 py-6 sm:py-8">
+                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-6">
+                        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                             Quiz List
                         </h2>
 
                         <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm text-left">
+                            <table className="min-w-full table-fixed text-xs sm:text-sm text-left">
                                 <thead>
                                     <tr className="border-b border-gray-200 text-gray-600">
-                                        <th className="py-2 px-3">Quiz ID</th>
-                                        <th className="py-2 px-3">Creator</th>
-                                        <th className="py-2 px-3">Details</th>
-                                        <th className="py-2 px-3">Questions</th>
-                                        <th className="py-2 px-3">Times Taken</th>
-                                        <th className="py-2 px-3">Status</th>
-                                        <th className="py-2 px-3">Created</th>
-                                        <th className="py-2 px-3">Action</th>
+                                        <th className="py-2 px-2 sm:px-3 w-20">Quiz ID</th>
+                                        <th className="py-2 px-2 sm:px-3 w-28">Creator</th>
+                                        <th className="py-2 px-2 sm:px-3 w-40">Details</th>
+                                        <th className="py-2 px-2 sm:px-3 w-24">Questions</th>
+                                        <th className="py-2 px-2 sm:px-3 w-28">Times Taken</th>
+                                        <th className="py-2 px-2 sm:px-3 w-24">Status</th>
+                                        <th className="py-2 px-2 sm:px-3 w-28">Created</th>
+                                        <th className="py-2 px-2 sm:px-3 w-32">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {currentQuizzes.length > 0 ? (
                                         currentQuizzes.map((quiz) => (
                                             <tr key={quiz.quiz_id} className="border-b border-gray-100">
-                                                <td className="py-2 px-3">{quiz.quiz_id}</td>
-                                                <td className="py-2 px-3 font-medium">{quiz.creator}</td>
-                                                <td className="py-2 px-3">
+                                                <td className="py-2 px-2 sm:px-3 truncate">{quiz.quiz_id}</td>
+                                                <td className="py-2 px-2 sm:px-3 font-medium truncate">{quiz.creator}</td>
+                                                <td className="py-2 px-2 sm:px-3">
                                                     <div>
-                                                        <p className="font-medium text-gray-800">
+                                                        <p className="font-medium text-gray-800 truncate">
                                                             {quiz.title}
                                                         </p>
                                                     </div>
                                                 </td>
-                                                <td className="py-2 px-3">{quiz.questions}</td>
-                                                <td className="py-2 px-3">{quiz.timesTaken}</td>
-                                                <td className="py-2 px-3">
+                                                <td className="py-2 px-2 sm:px-3 truncate">{quiz.questions}</td>
+                                                <td className="py-2 px-2 sm:px-3 truncate">{quiz.timesTaken}</td>
+                                                <td className="py-2 px-2 sm:px-3">
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-medium ${quiz.status === "Open"
-                                                            ? "bg-green-100 text-green-800"
-                                                            : "bg-gray-200 text-gray-700"
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-gray-200 text-gray-700"
                                                             }`}
                                                     >
                                                         {quiz.status}
                                                     </span>
                                                 </td>
-                                                <td className="py-2 px-3 text-gray-600">
+                                                <td className="py-2 px-2 sm:px-3 text-gray-600 truncate">
                                                     {quiz.created}
                                                 </td>
-                                                <td className="py-2 px-3 flex space-x-2">
+                                                <td className="py-2 px-2 sm:px-3 flex space-x-1 sm:space-x-2">
                                                     <button
                                                         onClick={() => handleViewQuestions(quiz)}
-                                                        className="flex items-center bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-blue-600"
+                                                        className="flex items-center bg-blue-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-blue-600"
                                                     >
-                                                        <Eye className="w-4 h-4 mr-1" /> View
+                                                        <Eye className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                                        <span className="hidden sm:inline">View</span>
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteQuiz(quiz.quiz_id)}
-                                                        className="flex items-center bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
+                                                        className="flex items-center bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
                                                     >
-                                                        <Trash2 className="w-4 h-4 mr-1" /> Delete
+                                                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                                        <span className="hidden sm:inline">Delete</span>
                                                     </button>
                                                 </td>
                                             </tr>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Users, FileText, PlayCircle, StickyNote, Lock, Unlock, Clock, Menu, X, } from "lucide-react";
+import { Users, FileText, PlayCircle, StickyNote, Lock, Unlock, Clock, Menu } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import { API_URL } from "../../config/api.config";
 
@@ -13,7 +13,7 @@ export default function AdminDashboard() {
     });
     const [recentUsers, setRecentUsers] = useState([]);
     const [recentSessions, setRecentSessions] = useState([]);
-    const [sidebarOpen, setSidebarOpen] = useState(false); // ✅ for mobile toggle
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -80,93 +80,89 @@ export default function AdminDashboard() {
     };
 
     return (
-        <div className="flex min-h-screen bg-gray-100">
-            {/* ✅ Sidebar for large screens */}
-            <div className="hidden md:block fixed top-0 left-0 h-screen">
+        <div className="flex w-full min-h-screen bg-gray-100 relative">
+            {/* Desktop Sidebar */}
+            <div className="hidden md:block fixed top-0 left-0 h-screen w-64 bg-yellow-400">
                 <Sidebar />
             </div>
 
-            {/* ✅ Mobile Sidebar (drawer style) */}
-            {sidebarOpen && (
-                <div className="fixed inset-0 z-50 flex">
-                    <div className="w-64 bg-white shadow-lg">
-                        <Sidebar />
-                    </div>
-                    <div
-                        className="flex-1 bg-black bg-opacity-40"
-                        onClick={() => setSidebarOpen(false)}
-                    ></div>
+            {/* Mobile Sidebar Overlay */}
+            <div
+                className={`fixed inset-0 bg-black bg-opacity-40 z-50 md:hidden transition-opacity ${sidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
+                    }`}
+                onClick={() => setSidebarOpen(false)}
+            >
+                <div
+                    className={`absolute top-0 left-0 h-full w-64 bg-yellow-400 shadow-lg transform transition-transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                        }`}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                 </div>
-            )}
+            </div>
 
-            {/* ✅ Main Content Area */}
-            <div className="flex-1 flex flex-col md:ml-64">
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col md:ml-64 min-h-screen">
                 {/* Header */}
                 <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-                    <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                            {/* Mobile Toggle Button */}
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
                             <button
-                                className="md:hidden text-gray-700"
-                                onClick={() => setSidebarOpen(!sidebarOpen)}
+                                className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+                                onClick={() => setSidebarOpen(true)}
                             >
-                                {sidebarOpen ? (
-                                    <X className="w-6 h-6" />
-                                ) : (
-                                    <Menu className="w-6 h-6" />
-                                )}
+                                <Menu className="w-6 h-6 text-gray-800" />
                             </button>
-                            <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+                            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
                                 Administrator Dashboard
                             </h1>
                         </div>
-
                     </div>
                 </div>
 
                 {/* Main Dashboard Content */}
-                <div className="flex-1 overflow-y-auto px-4 md:px-6 py-8">
+                <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 py-6 sm:py-8">
                     {/* Stats Boxes */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3 sm:p-4">
                             <div className="flex items-center justify-between mb-2">
-                                <Users className="w-5 h-5 text-indigo-600" />
+                                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
                                 <span className="text-xs text-gray-500">Users</span>
                             </div>
-                            <p className="text-2xl font-bold text-gray-900">
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900">
                                 {stats.totalUsers}
                             </p>
                             <p className="text-xs text-gray-600 mt-1">Total Users</p>
                         </div>
 
-                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3 sm:p-4">
                             <div className="flex items-center justify-between mb-2">
-                                <FileText className="w-5 h-5 text-yellow-600" />
+                                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
                                 <span className="text-xs text-gray-500">Quizzes</span>
                             </div>
-                            <p className="text-2xl font-bold text-gray-900">
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900">
                                 {stats.totalQuizzes}
                             </p>
                             <p className="text-xs text-gray-600 mt-1">Total Quizzes</p>
                         </div>
 
-                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3 sm:p-4">
                             <div className="flex items-center justify-between mb-2">
-                                <PlayCircle className="w-5 h-5 text-green-600" />
+                                <PlayCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                                 <span className="text-xs text-gray-500">Sessions</span>
                             </div>
-                            <p className="text-2xl font-bold text-gray-900">
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900">
                                 {stats.activeSessions}
                             </p>
                             <p className="text-xs text-gray-600 mt-1">Active Sessions</p>
                         </div>
 
-                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3 sm:p-4">
                             <div className="flex items-center justify-between mb-2">
-                                <StickyNote className="w-5 h-5 text-blue-600" />
+                                <StickyNote className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                                 <span className="text-xs text-gray-500">Notes</span>
                             </div>
-                            <p className="text-2xl font-bold text-gray-900">
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900">
                                 {stats.totalNotes}
                             </p>
                             <p className="text-xs text-gray-600 mt-1">Notes Created</p>
@@ -174,70 +170,72 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Recent User Activity */}
-                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 mb-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold text-gray-900">
+                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+                            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
                                 Recent User Activity
                             </h2>
-                            <button className="text-sm bg-yellow-400 text-black font-medium px-4 py-1.5 rounded-lg hover:bg-yellow-500 transition">
+                            <button className="text-xs sm:text-sm bg-yellow-400 text-black font-medium px-3 sm:px-4 py-1.5 rounded-lg hover:bg-yellow-500 transition">
                                 View All Users
                             </button>
                         </div>
 
                         <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm text-left">
+                            <table className="min-w-full table-fixed text-xs sm:text-sm text-left">
                                 <thead>
                                     <tr className="border-b border-gray-200 text-gray-600">
-                                        <th className="py-2 px-3">User ID</th>
-                                        <th className="py-2 px-3">Username</th>
-                                        <th className="py-2 px-3">Email</th>
-                                        <th className="py-2 px-3">Status</th>
-                                        <th className="py-2 px-3">Last Activity</th>
-                                        <th className="py-2 px-3">Action</th>
+                                        <th className="py-2 px-2 sm:px-3 w-20">User ID</th>
+                                        <th className="py-2 px-2 sm:px-3 w-32 sm:w-40">Username</th>
+                                        <th className="py-2 px-2 sm:px-3 w-40 sm:w-56">Email</th>
+                                        <th className="py-2 px-2 sm:px-3 w-24 sm:w-28">Status</th>
+                                        <th className="py-2 px-2 sm:px-3 w-32 sm:w-40">Last Activity</th>
+                                        <th className="py-2 px-2 sm:px-3 w-28 sm:w-32">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {recentUsers.length > 0 ? (
                                         recentUsers.map((user) => (
                                             <tr key={user.user_id} className="border-b border-gray-100">
-                                                <td className="py-2 px-3">{user.user_id}</td>
-                                                <td className="py-2 px-3 font-medium">
+                                                <td className="py-2 px-2 sm:px-3 truncate">{user.user_id}</td>
+                                                <td className="py-2 px-2 sm:px-3 font-medium truncate">
                                                     {user.username}
                                                 </td>
-                                                <td className="py-2 px-3 text-gray-600">
+                                                <td className="py-2 px-2 sm:px-3 text-gray-600 truncate">
                                                     {user.email}
                                                 </td>
-                                                <td className="py-2 px-3">
+                                                <td className="py-2 px-2 sm:px-3">
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-medium ${user.status === "Active"
-                                                            ? "bg-green-100 text-green-800"
-                                                            : "bg-red-100 text-red-800"
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-red-100 text-red-800"
                                                             }`}
                                                     >
                                                         {user.status}
                                                     </span>
                                                 </td>
-                                                <td className="py-2 px-3 text-gray-500">
+                                                <td className="py-2 px-2 sm:px-3 text-gray-500 truncate">
                                                     {user.lastActivity}
                                                 </td>
-                                                <td className="py-2 px-3">
+                                                <td className="py-2 px-2 sm:px-3">
                                                     {user.status === "Active" ? (
                                                         <button
                                                             onClick={() =>
                                                                 handleUserAction(user.user_id, "lock")
                                                             }
-                                                            className="flex items-center bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
+                                                            className="flex items-center bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
                                                         >
-                                                            <Lock className="w-4 h-4 mr-1" /> Lock
+                                                            <Lock className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                                            <span className="hidden sm:inline">Lock</span>
                                                         </button>
                                                     ) : (
                                                         <button
                                                             onClick={() =>
                                                                 handleUserAction(user.user_id, "unlock")
                                                             }
-                                                            className="flex items-center bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-green-600"
+                                                            className="flex items-center bg-green-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-green-600"
                                                         >
-                                                            <Unlock className="w-4 h-4 mr-1" /> Unlock
+                                                            <Unlock className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                                            <span className="hidden sm:inline">Unlock</span>
                                                         </button>
                                                     )}
                                                 </td>
@@ -259,26 +257,26 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Recent Study Sessions */}
-                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold text-gray-900">
+                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+                            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
                                 Recent Study Sessions
                             </h2>
-                            <button className="text-sm bg-yellow-400 text-black font-medium px-4 py-1.5 rounded-lg hover:bg-yellow-500 transition">
+                            <button className="text-xs sm:text-sm bg-yellow-400 text-black font-medium px-3 sm:px-4 py-1.5 rounded-lg hover:bg-yellow-500 transition">
                                 View All Sessions
                             </button>
                         </div>
 
                         <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm text-left">
+                            <table className="min-w-full table-fixed text-xs sm:text-sm text-left">
                                 <thead>
                                     <tr className="border-b border-gray-200 text-gray-600">
-                                        <th className="py-2 px-3">Session ID</th>
-                                        <th className="py-2 px-3">Host</th>
-                                        <th className="py-2 px-3">Participants</th>
-                                        <th className="py-2 px-3">Duration</th>
-                                        <th className="py-2 px-3">Status</th>
-                                        <th className="py-2 px-3">Action</th>
+                                        <th className="py-2 px-2 sm:px-3 w-24">Session ID</th>
+                                        <th className="py-2 px-2 sm:px-3 w-32">Host</th>
+                                        <th className="py-2 px-2 sm:px-3 w-28">Participants</th>
+                                        <th className="py-2 px-2 sm:px-3 w-24">Duration</th>
+                                        <th className="py-2 px-2 sm:px-3 w-24">Status</th>
+                                        <th className="py-2 px-2 sm:px-3 w-24">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -288,28 +286,30 @@ export default function AdminDashboard() {
                                                 key={s.session_id}
                                                 className="border-b border-gray-100"
                                             >
-                                                <td className="py-2 px-3">{s.session_id}</td>
-                                                <td className="py-2 px-3">{s.host}</td>
-                                                <td className="py-2 px-3">{s.participants}</td>
-                                                <td className="py-2 px-3">{s.duration}</td>
-                                                <td className="py-2 px-3">
+                                                <td className="py-2 px-2 sm:px-3 truncate">{s.session_id}</td>
+                                                <td className="py-2 px-2 sm:px-3 truncate">{s.host}</td>
+                                                <td className="py-2 px-2 sm:px-3 truncate">{s.participants}</td>
+                                                <td className="py-2 px-2 sm:px-3 truncate">{s.duration}</td>
+                                                <td className="py-2 px-2 sm:px-3">
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-medium ${s.status === "Active"
-                                                            ? "bg-green-100 text-green-800"
-                                                            : "bg-gray-200 text-gray-700"
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-gray-200 text-gray-700"
                                                             }`}
                                                     >
                                                         {s.status}
                                                     </span>
                                                 </td>
-                                                <td className="py-2 px-3">
+                                                <td className="py-2 px-2 sm:px-3">
                                                     {s.status === "Active" ? (
-                                                        <button className="bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-red-600 flex items-center">
-                                                            <Clock className="w-4 h-4 mr-1" /> End
+                                                        <button className="bg-red-500 text-white text-xs px-2 sm:px-3 py-1.5 rounded-lg hover:bg-red-600 flex items-center">
+                                                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                                            <span className="hidden sm:inline">End</span>
                                                         </button>
                                                     ) : (
-                                                        <button className="bg-gray-300 text-gray-700 text-xs px-3 py-1.5 rounded-lg flex items-center cursor-default">
-                                                            <Clock className="w-4 h-4 mr-1" /> Ended
+                                                        <button className="bg-gray-300 text-gray-700 text-xs px-2 sm:px-3 py-1.5 rounded-lg flex items-center cursor-default">
+                                                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                                            <span className="hidden sm:inline">Ended</span>
                                                         </button>
                                                     )}
                                                 </td>
