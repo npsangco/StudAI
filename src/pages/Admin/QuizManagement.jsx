@@ -158,7 +158,7 @@ export default function QuizManagement() {
             <div className="flex-1 flex flex-col md:ml-64 min-h-screen">
                 {/* Header */}
                 <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+                    <div className="px-4 sm:px-6 py-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <button
                                 className="md:hidden p-2 rounded-lg hover:bg-gray-100"
@@ -202,7 +202,7 @@ export default function QuizManagement() {
                                                 <td className="py-2 px-2 sm:px-3 font-medium truncate">{quiz.creator}</td>
                                                 <td className="py-2 px-2 sm:px-3">
                                                     <div>
-                                                        <p className="font-medium text-gray-800 truncate">
+                                                        <p className="font-medium text-gray-800 break-words">
                                                             {quiz.title}
                                                         </p>
                                                     </div>
@@ -212,8 +212,8 @@ export default function QuizManagement() {
                                                 <td className="py-2 px-2 sm:px-3">
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-medium ${quiz.status === "Open"
-                                                                ? "bg-green-100 text-green-800"
-                                                                : "bg-gray-200 text-gray-700"
+                                                            ? "bg-green-100 text-green-800"
+                                                            : "bg-gray-200 text-gray-700"
                                                             }`}
                                                     >
                                                         {quiz.status}
