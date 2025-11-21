@@ -30,20 +30,33 @@ export const LiveLeaderboard = ({
   
   // Get connection status badge
   const getConnectionStatus = (player) => {
-    if (player.inGracePeriod) {
+    // 1. Reconnecting (in grace period, can still come back)
+    if (player.inGracePeriod && player.isOnline === false) {
       return (
         <span className="px-1.5 py-0.5 bg-yellow-500/80 text-white text-[10px] font-bold rounded uppercase animate-pulse">
           Reconnecting
         </span>
       );
     }
-    if (!player.isOnline || player.forfeited) {
+
+    // 2. QUIT (explicitly forfeited - score reset to 0)
+    if (player.forfeited === true || player.hasForfeited === true) {
+      return (
+        <span className="px-1.5 py-0.5 bg-red-500/80 text-white text-[10px] font-bold rounded uppercase">
+          QUIT
+        </span>
+      );
+    }
+
+    // 3. OFFLINE (disconnected, grace period expired, can't reconnect)
+    if (player.isOnline === false && !player.inGracePeriod) {
       return (
         <span className="px-1.5 py-0.5 bg-gray-500/80 text-white text-[10px] font-bold rounded uppercase">
           Offline
         </span>
       );
     }
+
     return null;
   };
 

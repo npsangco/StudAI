@@ -288,6 +288,25 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
       return { success: false, error: 'Missing game info' };
     }
 
+    // 🔥 NEW: Check if grace period has expired BEFORE attempting reconnection
+    const gracePeriodStatus = await checkGracePeriod(gamePin, userId);
+
+    if (gracePeriodStatus.isForfeited) {
+      console.error('❌ Cannot reconnect - grace period expired and player forfeited');
+      return {
+        success: false,
+        error: 'Reconnection window expired. You have been marked as forfeited.'
+      };
+    }
+
+    if (!gracePeriodStatus.inGracePeriod && gracePeriodStatus.timeRemaining === 0) {
+      console.error('❌ Cannot reconnect - grace period expired');
+      return {
+        success: false,
+        error: 'Reconnection window expired (90 seconds)'
+      };
+    }
+
     // 🔥 CRITICAL FIX: Stop grace period monitoring IMMEDIATELY when reconnection starts
     // This prevents the forfeit timer from firing during reconnection
     stopGracePeriodMonitoring();

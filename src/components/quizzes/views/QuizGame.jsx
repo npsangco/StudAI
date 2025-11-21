@@ -263,15 +263,17 @@ const QuizGame = ({
               name: p.name,
               isOnline: p.isOnline,
               inGracePeriod: p.inGracePeriod,
-              forfeited: p.forfeited
+              forfeited: p.forfeited,
+              hasForfeited: p.hasForfeited
             });
-            
+
             return {
               id: p.userId,
               name: p.name,
               initial: p.initial,
               score: p.score || 0,
-              forfeited: p.forfeited || false, // Include forfeit status
+              forfeited: p.forfeited || false, // Manual forfeit (back button)
+              hasForfeited: p.hasForfeited || false, // Auto forfeit (grace period expired)
               isOnline: p.isOnline !== undefined ? p.isOnline : true, // Connection status
               inGracePeriod: p.inGracePeriod || false, // Grace period status
               currentQuestion: p.currentQuestion || 0 // Player progress
