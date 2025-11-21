@@ -51,9 +51,17 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
   // ============================================
   
   useEffect(() => {
+    console.log('🔍 useReconnection useEffect triggered:', { isActive, gamePin, userId, hasInitialized: hasInitializedRef.current });
+    
     // Prevent double initialization
     if (!isActive || !gamePin || !userId || hasInitializedRef.current) {
-      console.log('⏭️ Skipping connection init:', { isActive, gamePin, userId, hasInitialized: hasInitializedRef.current });
+      console.log('⏭️ Skipping connection init - Condition failed:', { 
+        isActive, 
+        gamePin, 
+        userId, 
+        hasInitialized: hasInitializedRef.current,
+        reason: !isActive ? 'isActive=false' : !gamePin ? 'no gamePin' : !userId ? 'no userId' : 'already initialized'
+      });
       return;
     }
 

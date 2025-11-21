@@ -310,6 +310,13 @@ const QuizGame = ({
   // RECONNECTION HOOK
   // ============================================
   
+  console.log('🎮 QuizGame props for reconnection:', {
+    mode,
+    gamePin: quiz?.gamePin,
+    currentUserId: quiz?.currentUserId,
+    isActive: mode === 'battle'
+  });
+  
   const reconnection = useReconnection(
     quiz?.gamePin,
     quiz?.currentUserId,
