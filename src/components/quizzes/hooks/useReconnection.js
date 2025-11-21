@@ -5,7 +5,12 @@ import {
   listenToConnectionState,
   cleanupConnectionTracking,
   rejoinBattle,
-  isPlayerOnline
+  isPlayerOnline,
+  checkGracePeriod,
+  markAsForfeited,
+  savePlayerState,
+  restorePlayerState,
+  clearSavedState
 } from '../../../firebase/connectionManager';
 import {
   createReconnectionToken,
@@ -16,25 +21,30 @@ import {
 
 /**
  * Custom hook for handling reconnection logic
- * Manages heartbeats, disconnect detection, and reconnection flows
+ * Manages heartbeats, disconnect detection, reconnection flows, and state preservation
  * 
  * @param {string} gamePin - The battle game PIN
  * @param {number} userId - Current user's ID
  * @param {object} playerData - Player info (name, initial, etc.)
  * @param {boolean} isActive - Whether reconnection tracking is active
+ * @param {object} gameState - Current game state to preserve (score, currentQuestionIndex, userAnswers)
  */
-export function useReconnection(gamePin, userId, playerData, isActive = false) {
+export function useReconnection(gamePin, userId, playerData, isActive = false, gameState = null) {
   const [connectionState, setConnectionState] = useState({
     isOnline: true,
     isReconnecting: false,
     reconnectionAvailable: false,
-    lastHeartbeat: Date.now()
+    lastHeartbeat: Date.now(),
+    inGracePeriod: false,
+    gracePeriodTimeRemaining: 0
   });
   
   const heartbeatIntervalRef = useRef(null);
   const connectionListenerRef = useRef(null);
   const reconnectionTokenRef = useRef(null);
   const hasInitializedRef = useRef(false);
+  const gracePeriodTimerRef = useRef(null);
+  const gracePeriodCheckIntervalRef = useRef(null);
   
   // ============================================
   // INITIALIZE CONNECTION TRACKING
@@ -146,23 +156,97 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
   }, [gamePin, userId]);
   
   // ============================================
-  // DISCONNECT HANDLING
+  // DISCONNECT HANDLING WITH GRACE PERIOD
   // ============================================
   
-  const handleDisconnect = useCallback(() => {
+  const handleDisconnect = useCallback(async () => {
 
     setConnectionState(prev => ({
       ...prev,
       isOnline: false,
-      reconnectionAvailable: true
+      reconnectionAvailable: true,
+      inGracePeriod: true,
+      gracePeriodTimeRemaining: 90 // 90 seconds
     }));
+    
+    // Save current game state for reconnection
+    if (gamePin && userId && gameState) {
+      await savePlayerState(gamePin, userId, gameState);
+    }
     
     // Stop heartbeat
     stopHeartbeat();
     
+    // Start grace period countdown
+    startGracePeriodMonitoring();
+    
     // Show reconnection opportunity
     // (UI will detect reconnectionAvailable flag)
-  }, [stopHeartbeat]);
+  }, [stopHeartbeat, gamePin, userId, gameState]);
+  
+  const startGracePeriodMonitoring = useCallback(() => {
+    // Clear any existing timer
+    if (gracePeriodTimerRef.current) {
+      clearTimeout(gracePeriodTimerRef.current);
+    }
+    if (gracePeriodCheckIntervalRef.current) {
+      clearInterval(gracePeriodCheckIntervalRef.current);
+    }
+    
+    // Check grace period status every second
+    gracePeriodCheckIntervalRef.current = setInterval(async () => {
+      if (!gamePin || !userId) return;
+      
+      const status = await checkGracePeriod(gamePin, userId);
+      
+      setConnectionState(prev => ({
+        ...prev,
+        inGracePeriod: status.inGracePeriod,
+        gracePeriodTimeRemaining: status.timeRemaining
+      }));
+      
+      // If forfeited, stop monitoring
+      if (status.isForfeited) {
+        if (gracePeriodCheckIntervalRef.current) {
+          clearInterval(gracePeriodCheckIntervalRef.current);
+        }
+        setConnectionState(prev => ({
+          ...prev,
+          reconnectionAvailable: false,
+          inGracePeriod: false
+        }));
+      }
+    }, 1000); // Check every second
+    
+    // Set timeout for forfeit after 90 seconds
+    gracePeriodTimerRef.current = setTimeout(async () => {
+      if (gamePin && userId) {
+        await markAsForfeited(gamePin, userId);
+        
+        setConnectionState(prev => ({
+          ...prev,
+          reconnectionAvailable: false,
+          inGracePeriod: false,
+          gracePeriodTimeRemaining: 0
+        }));
+        
+        if (gracePeriodCheckIntervalRef.current) {
+          clearInterval(gracePeriodCheckIntervalRef.current);
+        }
+      }
+    }, 90000); // 90 seconds
+  }, [gamePin, userId]);
+  
+  const stopGracePeriodMonitoring = useCallback(() => {
+    if (gracePeriodTimerRef.current) {
+      clearTimeout(gracePeriodTimerRef.current);
+      gracePeriodTimerRef.current = null;
+    }
+    if (gracePeriodCheckIntervalRef.current) {
+      clearInterval(gracePeriodCheckIntervalRef.current);
+      gracePeriodCheckIntervalRef.current = null;
+    }
+  }, []);
   
   // ============================================
   // RECONNECTION LOGIC
@@ -204,20 +288,32 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
         throw new Error(rejoinResult.error || 'Failed to rejoin');
       }
       
-      // Success! Restart heartbeat
+      // Restore saved game state
+      const stateResult = await restorePlayerState(gamePin, userId);
+      
+      // Success! Restart heartbeat and clear grace period
       startHeartbeat();
       setupConnectionListener();
+      stopGracePeriodMonitoring();
+      
+      // Clear saved state after successful restore
+      if (stateResult.success) {
+        await clearSavedState(gamePin, userId);
+      }
       
       setConnectionState({
         isOnline: true,
         isReconnecting: false,
         reconnectionAvailable: false,
-        lastHeartbeat: Date.now()
+        lastHeartbeat: Date.now(),
+        inGracePeriod: false,
+        gracePeriodTimeRemaining: 0
       });
 
       return {
         success: true,
-        playerData: rejoinResult.playerData
+        playerData: rejoinResult.playerData,
+        savedState: stateResult.success ? stateResult.state : null
       };
       
     } catch (error) {
@@ -242,6 +338,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
   const cleanup = useCallback(async () => {
 
     stopHeartbeat();
+    stopGracePeriodMonitoring();
     
     if (connectionListenerRef.current) {
       connectionListenerRef.current();
@@ -251,7 +348,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
     if (gamePin && userId) {
       await cleanupConnectionTracking(gamePin, userId);
     }
-  }, [gamePin, userId, stopHeartbeat]);
+  }, [gamePin, userId, stopHeartbeat, stopGracePeriodMonitoring]);
   
   // ============================================
   // MANUAL DISCONNECT (LEAVE BATTLE)
@@ -270,7 +367,9 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
       isOnline: false,
       isReconnecting: false,
       reconnectionAvailable: false,
-      lastHeartbeat: 0
+      lastHeartbeat: 0,
+      inGracePeriod: false,
+      gracePeriodTimeRemaining: 0
     });
     
     hasInitializedRef.current = false; // Allow re-init if needed

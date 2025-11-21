@@ -301,7 +301,13 @@ const QuizGame = ({
     quiz?.gamePin,
     quiz?.currentUserId,
     { name: 'You', userId: quiz?.currentUserId },
-    mode === 'battle' // Only active in battle mode
+    mode === 'battle', // Only active in battle mode
+    {
+      score: game.score,
+      currentQuestionIndex: game.currentQuestionIndex,
+      userAnswers: game.userAnswers,
+      answeredQuestions: game.answeredQuestions
+    }
   );
   
   // ENSURE GAME STARTS UNPAUSED
@@ -323,8 +329,15 @@ const QuizGame = ({
 
     if (result.success) {
 
-      // 1. Restore score
-      if (result.playerData.score !== undefined) {
+      // 1. Restore score and game state from saved state
+      if (result.savedState) {
+        // Restore from saved state (preserves exact progress)
+        game.scoreRef.current = result.savedState.score;
+        game.setCurrentQuestionIndex(result.savedState.currentQuestionIndex);
+        game.setUserAnswers(result.savedState.userAnswers || []);
+        game.setAnsweredQuestions(result.savedState.answeredQuestions || new Set());
+      } else if (result.playerData.score !== undefined) {
+        // Fallback to player data from Firebase
         game.scoreRef.current = result.playerData.score;
       }
 
@@ -1447,6 +1460,8 @@ const QuizGame = ({
           isReconnecting={reconnection.connectionState.isReconnecting}
           gamePin={quiz?.gamePin}
           playerName="You"
+          inGracePeriod={reconnection.connectionState.inGracePeriod}
+          gracePeriodTimeRemaining={reconnection.connectionState.gracePeriodTimeRemaining}
         />
       )}
 

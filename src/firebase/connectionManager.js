@@ -11,7 +11,7 @@ import { realtimeDb } from './config';
 
 /**
  * Initialize connection tracking for a player
- * Sets up heartbeat and disconnect handlers
+ * Sets up heartbeat and disconnect handlers with 90-second grace period
  */
 export const initializeConnectionTracking = async (gamePin, userId) => {
   try {
@@ -23,20 +23,24 @@ export const initializeConnectionTracking = async (gamePin, userId) => {
       userId,
       isOnline: true,
       lastHeartbeat: Date.now(),
-      connectedAt: Date.now()
+      connectedAt: Date.now(),
+      disconnectedAt: null,
+      gracePeriodActive: false
     });
     
-    // Setup disconnect handler - auto-mark as offline
+    // Setup disconnect handler - auto-mark as offline with grace period
     const disconnectRef = onDisconnect(connectionRef);
     await disconnectRef.update({
       isOnline: false,
-      disconnectedAt: Date.now()
+      disconnectedAt: Date.now(),
+      gracePeriodActive: true // Start grace period
     });
     
-    // Also update player's isOnline status
+    // Also update player's isOnline status (but keep in grace period)
     const playerDisconnectRef = onDisconnect(playerRef);
     await playerDisconnectRef.update({
-      isOnline: false
+      isOnline: false,
+      inGracePeriod: true
     });
 
     return {
@@ -53,6 +57,7 @@ export const initializeConnectionTracking = async (gamePin, userId) => {
 /**
  * Send heartbeat to keep connection alive
  * Should be called every 5 seconds
+ * Clears grace period if player reconnects
  */
 export const sendHeartbeat = async (gamePin, userId) => {
   try {
@@ -61,12 +66,17 @@ export const sendHeartbeat = async (gamePin, userId) => {
     await set(connectionRef, {
       userId,
       isOnline: true,
-      lastHeartbeat: Date.now()
+      lastHeartbeat: Date.now(),
+      disconnectedAt: null,
+      gracePeriodActive: false
     });
     
-    // Also update player status
-    const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}/isOnline`);
-    await set(playerRef, true);
+    // Also update player status (clear grace period)
+    const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
+    await set(playerRef, {
+      isOnline: true,
+      inGracePeriod: false
+    }, { merge: true });
     
   } catch (error) {
     console.error('❌ Heartbeat failed:', error);
@@ -92,6 +102,7 @@ export const listenToConnectionState = (gamePin, userId, callback) => {
 /**
  * Check if a player is still online
  * Uses heartbeat timeout (10 seconds = 2 missed heartbeats)
+ * Includes grace period logic (90 seconds before forfeit)
  */
 export const isPlayerOnline = async (gamePin, userId) => {
   try {
@@ -107,7 +118,20 @@ export const isPlayerOnline = async (gamePin, userId) => {
     const heartbeatAge = now - (data.lastHeartbeat || 0);
     
     // Consider offline if no heartbeat in 10 seconds
-    return data.isOnline && heartbeatAge < 10000;
+    const isCurrentlyOnline = data.isOnline && heartbeatAge < 10000;
+    
+    // If offline, check if still in grace period
+    if (!isCurrentlyOnline && data.disconnectedAt) {
+      const disconnectAge = now - data.disconnectedAt;
+      const GRACE_PERIOD = 90000; // 90 seconds
+      
+      // Still in grace period = considered "temporarily offline" not forfeited
+      if (disconnectAge < GRACE_PERIOD) {
+        return 'grace_period'; // Special status
+      }
+    }
+    
+    return isCurrentlyOnline;
     
   } catch (error) {
     console.error('❌ Error checking online status:', error);
@@ -117,6 +141,7 @@ export const isPlayerOnline = async (gamePin, userId) => {
 
 /**
  * Get all online players in a battle
+ * Includes players in grace period as "temporarily offline"
  */
 export const getOnlinePlayers = async (gamePin) => {
   try {
@@ -129,15 +154,98 @@ export const getOnlinePlayers = async (gamePin) => {
     
     const connections = snapshot.val();
     const now = Date.now();
+    const GRACE_PERIOD = 90000; // 90 seconds
     
     return Object.values(connections).filter(conn => {
       const heartbeatAge = now - (conn.lastHeartbeat || 0);
-      return conn.isOnline && heartbeatAge < 10000;
+      const isCurrentlyOnline = conn.isOnline && heartbeatAge < 10000;
+      
+      // Include players in grace period
+      if (!isCurrentlyOnline && conn.disconnectedAt) {
+        const disconnectAge = now - conn.disconnectedAt;
+        return disconnectAge < GRACE_PERIOD; // Still in grace period
+      }
+      
+      return isCurrentlyOnline;
     });
     
   } catch (error) {
     console.error('❌ Error getting online players:', error);
     return [];
+  }
+};
+
+/**
+ * Check grace period status for a disconnected player
+ * Returns: { inGracePeriod: boolean, timeRemaining: number, isForfeited: boolean }
+ */
+export const checkGracePeriod = async (gamePin, userId) => {
+  try {
+    const connectionRef = ref(realtimeDb, `battles/${gamePin}/connections/user_${userId}`);
+    const snapshot = await get(connectionRef);
+    
+    if (!snapshot.exists()) {
+      return { inGracePeriod: false, timeRemaining: 0, isForfeited: true };
+    }
+    
+    const data = snapshot.val();
+    const now = Date.now();
+    const GRACE_PERIOD = 90000; // 90 seconds
+    
+    // Check if currently online
+    const heartbeatAge = now - (data.lastHeartbeat || 0);
+    if (data.isOnline && heartbeatAge < 10000) {
+      return { inGracePeriod: false, timeRemaining: 0, isForfeited: false };
+    }
+    
+    // Check grace period
+    if (data.disconnectedAt) {
+      const disconnectAge = now - data.disconnectedAt;
+      const timeRemaining = Math.max(0, GRACE_PERIOD - disconnectAge);
+      
+      if (timeRemaining > 0) {
+        return {
+          inGracePeriod: true,
+          timeRemaining: Math.ceil(timeRemaining / 1000), // Convert to seconds
+          isForfeited: false
+        };
+      }
+      
+      // Grace period expired
+      return { inGracePeriod: false, timeRemaining: 0, isForfeited: true };
+    }
+    
+    return { inGracePeriod: false, timeRemaining: 0, isForfeited: true };
+    
+  } catch (error) {
+    console.error('❌ Error checking grace period:', error);
+    return { inGracePeriod: false, timeRemaining: 0, isForfeited: false };
+  }
+};
+
+/**
+ * Mark player as forfeited after grace period expires
+ */
+export const markAsForfeited = async (gamePin, userId) => {
+  try {
+    const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
+    
+    await set(playerRef, {
+      isOnline: false,
+      inGracePeriod: false,
+      hasForfeited: true,
+      forfeitedAt: Date.now()
+    }, { merge: true });
+    
+    const connectionRef = ref(realtimeDb, `battles/${gamePin}/connections/user_${userId}`);
+    await set(connectionRef, {
+      isOnline: false,
+      gracePeriodActive: false,
+      hasForfeited: true
+    }, { merge: true });
+    
+  } catch (error) {
+    console.error('❌ Error marking as forfeited:', error);
   }
 };
 
@@ -305,4 +413,83 @@ export const listenToPlayerConnections = (gamePin, callback) => {
       callback([]);
     }
   });
+};
+
+// ============================================
+// 💾 STATE PRESERVATION FOR RECONNECTION
+// ============================================
+
+/**
+ * Save player's current game state for reconnection
+ * Called when player disconnects during battle
+ */
+export const savePlayerState = async (gamePin, userId, state) => {
+  try {
+    const stateRef = ref(realtimeDb, `battles/${gamePin}/savedStates/user_${userId}`);
+    
+    await set(stateRef, {
+      userId,
+      score: state.score || 0,
+      currentQuestionIndex: state.currentQuestionIndex || 0,
+      userAnswers: state.userAnswers || [],
+      answeredQuestions: state.answeredQuestions || new Set(),
+      savedAt: Date.now(),
+      expiresAt: Date.now() + 90000 // Expires after 90 seconds
+    });
+    
+  } catch (error) {
+    console.error('❌ Error saving player state:', error);
+  }
+};
+
+/**
+ * Restore player's saved game state
+ * Called when player reconnects during grace period
+ */
+export const restorePlayerState = async (gamePin, userId) => {
+  try {
+    const stateRef = ref(realtimeDb, `battles/${gamePin}/savedStates/user_${userId}`);
+    const snapshot = await get(stateRef);
+    
+    if (!snapshot.exists()) {
+      return { success: false, error: 'No saved state found' };
+    }
+    
+    const savedState = snapshot.val();
+    const now = Date.now();
+    
+    // Check if state has expired
+    if (savedState.expiresAt && now > savedState.expiresAt) {
+      // Clean up expired state
+      await set(stateRef, null);
+      return { success: false, error: 'Saved state expired' };
+    }
+    
+    return {
+      success: true,
+      state: {
+        score: savedState.score,
+        currentQuestionIndex: savedState.currentQuestionIndex,
+        userAnswers: savedState.userAnswers || [],
+        answeredQuestions: new Set(savedState.answeredQuestions || [])
+      }
+    };
+    
+  } catch (error) {
+    console.error('❌ Error restoring player state:', error);
+    return { success: false, error: 'Failed to restore state' };
+  }
+};
+
+/**
+ * Clear saved player state
+ * Called after successful reconnection or when state expires
+ */
+export const clearSavedState = async (gamePin, userId) => {
+  try {
+    const stateRef = ref(realtimeDb, `battles/${gamePin}/savedStates/user_${userId}`);
+    await set(stateRef, null);
+  } catch (error) {
+    console.error('❌ Error clearing saved state:', error);
+  }
 };

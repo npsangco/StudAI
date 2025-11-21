@@ -11,11 +11,20 @@ export const ReconnectionModal = ({
   onGiveUp,
   isReconnecting = false,
   gamePin,
-  playerName 
+  playerName,
+  inGracePeriod = false,
+  gracePeriodTimeRemaining = 0
 }) => {
   const [error, setError] = useState(null);
   
   if (!isOpen) return null;
+  
+  // Format time remaining
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
   
   const handleReconnect = async () => {
     setError(null);
@@ -103,10 +112,27 @@ export const ReconnectionModal = ({
             </div>
           )}
           
+          {/* Grace Period Countdown */}
+          {inGracePeriod && gracePeriodTimeRemaining > 0 && (
+            <div className="bg-yellow-50 rounded-lg p-4 mb-4 border-2 border-yellow-300">
+              <div className="text-center">
+                <p className="text-sm text-yellow-800 font-semibold mb-2">
+                  ⏰ Reconnect before time runs out!
+                </p>
+                <div className="text-3xl font-bold text-yellow-900 mb-1">
+                  {formatTime(gracePeriodTimeRemaining)}
+                </div>
+                <p className="text-xs text-yellow-700">
+                  {gracePeriodTimeRemaining <= 30 ? 'Hurry! Time running out!' : 'Your progress is saved'}
+                </p>
+              </div>
+            </div>
+          )}
+          
           {/* Info */}
           <div className="bg-yellow-50 rounded-lg p-3 mb-4 border border-yellow-200">
             <p className="text-xs text-yellow-800 leading-relaxed">
-              <strong>Note:</strong> If you don't reconnect within 30 minutes, your progress will be lost and you'll be marked as forfeit.
+              <strong>Note:</strong> If you don't reconnect within 90 seconds, you'll be marked as forfeit.
             </p>
           </div>
           

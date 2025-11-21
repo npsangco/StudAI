@@ -27,6 +27,25 @@ export const LiveLeaderboard = ({
     }
     return null;
   };
+  
+  // Get connection status badge
+  const getConnectionStatus = (player) => {
+    if (player.inGracePeriod) {
+      return (
+        <span className="px-1.5 py-0.5 bg-yellow-500/80 text-white text-[10px] font-bold rounded uppercase animate-pulse">
+          Reconnecting
+        </span>
+      );
+    }
+    if (!player.isOnline || player.forfeited) {
+      return (
+        <span className="px-1.5 py-0.5 bg-gray-500/80 text-white text-[10px] font-bold rounded uppercase">
+          Offline
+        </span>
+      );
+    }
+    return null;
+  };
 
   // Check if player just answered (for pulse effect)
   const justAnswered = (playerId) => {
@@ -152,6 +171,7 @@ export const LiveLeaderboard = ({
                         {isCurrentUser ? 'You' : player.name}
                       </p>
                       {getStreakIcon(player)}
+                      {getConnectionStatus(player)}
                     </div>
                     <p className={`text-xs ${isCurrentUser ? 'text-amber-800' : 'text-amber-700'}`}>
                       {rank}{getRankSuffix(rank)} place
@@ -192,7 +212,7 @@ export const LiveLeaderboard = ({
     );
   }
 
-  // Tablet - Light Mode Yellow/Black Bottom Panel
+  // Tablet 
   if (mode === 'tablet') {
     // Calculate current user rank - find by userId instead of name
     const currentUserPlayer = sortedPlayers.find(p => 
@@ -253,9 +273,12 @@ export const LiveLeaderboard = ({
                     <span className={`text-xl font-bold ${isCurrentUser ? 'text-amber-900' : 'text-amber-800'}`}>
                       {getRankIcon(rank)}
                     </span>
-                    <p className={`font-bold drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
-                      {isCurrentUser ? 'You' : player.name}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className={`font-bold drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
+                        {isCurrentUser ? 'You' : player.name}
+                      </p>
+                      {getConnectionStatus(player)}
+                    </div>
                   </div>
                   <span className={`text-lg font-bold drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
                     {player.score}pts
