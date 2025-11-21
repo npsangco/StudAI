@@ -7,8 +7,6 @@ export const EmojiReactions = ({ gamePin, currentUserId }) => {
   useEffect(() => {
     if (!gamePin) return;
 
-    console.log('👂 Listening to emoji reactions...');
-
     const unsubscribe = listenToReactions(gamePin, (newReactions) => {
       // Keep only the 5 most recent reactions
       setReactions(newReactions.slice(0, 5));

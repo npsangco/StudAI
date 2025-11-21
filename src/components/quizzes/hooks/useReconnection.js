@@ -67,7 +67,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
         setupConnectionListener();
         
       } catch (error) {
-        console.error('❌ Failed to initialize connection:', error);
+
         hasInitializedRef.current = false; // Allow retry
       }
     };
@@ -221,8 +221,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false) {
       };
       
     } catch (error) {
-      console.error('❌ Reconnection failed:', error);
-      
+
       setConnectionState(prev => ({
         ...prev,
         isReconnecting: false,

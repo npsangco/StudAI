@@ -51,27 +51,23 @@ const QuizGame = ({
     const shuffled = [...rawQuestions].sort(() => Math.random() - 0.5);
     const selectedQuestions = shuffled.slice(0, Math.min(QUESTION_BANK_SIZE, shuffled.length));
 
-    console.log(`🎲 Question Bank: Selected ${selectedQuestions.length} random questions from ${rawQuestions.length} total`);
-
     // Step 2: Apply mode-specific ordering/logic
     if (useAdaptiveMode) {
       // Solo Adaptive: Initialize adaptive queue with selected 10
       const { orderedQuestions, startingDifficulty} = initializeAdaptiveQueue(selectedQuestions);
-
-      console.log(`🎯 ADAPTIVE MODE: ${orderedQuestions.length} questions (Starting: ${startingDifficulty})`);
 
       return orderedQuestions;
     }
 
     if (mode === 'battle') {
       // Battle: Use selected 10 as-is (all players get same random 10)
-      console.log(`⚔️ BATTLE MODE: ${selectedQuestions.length} questions`);
+
       return selectedQuestions;
     }
 
     // Solo Classic: Sort selected 10 by difficulty
     const sorted = sortQuestionsByDifficulty(selectedQuestions);
-    console.log(`📚 SOLO CLASSIC: ${sorted.length} questions (sorted by difficulty)`);
+
     return sorted;
   });
 
@@ -81,7 +77,6 @@ const QuizGame = ({
       // 🔥 OPTION 1: Get starting difficulty from initialization
       const { startingDifficulty } = initializeAdaptiveQueue(rawQuestions);
 
-      console.log(`🎯 ADAPTIVE MODE ENABLED - Starting difficulty: ${startingDifficulty}`);
       return {
         currentDifficulty: startingDifficulty,
         difficultyHistory: [{
@@ -97,8 +92,6 @@ const QuizGame = ({
   const [adaptiveFeedbackAction, setAdaptiveFeedbackAction] = useState(null);
   const isShowingFeedbackRef = useRef(false); // 🔥 Prevent overlapping feedback
   const feedbackTimeoutRef = useRef(null); // 🔥 Track feedback timeout for cleanup
-
-  console.log(`📚 Questions loaded: ${questions.length}`);
 
   // 🔥 BULLETPROOF: Cleanup feedback on component unmount
   useEffect(() => {
@@ -141,12 +134,11 @@ const QuizGame = ({
     : rawTimer; // Allow 0 (No Limit) for solo
 
   if (mode === 'battle' && rawTimer === 0) {
-    console.log('⚠️ Battle mode: No Limit timer not allowed. Using 30s default.');
+
   } else if (mode === 'battle' && rawTimer < 15) {
-    console.log(`⚠️ Battle mode: Timer too short (${rawTimer}s). Using minimum 15s.`);
+
   }
-  console.log(`⏱️ Quiz timer (${mode} mode):`, quizTimer, 'seconds');
-  
+
   const game = useQuizGame(questions, quizTimer);
   const [userPlayer] = useState({ id: 'user', name: 'You', initial: 'Y', score: 0 });
 
@@ -234,8 +226,7 @@ const QuizGame = ({
   // Listen to real players in battle mode
   useEffect(() => {
     if (mode === 'battle' && quiz?.gamePin) {
-      console.log('👂 QuizGame: Listening to players for leaderboard...');
-      
+
       const unsubscribe = listenToPlayers(quiz.gamePin, (firebasePlayers) => {
         // Transform and sort by score
         const players = firebasePlayers
@@ -247,8 +238,7 @@ const QuizGame = ({
             forfeited: p.forfeited || false // Include forfeit status
           }))
           .sort((a, b) => b.score - a.score);
-        
-        console.log('📊 Leaderboard updated:', players);
+
         setRealPlayers(players);
       });
       
@@ -293,7 +283,7 @@ const QuizGame = ({
     if (mode === 'battle') {
       // On initial mount, ensure game is NOT paused
       game.setIsPaused(false);
-      console.log('✅ Battle game initialized - starting unpaused');
+
     }
   }, []); // Empty dependency array = runs once on mount
 
@@ -302,11 +292,10 @@ const QuizGame = ({
   // ============================================
   
   const handleReconnection = async () => {
-    console.log('🔄 Handling reconnection...');
+
     const result = await reconnection.attemptReconnection();
 
     if (result.success) {
-      console.log('✅ Reconnected! Restoring state:', result.playerData);
 
       // 1. Restore score
       if (result.playerData.score !== undefined) {
@@ -323,28 +312,12 @@ const QuizGame = ({
             const playersData = snapshot.val();
             const allPlayers = Object.values(playersData);
 
-            console.log('👥 All players in battle:', allPlayers.map(p => ({
-              userId: p.userId,
-              name: p.name,
-              currentQuestion: p.currentQuestion,
-              isOnline: p.isOnline
-            })));
-
             // 🔥 FIX: Simplified player filtering - Firebase stores userId as NUMBER, not with 'user_' prefix
             const currentUserIdNum = Number(quiz.currentUserId);
             const activePlayersData = allPlayers.filter(p => {
               const isNotSelf = Number(p.userId) !== currentUserIdNum;
               const isOnline = p.isOnline !== false; // Treat undefined as online
               const notForfeited = p.forfeited !== true;
-
-              console.log('🔍 Player filter:', {
-                playerUserId: p.userId,
-                currentUserId: currentUserIdNum,
-                isNotSelf,
-                isOnline,
-                notForfeited,
-                included: isNotSelf && isOnline && notForfeited
-              });
 
               return isNotSelf && isOnline && notForfeited;
             });
@@ -354,16 +327,13 @@ const QuizGame = ({
             // If currentQuestion = 3, they're ON question index 3 (Q4)
 
             const activePlayersQuestions = activePlayersData.map(p => p.currentQuestion || 0);
-            console.log('🔍 Active players currentQuestion values:', activePlayersQuestions);
-            console.log('🔍 My saved currentQuestion:', result.playerData.currentQuestion);
+
 
             if (activePlayersData.length > 0) {
               // For STRICT SYNC: Find the MINIMUM currentQuestion (slowest player)
               // Everyone waits for the slowest, so sync to that question
               const minCurrentQuestion = Math.min(...activePlayersQuestions);
               const maxCurrentQuestion = Math.max(...activePlayersQuestions);
-
-              console.log('🔍 Min (slowest):', minCurrentQuestion, 'Max (fastest):', maxCurrentQuestion);
 
               // Determine target question based on my progress vs group
               const myProgress = result.playerData.currentQuestion || 0;
@@ -376,35 +346,30 @@ const QuizGame = ({
                 // Put me on MY current progress and enter waiting state
                 targetQuestion = myProgress;
                 shouldWait = true;
-                console.log(`🚀 AHEAD: I'm on Q${myProgress + 1}, group is on Q${minCurrentQuestion + 1}, waiting for them`);
+
               } else {
                 // I'm BEHIND or EQUAL to the group
                 // Sync to where the slowest player is
                 targetQuestion = minCurrentQuestion;
-                console.log(`🚀 CATCHING UP: Syncing to group at Q${minCurrentQuestion + 1}`);
+
               }
 
               if (targetQuestion >= 0 && targetQuestion < questions.length) {
-                console.log(`🚀 JUMPING to question index ${targetQuestion} (question #${targetQuestion + 1})`);
-                console.log(`🔍 Before setCurrentQuestionIndex: game.currentQuestionIndex = ${game.currentQuestionIndex}`);
+
 
                 // ✅ USE SETTER to trigger re-render!
                 game.setCurrentQuestionIndex(targetQuestion);
 
-                console.log(`🔍 After setCurrentQuestionIndex: targetQuestion = ${targetQuestion}`);
-
                 // 🔥 FIX: Update progress AND check if we should be waiting
                 await updatePlayerProgress(quiz.gamePin, quiz.currentUserId, targetQuestion);
-                console.log(`✅ Updated Firebase with currentQuestion = ${targetQuestion}`);
 
                 // Reset timer for this question
                 resetTimer(quizTimer);
-                console.log(`✅ Timer reset for question ${targetQuestion}`);
 
                 // 🔥 FIX: Check if we should enter waiting state immediately after reconnection
                 // If I was ahead (shouldWait = true), enter waiting immediately
                 if (shouldWait) {
-                  console.log('⏳ I was ahead, entering waiting state immediately');
+
                   setIsWaitingForPlayers(true);
                 } else {
                   // Small delay to ensure state is properly set before checking
@@ -424,38 +389,38 @@ const QuizGame = ({
                       ).length;
 
                       if (playersWhoAnsweredTarget === latestActivePlayers.length && latestActivePlayers.length > 0) {
-                        console.log('⏳ All other players already answered this question, entering waiting state');
+
                         setIsWaitingForPlayers(true);
                         // The auto-advance logic will handle moving to next question
                       } else {
-                        console.log(`📊 ${playersWhoAnsweredTarget}/${latestActivePlayers.length} players answered, continuing game`);
+
                       }
                     }
                   }, 100); // 100ms delay to ensure state is synced
                 }
 
               } else if (targetQuestion >= questions.length) {
-                console.log('⚠️ Other players finished, using saved progress');
+
                 const savedQuestion = result.playerData.currentQuestion || 0;
                 game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
               }
             } else {
               // No other active players online, use SAVED progress (not question 0!)
               const savedQuestion = result.playerData.currentQuestion || 0;
-              console.log(`⚠️ No other active players found, using SAVED progress: question ${savedQuestion}`);
+
               game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
             }
           } else {
             // Battle doesn't exist, use saved progress
             const savedQuestion = result.playerData.currentQuestion || 0;
-            console.log(`⚠️ Battle data not found, using SAVED progress: question ${savedQuestion}`);
+
             game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
           }
         } catch (error) {
-          console.error('❌ Error checking other players progress:', error);
+
           // Fallback to SAVED progress (not question 0!)
           const savedQuestion = result.playerData.currentQuestion || 0;
-          console.log(`⚠️ Fallback: Using SAVED progress: question ${savedQuestion}`);
+
           game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
         }
       }
@@ -465,13 +430,13 @@ const QuizGame = ({
 
       return result;
     } else {
-      console.error('❌ Reconnection failed:', result.error);
+
       return result;
     }
   };
   
   const handleGiveUpReconnection = () => {
-    console.log('👋 User gave up on reconnection');
+
     reconnection.disconnect();
     onBack();
   };
@@ -485,11 +450,11 @@ const QuizGame = ({
       // Only pause if explicitly disconnected (reconnectionAvailable = true)
       if (reconnection.connectionState.reconnectionAvailable) {
         game.setIsPaused(true);
-        console.log('⚠️ Connection lost - game paused');
+
       } else if (!reconnection.connectionState.reconnectionAvailable && !reconnection.connectionState.isReconnecting) {
         // Unpause when connection is stable (not reconnecting, no reconnection needed)
         game.setIsPaused(false);
-        console.log('✅ Connection stable - game running');
+
       }
     }
   }, [reconnection.connectionState.reconnectionAvailable, reconnection.connectionState.isReconnecting, mode]);
@@ -506,14 +471,12 @@ const QuizGame = ({
     }
     
     // Battle mode: forfeit with score reset
-    console.log('🏁 Player forfeiting battle...');
-    
+
     if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
       try {
         // 1. Set score to 0 in Firebase
         await updatePlayerScore(quiz.gamePin, quiz.currentUserId, 0);
-        console.log('✅ Score set to 0');
-        
+
         // 2. Mark as forfeited
         const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
         await update(playerRef, {
@@ -521,14 +484,12 @@ const QuizGame = ({
           forfeitedAt: Date.now(),
           isOnline: false
         });
-        console.log('✅ Player marked as forfeited');
-        
+
         // 3. Cleanup connection tracking
         await reconnection.disconnect();
-        console.log('✅ Connection cleaned up');
-        
+
       } catch (error) {
-        console.error('❌ Error during forfeit:', error);
+
       }
     }
     
@@ -547,8 +508,7 @@ const QuizGame = ({
     // Handle browser close/refresh (X button)
     const handleBeforeUnload = (e) => {
       if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
-        console.log('⚠️ Browser closing/refreshing');
-        
+
         // DON'T delete player data - just mark as disconnected
         // This allows reconnection to work!
         const connectionUrl = `https://studai-quiz-battles-default-rtdb.asia-southeast1.firebasedatabase.app/battles/${quiz.gamePin}/connections/user_${quiz.currentUserId}.json`;
@@ -565,7 +525,7 @@ const QuizGame = ({
         if (navigator.sendBeacon) {
           const blob = new Blob([JSON.stringify(disconnectData)], { type: 'application/json' });
           navigator.sendBeacon(connectionUrl, blob);
-          console.log('📡 Sent disconnect beacon (keeping player data for reconnection)');
+
         } else {
           // Fallback: synchronous XHR
           try {
@@ -573,9 +533,9 @@ const QuizGame = ({
             xhr.open('PUT', connectionUrl, false); // synchronous PUT
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.send(JSON.stringify(disconnectData));
-            console.log('📡 Sent disconnect XHR');
+
           } catch (err) {
-            console.error('❌ Failed to send disconnect:', err);
+
           }
         }
         
@@ -596,7 +556,7 @@ const QuizGame = ({
     // Cleanup on unmount (when user intentionally exits via button)
     return () => {
       if (mode === 'battle') {
-        console.log('🧹 QuizGame unmounting - cleaning up connection');
+
         window.removeEventListener('beforeunload', handleBeforeUnload);
         
         // Check if this is an intentional exit from the app (via onBack/onComplete)
@@ -629,8 +589,8 @@ const QuizGame = ({
     // Mark progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
-        .then(() => console.log('✅ Timeout: Progress marked in Firebase'))
-        .catch(err => console.error('Failed to update progress on timeout:', err));
+        .then(() => {})
+        .catch(() => {});
     }
 
     game.isProcessingRef.current = true;
@@ -699,7 +659,7 @@ const QuizGame = ({
       if (mode === 'battle' && quiz?.gamePin) {
         const newScore = game.scoreRef.current; // Already updated above with correct points
         updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
-          .catch(err => console.error('Failed to update score:', err));
+          .catch(() => {});
       }
       
       if (onPlayerScoreUpdate) {
@@ -714,7 +674,7 @@ const QuizGame = ({
     // Update progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
-        .catch(err => console.error('Failed to update progress:', err));
+        .catch(() => {});
       
     }
     
@@ -774,7 +734,7 @@ const QuizGame = ({
       if (mode === 'battle' && quiz?.gamePin) {
         const newScore = game.scoreRef.current; // Already updated above with correct points
         updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
-          .catch(err => console.error('Failed to update score:', err));
+          .catch(() => {});
       }
       
       if (onPlayerScoreUpdate) {
@@ -789,7 +749,7 @@ const QuizGame = ({
     // Update progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
-        .catch(err => console.error('Failed to update progress:', err));
+        .catch(() => {});
       
     }
     
@@ -808,7 +768,6 @@ const QuizGame = ({
   const handleMatchingSubmit = (matches) => {
     if (game.isPaused || isProcessing) return;
 
-    // 🐾 Clear encouragement timer since user is submitting
     if (encouragementTimerRef.current) {
       clearTimeout(encouragementTimerRef.current);
       encouragementTimerRef.current = null;
@@ -819,52 +778,57 @@ const QuizGame = ({
     setIsProcessing(true);
     game.setUserMatches(matches);
     game.setIsMatchingSubmitted(true);
-    const isCorrect = game.isAnswerCorrect(currentQ, matches);
+    const answerResult = game.isAnswerCorrect(currentQ, matches);
 
-    // Record answer
+    // Handle partial credit for matching questions
+    const isCorrect = typeof answerResult === 'object' ? answerResult.isCorrect : answerResult;
+    const partialCredit = typeof answerResult === 'object' ? answerResult.partialCredit : 0;
+    const accuracy = typeof answerResult === 'object' ? answerResult.accuracy : (isCorrect ? 100 : 0);
+
     const answerRecord = {
       question: currentQ.question,
       userAnswer: matches,
       correctAnswer: currentQ.matchingPairs,
       isCorrect: isCorrect,
+      partialCredit: partialCredit,
+      accuracy: accuracy,
       type: currentQ.type
     };
     const newAnswersHistory = [...answersHistory, answerRecord];
     setAnswersHistory(newAnswersHistory);
     
-    if (isCorrect) {
-      // Track correct answers (sync ref + state)
-      correctAnswersCountRef.current += 1;
-      setCorrectAnswersCount(correctAnswersCountRef.current);
+    // Award points (full points if correct, partial points otherwise)
+    if (isCorrect || partialCredit > 0) {
+      if (isCorrect || partialCredit >= 1) {
+        correctAnswersCountRef.current += 1;
+        setCorrectAnswersCount(correctAnswersCountRef.current);
+      }
       
-      // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo'
-        ? getPointsForDifficulty(currentQ.difficulty)
-        : 1; // Battle mode: flat 1 point per question
+        ? (partialCredit > 0 ? partialCredit : getPointsForDifficulty(currentQ.difficulty))
+        : 1;
       
       game.updateScore(points);
 
-    // 🐾 Show pet companion message
-    setPetAnswerCorrect(isCorrect);
-    setShowPetMessage(true);      // 🔥 Update score in Firebase
       if (mode === 'battle' && quiz?.gamePin) {
-        const newScore = game.scoreRef.current; // Already updated above with correct points
+        const newScore = game.scoreRef.current;
         updatePlayerScore(quiz.gamePin, quiz.currentUserId, newScore)
-          .catch(err => console.error('Failed to update score:', err));
+          .catch(() => {});
       }
       
       if (onPlayerScoreUpdate) {
-        onPlayerScoreUpdate(1, 1);
+        onPlayerScoreUpdate(partialCredit > 0 ? partialCredit : 1, 1);
       }
     }
+
+    setPetAnswerCorrect(isCorrect || accuracy >= 60);
+    setShowPetMessage(true);
     
-    // Update progress in Firebase (battle mode)
     if (mode === 'battle' && quiz?.gamePin) {
       updatePlayerProgress(quiz.gamePin, quiz.currentUserId, game.currentQuestionIndex + 1)
-        .catch(err => console.error('Failed to update progress:', err));
+        .catch(() => {});
     }
 
-    // Both modes: just unlock UI, manual next button appears for matching
     setIsProcessing(false);
   };
 
@@ -874,7 +838,7 @@ const QuizGame = ({
     
     // 🔥 EDGE CASE 1: Skip adaptive check if feedback is already showing
     if (isShowingFeedbackRef.current) {
-      console.log('⏭️ EDGE CASE: Skipping adaptive check - feedback already showing');
+
       // Just proceed with normal transition
       setIsProcessing(false);
       timeoutHandledRef.current = false;
@@ -920,7 +884,7 @@ const QuizGame = ({
       // 🔥 REORDER questions if needed
       if (result.shouldReorder && result.reorderedQuestions.length > 0) {
         setQuestions(result.reorderedQuestions);
-        console.log(`🔄 Questions reordered! Total: ${result.reorderedQuestions.length}`);
+
       }
 
       // Show feedback if we have a message
@@ -981,7 +945,7 @@ const QuizGame = ({
     setTimeout(() => {
       // 🔥 EDGE CASE 5: Ensure questions array is valid before transitioning
       if (!questions || questions.length === 0) {
-        console.error('❌ EDGE CASE: No questions available');
+
         finishQuiz();
         return;
       }
@@ -1001,19 +965,13 @@ const QuizGame = ({
   };
 
   const handleManualNext = () => {
-    console.log('🔘 Manual Next clicked', {
-      questionType: currentQ.type,
-      isSubmitted: game.isMatchingSubmitted,
-      currentIndex: game.currentQuestionIndex,
-      totalQuestions: questions.length
-    });
 
     // For matching type, check if last question
     if (game.currentQuestionIndex >= questions.length - 1) {
-      console.log('📝 Last question - finishing quiz');
+
       finishQuizWithAnswers(answersHistory);
     } else {
-      console.log('➡️ Moving to next question');
+
       handleNextQuestion();
     }
   };
@@ -1030,10 +988,7 @@ const QuizGame = ({
   };
 
   const finishQuizWithAnswers = (finalAnswers) => {
-    console.log('🏁 Finishing quiz with answers:', finalAnswers);
 
-    console.log('🔍 DEBUG - quiz.isHost:', quiz?.isHost);
-    console.log('🔍 DEBUG - mode:', mode);
 
     const results = {
       ...game.getResults(),
@@ -1050,10 +1005,8 @@ const QuizGame = ({
         adaptiveState.difficultyHistory,
         finalAnswers
       );
-      console.log('🎯 Adaptive Journey:', results.adaptiveJourney);
-    }
 
-    console.log('🔍 DEBUG - results.isHost:', results.isHost);
+    }
 
     if (mode === 'battle') {
       results.players = allPlayers.map(player =>
@@ -1090,7 +1043,6 @@ const QuizGame = ({
       emoji: emojiData.emoji
     });
 
-    console.log(`🎭 Sent reaction: ${emojiData.emoji}`);
   };
 
   useEffect(() => {

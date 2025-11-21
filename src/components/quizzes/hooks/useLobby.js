@@ -51,7 +51,7 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
       await markPlayerReady(gamePin, currentUserId);
       
     } catch (error) {
-      console.error('❌ Error marking ready:', error);
+
     }
   };
 
@@ -63,7 +63,7 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
       await markPlayerUnready(gamePin, currentUserId);
       
     } catch (error) {
-      console.error('❌ Error marking unready:', error);
+
     }
   };
 

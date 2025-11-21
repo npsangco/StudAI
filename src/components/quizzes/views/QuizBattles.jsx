@@ -25,9 +25,9 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
           credentials: 'include'
         });
         currentUser = await userResponse.json();
-        console.log('✅ Current user fetched:', currentUser.username);
+
       } catch (userError) {
-        console.error('❌ Failed to get user info:', userError);
+
         setError('Please log in first');
         return;
       }
@@ -35,9 +35,7 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
       // 1️⃣ Join battle in MySQL (existing API)
       const response = await quizApi.joinBattle({ gamePin });
       const { battle, participant } = response.data;
-      
-      console.log('✅ Joined MySQL battle:', battle);
-      
+
       // 2️⃣ Add player to Firebase room
       // Convert relative profile picture path to full URL
       let profilePictureUrl = null;
@@ -53,16 +51,14 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
         initial: currentUser.username[0].toUpperCase(),
         profilePicture: profilePictureUrl
       });
-      
-      console.log('✅ Added to Firebase room');
-      
+
       // 3️⃣ Continue with existing flow
       if (onJoinSuccess) {
         onJoinSuccess(battle, participant);
       }
       
     } catch (err) {
-      console.error('Join battle error:', err);
+
       setError(err.response?.data?.error || 'Failed to join battle');
     } finally {
       setLoading(false);

@@ -26,8 +26,7 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
     if (!isOpen) return;
     
     if (results?.gamePin) {
-      console.log('📊 Fetching final results from Firebase for PIN:', results.gamePin);
-      
+
       const unsubscribe = listenToPlayers(results.gamePin, (firebasePlayers) => {
         const formattedResults = firebasePlayers.map(player => ({
           id: `user_${player.userId}`,
@@ -60,10 +59,10 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
       try {
         const result = await syncBattleResultsToMySQL(results.gamePin);
         if (result.success) {
-          console.log('✅ Battle results synced to MySQL');
+
         }
       } catch (error) {
-        console.error('❌ Sync error:', error);
+
       }
     }, 1000);
     
@@ -82,10 +81,10 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
         const result = await incrementViewers(gamePin);
         if (result.success) {
           isRegistered = true;
-          console.log(`✅ Viewer registered. Total viewers: ${result.viewerCount}`);
+
         }
       } catch (error) {
-        console.error('❌ Error registering viewer:', error);
+
       }
     };
 
@@ -118,7 +117,7 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
           try {
             await decrementViewersAndCleanup(gamePin);
           } catch (error) {
-            console.error('❌ Error unregistering viewer:', error);
+
           }
         };
         unregisterViewer();

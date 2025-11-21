@@ -141,7 +141,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
 
       } catch (firebaseError) {
-        console.error('Firebase error:', firebaseError);
+
         setError('Failed to create battle room. Please try again.');
       }
     }
@@ -178,7 +178,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     const currentGamePin = gameState.gamePin;
 
     if (!currentGamePin) {
-      console.error('❌ No game PIN found!');
+
       setError('Game PIN not found. Please try creating the battle again.');
       return;
     }
@@ -195,8 +195,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       
       if (!result.success) {
         // Handle specific error cases
-        console.error('❌ Battle start validation failed:', result.errorCode);
-        
+
         // Show user-friendly error message
         switch (result.errorCode) {
           case 'QUIZ_DELETED':
@@ -235,12 +234,12 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       }
       
       // 4️⃣ Transition to loading screen
-      console.log('✅ Battle started successfully');
+
       updateUiState({ currentView: VIEWS.LOADING_BATTLE });
       countdown.start();
       
     } catch (error) {
-      console.error('❌ Error starting battle:', error);
+
       toast.error('Failed to start battle. Please try again.');
     }
   };
@@ -510,14 +509,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     if (attemptData) {
       const pointsEarned = attemptData.points_earned || 0;
       const expEarned = attemptData.exp_earned || 0;
-      
-      console.log('📊 Quiz Results - Backend Response:', {
-        points_earned: attemptData.points_earned,
-        exp_earned: attemptData.exp_earned,
-        petLevelUp: attemptData.petLevelUp,
-        fullResponse: attemptData
-      });
-      
+
       updateGameState({
         results: {
           ...results,
@@ -540,7 +532,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         window.dispatchEvent(new Event('questActivity'));
       }, 500);
     } else {
-      console.error('⚠️ Quiz submit failed - no attemptData received');
+
       updateGameState({ results });
     }
 

@@ -9,16 +9,23 @@ export function useQuizTimer(timeLimit, isPaused, onTimeUp) {
   }, [timeLimit]);
 
   useEffect(() => {
-    // If timeLimit is 0, it means "No Limit" mode - don't run timer
+    // Skip timer setup entirely for No Limit mode (timeLimit === 0)
+    // This prevents unnecessary effect re-runs and memory overhead
     if (timeLimit === 0) {
       return;
     }
 
-    if (timeLeft > 0 && !isPaused) {
+    // Skip if paused
+    if (isPaused) {
+      return;
+    }
+
+    // Run timer countdown
+    if (timeLeft > 0) {
       timerRef.current = setTimeout(() => {
         setTimeLeft(prev => prev - 1);
       }, 1000);
-    } else if (timeLeft === 0 && !isPaused) {
+    } else if (timeLeft === 0) {
       if (onTimeUp) onTimeUp();
     }
 
@@ -27,7 +34,7 @@ export function useQuizTimer(timeLimit, isPaused, onTimeUp) {
         clearTimeout(timerRef.current);
       }
     };
-  }, [timeLeft, isPaused, onTimeUp, timeLimit]);
+  }, [timeLeft, isPaused, timeLimit, onTimeUp]);
 
   const resetTimer = (newTime = timeLimit) => {
     setTimeLeft(newTime);

@@ -1,6 +1,16 @@
 import { QUESTION_TYPES } from './constants';
 
-// Check if answer is correct
+// Get points for difficulty level
+export function getPointsForDifficulty(difficulty) {
+  const difficultyMap = {
+    easy: 1,
+    medium: 2,
+    hard: 3
+  };
+  return difficultyMap[difficulty?.toLowerCase()] || 2;
+}
+
+// Check if answer is correct (with partial credit support for matching)
 export function checkAnswer(question, answer) {
   switch (question.type) {
     case QUESTION_TYPES.MULTIPLE_CHOICE:
@@ -12,11 +22,37 @@ export function checkAnswer(question, answer) {
     
     case QUESTION_TYPES.MATCHING:
       if (!Array.isArray(answer) || answer.length === 0) return false;
-      return answer.every(match =>
+      
+      const totalPairs = question.matchingPairs.length;
+      const correctPairs = answer.filter(match =>
         question.matchingPairs.some(pair =>
           pair.left === match.left && pair.right === match.right
         )
-      ) && answer.length === question.matchingPairs.length;
+      ).length;
+      
+      const accuracy = correctPairs / totalPairs;
+      const allCorrect = accuracy === 1.0 && answer.length === totalPairs;
+      
+      // Award partial credit if >= 60% correct
+      if (accuracy >= 0.6) {
+        const difficultyPoints = getPointsForDifficulty(question.difficulty);
+        return {
+          isCorrect: allCorrect,
+          partialCredit: allCorrect ? difficultyPoints : Math.floor(accuracy * difficultyPoints),
+          accuracy: Math.round(accuracy * 100),
+          correctPairs,
+          totalPairs
+        };
+      }
+      
+      // Less than 60% = no credit
+      return {
+        isCorrect: false,
+        partialCredit: 0,
+        accuracy: Math.round(accuracy * 100),
+        correctPairs,
+        totalPairs
+      };
     
     default:
       return false;

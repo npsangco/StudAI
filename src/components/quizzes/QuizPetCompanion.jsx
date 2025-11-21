@@ -18,7 +18,7 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
           setPet(res.data);
         }
       } catch (err) {
-        console.error('Failed to load pet for quiz:', err);
+
       }
     };
     loadPet();

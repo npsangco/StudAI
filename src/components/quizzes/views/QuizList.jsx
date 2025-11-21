@@ -89,7 +89,7 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false, toast }) => {
         setError(data.error || 'Failed to import quiz');
       }
     } catch (err) {
-      console.error('Import error:', err);
+
       setError('Failed to import quiz');
     } finally {
       setLoading(false);
@@ -516,7 +516,7 @@ export const QuizList = ({
         setError(data.error || 'Failed to import quiz');
       }
     } catch (err) {
-      console.error('Import error:', err);
+
       setError('Failed to import quiz');
     } finally {
       setLoading(false);

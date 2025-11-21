@@ -53,7 +53,7 @@ export function useQuizAPI(quizDataHook, toast) {
 
       updateQuizData({ list: formattedQuizzes });
     } catch (err) {
-      console.error('Failed to load quizzes:', err);
+
       setError(err.response?.data?.error || 'Failed to load quizzes');
     } finally {
       setLoading(false);
@@ -108,7 +108,7 @@ export function useQuizAPI(quizDataHook, toast) {
         questions: formattedQuestions
       };
     } catch (err) {
-      console.error('Failed to load quiz:', err);
+
       setError(err.response?.data?.error || 'Failed to load quiz');
       return null;
     } finally {
@@ -211,7 +211,7 @@ export function useQuizAPI(quizDataHook, toast) {
       
       return true;
     } catch (err) {
-      console.error('Failed to save quiz:', err);
+
       setError(err.response?.data?.error || 'Failed to save quiz');
       return false;
     } finally {
@@ -238,7 +238,7 @@ export function useQuizAPI(quizDataHook, toast) {
       toast.success(`Quiz "${quizTitle}" deleted successfully`);
       return true;
     } catch (err) {
-      console.error('Failed to delete quiz:', err);
+
       setError(err.response?.data?.error || 'Failed to delete quiz');
       toast.error('Failed to delete quiz');
       return false;
@@ -256,7 +256,7 @@ export function useQuizAPI(quizDataHook, toast) {
         
         await quizApi.delete(quizData.editing.id);
       } catch (err) {
-        console.error('Failed to auto-delete empty quiz:', err);
+
       }
     }
   };
@@ -279,7 +279,7 @@ export function useQuizAPI(quizDataHook, toast) {
       
       return { battle, gamePin };
     } catch (err) {
-      console.error('Battle creation error:', err);
+
       setError(err.response?.data?.error || 'Error creating battle');
       return null;
     } finally {
@@ -298,19 +298,13 @@ export function useQuizAPI(quizDataHook, toast) {
       
       return { success: true, data: response.data };
     } catch (err) {
-      console.error('Start battle error:', err);
-      
+
       const errorData = err.response?.data || {};
       const errorCode = errorData.errorCode || 'UNKNOWN_ERROR';
       const errorMessage = errorData.error || 'Failed to start battle';
       
       // Log specific error details for debugging
-      console.error('❌ Battle start failed:', {
-        errorCode,
-        message: errorMessage,
-        details: errorData
-      });
-      
+
       setError(errorMessage);
       
       return { 
@@ -346,7 +340,7 @@ export function useQuizAPI(quizDataHook, toast) {
 
       return response.data;
     } catch (err) {
-      console.error('Failed to submit attempt:', err);
+
       return null;
     }
   };
