@@ -8,7 +8,7 @@ export default function UserManagement() {
     const [users, setUsers] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const usersPerPage = 14;
+    const usersPerPage = 13;
 
     useEffect(() => {
         const fetchUsers = async () => {

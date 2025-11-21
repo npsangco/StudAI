@@ -8,7 +8,7 @@ export default function AuditLogs() {
     const [logs, setLogs] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [sidebarOpen, setSidebarOpen] = useState(false); // for mobile sidebar toggle
-    const logsPerPage = 14;
+    const logsPerPage = 13;
 
     useEffect(() => {
         const fetchLogs = async () => {
