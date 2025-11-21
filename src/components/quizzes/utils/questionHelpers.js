@@ -36,9 +36,19 @@ export function checkAnswer(question, answer) {
       // Award partial credit if >= 60% correct
       if (accuracy >= 0.6) {
         const difficultyPoints = getPointsForDifficulty(question.difficulty);
+        
+        // Calculate partial points: Use Math.ceil for >= 60%, ensures at least 1 point
+        let partialPoints;
+        if (allCorrect) {
+          partialPoints = difficultyPoints;
+        } else {
+          // For partial credit, ensure at least 1 point if accuracy >= 60%
+          partialPoints = Math.max(1, Math.ceil(accuracy * difficultyPoints));
+        }
+        
         return {
           isCorrect: allCorrect,
-          partialCredit: allCorrect ? difficultyPoints : Math.floor(accuracy * difficultyPoints),
+          partialCredit: partialPoints,
           accuracy: Math.round(accuracy * 100),
           correctPairs,
           totalPairs
