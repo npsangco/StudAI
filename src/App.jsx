@@ -64,7 +64,7 @@ function App() {
   const requiresAuth = authenticatedRoutes.includes(location.pathname);
 
   // Routes that should have NO footer
-  const noFooterRoutes = ['/login', '/signup'];
+  const noFooterRoutes = ['/login', '/signup', '/admin/dashboard', '/admin/users', '/admin/quizzes', '/admin/sessions', '/admin/logs'];
   const shouldHideFooter = noFooterRoutes.includes(location.pathname);
 
   return (
