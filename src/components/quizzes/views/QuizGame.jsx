@@ -261,7 +261,10 @@ const QuizGame = ({
             name: p.name,
             initial: p.initial,
             score: p.score || 0,
-            forfeited: p.forfeited || false // Include forfeit status
+            forfeited: p.forfeited || false, // Include forfeit status
+            isOnline: p.isOnline !== undefined ? p.isOnline : true, // Connection status
+            inGracePeriod: p.inGracePeriod || false, // Grace period status
+            currentQuestion: p.currentQuestion || 0 // Player progress
           }))
           .sort((a, b) => b.score - a.score);
 

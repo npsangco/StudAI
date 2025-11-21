@@ -186,6 +186,14 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     try {
       // 1️⃣ Store questions in Firebase (so players can access them)
       await storeQuizQuestions(currentGamePin, questions);
+      
+      // 1.5️⃣ Update totalQuestions to match ACTUAL battle questions count
+      const { ref: dbRef, update: dbUpdate } = await import('firebase/database');
+      const { realtimeDb } = await import('../../../firebase/config');
+      const battleMetadataRef = dbRef(realtimeDb, `battles/${currentGamePin}/metadata`);
+      await dbUpdate(battleMetadataRef, {
+        totalQuestions: questions.length // Use actual battle questions (10)
+      });
 
       // 2️⃣ Update battle status in Firebase to "in_progress"
       await updateBattleStatus(currentGamePin, 'in_progress');

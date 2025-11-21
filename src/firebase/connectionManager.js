@@ -28,6 +28,12 @@ export const initializeConnectionTracking = async (gamePin, userId) => {
       gracePeriodActive: false
     });
     
+    // IMPORTANT: Also update player's isOnline status so leaderboard shows correctly
+    await update(playerRef, {
+      isOnline: true,
+      inGracePeriod: false
+    });
+    
     // Setup disconnect handler - auto-mark as offline with grace period
     const disconnectRef = onDisconnect(connectionRef);
     await disconnectRef.update({
@@ -73,10 +79,10 @@ export const sendHeartbeat = async (gamePin, userId) => {
     
     // Also update player status (clear grace period)
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
-    await set(playerRef, {
+    await update(playerRef, {
       isOnline: true,
       inGracePeriod: false
-    }, { merge: true });
+    });
     
   } catch (error) {
     console.error('❌ Heartbeat failed:', error);
@@ -230,19 +236,19 @@ export const markAsForfeited = async (gamePin, userId) => {
   try {
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
     
-    await set(playerRef, {
+    await update(playerRef, {
       isOnline: false,
       inGracePeriod: false,
       hasForfeited: true,
       forfeitedAt: Date.now()
-    }, { merge: true });
+    });
     
     const connectionRef = ref(realtimeDb, `battles/${gamePin}/connections/user_${userId}`);
-    await set(connectionRef, {
+    await update(connectionRef, {
       isOnline: false,
       gracePeriodActive: false,
       hasForfeited: true
-    }, { merge: true });
+    });
     
   } catch (error) {
     console.error('❌ Error marking as forfeited:', error);
@@ -371,7 +377,10 @@ export const rejoinBattle = async (gamePin, userId) => {
       reconnectedAt: Date.now()
     });
     
-    await set(ref(realtimeDb, `battles/${gamePin}/players/user_${userId}/isOnline`), true);
+    await update(ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`), {
+      isOnline: true,
+      inGracePeriod: false
+    });
 
     return {
       success: true,
