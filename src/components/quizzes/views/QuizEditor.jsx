@@ -116,14 +116,14 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
   return (
     <div className="bg-gray-50 border-b border-gray-200">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-3">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
+        <div className="flex flex-row items-center gap-2 md:gap-4 overflow-x-auto">
           {/* Privacy Section */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-700">Privacy:</span>
+          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+            <span className="text-xs md:text-sm font-medium text-gray-700">Privacy:</span>
             <button
               onClick={handleToggle}
               disabled={loading || isTempQuiz}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all ${
                 isPublic
                   ? 'bg-green-100 text-green-700 hover:bg-green-200'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -132,12 +132,12 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
             >
               {isPublic ? (
                 <>
-                  <Globe className="w-3.5 h-3.5" />
+                  <Globe className="w-3 h-3 md:w-3.5 md:h-3.5" />
                   <span>Public</span>
                 </>
               ) : (
                 <>
-                  <Lock className="w-3.5 h-3.5" />
+                  <Lock className="w-3 h-3 md:w-3.5 md:h-3.5" />
                   <span>Private</span>
                 </>
               )}
@@ -163,25 +163,25 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
           </div>
 
           {/* Divider */}
-          <div className="hidden md:block w-px h-6 bg-gray-300"></div>
+          <div className="w-px h-6 bg-gray-300 flex-shrink-0"></div>
 
           {/* Timer Section */}
-          <div className="relative flex items-center gap-3 timer-dropdown-container">
-            <span className="text-sm font-medium text-gray-700">Timer:</span>
+          <div className="relative flex items-center gap-2 md:gap-3 timer-dropdown-container flex-shrink-0">
+            <span className="text-xs md:text-sm font-medium text-gray-700">Timer:</span>
 
             {/* Timer Dropdown Trigger */}
             <button
               onClick={() => setShowTimerDropdown(!showTimerDropdown)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-gray-300 hover:border-yellow-500 hover:bg-yellow-50 transition-all"
+              className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-medium bg-white border border-gray-300 hover:border-yellow-500 hover:bg-yellow-50 transition-all"
             >
               {(() => {
                 const selected = timerOptions.find(opt => opt.value === timerValue);
                 const IconComponent = selected?.icon || Clock;
                 return (
                   <>
-                    <IconComponent className="w-3.5 h-3.5" />
+                    <IconComponent className="w-3 h-3 md:w-3.5 md:h-3.5" />
                     <span>{selected?.label || '30s'}</span>
-                    <ChevronDown className="w-3 h-3" />
+                    <ChevronDown className="w-2.5 h-2.5 md:w-3 md:h-3" />
                   </>
                 );
               })()}
@@ -1162,7 +1162,7 @@ export const QuizEditor = ({
                 </div>
                 <h4 className="font-bold text-gray-900 text-lg mb-2">Difficulty Types</h4>
                 <p className="text-gray-700 text-sm">
-                  <strong className="text-purple-700">Adaptive:</strong> AI adjusts difficulty based on your performance (2+ difficulty levels)<br/>
+                  <strong className="text-purple-700">Adaptive:</strong> Adjusts difficulty based on your performance (2+ difficulty levels)<br/>
                   <strong className="text-amber-700">Classic:</strong> Fixed difficulty throughout
                 </p>
               </div>

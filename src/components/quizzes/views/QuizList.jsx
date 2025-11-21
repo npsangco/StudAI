@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit, Play, GripVertical, Trash2, MoreVertical, Share2, Plus, Sparkles, BookOpen, Users, Trophy, Circle, FileText, Clock, Target, Lock, Link2 } from 'lucide-react';
+import { Edit, Play, GripVertical, Trash2, MoreVertical, Share2, Plus, Sparkles, BookOpen, Users, Trophy, Circle, FileText, Clock, Target, Lock, Link2, Zap, Swords } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 
 // Utility: Get quiz accent color based on quiz ID
@@ -578,73 +578,63 @@ export const QuizList = ({
             </div>
           </div>
 
-          {/* Empty State Content - Ultra Compact for Desktop */}
-          <div className="flex-1 overflow-y-auto px-6 py-3">
+          {/* Empty State Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
             <div className="flex items-center justify-center min-h-full">
               <div className="w-full max-w-2xl">
-                <div className="flex flex-col items-center justify-center text-center mb-3">
-                  {/* Animated Icon - Ultra Compact */}
-                  <div className="relative mb-2">
-                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center shadow-md">
-                      <BookOpen className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center shadow-sm animate-pulse">
-                      <Sparkles className="w-2.5 h-2.5 text-white" />
-                    </div>
-                  </div>
-
-                  {/* Main Message - Ultra Compact */}
-                  <h2 className="text-base font-bold text-gray-900 mb-1">
-                    Your Quiz Library Awaits
+                {/* Header & Subtext */}
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Master Any Subject with Smart Quizzes
                   </h2>
-                  <p className="text-[11px] text-gray-600 max-w-md leading-tight">
-                    Start creating interactive quizzes, challenge friends in real-time battles, and earn rewards as you study!
+                  <p className="text-sm text-gray-600">
+                    Create your first quiz and start learning smarter today.
                   </p>
                 </div>
 
-                {/* Enhanced Feature Cards - 2x2 Grid - Ultra Compact */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  {/* Feature 1 - Question Types */}
-                  <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-3 border border-indigo-200 hover:shadow-md transition-all">
-                    <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
-                      <BookOpen className="w-4 h-4 text-white" />
+                {/* Feature Cards - 2x2 Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Card 1 - 4 Question Types (Yellow) */}
+                  <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-4 border border-yellow-200 hover:shadow-md transition-all">
+                    <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                      <FileText className="w-5 h-5 text-white" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-[11px] mb-0.5">4 Question Types</h3>
-                    <p className="text-[9px] text-gray-600 leading-tight">
-                      Multiple choice, fill-in-the-blanks, true/false, and matching pairs - mix and match for maximum engagement
+                    <h3 className="font-bold text-gray-900 text-sm mb-1.5">4 Question Types</h3>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Multiple choice, fill-in-the-blanks, true/false, and matching pairs - mix and match for full experience
                     </p>
                   </div>
 
-                  {/* Feature 2 - Battle Mode */}
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3 border border-purple-200 hover:shadow-md transition-all">
-                    <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
-                      <Users className="w-4 h-4 text-white" />
+                  {/* Card 2 - Smart Difficulty System (Purple) */}
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200 hover:shadow-md transition-all">
+                    <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                      <Zap className="w-5 h-5 text-white" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-[11px] mb-0.5">Live Quiz Battles</h3>
-                    <p className="text-[9px] text-gray-600 leading-tight">
-                      Challenge up to 5 players in real-time PvP battles with instant leaderboards and competitive scoring
+                    <h3 className="font-bold text-gray-900 text-sm mb-1.5">Smart Difficulty System</h3>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Adaptive mode auto-adjusts based on your accuracy, or choose Classic for traditional fixed-difficulty
                     </p>
                   </div>
 
-                  {/* Feature 3 - Rewards */}
-                  <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-3 border border-yellow-200 hover:shadow-md transition-all">
-                    <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
-                      <Trophy className="w-4 h-4 text-white" />
+                  {/* Card 3 - Live Quiz Battles (Blue) */}
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200 hover:shadow-md transition-all">
+                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                      <Swords className="w-5 h-5 text-white" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-[11px] mb-0.5">Points & Rewards</h3>
-                    <p className="text-[9px] text-gray-600 leading-tight">
-                      Earn points and EXP with every quiz - level up your pet buddy and track your study streaks
+                    <h3 className="font-bold text-gray-900 text-sm mb-1.5">Live Quiz Battles</h3>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Challenge friends in real-time competitions with instant leaderboards and synchronized questions
                     </p>
                   </div>
 
-                  {/* Feature 4 - Import & Collaborate */}
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border border-green-200 hover:shadow-md transition-all">
-                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
-                      <Share2 className="w-4 h-4 text-white" />
+                  {/* Card 4 - Import & Collaborate (Green) */}
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200 hover:shadow-md transition-all">
+                    <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                      <Share2 className="w-5 h-5 text-white" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-[11px] mb-0.5">Import & Collaborate</h3>
-                    <p className="text-[9px] text-gray-600 leading-tight">
-                      Import quizzes from classmates using 6-digit codes - study together and share knowledge effortlessly
+                    <h3 className="font-bold text-gray-900 text-sm mb-1.5">Import & Collaborate</h3>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Share quizzes using 6-digit codes - import from friends and study together effortlessly
                     </p>
                   </div>
                 </div>
@@ -657,15 +647,15 @@ export const QuizList = ({
         /* QUIZ LIST STATE - With Header */
         /* ============================================ */
         <>
-          {/* Header - Fixed */}
+          {/* Header */}
           <div className="flex-shrink-0 p-6 pb-4 border-b border-gray-100" data-tutorial="quiz-list-header">
             <h2 className="text-2xl font-bold text-gray-900">My Quizzes</h2>
           </div>
 
-          {/* Content - Scrollable */}
+          {/* Content */}
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <div className="space-y-4">
-              {/* Import Card - Top Position */}
+              {/* Import Card */}
               <ShareCodeInput onImportQuiz={onImportQuiz} asTopCard={true} toast={toast} />
 
               {/* Quiz Cards */}
