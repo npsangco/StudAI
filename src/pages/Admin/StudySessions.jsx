@@ -46,7 +46,7 @@ export default function StudySessions() {
                     );
                     setSessions((prev) =>
                         prev.map((s) =>
-                            s.session_id === sessionId ? { ...s, status: "Ended" } : s
+                            s.session_id === sessionId ? { ...s, status: "Completed" } : s
                         )
                     );
                     toast.success("Session ended successfully!");
@@ -130,9 +130,9 @@ export default function StudySessions() {
                             <table className="min-w-full table-fixed text-xs sm:text-sm text-left">
                                 <thead>
                                     <tr className="border-b border-gray-200 text-gray-600">
-                                        <th className="py-2 px-2 sm:px-3 w-24">Session ID</th>
+                                        <th className="py-2 px-2 sm:px-3 w-20">ID</th>
                                         <th className="py-2 px-2 sm:px-3 w-32">Host</th>
-                                        <th className="py-2 px-2 sm:px-3 w-28">Participants</th>
+                                        <th className="py-2 px-2 sm:px-3 w-40">Topic</th>
                                         <th className="py-2 px-2 sm:px-3 w-24">Duration</th>
                                         <th className="py-2 px-2 sm:px-3 w-24">Status</th>
                                         <th className="py-2 px-2 sm:px-3 w-24">Action</th>
@@ -144,23 +144,29 @@ export default function StudySessions() {
                                             <tr key={session.session_id} className="border-b border-gray-100">
                                                 <td className="py-2 px-2 sm:px-3 truncate">{session.session_id}</td>
                                                 <td className="py-2 px-2 sm:px-3 font-medium truncate">{session.host}</td>
-                                                <td className="py-2 px-2 sm:px-3 truncate">{session.participants}</td>
+                                                <td className="py-2 px-2 sm:px-3 truncate" title={session.topic}>
+                                                    {session.topic}
+                                                </td>
                                                 <td className="py-2 px-2 sm:px-3 truncate">{session.duration}</td>
                                                 <td className="py-2 px-2 sm:px-3">
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-medium ${session.status === "Active"
                                                                 ? "bg-green-100 text-green-800"
-                                                                : "bg-gray-200 text-gray-700"
+                                                                : session.status === "Scheduled"
+                                                                    ? "bg-blue-100 text-blue-800"
+                                                                    : session.status === "Completed"
+                                                                        ? "bg-gray-200 text-gray-700"
+                                                                        : "bg-red-100 text-red-800"
                                                             }`}
                                                     >
                                                         {session.status}
                                                     </span>
                                                 </td>
                                                 <td className="py-2 px-2 sm:px-3">
-                                                    {session.status === "Active" ? (
+                                                    {session.status === "Active" || session.status === "Scheduled" ? (
                                                         <button
                                                             onClick={() => handleEndSession(session.session_id)}
-                                                            className="bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
+                                                            className="bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
                                                         >
                                                             End
                                                         </button>
@@ -192,7 +198,7 @@ export default function StudySessions() {
                             <button
                                 onClick={handlePrev}
                                 disabled={currentPage === 1}
-                                className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-300"
+                                className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-300 transition-colors"
                             >
                                 Previous
                             </button>
@@ -204,7 +210,7 @@ export default function StudySessions() {
                             <button
                                 onClick={handleNext}
                                 disabled={currentPage === totalPages}
-                                className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-300"
+                                className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-300 transition-colors"
                             >
                                 Next
                             </button>

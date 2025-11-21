@@ -206,8 +206,8 @@ export default function AdminDashboard() {
                                                 <td className="py-2 px-2 sm:px-3">
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-medium ${user.status === "Active"
-                                                                ? "bg-green-100 text-green-800"
-                                                                : "bg-red-100 text-red-800"
+                                                            ? "bg-green-100 text-green-800"
+                                                            : "bg-red-100 text-red-800"
                                                             }`}
                                                     >
                                                         {user.status}
@@ -273,10 +273,9 @@ export default function AdminDashboard() {
                                     <tr className="border-b border-gray-200 text-gray-600">
                                         <th className="py-2 px-2 sm:px-3 w-24">Session ID</th>
                                         <th className="py-2 px-2 sm:px-3 w-32">Host</th>
-                                        <th className="py-2 px-2 sm:px-3 w-28">Participants</th>
+                                        <th className="py-2 px-2 sm:px-3 w-40">Topic</th>
                                         <th className="py-2 px-2 sm:px-3 w-24">Duration</th>
                                         <th className="py-2 px-2 sm:px-3 w-24">Status</th>
-                                        <th className="py-2 px-2 sm:px-3 w-24">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -288,37 +287,28 @@ export default function AdminDashboard() {
                                             >
                                                 <td className="py-2 px-2 sm:px-3 truncate">{s.session_id}</td>
                                                 <td className="py-2 px-2 sm:px-3 truncate">{s.host}</td>
-                                                <td className="py-2 px-2 sm:px-3 truncate">{s.participants}</td>
+                                                <td className="py-2 px-2 sm:px-3 truncate" title={s.topic}>{s.topic}</td>
                                                 <td className="py-2 px-2 sm:px-3 truncate">{s.duration}</td>
                                                 <td className="py-2 px-2 sm:px-3">
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-medium ${s.status === "Active"
-                                                                ? "bg-green-100 text-green-800"
-                                                                : "bg-gray-200 text-gray-700"
+                                                            ? "bg-green-100 text-green-800"
+                                                            : s.status === "Scheduled"
+                                                                ? "bg-blue-100 text-blue-800"
+                                                                : s.status === "Completed"
+                                                                    ? "bg-gray-200 text-gray-700"
+                                                                    : "bg-red-100 text-red-800"
                                                             }`}
                                                     >
                                                         {s.status}
                                                     </span>
-                                                </td>
-                                                <td className="py-2 px-2 sm:px-3">
-                                                    {s.status === "Active" ? (
-                                                        <button className="bg-red-500 text-white text-xs px-2 sm:px-3 py-1.5 rounded-lg hover:bg-red-600 flex items-center">
-                                                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">End</span>
-                                                        </button>
-                                                    ) : (
-                                                        <button className="bg-gray-300 text-gray-700 text-xs px-2 sm:px-3 py-1.5 rounded-lg flex items-center cursor-default">
-                                                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">Ended</span>
-                                                        </button>
-                                                    )}
                                                 </td>
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
                                             <td
-                                                colSpan="6"
+                                                colSpan="5"
                                                 className="text-center py-4 text-gray-500"
                                             >
                                                 No recent sessions

@@ -4,10 +4,10 @@ import User from "../models/User.js";
 import AuditLog from "../models/AuditLog.js";
 import Quiz from "../models/Quiz.js";
 import QuizAttempt from "../models/QuizAttempt.js";
-import Session from "../models/Session.js";
+import JitsiSession from "../models/JitsiSession.js";
 import sequelize from "../db.js";
 import Note from "../models/Note.js";
-import Question from "../models/Question.js"
+import Question from "../models/Question.js";
 
 const router = express.Router();
 
@@ -226,98 +226,76 @@ router.delete("/questions/:questionId", async (req, res) => {
     }
 });
 
-// Get all study sessions for admin
+// Get all Jitsi study sessions for admin
 router.get("/sessions", async (req, res) => {
     try {
-        const sessions = await Session.findAll({
-            include: [
-                {
-                    model: User,
-                    as: 'host',
-                    attributes: ['username'],
-                    foreignKey: 'user_id'
-                }
-            ],
-            order: [["createdAt", "DESC"]],
+        const sessions = await JitsiSession.findAll({
+            order: [["created_at", "DESC"]],
         });
 
+        // Get user info for each session
         const formattedSessions = await Promise.all(sessions.map(async (session) => {
             const sessionData = session.toJSON();
 
-            // Count participants
-            const participantCount = await sequelize.query(
-                `SELECT COUNT(DISTINCT user_id) as count 
-                 FROM session_participants 
-                 WHERE session_id = ?`,
-                {
-                    replacements: [sessionData.session_id],
-                    type: sequelize.QueryTypes.SELECT
-                }
-            ).catch(() => [{ count: 0 }]);
+            // Get creator info
+            const creator = await User.findByPk(sessionData.user_id, {
+                attributes: ['username']
+            });
 
             // Calculate duration
             let duration = "N/A";
-            if (sessionData.scheduled_start && sessionData.scheduled_end) {
-                const start = new Date(sessionData.scheduled_start);
-                const end = new Date(sessionData.scheduled_end);
-                const durationMs = end - start;
-                const hours = Math.floor(durationMs / 3600000);
-                const minutes = Math.floor((durationMs % 3600000) / 60000);
+            if (sessionData.duration) {
+                const hours = Math.floor(sessionData.duration / 60);
+                const minutes = sessionData.duration % 60;
 
                 if (hours > 0) {
                     duration = `${hours}h ${minutes}m`;
                 } else {
                     duration = `${minutes}m`;
                 }
-            } else if (sessionData.duration) {
-                duration = `${sessionData.duration}m`;
             }
 
-            // Determine status
+            // Format status
             let status = "Scheduled";
-            if (sessionData.status === "active" || session.isActive()) {
+            if (sessionData.status === "active") {
                 status = "Active";
-            } else if (sessionData.status === "ended" || session.isExpired()) {
-                status = "Ended";
+            } else if (sessionData.status === "completed") {
+                status = "Completed";
             } else if (sessionData.status === "cancelled") {
                 status = "Cancelled";
             }
 
             return {
                 session_id: sessionData.session_id,
-                host: sessionData.host?.username || sessionData.host_name || 'Unknown',
-                participants: participantCount[0]?.count || 0,
+                host: creator?.username || 'Unknown',
+                topic: sessionData.topic,
                 duration: duration,
                 status: status,
-                scheduled_start: sessionData.scheduled_start,
-                scheduled_end: sessionData.scheduled_end
+                start_time: sessionData.start_time,
+                is_private: sessionData.is_private,
+                room_id: sessionData.room_id
             };
         }));
 
         res.json(formattedSessions);
     } catch (error) {
-        console.error("Error fetching sessions:", error);
+        console.error("Error fetching Jitsi sessions:", error);
         res.status(500).json({ error: "Failed to fetch sessions" });
     }
 });
 
-// End a study session
+// End a Jitsi study session
 router.put("/sessions/:sessionId/end", async (req, res) => {
     try {
         const { sessionId } = req.params;
 
-        // Check if session exists
-        const session = await Session.findByPk(sessionId);
+        const session = await JitsiSession.findByPk(sessionId);
         if (!session) {
             return res.status(404).json({ error: "Session not found" });
         }
 
-        // Update session status to ended
-        await Session.update(
-            {
-                status: "ended",
-                scheduled_end: new Date()
-            },
+        await JitsiSession.update(
+            { status: "completed" },
             { where: { session_id: sessionId } }
         );
 
@@ -334,7 +312,13 @@ router.get("/stats", async (req, res) => {
         const totalUsers = await User.count();
         const totalQuizzes = await Quiz.count();
         const totalNotes = await Note.count();
-        const activeSessions = await Session.count({ where: { status: "Active" } });
+        const activeSessions = await JitsiSession.count({
+            where: {
+                status: {
+                    [Op.in]: ['active', 'scheduled']
+                }
+            }
+        });
 
         res.json({
             totalUsers,
@@ -395,20 +379,49 @@ router.get("/recent-users", async (req, res) => {
     }
 });
 
-// Recent Study Sessions
+// Recent Jitsi Study Sessions
 router.get("/recent-sessions", async (req, res) => {
     try {
-        const sessions = await Session.findAll({
-            order: [["createdAt", "DESC"]],
+        const sessions = await JitsiSession.findAll({
+            order: [["created_at", "DESC"]],
             limit: 5
         });
 
-        const formatted = sessions.map(s => ({
-            session_id: s.session_id,
-            host: s.host_name || "Unknown",
-            participants: s.participants || 0,
-            duration: s.duration || "N/A",
-            status: s.status
+        const formatted = await Promise.all(sessions.map(async (session) => {
+            const creator = await User.findByPk(session.user_id, {
+                attributes: ['username']
+            });
+
+            // Calculate duration
+            let duration = "N/A";
+            if (session.duration) {
+                const hours = Math.floor(session.duration / 60);
+                const minutes = session.duration % 60;
+
+                if (hours > 0) {
+                    duration = `${hours}h ${minutes}m`;
+                } else {
+                    duration = `${minutes}m`;
+                }
+            }
+
+            // Format status
+            let status = "Scheduled";
+            if (session.status === "active") {
+                status = "Active";
+            } else if (session.status === "completed") {
+                status = "Completed";
+            } else if (session.status === "cancelled") {
+                status = "Cancelled";
+            }
+
+            return {
+                session_id: session.session_id,
+                host: creator?.username || "Unknown",
+                topic: session.topic,
+                duration: duration,
+                status: status
+            };
         }));
 
         res.json({ sessions: formatted });
