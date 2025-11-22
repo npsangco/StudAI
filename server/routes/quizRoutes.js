@@ -610,9 +610,13 @@ router.get('/', requireAuth, async (req, res) => {
 
       const totalQuestions = Object.values(difficultyDistribution).reduce((sum, value) => sum + value, 0);
       const hasAllDifficulties = Object.values(difficultyDistribution).every(count => count > 0);
+      const hasVariedDifficulty = Object.values(difficultyDistribution).filter(count => count > 0).length >= 2;
 
-      quizData.difficultyDistribution = difficultyDistribution;
-      quizData.supportsAdaptiveMode = hasAllDifficulties && totalQuestions >= 9;
+      quizData.difficulty_distribution = difficultyDistribution;
+      quizData.difficultyDistribution = difficultyDistribution; // legacy camelCase consumer
+      quizData.has_varied_difficulty = hasVariedDifficulty;
+      quizData.can_use_adaptive = hasAllDifficulties && totalQuestions >= 9;
+      quizData.supportsAdaptiveMode = quizData.can_use_adaptive;
       quizData.total_questions = totalQuestions;
 
       return quizData;
@@ -622,6 +626,95 @@ router.get('/', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[Quiz] Fetch quizzes error:', err);
     return res.status(500).json({ error: 'Failed to fetch quizzes' });
+  }
+});
+
+// Get single quiz with questions
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const quizId = req.params.id;
+
+    const quiz = await Quiz.findOne({
+      where: { quiz_id: quizId },
+      include: [{
+        model: User,
+        as: 'creator',
+        attributes: ['username']
+      }]
+    });
+
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    if (!quiz.is_public && quiz.created_by !== userId) {
+      return res.status(403).json({ error: 'Not authorized to view this quiz' });
+    }
+
+    const questions = await Question.findAll({
+      where: { quiz_id: quizId },
+      order: [['question_order', 'ASC'], ['question_id', 'ASC']]
+    });
+
+    const difficultyDistribution = { easy: 0, medium: 0, hard: 0 };
+    const parsedQuestions = questions.map(question => {
+      const questionJson = question.toJSON();
+
+      const difficultyKey = (questionJson.difficulty || 'medium').toLowerCase();
+      if (difficultyDistribution[difficultyKey] !== undefined) {
+        difficultyDistribution[difficultyKey] += 1;
+      }
+
+      let choices = questionJson.choices;
+      if (typeof choices === 'string') {
+        try {
+          choices = JSON.parse(choices);
+        } catch {
+          choices = null;
+        }
+      }
+
+      let matchingPairs = questionJson.matching_pairs;
+      if (typeof matchingPairs === 'string') {
+        try {
+          matchingPairs = JSON.parse(matchingPairs);
+        } catch {
+          matchingPairs = null;
+        }
+      }
+
+      return {
+        question_id: questionJson.question_id,
+        quiz_id: questionJson.quiz_id,
+        type: questionJson.type,
+        question: questionJson.question,
+        question_order: questionJson.question_order,
+        choices,
+        correctAnswer: questionJson.correct_answer,
+        answer: questionJson.answer,
+        matchingPairs,
+        difficulty: questionJson.difficulty || 'medium'
+      };
+    });
+
+    const totalQuestions = parsedQuestions.length;
+    const hasVariedDifficulty = Object.values(difficultyDistribution).filter(count => count > 0).length >= 2;
+    const hasAllDifficulties = Object.values(difficultyDistribution).every(count => count > 0);
+
+    const quizPayload = {
+      ...quiz.toJSON(),
+      total_questions: totalQuestions,
+      difficulty_distribution: difficultyDistribution,
+      difficultyDistribution,
+      has_varied_difficulty: hasVariedDifficulty,
+      can_use_adaptive: hasAllDifficulties && totalQuestions >= 9
+    };
+
+    return res.json({ quiz: quizPayload, questions: parsedQuestions });
+  } catch (err) {
+    console.error('[Quiz] Fetch quiz error:', err);
+    return res.status(500).json({ error: 'Failed to load quiz' });
   }
 });
 
