@@ -22,17 +22,9 @@ const getQuizAccentColor = (quizId) => {
 const formatQuizDate = (dateString) => {
   if (!dateString) return '';
 
-  // Parse the date - if it's coming from MySQL it might be in local time
-  // We need to treat it as UTC to get the correct time
-  let date;
-  if (dateString.includes('T') || dateString.includes('Z')) {
-    // ISO format with timezone info
-    date = new Date(dateString);
-  } else {
-    // MySQL datetime format without timezone (e.g., "2025-01-18 14:30:00")
-    // Treat it as UTC by appending 'Z'
-    date = new Date(dateString + 'Z');
-  }
+  // Parse the date - MySQL datetime is stored in local time, not UTC
+  // We should NOT add 'Z' suffix as that would incorrectly treat it as UTC
+  const date = new Date(dateString);
 
   const now = new Date();
   const diffMs = now - date;
