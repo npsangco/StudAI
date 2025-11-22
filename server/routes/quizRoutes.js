@@ -111,13 +111,124 @@ function normalizeAiQuestion(rawQuestion, index) {
       .filter(pair => pair.left && pair.right);
 
     if (cleanedPairs.length === 0) {
-      throw new Error(`Question ${index + 1} must include at least one valid matching pair.`);
+      // Generate questions using OpenAI in batches for reliability
+      try {
+        const openAiApiKey = process.env.OPENAI_API_KEY;
+        if (!openAiApiKey) {
+          throw new Error('OpenAI API key not configured');
+        }
+
+        // Truncate note content to ~2000 chars to keep token count manageable
+        const maxNoteLength = 2000;
+        const truncatedContent = noteContent.length > maxNoteLength 
+          ? noteContent.substring(0, maxNoteLength) + '...' 
+          : noteContent;
+
+        const batchSize = AI_QUIZ_RULES.batchSize || targetQuestionCount;
+        const normalizedQuestions = [];
+        const seenQuestions = new Set();
+        const maxBatchIterations = Math.max(3, Math.ceil(targetQuestionCount / batchSize) + 2);
+        let batchIterations = 0;
+
+        while (normalizedQuestions.length < targetQuestionCount && batchIterations < maxBatchIterations) {
+          const remainingNeeded = targetQuestionCount - normalizedQuestions.length;
+          const currentBatchSize = Math.min(batchSize, remainingNeeded);
+          const batchQuestions = await generateAiQuestionBatch({
+            batchCount: currentBatchSize,
+            truncatedContent,
+            openAiApiKey
+          });
+
+          for (const questionData of batchQuestions) {
+            const dedupeKey = `${questionData.type}:${(questionData.question || '').trim().toLowerCase()}`;
+            if (seenQuestions.has(dedupeKey)) {
+              continue;
+            }
+            seenQuestions.add(dedupeKey);
+            normalizedQuestions.push(questionData);
+            if (normalizedQuestions.length === targetQuestionCount) {
+              break;
+            }
+          }
+
+          batchIterations++;
+        }
+
+        if (normalizedQuestions.length !== targetQuestionCount) {
+          throw new Error(`AI returned only ${normalizedQuestions.length} unique questions after batching. Please try again.`);
+        }
+        fixedJson = fixedJson.replace(/\]\s*\{/g, '],[{');
+
+        // Fix unquoted keys
+        fixedJson = fixedJson.replace(/([{,]\s*)([a-zA-Z_]\w*)(\s*:)/g, '$1"$2"$3');
+
+        // Ensure all bracket pairs match
+        const openBrackets = (fixedJson.match(/\[/g) || []).length;
+        const closeBrackets = (fixedJson.match(/\]/g) || []).length;
+        const openBraces = (fixedJson.match(/\{/g) || []).length;
+        const closeBraces = (fixedJson.match(/\}/g) || []).length;
+
+        if (openBrackets > closeBrackets) {
+          fixedJson = fixedJson + ']'.repeat(openBrackets - closeBrackets);
+        }
+        if (openBraces > closeBraces) {
+          fixedJson = fixedJson + '}'.repeat(openBraces - closeBraces);
+        }
+
+        try {
+          questionsData = JSON.parse(fixedJson);
+          repairedSuccessfully = true;
+          console.log('✅ JSON fixed and parsed successfully');
+        } catch (secondError) {
+          console.error('Failed to parse JSON even after fixes:', secondError.message);
+          console.error('Raw response (first 1000 chars):', jsonText.substring(0, 1000));
+          console.error('Fixed response (first 1000 chars):', fixedJson.substring(0, 1000));
+          const salvagedQuestions = salvageQuestionArray(jsonText, batchCount) || salvageQuestionArray(fixedJson, batchCount);
+          if (salvagedQuestions && salvagedQuestions.length === batchCount) {
+            questionsData = salvagedQuestions;
+            repairedSuccessfully = true;
+            console.log('✅ Salvaged questions via object extraction');
+          } else {
+            lastErrorMessage = 'AI response was not valid JSON. Please try again.';
+            retryInstruction = `Return ONLY valid JSON array data with ${batchCount} quiz questions. No prose, no markdown.`;
+            continue;
+          }
+        }
+      }
+
+      if (!repairedSuccessfully) {
+        lastErrorMessage = 'Failed to repair AI JSON output. Please try again.';
+        continue;
+      }
+    }
+    
+    // Ensure it's an array with the required number of questions
+    if (!Array.isArray(questionsData)) {
+      lastErrorMessage = 'AI response must be a JSON array of questions.';
+      retryInstruction = `Respond ONLY with a JSON array containing ${batchCount} question objects.`;
+      continue;
     }
 
-    normalized.matchingPairs = cleanedPairs;
+    if (questionsData.length !== batchCount) {
+      lastErrorMessage = `AI must return exactly ${batchCount} questions. Received ${questionsData.length}.`;
+      retryInstruction = `You returned ${questionsData.length} questions. Regenerate and return EXACTLY ${batchCount} fully-valid questions.`;
+      continue;
+    }
+
+    try {
+      normalizedQuestions = questionsData.map((questionData, index) => normalizeAiQuestion(questionData, index));
+      break;
+    } catch (validationError) {
+      lastErrorMessage = validationError.message;
+      retryInstruction = `Validation error: ${validationError.message}. Fix all issues and return ${batchCount} valid questions.`;
+    }
   }
 
-  return normalized;
+  if (!normalizedQuestions) {
+    throw new Error(lastErrorMessage);
+  }
+
+  return normalizedQuestions;
 }
 
 // ============================================
