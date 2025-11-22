@@ -10,6 +10,7 @@ import sequelize from '../db.js';
 import { validateQuizRequest, validateTitle, validateNumericId } from '../middleware/validationMiddleware.js';
 import { ensureQuizAvailable, recordQuizUsage, DAILY_AI_LIMITS, getUsageSnapshot } from '../services/aiUsageService.js';
 import { ensureContentIsSafe, ModerationError } from '../services/moderationService.js';
+import { jsonrepair } from 'jsonrepair';
 
 const router = express.Router();
 
@@ -539,7 +540,7 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
       blockMessage: 'Unable to generate a quiz because the provided note content violates our safety policies.'
     });
 
-    // AI-generated quizzes are always exactly 10 questions
+    // AI-generated quizzes enforce a fixed question count for consistency
     const targetQuestionCount = AI_QUIZ_RULES.requiredQuestionCount;
     if (questionCount && questionCount !== targetQuestionCount) {
       return res.status(400).json({ error: `AI-generated quizzes must have exactly ${targetQuestionCount} questions` });
@@ -570,7 +571,7 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
         ? noteContent.substring(0, maxNoteLength) + '...' 
         : noteContent;
 
-      const prompt = `Generate EXACTLY 10 valid JSON quiz questions. CRITICAL RULES:
+      const prompt = `Generate EXACTLY ${targetQuestionCount} valid JSON quiz questions. CRITICAL RULES:
 1. Return ONLY JSON array in brackets [], nothing else
 2. NO markdown, NO code blocks, NO text outside JSON
 3. NO escaped quotes (\"), NO newlines in strings
@@ -636,7 +637,7 @@ Generate EXACTLY in this format - no variations:
 
         if (!generatedText) {
           lastErrorMessage = 'No response from OpenAI';
-          retryInstruction = 'Previous response was empty. Return ONLY a JSON array with 10 quiz questions.';
+          retryInstruction = `Previous response was empty. Return ONLY a JSON array with ${targetQuestionCount} quiz questions.`;
           continue;
         }
 
@@ -657,64 +658,76 @@ Generate EXACTLY in this format - no variations:
           console.error('Initial JSON parse error:', parseError.message);
           console.error('Position:', parseError.message.match(/position (\d+)/) ? parseError.message.match(/position (\d+)/)[1] : 'unknown');
           console.error('Attempting to fix common JSON issues...');
-          
-          let fixedJson = jsonText;
-          
-          // Remove control characters and bad escapes
-          fixedJson = fixedJson.replace(/[\x00-\x1f\x7f]/g, '');
-          
-          // Remove all escaped quotes (they break JSON)
-          fixedJson = fixedJson.replace(/\\"/g, '"');
-          fixedJson = fixedJson.replace(/\\\"/g, '"');
-          
-          // Handle newlines within quoted strings - replace with spaces
-          fixedJson = fixedJson.replace(/"([^"]*(?:\n[^"]*)*)"/g, (match) => {
-            return match.replace(/\n\s+/g, ' ').replace(/[\r\n]+/g, ' ');
-          });
-          
-          // Replace single quotes with double quotes
-          fixedJson = fixedJson.replace(/'/g, '"');
-          
-          // Fix _blank fields - more aggressive approach
-          // Find and remove entire objects that have _blank fields instead of standard fields
-          fixedJson = fixedJson.replace(/\{\s*"_blank\d+_"\s*:[^}]*\}/g, '');
-          fixedJson = fixedJson.replace(/,\s*\{\s*"_blank\d+_"/g, '');
-          
-          // Convert remaining _blank fields to "answer" for safety
-          fixedJson = fixedJson.replace(/"_blank\d+_"/g, '"answer"');
-          
-          // Fix trailing commas
-          fixedJson = fixedJson.replace(/,(\s*[\]\}])/g, '$1');
-          
-          // Fix missing commas between objects
-          fixedJson = fixedJson.replace(/\}\s*\{/g, '},{');
-          fixedJson = fixedJson.replace(/\]\s*\{/g, '],[{');
-          
-          // Fix unquoted keys
-          fixedJson = fixedJson.replace(/([{,]\s*)([a-zA-Z_]\w*)(\s*:)/g, '$1"$2"$3');
-          
-          // Ensure all bracket pairs match
-          const openBrackets = (fixedJson.match(/\[/g) || []).length;
-          const closeBrackets = (fixedJson.match(/\]/g) || []).length;
-          const openBraces = (fixedJson.match(/\{/g) || []).length;
-          const closeBraces = (fixedJson.match(/\}/g) || []).length;
-          
-          if (openBrackets > closeBrackets) {
-            fixedJson = fixedJson + ']'.repeat(openBrackets - closeBrackets);
-          }
-          if (openBraces > closeBraces) {
-            fixedJson = fixedJson + '}'.repeat(openBraces - closeBraces);
-          }
-          
+
+          let repairedSuccessfully = false;
+
           try {
-            questionsData = JSON.parse(fixedJson);
-            console.log('✅ JSON fixed and parsed successfully');
-          } catch (secondError) {
-            console.error('Failed to parse JSON even after fixes:', secondError.message);
-            console.error('Raw response (first 1000 chars):', jsonText.substring(0, 1000));
-            console.error('Fixed response (first 1000 chars):', fixedJson.substring(0, 1000));
-            lastErrorMessage = 'AI response was not valid JSON. Please try again.';
-            retryInstruction = 'Return ONLY valid JSON array data with 10 quiz questions. No prose, no markdown.';
+            const repairedJson = jsonrepair(jsonText);
+            questionsData = JSON.parse(repairedJson);
+            repairedSuccessfully = true;
+            console.log('✅ JSON repaired via jsonrepair');
+          } catch (repairError) {
+            console.error('jsonrepair failed, applying manual fallbacks...');
+            let fixedJson = jsonText;
+
+            // Remove control characters and bad escapes
+            fixedJson = fixedJson.replace(/[\x00-\x1f\x7f]/g, '');
+            fixedJson = fixedJson.replace(/\\"/g, '"');
+            fixedJson = fixedJson.replace(/\\\"/g, '"');
+
+            // Handle newlines within quoted strings - replace with spaces
+            fixedJson = fixedJson.replace(/"([^"]*(?:\n[^"]*)*)"/g, (match) => {
+              return match.replace(/\n\s+/g, ' ').replace(/[\r\n]+/g, ' ');
+            });
+
+            // Fix single-quoted keys and values without touching apostrophes
+            fixedJson = fixedJson.replace(/([{,]\s*)'([^'"\s][^'"\n]*?)'(\s*:)/g, '$1"$2"$3');
+            fixedJson = fixedJson.replace(/:\s*'([^'"\n]*?)'(\s*[,}])/g, ':"$1"$2');
+
+            // Fix _blank fields - more aggressive approach
+            fixedJson = fixedJson.replace(/\{\s*"_blank\d+_"\s*:[^}]*\}/g, '');
+            fixedJson = fixedJson.replace(/,\s*\{\s*"_blank\d+_"/g, '');
+            fixedJson = fixedJson.replace(/"_blank\d+_"/g, '"answer"');
+
+            // Fix trailing commas
+            fixedJson = fixedJson.replace(/,(\s*[\]\}])/g, '$1');
+
+            // Fix missing commas between objects
+            fixedJson = fixedJson.replace(/\}\s*\{/g, '},{');
+            fixedJson = fixedJson.replace(/\]\s*\{/g, '],[{');
+
+            // Fix unquoted keys
+            fixedJson = fixedJson.replace(/([{,]\s*)([a-zA-Z_]\w*)(\s*:)/g, '$1"$2"$3');
+
+            // Ensure all bracket pairs match
+            const openBrackets = (fixedJson.match(/\[/g) || []).length;
+            const closeBrackets = (fixedJson.match(/\]/g) || []).length;
+            const openBraces = (fixedJson.match(/\{/g) || []).length;
+            const closeBraces = (fixedJson.match(/\}/g) || []).length;
+
+            if (openBrackets > closeBrackets) {
+              fixedJson = fixedJson + ']'.repeat(openBrackets - closeBrackets);
+            }
+            if (openBraces > closeBraces) {
+              fixedJson = fixedJson + '}'.repeat(openBraces - closeBraces);
+            }
+
+            try {
+              questionsData = JSON.parse(fixedJson);
+              repairedSuccessfully = true;
+              console.log('✅ JSON fixed and parsed successfully');
+            } catch (secondError) {
+              console.error('Failed to parse JSON even after fixes:', secondError.message);
+              console.error('Raw response (first 1000 chars):', jsonText.substring(0, 1000));
+              console.error('Fixed response (first 1000 chars):', fixedJson.substring(0, 1000));
+              lastErrorMessage = 'AI response was not valid JSON. Please try again.';
+              retryInstruction = `Return ONLY valid JSON array data with ${targetQuestionCount} quiz questions. No prose, no markdown.`;
+              continue;
+            }
+          }
+
+          if (!repairedSuccessfully) {
+            lastErrorMessage = 'Failed to repair AI JSON output. Please try again.';
             continue;
           }
         }
@@ -751,12 +764,13 @@ Generate EXACTLY in this format - no variations:
         const questionData = normalizedQuestions[i];
         const questionType = questionData.type;
 
-        // Assign difficulty based on question order to create progression
-        // Q1-3: Easy, Q4-7: Medium, Q8-10: Hard
+        // Assign difficulty tiers that scale with the total question count
+        const easyThreshold = Math.max(3, Math.floor(targetQuestionCount * 0.3));
+        const hardThreshold = Math.max(easyThreshold + 1, targetQuestionCount - 3);
         let difficulty = 'medium';
-        if (i < 3) {
+        if (i < easyThreshold) {
           difficulty = 'easy';
-        } else if (i >= 7) {
+        } else if (i >= hardThreshold) {
           difficulty = 'hard';
         }
 
