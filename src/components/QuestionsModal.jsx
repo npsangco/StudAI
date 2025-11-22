@@ -37,6 +37,7 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
             }
         } catch (e) {
             console.error('Error parsing choices:', e);
+            console.error('Raw choices value:', question.choices);
             choices = null;
         }
 
@@ -48,6 +49,7 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
             }
         } catch (e) {
             console.error('Error parsing matching pairs:', e);
+            console.error('Raw matching_pairs value:', question.matching_pairs);
             matchingPairs = null;
         }
 
@@ -71,7 +73,10 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                                 </div>
                             ))
                         ) : (
-                            <p className="text-sm text-gray-500 italic">No choices available</p>
+                            <div className="text-sm text-gray-500 italic">
+                                <p>No choices available</p>
+                                <p className="text-xs mt-1">Raw data: {JSON.stringify(question.choices)}</p>
+                            </div>
                         )}
                     </div>
                 );
@@ -107,7 +112,10 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                                 </div>
                             ))
                         ) : (
-                            <p className="text-sm text-gray-500 italic">No matching pairs available</p>
+                            <div className="text-sm text-gray-500 italic">
+                                <p>No matching pairs available</p>
+                                <p className="text-xs mt-1">Raw data: {JSON.stringify(question.matching_pairs)}</p>
+                            </div>
                         )}
                     </div>
                 );
