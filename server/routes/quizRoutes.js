@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import Quiz from '../models/Quiz.js';
 import Question from '../models/Question.js';
 import QuizAttempt from '../models/QuizAttempt.js';
@@ -27,6 +27,75 @@ const AI_QUIZ_RULES = {
 const QUIZ_CONFIG = {
   points: {
     formula: (score, total) => {
+      if (total === 0) return 0;
+      const percentage = (score / total) * 100;
+      if (percentage >= 100) return 50;
+      if (percentage >= 80) return 40;
+      if (percentage >= 60) return 30;
+      if (percentage >= 40) return 20;
+      return 10; // Participation
+    },
+    dailyCap: 3,
+    capMessage: "Daily quiz limit reached (3/3). Come back tomorrow for more points!"
+  },
+  exp: {
+    formula: (score, total) => {
+      if (total === 0) return 0;
+      const percentage = (score / total) * 100;
+      return Math.floor((percentage / 100) * 30); // Max 30 EXP
+    }
+  }
+};
+
+function normalizeAiQuestion(rawQuestion, index) {
+  if (!rawQuestion || typeof rawQuestion !== 'object') {
+    throw new Error(`Question ${index + 1} is not valid JSON data.`);
+  }
+
+  const questionText = typeof rawQuestion.question === 'string' ? rawQuestion.question.trim() : '';
+  if (!questionText) {
+    throw new Error(`Question ${index + 1} is missing the question text.`);
+  }
+
+  const type = AI_QUIZ_RULES.validTypes.includes(rawQuestion.type) ? rawQuestion.type : null;
+  if (!type) {
+    throw new Error(`Question ${index + 1} has an unsupported type: ${rawQuestion.type || 'undefined'}.`);
+  }
+
+  const normalized = { type, question: questionText };
+
+  if (type === 'Multiple Choice') {
+    const rawChoices = Array.isArray(rawQuestion.choices) ? rawQuestion.choices : [];
+    const cleanedChoices = rawChoices
+      .map(choice => (typeof choice === 'string' ? choice.trim() : ''))
+      .filter(choice => choice.length > 0);
+
+    if (cleanedChoices.length < 2) {
+      throw new Error(`Question ${index + 1} must provide at least two choices.`);
+    }
+
+    const rawCorrectAnswer = typeof rawQuestion.correctAnswer === 'string' ? rawQuestion.correctAnswer.trim() : '';
+    if (!rawCorrectAnswer) {
+      throw new Error(`Question ${index + 1} must include the correct answer.`);
+    }
+
+    const resolvedAnswer = cleanedChoices.find(
+      choice => choice.toLowerCase() === rawCorrectAnswer.toLowerCase()
+    );
+
+    if (!resolvedAnswer) {
+      throw new Error(`Question ${index + 1} correct answer must match one of the provided choices.`);
+    }
+
+    normalized.choices = cleanedChoices;
+    normalized.correctAnswer = resolvedAnswer;
+  } else if (type === 'True/False') {
+    const rawCorrectAnswer = typeof rawQuestion.correctAnswer === 'string' ? rawQuestion.correctAnswer.trim().toLowerCase() : '';
+    if (rawCorrectAnswer !== 'true' && rawCorrectAnswer !== 'false') {
+      throw new Error(`Question ${index + 1} must specify "True" or "False" as the correct answer.`);
+    }
+    normalized.correctAnswer = rawCorrectAnswer === 'true' ? 'True' : 'False';
+  } else if (type === 'Fill in the blanks') {
     const answer = typeof rawQuestion.answer === 'string' ? rawQuestion.answer.trim() : '';
     if (!answer) {
       throw new Error(`Question ${index + 1} must specify the missing word or phrase.`);
@@ -42,58 +111,199 @@ const QUIZ_CONFIG = {
       .filter(pair => pair.left && pair.right);
 
     if (cleanedPairs.length === 0) {
-      // Generate questions using OpenAI in batches for reliability
-      try {
-        const openAiApiKey = process.env.OPENAI_API_KEY;
-        if (!openAiApiKey) {
-          throw new Error('OpenAI API key not configured');
-        }
+      throw new Error(`Question ${index + 1} must include at least one valid matching pair.`);
+    }
 
-        // Truncate note content to ~2000 chars to keep token count manageable
-        const maxNoteLength = 2000;
-        const truncatedContent = noteContent.length > maxNoteLength 
-          ? noteContent.substring(0, maxNoteLength) + '...' 
-          : noteContent;
+    normalized.matchingPairs = cleanedPairs;
+  }
 
-        const batchSize = AI_QUIZ_RULES.batchSize || targetQuestionCount;
-        const normalizedQuestions = [];
-        const seenQuestions = new Set();
-        const maxBatchIterations = Math.max(3, Math.ceil(targetQuestionCount / batchSize) + 2);
-        let batchIterations = 0;
+  return normalized;
+}
 
-        while (normalizedQuestions.length < targetQuestionCount && batchIterations < maxBatchIterations) {
-          const remainingNeeded = targetQuestionCount - normalizedQuestions.length;
-          const currentBatchSize = Math.min(batchSize, remainingNeeded);
-          const batchQuestions = await generateAiQuestionBatch({
-            batchCount: currentBatchSize,
-            truncatedContent,
-            openAiApiKey
-          });
+function extractTopLevelJsonObjects(rawText) {
+  const objects = [];
+  let depth = 0;
+  let startIndex = -1;
+  let inString = false;
+  let escaping = false;
 
-          for (const questionData of batchQuestions) {
-            const dedupeKey = `${questionData.type}:${(questionData.question || '').trim().toLowerCase()}`;
-            if (seenQuestions.has(dedupeKey)) {
-              continue;
-            }
-            seenQuestions.add(dedupeKey);
-            normalizedQuestions.push(questionData);
-            if (normalizedQuestions.length === targetQuestionCount) {
-              break;
-            }
+  for (let i = 0; i < rawText.length; i++) {
+    const char = rawText[i];
+
+    if (escaping) {
+      escaping = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaping = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (char === '{') {
+      if (depth === 0) {
+        startIndex = i;
+      }
+      depth++;
+    } else if (char === '}') {
+      depth--;
+      if (depth === 0 && startIndex !== -1) {
+        objects.push(rawText.slice(startIndex, i + 1));
+        startIndex = -1;
+      }
+    }
+  }
+
+  return objects;
+}
+
+function tryParseWithRepair(jsonString) {
+  try {
+    return JSON.parse(jsonString);
+  } catch (err) {
+    try {
+      return JSON.parse(jsonrepair(jsonString));
+    } catch {
+      return null;
+    }
+  }
+}
+
+function salvageQuestionArray(rawText, expectedCount) {
+  const objectStrings = extractTopLevelJsonObjects(rawText);
+  if (!objectStrings.length) {
+    return null;
+  }
+
+  const parsedObjects = objectStrings
+    .map(objText => tryParseWithRepair(objText))
+    .filter(Boolean);
+
+  if (parsedObjects.length === expectedCount) {
+    return parsedObjects;
+  }
+
+  return null;
+}
+
+async function generateAiQuestionBatch({ batchCount, truncatedContent, openAiApiKey }) {
+  const prompt = `Generate EXACTLY ${batchCount} valid JSON quiz questions. CRITICAL RULES:
+1. Return ONLY JSON array in brackets [], nothing else
+2. NO markdown, NO code blocks, NO text outside JSON
+3. NO escaped quotes (\"), NO newlines in strings
+4. ONLY use these exact keys: "type", "question", "choices", "correctAnswer", "answer", "matchingPairs"
+5. NEVER use: "_blank1_", "_blank2_", "blank" fields, or underscore keys
+6. For Fill blanks: ALWAYS use "answer" key with single word value ONLY
+7. Each question must have all required fields for its type
+
+CRITICAL: If you generate any field with underscore or blank numbers, the entire response fails!
+
+Content: "${truncatedContent}"
+
+Generate EXACTLY in this format - no variations:
+[
+{"type":"Multiple Choice","question":"What...?","choices":["opt1","opt2","opt3","opt4"],"correctAnswer":"opt1"},
+{"type":"Fill in the blanks","question":"The ___ is...","answer":"word"},
+{"type":"True/False","question":"Is...true?","correctAnswer":"True"},
+{"type":"Matching","question":"Match these","matchingPairs":[{"left":"A","right":"1"},{"left":"B","right":"2"}]}
+]`;
+
+  const maxAiAttempts = 3;
+  let normalizedQuestions = null;
+  let lastErrorMessage = 'AI failed to generate quiz questions.';
+  let retryInstruction = '';
+
+  for (let attempt = 1; attempt <= maxAiAttempts; attempt++) {
+    const attemptPrompt = retryInstruction ? `${prompt}\n${retryInstruction}` : prompt;
+
+    const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openAiApiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert educator that creates well-structured quiz questions. Return only valid JSON.'
+          },
+          {
+            role: 'user',
+            content: attemptPrompt
           }
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+        top_p: 1.0,
+        frequency_penalty: 0.5,
+        presence_penalty: 0.5
+      })
+    });
 
-          batchIterations++;
-        }
+    if (!openAiResponse.ok) {
+      const errorData = await openAiResponse.json();
+      console.error('OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+    }
 
-        if (normalizedQuestions.length !== targetQuestionCount) {
-          throw new Error(`AI returned only ${normalizedQuestions.length} unique questions after batching. Please try again.`);
-        }
+    const aiData = await openAiResponse.json();
+    const generatedText = aiData.choices[0]?.message?.content;
+
+    if (!generatedText) {
+      lastErrorMessage = 'No response from OpenAI';
+      retryInstruction = `Previous response was empty. Return ONLY a JSON array with ${batchCount} quiz questions.`;
+      continue;
+    }
+
+    let jsonText = generatedText.trim();
+    const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      jsonText = jsonMatch[1].trim();
+    }
+
+    let questionsData;
+    try {
+      questionsData = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error('Initial JSON parse error:', parseError.message);
+      console.error('Position:', parseError.message.match(/position (\d+)/) ? parseError.message.match(/position (\d+)/)[1] : 'unknown');
+      console.error('Attempting to fix common JSON issues...');
+
+      let repairedSuccessfully = false;
+
+      try {
+        const repairedJson = jsonrepair(jsonText);
+        questionsData = JSON.parse(repairedJson);
+        repairedSuccessfully = true;
+        console.log('JSON repaired via jsonrepair');
+      } catch (repairError) {
+        console.error('jsonrepair failed, applying manual fallbacks...');
+        let fixedJson = jsonText;
+        fixedJson = fixedJson.replace(/[\x00-\x1f\x7f]/g, '');
+        fixedJson = fixedJson.replace(/\\"/g, '"');
+        fixedJson = fixedJson.replace(/\\\"/g, '"');
+        fixedJson = fixedJson.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, match => match.replace(/\n\s+/g, ' ').replace(/[\r\n]+/g, ' '));
+        fixedJson = fixedJson.replace(/([{,]\s*)'([^'"\s][^'"\n]*?)'(\s*:)/g, '$1"$2"$3');
+        fixedJson = fixedJson.replace(/:\s*'([^'"\n]*?)'(\s*[,}])/g, ':"$1"$2');
+        fixedJson = fixedJson.replace(/\{\s*"_blank\d+_"\s*:[^}]*\}/g, '');
+        fixedJson = fixedJson.replace(/,\s*\{\s*"_blank\d+_"/g, '');
+        fixedJson = fixedJson.replace(/"_blank\d+_"/g, '"answer"');
+        fixedJson = fixedJson.replace(/,(\s*[\]\}])/g, '$1');
+        fixedJson = fixedJson.replace(/\}\s*\{/g, '},{');
         fixedJson = fixedJson.replace(/\]\s*\{/g, '],[{');
-
-        // Fix unquoted keys
         fixedJson = fixedJson.replace(/([{,]\s*)([a-zA-Z_]\w*)(\s*:)/g, '$1"$2"$3');
 
-        // Ensure all bracket pairs match
         const openBrackets = (fixedJson.match(/\[/g) || []).length;
         const closeBrackets = (fixedJson.match(/\]/g) || []).length;
         const openBraces = (fixedJson.match(/\{/g) || []).length;
@@ -109,7 +319,7 @@ const QUIZ_CONFIG = {
         try {
           questionsData = JSON.parse(fixedJson);
           repairedSuccessfully = true;
-          console.log('✅ JSON fixed and parsed successfully');
+          console.log('JSON fixed and parsed successfully');
         } catch (secondError) {
           console.error('Failed to parse JSON even after fixes:', secondError.message);
           console.error('Raw response (first 1000 chars):', jsonText.substring(0, 1000));
@@ -118,7 +328,7 @@ const QUIZ_CONFIG = {
           if (salvagedQuestions && salvagedQuestions.length === batchCount) {
             questionsData = salvagedQuestions;
             repairedSuccessfully = true;
-            console.log('✅ Salvaged questions via object extraction');
+            console.log('Salvaged questions via object extraction');
           } else {
             lastErrorMessage = 'AI response was not valid JSON. Please try again.';
             retryInstruction = `Return ONLY valid JSON array data with ${batchCount} quiz questions. No prose, no markdown.`;
@@ -132,8 +342,7 @@ const QUIZ_CONFIG = {
         continue;
       }
     }
-    
-    // Ensure it's an array with the required number of questions
+
     if (!Array.isArray(questionsData)) {
       lastErrorMessage = 'AI response must be a JSON array of questions.';
       retryInstruction = `Respond ONLY with a JSON array containing ${batchCount} question objects.`;
@@ -253,12 +462,12 @@ async function checkAchievements(userId) {
     const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
     const unlockedAchievements = await checkAndUnlockAchievements(userId);
     if (unlockedAchievements && unlockedAchievements.length > 0) {
-      console.log(`🏆 User ${userId} unlocked ${unlockedAchievements.length} achievement(s):`, 
+      console.log(`≡ƒÅå User ${userId} unlocked ${unlockedAchievements.length} achievement(s):`, 
         unlockedAchievements.map(a => a.title).join(', '));
     }
     return unlockedAchievements;
   } catch (err) {
-    console.error('❌ Achievement service error:', err);
+    console.error('[Achievement] Service error:', err);
     return [];
   }
 }
@@ -381,10 +590,40 @@ router.get('/', requireAuth, async (req, res) => {
     // Enhance each quiz with difficulty distribution for adaptive mode check
     const enhancedQuizzes = await Promise.all(quizzes.map(async (quiz) => {
       const quizData = quiz.toJSON();
-      
-      // Get difficulty distribution
-      const [difficultyStats] = await sequelize.query(`
-        SELECT 
+
+      const difficultyRows = await Question.findAll({
+        attributes: [
+          'difficulty',
+          [sequelize.fn('COUNT', sequelize.col('question_id')), 'count']
+        ],
+        where: { quiz_id: quiz.quiz_id },
+        group: ['difficulty']
+      });
+
+      const difficultyDistribution = { easy: 0, medium: 0, hard: 0 };
+      difficultyRows.forEach(row => {
+        const key = (row.difficulty || 'medium').toLowerCase();
+        if (key === 'easy' || key === 'medium' || key === 'hard') {
+          difficultyDistribution[key] = Number(row.get('count')) || 0;
+        }
+      });
+
+      const totalQuestions = Object.values(difficultyDistribution).reduce((sum, value) => sum + value, 0);
+      const hasAllDifficulties = Object.values(difficultyDistribution).every(count => count > 0);
+
+      quizData.difficultyDistribution = difficultyDistribution;
+      quizData.supportsAdaptiveMode = hasAllDifficulties && totalQuestions >= 9;
+      quizData.total_questions = totalQuestions;
+
+      return quizData;
+    }));
+
+    return res.json({ quizzes: enhancedQuizzes });
+  } catch (err) {
+    console.error('[Quiz] Fetch quizzes error:', err);
+    return res.status(500).json({ error: 'Failed to fetch quizzes' });
+  }
+});
 
 // Create new quiz
 router.post('/', requireAuth, async (req, res) => {
@@ -419,14 +658,14 @@ router.post('/', requireAuth, async (req, res) => {
       average_score: 0
     });
 
-    console.log(`✅ Quiz created with share code: ${shareCode}`);
+    console.log(`[Quiz] Created with share code: ${shareCode}`);
 
     res.status(201).json({ 
       quiz: newQuiz,
       share_code: shareCode 
     });
   } catch (err) {
-    console.error('❌ Create quiz error:', err);
+    console.error('[Quiz] Create quiz error:', err);
     res.status(500).json({ error: 'Failed to create quiz' });
   }
 });
@@ -495,198 +734,38 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
         ? noteContent.substring(0, maxNoteLength) + '...' 
         : noteContent;
 
-      const prompt = `Generate EXACTLY ${targetQuestionCount} valid JSON quiz questions. CRITICAL RULES:
-1. Return ONLY JSON array in brackets [], nothing else
-2. NO markdown, NO code blocks, NO text outside JSON
-3. NO escaped quotes (\"), NO newlines in strings
-4. ONLY use these exact keys: "type", "question", "choices", "correctAnswer", "answer", "matchingPairs"
-5. NEVER use: "_blank1_", "_blank2_", "blank" fields, or underscore keys
-6. For Fill blanks: ALWAYS use "answer" key with single word value ONLY
-7. Each question must have all required fields for its type
+      const batchSize = AI_QUIZ_RULES.batchSize || targetQuestionCount;
+      const normalizedQuestions = [];
+      const seenQuestions = new Set();
+      const maxBatchIterations = Math.max(3, Math.ceil(targetQuestionCount / batchSize) + 2);
+      let batchIterations = 0;
 
-CRITICAL: If you generate any field with underscore or blank numbers, the entire response fails!
-
-Content: "${truncatedContent}"
-
-Generate EXACTLY in this format - no variations:
-[
-{"type":"Multiple Choice","question":"What...?","choices":["opt1","opt2","opt3","opt4"],"correctAnswer":"opt1"},
-{"type":"Fill in the blanks","question":"The ___ is...","answer":"word"},
-{"type":"True/False","question":"Is...true?","correctAnswer":"True"},
-{"type":"Matching","question":"Match these","matchingPairs":[{"left":"A","right":"1"},{"left":"B","right":"2"}]}
-]`;
-
-      const maxAiAttempts = 3;
-      let normalizedQuestions = null;
-      let lastErrorMessage = 'AI failed to generate quiz questions.';
-      let retryInstruction = '';
-
-      for (let attempt = 1; attempt <= maxAiAttempts; attempt++) {
-        const attemptPrompt = retryInstruction ? `${prompt}\n${retryInstruction}` : prompt;
-
-        const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openAiApiKey}`
-          },
-          body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
-            messages: [
-              {
-                role: 'system',
-                content: 'You are an expert educator that creates well-structured quiz questions. Return only valid JSON.'
-              },
-              {
-                role: 'user',
-                content: attemptPrompt
-              }
-            ],
-            temperature: 0.7,
-            max_tokens: 4000,
-            top_p: 1.0,
-            frequency_penalty: 0.5,
-            presence_penalty: 0.5
-          })
+      while (normalizedQuestions.length < targetQuestionCount && batchIterations < maxBatchIterations) {
+        const remainingNeeded = targetQuestionCount - normalizedQuestions.length;
+        const currentBatchSize = Math.min(batchSize, remainingNeeded);
+        const batchQuestions = await generateAiQuestionBatch({
+          batchCount: currentBatchSize,
+          truncatedContent,
+          openAiApiKey
         });
 
-        if (!openAiResponse.ok) {
-          const errorData = await openAiResponse.json();
-          console.error('OpenAI API error:', errorData);
-          throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
-        }
-
-        const aiData = await openAiResponse.json();
-        const generatedText = aiData.choices[0]?.message?.content;
-
-        if (!generatedText) {
-          lastErrorMessage = 'No response from OpenAI';
-          retryInstruction = `Previous response was empty. Return ONLY a JSON array with ${targetQuestionCount} quiz questions.`;
-          continue;
-        }
-
-        // Extract JSON from markdown code blocks if present
-        let jsonText = generatedText.trim();
-        
-        // Remove markdown code blocks if present (```json ... ```)
-        const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-        if (jsonMatch) {
-          jsonText = jsonMatch[1].trim();
-        }
-
-        // Try to parse JSON with error handling
-        let questionsData;
-        try {
-          questionsData = JSON.parse(jsonText);
-        } catch (parseError) {
-          console.error('Initial JSON parse error:', parseError.message);
-          console.error('Position:', parseError.message.match(/position (\d+)/) ? parseError.message.match(/position (\d+)/)[1] : 'unknown');
-          console.error('Attempting to fix common JSON issues...');
-
-          let repairedSuccessfully = false;
-
-          try {
-            const repairedJson = jsonrepair(jsonText);
-            questionsData = JSON.parse(repairedJson);
-            repairedSuccessfully = true;
-            console.log('✅ JSON repaired via jsonrepair');
-          } catch (repairError) {
-            console.error('jsonrepair failed, applying manual fallbacks...');
-            let fixedJson = jsonText;
-
-            // Remove control characters and bad escapes
-            fixedJson = fixedJson.replace(/[\x00-\x1f\x7f]/g, '');
-            fixedJson = fixedJson.replace(/\\"/g, '"');
-            fixedJson = fixedJson.replace(/\\\"/g, '"');
-
-            // Handle newlines within quoted strings - replace with spaces
-            fixedJson = fixedJson.replace(/"([^"]*(?:\n[^"]*)*)"/g, (match) => {
-              return match.replace(/\n\s+/g, ' ').replace(/[\r\n]+/g, ' ');
-            });
-
-            // Fix single-quoted keys and values without touching apostrophes
-            fixedJson = fixedJson.replace(/([{,]\s*)'([^'"\s][^'"\n]*?)'(\s*:)/g, '$1"$2"$3');
-            fixedJson = fixedJson.replace(/:\s*'([^'"\n]*?)'(\s*[,}])/g, ':"$1"$2');
-
-            // Fix _blank fields - more aggressive approach
-            fixedJson = fixedJson.replace(/\{\s*"_blank\d+_"\s*:[^}]*\}/g, '');
-            fixedJson = fixedJson.replace(/,\s*\{\s*"_blank\d+_"/g, '');
-            fixedJson = fixedJson.replace(/"_blank\d+_"/g, '"answer"');
-
-            // Fix trailing commas
-            fixedJson = fixedJson.replace(/,(\s*[\]\}])/g, '$1');
-
-            // Fix missing commas between objects
-            fixedJson = fixedJson.replace(/\}\s*\{/g, '},{');
-            fixedJson = fixedJson.replace(/\]\s*\{/g, '],[{');
-
-            // Fix unquoted keys
-            fixedJson = fixedJson.replace(/([{,]\s*)([a-zA-Z_]\w*)(\s*:)/g, '$1"$2"$3');
-
-            // Ensure all bracket pairs match
-            const openBrackets = (fixedJson.match(/\[/g) || []).length;
-            const closeBrackets = (fixedJson.match(/\]/g) || []).length;
-            const openBraces = (fixedJson.match(/\{/g) || []).length;
-            const closeBraces = (fixedJson.match(/\}/g) || []).length;
-
-            if (openBrackets > closeBrackets) {
-              fixedJson = fixedJson + ']'.repeat(openBrackets - closeBrackets);
-            }
-            if (openBraces > closeBraces) {
-              fixedJson = fixedJson + '}'.repeat(openBraces - closeBraces);
-            }
-
-            try {
-              questionsData = JSON.parse(fixedJson);
-              repairedSuccessfully = true;
-              console.log('✅ JSON fixed and parsed successfully');
-            } catch (secondError) {
-              console.error('Failed to parse JSON even after fixes:', secondError.message);
-              console.error('Raw response (first 1000 chars):', jsonText.substring(0, 1000));
-              console.error('Fixed response (first 1000 chars):', fixedJson.substring(0, 1000));
-              const salvagedQuestions = salvageQuestionArray(jsonText, targetQuestionCount) || salvageQuestionArray(fixedJson, targetQuestionCount);
-              if (salvagedQuestions && salvagedQuestions.length === targetQuestionCount) {
-                questionsData = salvagedQuestions;
-                repairedSuccessfully = true;
-                console.log('✅ Salvaged questions via object extraction');
-              } else {
-                lastErrorMessage = 'AI response was not valid JSON. Please try again.';
-                retryInstruction = `Return ONLY valid JSON array data with ${targetQuestionCount} quiz questions. No prose, no markdown.`;
-                continue;
-              }
-            }
-          }
-
-          if (!repairedSuccessfully) {
-            lastErrorMessage = 'Failed to repair AI JSON output. Please try again.';
+        for (const questionData of batchQuestions) {
+          const dedupeKey = `${questionData.type}:${(questionData.question || '').trim().toLowerCase()}`;
+          if (seenQuestions.has(dedupeKey)) {
             continue;
           }
-        }
-        
-        // Ensure it's an array with the required number of questions
-        if (!Array.isArray(questionsData)) {
-          lastErrorMessage = 'AI response must be a JSON array of questions.';
-          retryInstruction = `Respond ONLY with a JSON array containing ${targetQuestionCount} question objects.`;
-          continue;
+          seenQuestions.add(dedupeKey);
+          normalizedQuestions.push(questionData);
+          if (normalizedQuestions.length === targetQuestionCount) {
+            break;
+          }
         }
 
-        if (questionsData.length !== targetQuestionCount) {
-          lastErrorMessage = `AI must return exactly ${targetQuestionCount} questions. Received ${questionsData.length}.`;
-          retryInstruction = `You returned ${questionsData.length} questions. Regenerate and return EXACTLY ${targetQuestionCount} fully-valid questions.`;
-          continue;
-        }
-
-        try {
-          normalizedQuestions = questionsData.map((questionData, index) => normalizeAiQuestion(questionData, index));
-          break;
-        } catch (validationError) {
-          lastErrorMessage = validationError.message;
-          retryInstruction = `Validation error: ${validationError.message}. Fix all issues and return ${targetQuestionCount} valid questions.`;
-        }
+        batchIterations++;
       }
 
-      if (!normalizedQuestions) {
-        throw new Error(lastErrorMessage);
+      if (normalizedQuestions.length !== targetQuestionCount) {
+        throw new Error(`AI returned only ${normalizedQuestions.length} unique questions after batching. Please try again.`);
       }
 
       // Create questions in the quiz
@@ -730,7 +809,7 @@ Generate EXACTLY in this format - no variations:
         total_questions: questions.length
       });
 
-      console.log(`✅ AI Quiz created: ${newQuiz.quiz_id} with ${questions.length} questions`);
+      console.log(`Γ£à AI Quiz created: ${newQuiz.quiz_id} with ${questions.length} questions`);
 
       const recordResult = await recordQuizUsage(userId);
       if (!recordResult.allowed) {
@@ -785,7 +864,7 @@ Generate EXACTLY in this format - no variations:
     } catch (aiError) {
       // If AI generation fails, delete the quiz and return error
       await newQuiz.destroy();
-      console.error('❌ AI Generation error:', aiError);
+      console.error('Γ¥î AI Generation error:', aiError);
       const errorMessage = aiError.message || 'Failed to generate questions using AI';
       return res.status(400).json({ 
         error: 'Failed to generate quiz with AI',
@@ -800,7 +879,7 @@ Generate EXACTLY in this format - no variations:
         details: err.details
       });
     }
-    console.error('❌ Generate from notes error:', err);
+    console.error('Γ¥î Generate from notes error:', err);
     res.status(500).json({ 
       error: 'Failed to generate quiz from notes',
       details: err.message 
@@ -846,7 +925,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 
     res.json({ quiz });
   } catch (err) {
-    console.error('❌ Update quiz error:', err);
+    console.error('Γ¥î Update quiz error:', err);
     res.status(500).json({ error: 'Failed to update quiz' });
   }
 });
@@ -909,12 +988,12 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
     await transaction.commit();
     
-    console.log(`✅ Quiz ${quizId} deleted successfully`);
+    console.log(`Γ£à Quiz ${quizId} deleted successfully`);
     res.json({ message: 'Quiz deleted successfully' });
     
   } catch (err) {
     await transaction.rollback();
-    console.error('❌ Delete quiz error:', err);
+    console.error('Γ¥î Delete quiz error:', err);
     res.status(500).json({ 
       error: 'Failed to delete quiz',
       details: err.message // Include error details for debugging
@@ -933,7 +1012,7 @@ router.post('/:id/questions', requireAuth, async (req, res) => {
     const quizId = req.params.id;
     const { type, question, question_order, choices, correct_answer, answer, matching_pairs, points, difficulty } = req.body;
 
-    console.log('📥 ADD QUESTION - Received data:', {
+    console.log('≡ƒôÑ ADD QUESTION - Received data:', {
       quizId,
       type,
       difficulty,
@@ -963,7 +1042,7 @@ router.post('/:id/questions', requireAuth, async (req, res) => {
       difficulty: difficulty || 'medium' 
     });
 
-    console.log('✅ Question created in DB:', {
+    console.log('Γ£à Question created in DB:', {
       id: newQuestion.question_id,
       difficulty: newQuestion.difficulty
     });
@@ -977,7 +1056,7 @@ router.post('/:id/questions', requireAuth, async (req, res) => {
 
     res.status(201).json({ question: newQuestion });
   } catch (err) {
-    console.error('❌ Add question error:', err);
+    console.error('Γ¥î Add question error:', err);
     res.status(500).json({ error: 'Failed to add question' });
   }
 });
@@ -1008,7 +1087,7 @@ router.put('/:quizId/questions/:questionId', requireAuth, async (req, res) => {
 
     res.json({ question });
   } catch (err) {
-    console.error('❌ Update question error:', err);
+    console.error('Γ¥î Update question error:', err);
     res.status(500).json({ error: 'Failed to update question' });
   }
 });
@@ -1043,7 +1122,7 @@ router.delete('/:quizId/questions/:questionId', requireAuth, async (req, res) =>
 
     res.json({ message: 'Question deleted successfully' });
   } catch (err) {
-    console.error('❌ Delete question error:', err);
+    console.error('Γ¥î Delete question error:', err);
     res.status(500).json({ error: 'Failed to delete question' });
   }
 });
@@ -1167,7 +1246,7 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       message: `Quiz completed! Earned ${points_earned} points and ${exp_earned} EXP!`
     });
   } catch (err) {
-    console.error('❌ Submit attempt error:', err);
+    console.error('Γ¥î Submit attempt error:', err);
     res.status(500).json({ error: 'Failed to submit quiz attempt' });
   }
 });
@@ -1184,7 +1263,7 @@ router.get('/:id/attempts', requireAuth, async (req, res) => {
 
     res.json({ attempts });
   } catch (err) {
-    console.error('❌ Get attempts error:', err);
+    console.error('Γ¥î Get attempts error:', err);
     res.status(500).json({ error: 'Failed to fetch attempts' });
   }
 });
@@ -1209,7 +1288,7 @@ router.get('/:id/leaderboard', requireAuth, async (req, res) => {
 
     res.json({ leaderboard });
   } catch (err) {
-    console.error('❌ Get leaderboard error:', err);
+    console.error('Γ¥î Get leaderboard error:', err);
     res.status(500).json({ error: 'Failed to fetch leaderboard' });
   }
 });
@@ -1282,7 +1361,7 @@ router.post('/:id/battle/create', requireAuth, async (req, res) => {
       gamePin 
     });
   } catch (err) {
-    console.error('❌ Create battle error:', err);
+    console.error('Γ¥î Create battle error:', err);
     res.status(500).json({ error: 'Failed to create battle' });
   }
 });
@@ -1370,7 +1449,7 @@ router.post('/battle/join', requireAuth, async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ Join battle error:', err);
+    console.error('Γ¥î Join battle error:', err);
     res.status(500).json({ error: 'Failed to join battle' });
   }
 });
@@ -1440,7 +1519,7 @@ router.get('/battle/:gamePin', requireAuth, async (req, res) => {
       }))
     });
   } catch (err) {
-    console.error('❌ Get battle error:', err);
+    console.error('Γ¥î Get battle error:', err);
     res.status(500).json({ error: 'Failed to get battle info' });
   }
 });
@@ -1471,7 +1550,7 @@ router.post('/battle/:gamePin/ready', requireAuth, async (req, res) => {
     
     res.json({ message: 'Marked as ready' });
   } catch (err) {
-    console.error('❌ Ready error:', err);
+    console.error('Γ¥î Ready error:', err);
     res.status(500).json({ error: 'Failed to mark ready' });
   }
 });
@@ -1484,7 +1563,7 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
     const gamePin = req.params.gamePin;
     const userId = req.session.userId;
     
-    console.log(`🎮 Start battle request: PIN=${gamePin}, Host=${userId}`);
+    console.log(`≡ƒÄ« Start battle request: PIN=${gamePin}, Host=${userId}`);
     
     // ============================================
     // VALIDATION 1: Battle exists
@@ -1526,7 +1605,7 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
     if (battle.status === 'in_progress') {
       // Idempotency: Battle already started, return success
       await transaction.rollback();
-      console.log(`⏭️ IDEMPOTENT: Battle ${gamePin} already started`);
+      console.log(`ΓÅ¡∩╕Å IDEMPOTENT: Battle ${gamePin} already started`);
       
       const questionCount = await Question.count({ where: { quiz_id: battle.quiz_id } });
       const currentPlayers = await BattleParticipant.count({ where: { battle_id: battle.battle_id } });
@@ -1559,7 +1638,7 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
     // ============================================
     if (!battle.quiz) {
       await transaction.rollback();
-      console.error(`❌ Quiz ${battle.quiz_id} was deleted`);
+      console.error(`Γ¥î Quiz ${battle.quiz_id} was deleted`);
       
       // Mark battle as invalid and cleanup
       await QuizBattle.update(
@@ -1584,7 +1663,7 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
     
     if (questionCount === 0) {
       await transaction.rollback();
-      console.error(`❌ Quiz ${battle.quiz_id} has no questions`);
+      console.error(`Γ¥î Quiz ${battle.quiz_id} has no questions`);
       
       return res.status(400).json({ 
         error: 'Cannot start battle. Quiz has no questions.',
@@ -1594,7 +1673,7 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
       });
     }
     
-    console.log(`✅ Quiz has ${questionCount} questions`);
+    console.log(`Γ£à Quiz has ${questionCount} questions`);
     
     // ============================================
     // VALIDATION 6: Minimum player count
@@ -1608,7 +1687,7 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
     
     if (currentPlayers < MIN_PLAYERS) {
       await transaction.rollback();
-      console.error(`❌ Not enough players: ${currentPlayers}/${MIN_PLAYERS}`);
+      console.error(`Γ¥î Not enough players: ${currentPlayers}/${MIN_PLAYERS}`);
       
       return res.status(400).json({ 
         error: `Need at least ${MIN_PLAYERS} players to start`,
@@ -1618,14 +1697,14 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
       });
     }
     
-    console.log(`✅ ${currentPlayers} players ready`);
+    console.log(`Γ£à ${currentPlayers} players ready`);
     
     // ============================================
     // VALIDATION 7: Player count doesn't exceed max
     // ============================================
     if (currentPlayers > battle.max_players) {
       await transaction.rollback();
-      console.error(`❌ Too many players: ${currentPlayers}/${battle.max_players}`);
+      console.error(`Γ¥î Too many players: ${currentPlayers}/${battle.max_players}`);
       
       return res.status(400).json({ 
         error: 'Player count exceeds maximum',
@@ -1649,10 +1728,10 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
     const allReady = readyPlayers === currentPlayers;
     
     if (!allReady) {
-      console.warn(`⚠️ Not all players ready: ${readyPlayers}/${currentPlayers}`);
+      console.warn(`ΓÜá∩╕Å Not all players ready: ${readyPlayers}/${currentPlayers}`);
       // Don't block - just warn
     } else {
-      console.log(`✅ All ${currentPlayers} players ready`);
+      console.log(`Γ£à All ${currentPlayers} players ready`);
     }
     
     // ============================================
@@ -1665,7 +1744,7 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
     
     await transaction.commit();
     
-    console.log(`🎮 Battle ${gamePin} started successfully`);
+    console.log(`≡ƒÄ« Battle ${gamePin} started successfully`);
     console.log(`   Quiz: ${battle.quiz.title}`);
     console.log(`   Players: ${currentPlayers}/${battle.max_players}`);
     console.log(`   Questions: ${questionCount}`);
@@ -1684,7 +1763,7 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
     
   } catch (err) {
     await transaction.rollback();
-    console.error('❌ Start battle error:', err);
+    console.error('Γ¥î Start battle error:', err);
     res.status(500).json({ 
       error: 'Failed to start battle',
       errorCode: 'SERVER_ERROR',
@@ -1726,7 +1805,7 @@ router.post('/battle/:gamePin/submit', requireAuth, async (req, res) => {
       study_streak: streak
    });
   } catch (err) {
-    console.error('❌ Submit score error:', err);
+    console.error('Γ¥î Submit score error:', err);
     res.status(500).json({ error: 'Failed to submit score' });
   }
 });
@@ -1773,13 +1852,13 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
         username: p.user.username,
         profile_picture: p.user.profile_picture,
         score: p.score,
-        is_winner: p.is_winner, // ✅ Use database value (supports ties)
+        is_winner: p.is_winner, // Γ£à Use database value (supports ties)
         points_earned: p.points_earned,
         exp_earned: p.exp_earned
       }))
     });
   } catch (err) {
-    console.error('❌ Get results error:', err);
+    console.error('Γ¥î Get results error:', err);
     res.status(500).json({ error: 'Failed to get results' });
   }
 });
@@ -1843,7 +1922,7 @@ router.post('/battle/:gamePin/end', requireAuth, async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ End battle error:', err);
+    console.error('Γ¥î End battle error:', err);
     res.status(500).json({ error: 'Failed to end battle' });
   }
 });
@@ -1853,7 +1932,7 @@ router.post('/battle/:gamePin/end', requireAuth, async (req, res) => {
 // ============================================
 
 router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
-  // ⚠️ CRITICAL: Use transaction with explicit rollback
+  // ΓÜá∩╕Å CRITICAL: Use transaction with explicit rollback
   let transaction;
   
   try {
@@ -1861,18 +1940,18 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     const { players, winnerId, completedAt } = req.body;
     const userId = req.session.userId;
     
-    console.log('🔄 MySQL Sync Request - PIN:', gamePin);
-    console.log('📊 Players:', JSON.stringify(players, null, 2));
-    console.log('🏆 Winner:', winnerId);
-    console.log('👤 Requester:', userId);
-    console.log('📅 CompletedAt:', completedAt);
+    console.log('≡ƒöä MySQL Sync Request - PIN:', gamePin);
+    console.log('≡ƒôè Players:', JSON.stringify(players, null, 2));
+    console.log('≡ƒÅå Winner:', winnerId);
+    console.log('≡ƒæñ Requester:', userId);
+    console.log('≡ƒôà CompletedAt:', completedAt);
     
     // ============================================
     // VALIDATION
     // ============================================
     
     if (!players || !Array.isArray(players) || players.length === 0) {
-      console.error('❌ Invalid players data:', players);
+      console.error('Γ¥î Invalid players data:', players);
       return res.status(400).json({ 
         success: false,
         error: 'Invalid players data' 
@@ -1887,16 +1966,16 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     const winners = players.filter(p => p.score === maxScore);
     const winnerIds = winners.map(w => w.userId);
     
-    console.log('🔍 Max score:', maxScore);
-    console.log('🏆 Winners (tied or single):', winnerIds);
-    console.log(`🎯 ${winners.length} winner(s) with ${maxScore} points`);
+    console.log('≡ƒöì Max score:', maxScore);
+    console.log('≡ƒÅå Winners (tied or single):', winnerIds);
+    console.log(`≡ƒÄ» ${winners.length} winner(s) with ${maxScore} points`);
     
     // ============================================
     // Handle all-forfeit scenario
     // ============================================
     const allForfeited = maxScore === 0;
     if (allForfeited) {
-      console.log('⚠️ All players forfeited (score = 0), no winner will be declared');
+      console.log('ΓÜá∩╕Å All players forfeited (score = 0), no winner will be declared');
     }
     
     // ============================================
@@ -1905,7 +1984,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     
     transaction = await sequelize.transaction();
     
-    console.log('🔒 Transaction started');
+    console.log('≡ƒöÆ Transaction started');
     
     // ============================================
     // 1. FIND & LOCK BATTLE ROW
@@ -1919,14 +1998,14 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     
     if (!battle) {
       await transaction.rollback();
-      console.error('❌ Battle not found:', gamePin);
+      console.error('Γ¥î Battle not found:', gamePin);
       return res.status(404).json({ 
         success: false,
         error: 'Battle not found in database' 
       });
     }
     
-    console.log('✅ Battle found and locked:', battle.battle_id);
+    console.log('Γ£à Battle found and locked:', battle.battle_id);
     
     // ============================================
     // 2. IDEMPOTENCY: CHECK IF ALREADY SYNCED (IMMEDIATELY AFTER LOCK)
@@ -1937,7 +2016,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     if (battle.status === 'completed') {
       // Battle already synced - return success (idempotent)
       await transaction.rollback();
-      console.log('⏭️ IDEMPOTENT: Battle already synced:', gamePin);
+      console.log('ΓÅ¡∩╕Å IDEMPOTENT: Battle already synced:', gamePin);
       
       const totalPlayers = await BattleParticipant.count({
         where: { battle_id: battle.battle_id }
@@ -1961,7 +2040,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     
     if (battle.host_id !== userId) {
       await transaction.rollback();
-      console.error('❌ Non-host sync attempt. Host:', battle.host_id, 'Requester:', userId);
+      console.error('Γ¥î Non-host sync attempt. Host:', battle.host_id, 'Requester:', userId);
       return res.status(403).json({ 
         success: false,
         error: 'Only host can sync results' 
@@ -1983,7 +2062,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         completed_at: completedAt || new Date()
       }, { transaction });
       
-      console.log('⚠️ Battle ended with no winner (all forfeited)');
+      console.log('ΓÜá∩╕Å Battle ended with no winner (all forfeited)');
       
       // Update all participants without awarding winner status
       for (const player of players) {
@@ -2028,10 +2107,10 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     }, { transaction });
     
     if (isTied) {
-      console.log(`🤝 TIE DETECTED: ${winnerIds.length} winners with ${maxScore} points each`);
+      console.log(`≡ƒñ¥ TIE DETECTED: ${winnerIds.length} winners with ${maxScore} points each`);
       console.log(`   Winner IDs: ${winnerIds.join(', ')}`);
     } else {
-      console.log(`✅ Battle completed with single winner: ${primaryWinnerId}`);
+      console.log(`Γ£à Battle completed with single winner: ${primaryWinnerId}`);
     }
     
     // ============================================
@@ -2047,7 +2126,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         const expEarned = player.score * 5;
         const isWinner = winnerIds.includes(player.userId);
         
-        console.log(`📝 Updating player ${player.userId}: score=${player.score}, points=${pointsEarned}, isWinner=${isWinner}`);
+        console.log(`≡ƒô¥ Updating player ${player.userId}: score=${player.score}, points=${pointsEarned}, isWinner=${isWinner}`);
         
         // Update participant record
         const [updateCount] = await BattleParticipant.update(
@@ -2067,7 +2146,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         );
         
         if (updateCount === 0) {
-          console.warn('⚠️ Participant not found for user:', player.userId);
+          console.warn('ΓÜá∩╕Å Participant not found for user:', player.userId);
           updateErrors.push(`Player ${player.userId} not found in battle`);
           continue;
         }
@@ -2083,13 +2162,13 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         
         // Award achievements for ALL tied winners
         if (isWinner) {
-          console.log(`🏆 Player ${player.userId} is a winner (tied: ${isTied})`);
+          console.log(`≡ƒÅå Player ${player.userId} is a winner (tied: ${isTied})`);
         }
         
-        console.log(`✅ Updated player ${player.userId}`);
+        console.log(`Γ£à Updated player ${player.userId}`);
         
       } catch (playerError) {
-        console.error(`❌ Error updating player ${player.userId}:`, playerError);
+        console.error(`Γ¥î Error updating player ${player.userId}:`, playerError);
         updateErrors.push(`Failed to update player ${player.userId}: ${playerError.message}`);
         
         // If any player fails, rollback entire transaction
@@ -2103,7 +2182,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     
     if (updatedCount !== players.length) {
       await transaction.rollback();
-      console.error(`❌ Player update mismatch: ${updatedCount}/${players.length}`);
+      console.error(`Γ¥î Player update mismatch: ${updatedCount}/${players.length}`);
       return res.status(500).json({
         success: false,
         error: `Only ${updatedCount}/${players.length} players updated`,
@@ -2116,8 +2195,8 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     // ============================================
     
     await transaction.commit();
-    console.log('✅ Transaction committed successfully');
-    console.log(`🎯 Final summary: ${winnerIds.length} winner(s), ${updatedCount} players updated`);
+    console.log('Γ£à Transaction committed successfully');
+    console.log(`≡ƒÄ» Final summary: ${winnerIds.length} winner(s), ${updatedCount} players updated`);
     
     // ============================================
     // 8. CHECK ACHIEVEMENTS FOR ALL PARTICIPANTS
@@ -2131,7 +2210,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         
         const isWinner = winnerIds.includes(player.userId);
         if (isWinner) {
-          console.log(`🎖️ Checking achievements for winner: ${player.userId}`);
+          console.log(`≡ƒÄû∩╕Å Checking achievements for winner: ${player.userId}`);
         }
       } catch (achievementError) {
         console.error(`Error checking achievements for user ${player.userId}:`, achievementError);
@@ -2166,17 +2245,17 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     if (transaction) {
       try {
         await transaction.rollback();
-        console.log('🔙 Transaction rolled back');
+        console.log('≡ƒöÖ Transaction rolled back');
       } catch (rollbackError) {
-        console.error('❌ Rollback failed:', rollbackError);
-        console.error('❌ Rollback error stack:', rollbackError.stack);
+        console.error('Γ¥î Rollback failed:', rollbackError);
+        console.error('Γ¥î Rollback error stack:', rollbackError.stack);
       }
     }
     
-    console.error('❌ Sync error:', error);
-    console.error('❌ Sync error message:', error.message);
-    console.error('❌ Sync error stack:', error.stack);
-    console.error('❌ Sync error name:', error.name);
+    console.error('Γ¥î Sync error:', error);
+    console.error('Γ¥î Sync error message:', error.message);
+    console.error('Γ¥î Sync error stack:', error.stack);
+    console.error('Γ¥î Sync error name:', error.name);
     
     return res.status(500).json({ 
       success: false,
@@ -2228,7 +2307,7 @@ router.get('/battle/:gamePin/verify-sync', requireAuth, async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('❌ Verify sync error:', error);
+    console.error('Γ¥î Verify sync error:', error);
     res.status(500).json({ error: 'Failed to verify sync' });
   }
 });
@@ -2261,12 +2340,12 @@ router.post('/:id/toggle-public', requireAuth, async (req, res) => {
     let shareCode = quiz.share_code;
     
     if (is_public && !shareCode) {
-      console.log('🔑 Generating NEW share code for quiz:', quizId);
+      console.log('≡ƒöæ Generating NEW share code for quiz:', quizId);
       shareCode = await generateUniqueShareCode();
     } else if (is_public && shareCode) {
-      console.log('♻️ Reusing existing share code:', shareCode);
+      console.log('ΓÖ╗∩╕Å Reusing existing share code:', shareCode);
     } else {
-      console.log('🔒 Making quiz private, keeping share code:', shareCode);
+      console.log('≡ƒöÆ Making quiz private, keeping share code:', shareCode);
     }
 
     // Update quiz
@@ -2276,14 +2355,14 @@ router.post('/:id/toggle-public', requireAuth, async (req, res) => {
       updated_at: new Date()
     });
 
-    console.log(`✅ Quiz ${quizId} updated: public=${is_public}, code=${shareCode}`);
+    console.log(`Γ£à Quiz ${quizId} updated: public=${is_public}, code=${shareCode}`);
 
     res.json({ 
       quiz,
       share_code: is_public ? shareCode : null // Only return code if public
     });
   } catch (err) {
-    console.error('❌ Toggle public error:', err);
+    console.error('Γ¥î Toggle public error:', err);
     res.status(500).json({ error: 'Failed to update quiz sharing status' });
   }
 });
@@ -2301,7 +2380,7 @@ router.post('/import', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid share code. Please enter a 6-digit code.' });
     }
 
-    console.log('🔍 Looking for quiz with share code:', share_code);
+    console.log('≡ƒöì Looking for quiz with share code:', share_code);
 
     // Find the quiz with this share code
     const originalQuiz = await Quiz.findOne({
@@ -2319,13 +2398,13 @@ router.post('/import', requireAuth, async (req, res) => {
 
     if (!originalQuiz) {
       await transaction.rollback();
-      console.log('❌ Quiz not found for code:', share_code);
+      console.log('Γ¥î Quiz not found for code:', share_code);
       return res.status(404).json({ 
         error: 'Quiz not found. Make sure the code is correct and the quiz is public.' 
       });
     }
 
-    console.log('✅ Found quiz:', originalQuiz.title, 'by', originalQuiz.creator.username);
+    console.log('Γ£à Found quiz:', originalQuiz.title, 'by', originalQuiz.creator.username);
 
     // Don't allow importing your own quiz
     if (originalQuiz.created_by === userId) {
@@ -2347,7 +2426,7 @@ router.post('/import', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'You already imported this quiz' });
     }
 
-    console.log('📦 Creating imported quiz copy...');
+    console.log('≡ƒôª Creating imported quiz copy...');
 
     // Create a copy of the quiz for this user
     const importedQuiz = await Quiz.create({
@@ -2370,7 +2449,7 @@ router.post('/import', requireAuth, async (req, res) => {
       transaction
     });
 
-    console.log(`📝 Copying ${originalQuestions.length} questions...`);
+    console.log(`≡ƒô¥ Copying ${originalQuestions.length} questions...`);
 
     for (const originalQuestion of originalQuestions) {
       await Question.create({
@@ -2393,7 +2472,7 @@ router.post('/import', requireAuth, async (req, res) => {
 
     await transaction.commit();
 
-    console.log(`✅ Quiz "${originalQuiz.title}" imported successfully by user ${userId}`);
+    console.log(`Γ£à Quiz "${originalQuiz.title}" imported successfully by user ${userId}`);
     
     res.json({ 
       message: 'Quiz imported successfully',
@@ -2401,7 +2480,7 @@ router.post('/import', requireAuth, async (req, res) => {
     });
   } catch (err) {
     await transaction.rollback();
-    console.error('❌ Import quiz error:', err);
+    console.error('Γ¥î Import quiz error:', err);
     res.status(500).json({ error: 'Failed to import quiz' });
   }
 });
@@ -2421,17 +2500,17 @@ router.post('/admin/backfill-share-codes', requireAuth, async (req, res) => {
       }
     });
     
-    console.log(`🔧 Found ${quizzes.length} public quizzes without share codes`);
+    console.log(`≡ƒöº Found ${quizzes.length} public quizzes without share codes`);
     
     let updated = 0;
     for (const quiz of quizzes) {
       try {
         const shareCode = await generateUniqueShareCode();
         await quiz.update({ share_code: shareCode });
-        console.log(`✅ Added share code ${shareCode} to quiz ${quiz.quiz_id}`);
+        console.log(`Γ£à Added share code ${shareCode} to quiz ${quiz.quiz_id}`);
         updated++;
       } catch (err) {
-        console.error(`❌ Failed to update quiz ${quiz.quiz_id}:`, err);
+        console.error(`Γ¥î Failed to update quiz ${quiz.quiz_id}:`, err);
       }
     }
     
@@ -2441,7 +2520,7 @@ router.post('/admin/backfill-share-codes', requireAuth, async (req, res) => {
       updated: updated
     });
   } catch (err) {
-    console.error('❌ Backfill error:', err);
+    console.error('Γ¥î Backfill error:', err);
     res.status(500).json({ error: 'Failed to backfill share codes' });
   }
 });
