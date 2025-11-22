@@ -14,7 +14,7 @@ import { ensureContentIsSafe, ModerationError } from '../services/moderationServ
 const router = express.Router();
 
 const AI_QUIZ_RULES = {
-  requiredQuestionCount: 10,
+  requiredQuestionCount: 20,
   validTypes: ['Multiple Choice', 'Fill in the blanks', 'True/False', 'Matching']
 };
 
