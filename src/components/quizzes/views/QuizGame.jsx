@@ -1298,7 +1298,7 @@ const QuizGame = ({
 
       {/* EMOJI PICKER - Mobile/Tablet only (Desktop uses inline below) */}
       {mode === 'battle' && leaderboardMode !== 'desktop' && (
-        <div className="fixed top-20 right-4 sm:right-6 z-50">
+        <div className="fixed top-28 sm:top-24 right-4 sm:right-6 z-50">
           <EmojiPicker
             onEmojiSelect={handleEmojiSelect}
             disabled={game.isPaused}

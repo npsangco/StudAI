@@ -18,7 +18,7 @@ export const EmojiReactions = ({ gamePin, currentUserId }) => {
   if (reactions.length === 0) return null;
 
   return (
-    <div className="fixed top-20 right-4 sm:right-6 z-40 flex flex-col gap-2 pointer-events-none max-w-[200px] sm:max-w-xs">
+    <div className="fixed top-44 sm:top-32 right-4 sm:right-6 z-40 flex flex-col gap-2 pointer-events-none max-w-[200px] sm:max-w-xs">
       {reactions.map((reaction, index) => {
         const age = Date.now() - reaction.timestamp;
         const opacity = Math.max(0, 1 - (age / 5000)); // Fade out over 5 seconds

@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 const BATTLE_EMOJIS = [
-  { id: 'fire', emoji: '🔥', label: 'On fire!' },
   { id: 'sweat', emoji: '😅', label: 'This is hard' },
-  { id: 'party', emoji: '🎉', label: 'Got it!' },
-  { id: 'skull', emoji: '💀', label: 'Oof' },
-  { id: 'eyes', emoji: '👀', label: 'Watching' },
-  { id: 'muscle', emoji: '💪', label: 'Let\'s go!' }
+  { id: 'oops', emoji: '🫢', label: 'Oops' },
+  { id: 'eyes', emoji: '👀', label: 'Watching you' },
+  { id: 'peace', emoji: '✌️', label: 'Peace' },
+  { id: 'clap', emoji: '👏', label: 'Good job!' },
+  { id: 'rocket', emoji: '🚀', label: 'Let\'s go!' }
 ];
 
 export const EmojiPicker = ({ onEmojiSelect, disabled = false, cooldown = 2000, mode = 'popup' }) => {
@@ -100,15 +100,15 @@ export const EmojiPicker = ({ onEmojiSelect, disabled = false, cooldown = 2000, 
         {onCooldown ? '⏱️' : '😊'}
       </button>
 
-      {/* Emoji Popup */}
+      {/* Emoji Popup - Horizontal layout (2 rows × 3 cols) */}
       {isOpen && (
-        <div className="absolute top-14 right-0 bg-white rounded-2xl shadow-2xl border-2 border-yellow-400 p-2 sm:p-3 z-50 animate-fadeIn">
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+        <div className="absolute top-14 right-0 bg-white rounded-2xl shadow-2xl border-2 border-yellow-400 p-2.5 sm:p-3 z-50 animate-slideInRight">
+          <div className="grid grid-cols-3 grid-rows-2 gap-2 sm:gap-3">
             {BATTLE_EMOJIS.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleEmojiClick(item)}
-                className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center text-2xl sm:text-3xl hover:bg-yellow-50 rounded-xl transition-all transform hover:scale-110 active:scale-95"
+                className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center text-2xl sm:text-2xl hover:bg-yellow-50 rounded-xl transition-all transform hover:scale-110 active:scale-95"
                 title={item.label}
               >
                 {item.emoji}
