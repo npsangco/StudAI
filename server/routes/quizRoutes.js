@@ -119,6 +119,81 @@ function normalizeAiQuestion(rawQuestion, index) {
   return normalized;
 }
 
+function extractTopLevelJsonObjects(rawText) {
+  const objects = [];
+  let depth = 0;
+  let startIndex = -1;
+  let inString = false;
+  let escaping = false;
+
+  for (let i = 0; i < rawText.length; i++) {
+    const char = rawText[i];
+
+    if (escaping) {
+      escaping = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaping = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (char === '{') {
+      if (depth === 0) {
+        startIndex = i;
+      }
+      depth++;
+    } else if (char === '}') {
+      depth--;
+      if (depth === 0 && startIndex !== -1) {
+        objects.push(rawText.slice(startIndex, i + 1));
+        startIndex = -1;
+      }
+    }
+  }
+
+  return objects;
+}
+
+function tryParseWithRepair(jsonString) {
+  try {
+    return JSON.parse(jsonString);
+  } catch (err) {
+    try {
+      return JSON.parse(jsonrepair(jsonString));
+    } catch (repairErr) {
+      return null;
+    }
+  }
+}
+
+function salvageQuestionArray(rawText, expectedCount) {
+  const objectStrings = extractTopLevelJsonObjects(rawText);
+  if (!objectStrings.length) {
+    return null;
+  }
+
+  const parsedObjects = objectStrings
+    .map(objText => tryParseWithRepair(objText))
+    .filter(Boolean);
+
+  if (parsedObjects.length === expectedCount) {
+    return parsedObjects;
+  }
+
+  return null;
+}
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -720,9 +795,16 @@ Generate EXACTLY in this format - no variations:
               console.error('Failed to parse JSON even after fixes:', secondError.message);
               console.error('Raw response (first 1000 chars):', jsonText.substring(0, 1000));
               console.error('Fixed response (first 1000 chars):', fixedJson.substring(0, 1000));
-              lastErrorMessage = 'AI response was not valid JSON. Please try again.';
-              retryInstruction = `Return ONLY valid JSON array data with ${targetQuestionCount} quiz questions. No prose, no markdown.`;
-              continue;
+              const salvagedQuestions = salvageQuestionArray(jsonText, targetQuestionCount) || salvageQuestionArray(fixedJson, targetQuestionCount);
+              if (salvagedQuestions && salvagedQuestions.length === targetQuestionCount) {
+                questionsData = salvagedQuestions;
+                repairedSuccessfully = true;
+                console.log('✅ Salvaged questions via object extraction');
+              } else {
+                lastErrorMessage = 'AI response was not valid JSON. Please try again.';
+                retryInstruction = `Return ONLY valid JSON array data with ${targetQuestionCount} quiz questions. No prose, no markdown.`;
+                continue;
+              }
             }
           }
 
