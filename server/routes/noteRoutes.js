@@ -46,7 +46,9 @@ const formatNoteForFrontend = (note) => {
     created_at: noteData.createdAt,
     words: noteData.content ? noteData.content.split(/\s+/).length : 0,
     is_shared: noteData.is_shared || false,
-    is_pinned: noteData.is_pinned || false
+    is_pinned: noteData.is_pinned || false,
+    is_archived: Boolean(noteData.is_archived ?? noteData.isArchived),
+    archived_at: noteData.archived_at || noteData.archivedAt || null
   };
 };
 
@@ -242,18 +244,33 @@ router.post('/categories', requireAuth, async (req, res) => {
 
 router.get('/', requireAuth, async (req, res) => {
   try {
+    const status = (req.query.status || 'all').toLowerCase();
+    const whereClause = { user_id: req.session.userId };
+
+    if (status === 'active') {
+      whereClause.is_archived = false;
+    } else if (status === 'archived') {
+      whereClause.is_archived = true;
+    } else if (status !== 'all') {
+      return res.status(400).json({ error: 'Invalid status filter. Use active, archived, or all.' });
+    }
+
+    const order = status === 'archived'
+      ? [['archived_at', 'DESC']]
+      : [
+          ['is_pinned', 'DESC'],
+          ['createdAt', 'DESC']
+        ];
+
     const notes = await Note.findAll({
-      where: { user_id: req.session.userId },
+      where: whereClause,
       include: [{
         model: NoteCategory,
         as: 'category',
         attributes: ['category_id', 'name', 'color'],
         required: false
       }],
-      order: [
-        ['is_pinned', 'DESC'],
-        ['createdAt', 'DESC']
-      ]
+      order
     });
 
     const notesWithExtras = notes.map(note => {
@@ -303,7 +320,9 @@ router.post('/create', requireAuth, async (req, res) => {
       category_id: category_id || null,
       title,
       content: content || '',
-      is_pinned: false
+      is_pinned: false,
+      is_archived: false,
+      archived_at: null
     });
 
     // Award points if under daily cap
@@ -381,6 +400,95 @@ router.post('/create', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Failed to create note:', err);
     res.status(500).json({ error: 'Failed to create note' });
+  }
+});
+
+router.post('/archive-all', requireAuth, async (req, res) => {
+  try {
+    const [archivedCount] = await Note.update(
+      { is_archived: true, archived_at: new Date(), is_pinned: false },
+      {
+        where: {
+          user_id: req.session.userId,
+          is_archived: false
+        }
+      }
+    );
+
+    res.json({
+      archivedCount,
+      message: archivedCount > 0
+        ? `Archived ${archivedCount} note${archivedCount === 1 ? '' : 's'}`
+        : 'No notes were archived'
+    });
+  } catch (err) {
+    console.error('Failed to archive notes:', err);
+    res.status(500).json({ error: 'Failed to archive notes' });
+  }
+});
+
+router.post('/:id/archive', requireAuth, async (req, res) => {
+  try {
+    const noteId = req.params.id;
+
+    const note = await Note.findOne({
+      where: {
+        note_id: noteId,
+        user_id: req.session.userId
+      }
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+
+    if (note.is_archived) {
+      return res.status(400).json({ error: 'Note is already archived' });
+    }
+
+    await note.update({
+      is_archived: true,
+      archived_at: new Date(),
+      is_pinned: false
+    });
+
+    const noteWithExtras = formatNoteForFrontend(note);
+    res.json({ note: noteWithExtras, message: 'Note archived successfully' });
+  } catch (err) {
+    console.error('Failed to archive note:', err);
+    res.status(500).json({ error: 'Failed to archive note' });
+  }
+});
+
+router.post('/:id/restore', requireAuth, async (req, res) => {
+  try {
+    const noteId = req.params.id;
+
+    const note = await Note.findOne({
+      where: {
+        note_id: noteId,
+        user_id: req.session.userId
+      }
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+
+    if (!note.is_archived) {
+      return res.status(400).json({ error: 'Note is not archived' });
+    }
+
+    await note.update({
+      is_archived: false,
+      archived_at: null
+    });
+
+    const noteWithExtras = formatNoteForFrontend(note);
+    res.json({ note: noteWithExtras, message: 'Note restored successfully' });
+  } catch (err) {
+    console.error('Failed to restore note:', err);
+    res.status(500).json({ error: 'Failed to restore note' });
   }
 });
 
@@ -678,6 +786,10 @@ router.post('/:id/pin', requireAuth, async (req, res) => {
 
     if (!note) {
       return res.status(404).json({ error: 'Note not found' });
+    }
+
+    if (note.is_archived) {
+      return res.status(400).json({ error: 'Cannot pin an archived note' });
     }
 
     await note.update({ is_pinned: true });

@@ -54,19 +54,8 @@ class NotesService {
 
     try {
       console.info('[Notes] Fetching from server...');
-      const res = await notesApi.getAll();
-      const notes = (res.data.notes || []).map((n) => ({
-        id: n.note_id || n.id,
-        title: n.title,
-        content: n.content || '',
-        words: n.words,
-        createdAt: n.created_at || n.createdAt,
-        isShared: n.is_shared === true || n.is_shared === 1,
-        isPinned: n.is_pinned === true || n.is_pinned === 1,
-        category: n.category || null,
-        categoryId: n.category_id || null,
-        fileId: n.file_id || n.fileId || null,
-      }));
+      const res = await notesApi.getAll('all');
+      const notes = (res.data.notes || []).map((n) => this.mapNotePayload(n));
       
       await cacheNotes(notes);
       console.info(`[Notes] Loaded ${notes.length} notes from server`);
@@ -88,6 +77,8 @@ class NotesService {
       createdAt: new Date().toISOString(),
       isShared: false,
       isPinned: false,
+      isArchived: false,
+      archivedAt: null,
       category: null,
       categoryId: noteData.category_id || null,
       fileId: noteData.file_id || null,
@@ -96,19 +87,7 @@ class NotesService {
     if (this.isOnline) {
       try {
         const res = await notesApi.create(noteData);
-        const n = res.data.note;
-        const note = {
-          id: n.note_id || n.id,
-          title: n.title,
-          content: n.content || '',
-          words: n.words,
-          createdAt: n.created_at || n.createdAt,
-          isShared: n.is_shared === true || n.is_shared === 1,
-          isPinned: n.is_pinned === true || n.is_pinned === 1,
-          category: n.category || null,
-          categoryId: n.category_id || null,
-          fileId: n.file_id || n.fileId || null,
-        };
+        const note = this.mapNotePayload(res.data.note);
         await cacheSingleNote(note);
         return { success: true, note };
       } catch (err) {
@@ -133,19 +112,7 @@ class NotesService {
     if (this.isOnline) {
       try {
         const res = await notesApi.update(noteId, updates);
-        const n = res.data.note;
-        const note = {
-          id: n.note_id || n.id,
-          title: n.title,
-          content: n.content || '',
-          words: n.words,
-          createdAt: n.created_at || n.createdAt,
-          isShared: n.is_shared === true || n.is_shared === 1,
-          isPinned: n.is_pinned === true || n.is_pinned === 1,
-          category: n.category || null,
-          categoryId: n.category_id || null,
-          fileId: n.file_id || n.fileId || null,
-        };
+        const note = this.mapNotePayload(res.data.note);
         await cacheSingleNote(note);
         return { success: true, note };
       } catch {
@@ -211,19 +178,8 @@ class NotesService {
     switch (op.type) {
       case 'CREATE': {
         const res = await notesApi.create(op.data);
-        const n = res.data.note;
-        await cacheSingleNote({
-          id: n.note_id || n.id,
-          title: n.title,
-          content: n.content || '',
-          words: n.words,
-          createdAt: n.created_at || n.createdAt,
-          isShared: n.is_shared === true || n.is_shared === 1,
-          isPinned: n.is_pinned === true || n.is_pinned === 1,
-          category: n.category || null,
-          categoryId: n.category_id || null,
-          fileId: n.file_id || n.fileId || null,
-        });
+        const note = this.mapNotePayload(res.data.note);
+        await cacheSingleNote(note);
         break;
       }
       case 'UPDATE':
@@ -242,6 +198,23 @@ class NotesService {
       isOnline: this.isOnline,
       isSyncing: this.isSyncing,
       pendingOperations: notePending.length,
+    };
+  }
+
+  mapNotePayload(note) {
+    return {
+      id: note.note_id || note.id,
+      title: note.title,
+      content: note.content || '',
+      words: note.words ?? (note.content ? note.content.split(/\s+/).length : 0),
+      createdAt: note.created_at || note.createdAt,
+      isShared: note.is_shared === true || note.is_shared === 1,
+      isPinned: note.is_pinned === true || note.is_pinned === 1,
+      isArchived: note.is_archived === true || note.is_archived === 1,
+      archivedAt: note.archived_at || note.archivedAt || null,
+      category: note.category || null,
+      categoryId: note.category_id || note.categoryId || (note.category ? note.category.category_id : null),
+      fileId: note.file_id || note.fileId || null,
     };
   }
 }

@@ -49,7 +49,7 @@ export const petApi = {
 // Notes API
 export const notesApi = {
   // Get all notes
-  getAll: () => api.get('/notes'),
+  getAll: (status = 'all') => api.get('/notes', { params: { status } }),
   
   // Create a new note
   create: (noteData) => api.post('/notes/create', noteData),
@@ -69,6 +69,12 @@ export const notesApi = {
   pinNote: (id) => api.post(`/notes/${id}/pin`),
 
   unpinNote: (id) => api.post(`/notes/${id}/unpin`),
+
+  archive: (id) => api.post(`/notes/${id}/archive`),
+
+  restore: (id) => api.post(`/notes/${id}/restore`),
+
+  archiveAll: () => api.post('/notes/archive-all'),
 
   // Category functions
   getCategories: () => api.get('/notes/categories'),

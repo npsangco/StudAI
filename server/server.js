@@ -63,7 +63,7 @@ import UserDailyStat from "./models/UserDailyStat.js";
 import AuditLog from "./models/AuditLog.js";
 import AIUsageStat from "./models/AIUsageStat.js";
 import JitsiSession from "./models/JitsiSession.js";
-import { Op } from "sequelize";
+import { Op, DataTypes } from "sequelize";
 import ChatMessage from "./models/ChatMessage.js";
 
 // Middleware
@@ -202,6 +202,38 @@ async function initializeDefaultAchievements() {
   } catch (error) {
     console.error('Error initializing achievements:', error);
   }
+}
+
+async function ensureNoteArchiveColumns() {
+    if (!Note) {
+        console.warn('⚠️ Skipping archive column check - Note model unavailable');
+        return;
+    }
+
+    const queryInterface = sequelize.getQueryInterface();
+
+    try {
+        const definition = await queryInterface.describeTable('note');
+
+        if (!('is_archived' in definition)) {
+            await queryInterface.addColumn('note', 'is_archived', {
+                type: DataTypes.BOOLEAN,
+                allowNull: false,
+                defaultValue: false
+            });
+            console.log('🗂️ Added note.is_archived column');
+        }
+
+        if (!('archived_at' in definition)) {
+            await queryInterface.addColumn('note', 'archived_at', {
+                type: DataTypes.DATE,
+                allowNull: true
+            });
+            console.log('🗂️ Added note.archived_at column');
+        }
+    } catch (err) {
+        console.warn('⚠️ Unable to ensure note archive columns:', err.message);
+    }
 }
 
 async function ensureChatbotForeignKey() {
@@ -360,6 +392,7 @@ sequelize.authenticate()
         
         // Initialize default achievements if they don't exist
         await initializeDefaultAchievements();
+        await ensureNoteArchiveColumns();
         await ChatMessage.sync();
         console.log("✅ Chatbot table ensured");
         await AIUsageStat.sync();

@@ -43,6 +43,15 @@ const Note = sequelize.define('Note', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false
+  },
+  is_archived: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  archived_at: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: 'note',
