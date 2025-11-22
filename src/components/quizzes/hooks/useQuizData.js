@@ -38,6 +38,9 @@ export function useQuizData() {
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationStatus, setValidationStatus] = useState(null);
 
+  // Dirty state tracking (for unsaved changes)
+  const [isDirty, setIsDirty] = useState(false);
+
   // Game state
   const [gameState, setGameState] = useState({
     results: null,
@@ -84,6 +87,7 @@ export function useQuizData() {
     setValidationErrors([]);
     setShowValidationModal(false);
     setValidationStatus(null);
+    setIsDirty(false);
   };
 
   return {
@@ -99,6 +103,7 @@ export function useQuizData() {
     validationStatus,
     gameState,
     deleteState,
+    isDirty,
 
     // Setters
     setLoading,
@@ -112,6 +117,7 @@ export function useQuizData() {
     setValidationStatus,
     setGameState,
     setDeleteState,
+    setIsDirty,
 
     // Update helpers
     updateQuizData,

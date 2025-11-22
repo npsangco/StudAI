@@ -18,6 +18,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     resetAllState,
     setError,
     setQuestions,
+    setIsDirty,
     quizData,
     questions,
     gameState  // ← Make sure we have access to gameState
@@ -297,6 +298,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     if (quizData.editing) {
       const updatedQuiz = { ...quizData.editing, title: newTitle };
       updateQuizData({ editing: updatedQuiz });
+      setIsDirty(true); // Mark as dirty when title changes
     }
   };
 
@@ -331,6 +333,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     const success = await quizAPI.saveQuiz();
 
     if (success) {
+      setIsDirty(false); // Reset dirty state after successful save
       toast.success('Quiz saved successfully!');
       // Small delay to let user see the toast before navigating away
       setTimeout(() => {
@@ -348,10 +351,12 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   const handleAddQuestion = () => {
     const newQuestion = createNewQuestion('Multiple Choice', questions);
     setQuestions([...questions, newQuestion]);
+    setIsDirty(true); // Mark as dirty when question added
   };
 
   const handleDeleteQuestion = (questionId) => {
     setQuestions(questions.filter(q => q.id !== questionId));
+    setIsDirty(true); // Mark as dirty when question deleted
   };
 
   const handleDuplicateQuestion = (questionId) => {
@@ -381,10 +386,12 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     ];
 
     setQuestions(newQuestions);
+    setIsDirty(true); // Mark as dirty when question duplicated
   };
 
   const handleReorderQuestions = (reorderedQuestions) => {
     setQuestions(reorderedQuestions);
+    setIsDirty(true); // Mark as dirty when questions reordered
   };
 
   const handleUpdateQuestion = (questionId, field, value) => {
@@ -407,6 +414,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       }
       return q;
     }));
+    setIsDirty(true); // Mark as dirty when question updated
   };
 
   const handleUpdateChoice = (questionId, choiceIndex, value) => {
@@ -418,6 +426,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       }
       return q;
     }));
+    setIsDirty(true); // Mark as dirty when choice updated
   };
 
   const handleAddChoice = (questionId) => {
@@ -427,6 +436,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       }
       return q;
     }));
+    setIsDirty(true); // Mark as dirty when choice added
   };
 
   const handleAddMatchingPair = (questionId) => {
@@ -442,6 +452,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       }
       return q;
     }));
+    setIsDirty(true); // Mark as dirty when matching pair added
   };
 
   const handleUpdateMatchingPair = (questionId, pairIndex, side, value) => {
@@ -456,6 +467,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       }
       return q;
     }));
+    setIsDirty(true); // Mark as dirty when matching pair updated
   };
 
   const handleRemoveMatchingPair = (questionId, pairIndex) => {
@@ -468,6 +480,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       }
       return q;
     }));
+    setIsDirty(true); // Mark as dirty when matching pair removed
   };
 
   // ============================================

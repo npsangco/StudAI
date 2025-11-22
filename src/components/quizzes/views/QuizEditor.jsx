@@ -602,7 +602,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
 // POLISHED HEADER COMPONENT
 // ============================================
 
-const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions }) => {
+const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions, isDirty }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempTitle, setTempTitle] = useState(quiz.title);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -790,13 +790,13 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               {/* Save Button - Yellow Primary */}
               <button
                 onClick={handleSaveClick}
-                disabled={hasErrors}
+                disabled={hasErrors || !isDirty}
                 className={`flex items-center gap-2 px-5 py-2 text-sm rounded-lg font-medium transition-all ${
-                  hasErrors
+                  hasErrors || !isDirty
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-yellow-500 text-white hover:bg-yellow-600 shadow-md hover:shadow-lg'
                 }`}
-                title={hasErrors ? 'Fix errors before saving' : 'Save quiz'}
+                title={hasErrors ? 'Fix errors before saving' : !isDirty ? 'No changes to save' : 'Save quiz'}
               >
                 <Save className="w-4 h-4" />
                 <span>Save</span>
@@ -904,9 +904,9 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
 
               <button
                 onClick={handleSaveClick}
-                disabled={hasErrors}
+                disabled={hasErrors || !isDirty}
                 className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs rounded-lg font-medium flex-1 ${
-                  hasErrors
+                  hasErrors || !isDirty
                     ? 'bg-gray-300 text-gray-500'
                     : 'bg-yellow-500 text-white'
                 }`}
@@ -943,6 +943,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
 export const QuizEditor = ({
   quiz,
   questions,
+  isDirty,
   onBack,
   onSave,
   onUpdateTitle,
@@ -1015,6 +1016,7 @@ export const QuizEditor = ({
         <PolishedHeader
           quiz={quiz}
           questions={questions}
+          isDirty={isDirty}
           onBack={onBack}
           onAddQuestion={onAddQuestion}
           onSave={onSave}
