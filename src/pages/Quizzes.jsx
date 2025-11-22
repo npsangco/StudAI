@@ -588,6 +588,7 @@ function QuizzesPage() {
           quiz={quizDataHook.quizData.editing}
           questions={quizDataHook.questions}
           validationStatus={quizDataHook.validationStatus}
+          isDirty={quizDataHook.isDirty}
           onBack={handlers.handleBackFromEditor}
           onSave={handlers.handleSaveQuiz}
           onUpdateTitle={handlers.handleUpdateQuizTitle}

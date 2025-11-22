@@ -602,7 +602,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
 // POLISHED HEADER COMPONENT
 // ============================================
 
-const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions }) => {
+const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions, isDirty }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempTitle, setTempTitle] = useState(quiz.title);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -790,13 +790,13 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               {/* Save Button - Yellow Primary */}
               <button
                 onClick={handleSaveClick}
-                disabled={hasErrors}
+                disabled={hasErrors || !isDirty}
                 className={`flex items-center gap-2 px-5 py-2 text-sm rounded-lg font-medium transition-all ${
-                  hasErrors
+                  hasErrors || !isDirty
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-yellow-500 text-white hover:bg-yellow-600 shadow-md hover:shadow-lg'
                 }`}
-                title={hasErrors ? 'Fix errors before saving' : 'Save quiz'}
+                title={hasErrors ? 'Fix errors before saving' : !isDirty ? 'No changes to save' : 'Save quiz'}
               >
                 <Save className="w-4 h-4" />
                 <span>Save</span>
@@ -904,9 +904,9 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
 
               <button
                 onClick={handleSaveClick}
-                disabled={hasErrors}
+                disabled={hasErrors || !isDirty}
                 className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs rounded-lg font-medium flex-1 ${
-                  hasErrors
+                  hasErrors || !isDirty
                     ? 'bg-gray-300 text-gray-500'
                     : 'bg-yellow-500 text-white'
                 }`}
@@ -943,6 +943,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
 export const QuizEditor = ({
   quiz,
   questions,
+  isDirty,
   onBack,
   onSave,
   onUpdateTitle,
@@ -962,6 +963,7 @@ export const QuizEditor = ({
 }) => {
   const [draggedQuestionIndex, setDraggedQuestionIndex] = useState(null);
   const [dragOverQuestionIndex, setDragOverQuestionIndex] = useState(null);
+  const [touchStartY, setTouchStartY] = useState(null);
 
   const handleQuestionDragStart = (e, index) => {
     setDraggedQuestionIndex(index);
@@ -1008,6 +1010,63 @@ export const QuizEditor = ({
     setDragOverQuestionIndex(null);
   };
 
+  // Touch event handlers for mobile drag & drop
+  const handleTouchStart = (e, index) => {
+    const touch = e.touches[0];
+    setTouchStartY(touch.clientY);
+    setDraggedQuestionIndex(index);
+  };
+
+  const handleTouchMove = (e, currentIndex) => {
+    if (draggedQuestionIndex === null || touchStartY === null) return;
+
+    // Prevent scrolling while dragging
+    e.preventDefault();
+
+    const touch = e.touches[0];
+    const currentY = touch.clientY;
+
+    // Find which question card we're over
+    const elements = document.querySelectorAll('[data-question-wrapper]');
+    let targetIndex = null;
+
+    elements.forEach((el, idx) => {
+      const rect = el.getBoundingClientRect();
+      if (currentY >= rect.top && currentY <= rect.bottom) {
+        targetIndex = idx;
+      }
+    });
+
+    if (targetIndex !== null && targetIndex !== draggedQuestionIndex) {
+      setDragOverQuestionIndex(targetIndex);
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (draggedQuestionIndex === null || dragOverQuestionIndex === null) {
+      setDraggedQuestionIndex(null);
+      setDragOverQuestionIndex(null);
+      setTouchStartY(null);
+      return;
+    }
+
+    if (draggedQuestionIndex !== dragOverQuestionIndex) {
+      const newQuestions = [...questions];
+      const draggedQuestion = newQuestions[draggedQuestionIndex];
+
+      newQuestions.splice(draggedQuestionIndex, 1);
+      newQuestions.splice(dragOverQuestionIndex, 0, draggedQuestion);
+
+      if (onReorderQuestions) {
+        onReorderQuestions(newQuestions);
+      }
+    }
+
+    setDraggedQuestionIndex(null);
+    setDragOverQuestionIndex(null);
+    setTouchStartY(null);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sticky Header Container - Minimal */}
@@ -1015,6 +1074,7 @@ export const QuizEditor = ({
         <PolishedHeader
           quiz={quiz}
           questions={questions}
+          isDirty={isDirty}
           onBack={onBack}
           onAddQuestion={onAddQuestion}
           onSave={onSave}
@@ -1093,11 +1153,11 @@ export const QuizEditor = ({
                   onDragOver={(e) => handleQuestionDragOver(e, index)}
                   onDragLeave={handleQuestionDragLeave}
                   onDrop={(e) => handleQuestionDrop(e, index)}
-                  className={`transition-all ${
-                    draggedQuestionIndex === index ? 'opacity-50 scale-95' : ''
+                  className={`transition-all duration-200 ${
+                    draggedQuestionIndex === index ? 'opacity-40 scale-95 z-50' : ''
                   } ${
                     dragOverQuestionIndex === index && draggedQuestionIndex !== index
-                      ? 'scale-[1.02] border-2 border-blue-400 rounded-lg'
+                      ? 'scale-[1.02] border-2 border-blue-400 rounded-lg shadow-lg'
                       : ''
                   }`}
                 >
@@ -1114,6 +1174,9 @@ export const QuizEditor = ({
                     onRemoveMatchingPair={onRemoveMatchingPair}
                     onDragStart={(e) => handleQuestionDragStart(e, index)}
                     onDragEnd={handleQuestionDragEnd}
+                    onTouchStart={(e) => handleTouchStart(e, index)}
+                    onTouchMove={(e) => handleTouchMove(e, index)}
+                    onTouchEnd={handleTouchEnd}
                   />
                 </div>
               ))}

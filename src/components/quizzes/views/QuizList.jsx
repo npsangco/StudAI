@@ -76,7 +76,7 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false, toast }) => {
       if (response.ok) {
         setShareCode('');
         if (onImportQuiz) onImportQuiz();
-        toast.success(`Quiz "${data.quiz.title}" imported successfully!`);
+        toast.success('Quiz imported successfully!');
       } else {
         setError(data.error || 'Failed to import quiz');
       }
@@ -504,7 +504,7 @@ export const QuizList = ({
       if (response.ok) {
         setShareCode('');
         if (onImportQuiz) onImportQuiz();
-        toast.success(`Quiz "${data.quiz.title}" imported successfully!`);
+        toast.success('Quiz imported successfully!');
       } else {
         setError(data.error || 'Failed to import quiz');
       }

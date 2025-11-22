@@ -21,7 +21,10 @@ export const QuestionCard = ({
   onUpdateMatchingPair,
   onRemoveMatchingPair,
   onDragStart,
-  onDragEnd
+  onDragEnd,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd
 }) => {
   // Get difficulty info for colored badge
   const getDifficultyInfo = () => {
@@ -43,13 +46,16 @@ export const QuestionCard = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
         {/* Left side: Drag + Number + Type */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Drag Handle - ONLY draggable element */}
+          {/* Drag Handle - Works on both desktop and mobile */}
           <div
             draggable={true}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
             data-drag-handle="true"
-            className="w-6 h-6 bg-gray-200 rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-gray-300 transition-colors flex-shrink-0"
+            className="w-6 h-6 bg-gray-200 rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-gray-300 transition-colors flex-shrink-0 touch-none"
           >
             <span className="text-xs font-bold text-gray-600" style={{ pointerEvents: 'none' }}>⋮⋮</span>
           </div>

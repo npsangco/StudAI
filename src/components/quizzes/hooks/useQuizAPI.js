@@ -226,7 +226,6 @@ export function useQuizAPI(quizDataHook, toast) {
     try {
       setLoading(true);
 
-      const quizTitle = deleteState.quizToDelete.title;
       await quizApi.delete(deleteState.quizToDelete.id);
 
       // Reload quizzes
@@ -235,7 +234,7 @@ export function useQuizAPI(quizDataHook, toast) {
       updateDeleteState({ quizToDelete: null });
       updateUiState({ showDeleteModal: false });
 
-      toast.success(`Quiz "${quizTitle}" deleted successfully`);
+      toast.success('Quiz deleted successfully');
       return true;
     } catch (err) {
 
