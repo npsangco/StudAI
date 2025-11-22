@@ -1,6 +1,6 @@
 // NoteEditor.jsx - Fixed auto-save and reload issues
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, Save, Share2, Trash2, MessageCircle, Wifi, WifiOff, Cloud, CloudOff, FileDown, Brain } from 'lucide-react';
+import { ArrowLeft, Save, Share2, Trash2, MessageCircle, Wifi, WifiOff, Cloud, CloudOff, FileDown, Brain, Archive, ArchiveRestore } from 'lucide-react';
 import { notesService } from '../utils/syncService';
 
 const NoteEditor = ({ 
@@ -12,7 +12,9 @@ const NoteEditor = ({
   onChatbot, 
   onExport,
   onGenerateQuiz,
-  formatDate 
+  formatDate,
+  onArchive,
+  onRestore
 }) => {
   const [editTitle, setEditTitle] = useState(note.title);
   const [editContent, setEditContent] = useState(note.content);
@@ -184,11 +186,24 @@ const NoteEditor = ({
     }
   };
 
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this note? This action cannot be undone.')) {
-      onDelete(note.id);
+  const handleDelete = async () => {
+    if (!note.isArchived || !onDelete) {
+      return;
+    }
+    const deleted = await onDelete(note.id);
+    if (deleted) {
       onBack();
     }
+  };
+
+  const handleArchive = async () => {
+    if (!onArchive) return;
+    await onArchive(note.id);
+  };
+
+  const handleRestore = async () => {
+    if (!onRestore) return;
+    await onRestore(note.id);
   };
 
   const handleShare = () => {
@@ -280,6 +295,11 @@ const NoteEditor = ({
                 <h1 className="text-base sm:text-xl font-semibold text-slate-800 flex items-center gap-2 truncate">
                   <span className="hidden sm:inline">Editing Note</span>
                   <span className="sm:hidden">Edit</span>
+                  {note.isArchived && (
+                    <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                      Archived
+                    </span>
+                  )}
                   {hasUnsavedChanges && (
                     <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 animate-pulse" title="Unsaved changes"></span>
                   )}
@@ -427,13 +447,32 @@ const NoteEditor = ({
               <Share2 className="w-4 h-4" />
               Share Note
             </button>
-            <button
-              onClick={handleDelete}
-              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-all hover:shadow-md text-sm sm:text-base"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete Note
-            </button>
+            {note.isArchived ? (
+              <>
+                <button
+                  onClick={handleRestore}
+                  className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-emerald-600 hover:bg-emerald-50 border border-emerald-200 rounded-lg transition-all hover:shadow-md text-sm sm:text-base"
+                >
+                  <ArchiveRestore className="w-4 h-4" />
+                  Restore Note
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-all hover:shadow-md text-sm sm:text-base"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Permanently
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleArchive}
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-amber-600 hover:bg-amber-50 border border-amber-200 rounded-lg transition-all hover:shadow-md text-sm sm:text-base"
+              >
+                <Archive className="w-4 h-4" />
+                Archive Note
+              </button>
+            )}
           </div>
         </div>
       </div>

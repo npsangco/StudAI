@@ -237,6 +237,13 @@ const Notes = () => {
   };
 
   const deleteNote = async (id) => {
+    const targetNote = notes.find(n => n.id === id);
+    if (targetNote && !targetNote.isArchived) {
+      toast.info('Archive this note before deleting permanently.');
+      return;
+    }
+
+    let deleted = false;
     await confirm({
       title: 'Delete Note',
       message: 'Are you sure you want to delete this note? This action cannot be undone.',
@@ -248,12 +255,16 @@ const Notes = () => {
           await notesService.deleteNote(id);
           toast.success('Note deleted successfully!');
           await fetchNotesFromDatabase();
+          deleted = true;
         } catch (error) {
           console.error('Error deleting note:', error);
-          toast.error('Failed to delete note. Please try again.');
+          const message = error.response?.data?.error || 'Failed to delete note. Please try again.';
+          toast.error(message);
         }
       }
     });
+
+    return deleted;
   };
 
   const pinNote = async (id) => {
@@ -305,6 +316,8 @@ const Notes = () => {
         prevNotes.map(note => (note.id === updatedNote.id ? updatedNote : note))
       );
 
+      setEditingNote(prev => (prev && prev.id === updatedNote.id ? updatedNote : prev));
+
       await cacheSingleNote(updatedNote);
       toast.success('Note archived!');
     } catch (error) {
@@ -322,6 +335,8 @@ const Notes = () => {
       setNotes(prevNotes =>
         prevNotes.map(note => (note.id === updatedNote.id ? updatedNote : note))
       );
+
+      setEditingNote(prev => (prev && prev.id === updatedNote.id ? updatedNote : prev));
 
       await cacheSingleNote(updatedNote);
       toast.success('Note restored!');
@@ -694,16 +709,6 @@ const Notes = () => {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  deleteNote(note.id);
-                }}
-                className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Delete"
-              >
-                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
                   startExportMode(note.id);
                 }}
                 className="p-1.5 sm:p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
@@ -912,16 +917,6 @@ const Notes = () => {
           >
             <Archive className="w-4 h-4" />
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteNote(note.id);
-            }}
-            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
         </div>
       )}
       {!exportMode && note.isArchived && (
@@ -983,6 +978,8 @@ const Notes = () => {
           onChatbot={handleChatbot}
           onGenerateQuiz={handleGenerateQuiz}
           formatDate={formatDate}
+          onArchive={archiveSingleNote}
+          onRestore={restoreSingleNote}
           categories={categories}
           onExport={(note) => {
             const result = exportNoteToPDF(note);

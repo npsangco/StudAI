@@ -130,7 +130,10 @@ class NotesService {
       try {
         await notesApi.delete(noteId);
         return { success: true };
-      } catch {
+      } catch (err) {
+        if (err.response && err.response.status >= 400 && err.response.status < 500) {
+          throw err;
+        }
         await queueOperation({ entityType: 'note', type: 'DELETE', data: { noteId } });
         return { success: true, queued: true };
       }

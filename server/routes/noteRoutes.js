@@ -568,6 +568,10 @@ router.delete('/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Note not found' });
     }
 
+    if (!note.is_archived) {
+      return res.status(400).json({ error: 'Archive this note before deleting permanently' });
+    }
+
     const attachedFileId = note.file_id;
     await note.destroy();
 
