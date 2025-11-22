@@ -16,6 +16,7 @@ const router = express.Router();
 
 const AI_QUIZ_RULES = {
   requiredQuestionCount: 20,
+  batchSize: 10,
   validTypes: ['Multiple Choice', 'Fill in the blanks', 'True/False', 'Matching']
 };
 
@@ -117,81 +118,6 @@ function normalizeAiQuestion(rawQuestion, index) {
   }
 
   return normalized;
-}
-
-function extractTopLevelJsonObjects(rawText) {
-  const objects = [];
-  let depth = 0;
-  let startIndex = -1;
-  let inString = false;
-  let escaping = false;
-
-  for (let i = 0; i < rawText.length; i++) {
-    const char = rawText[i];
-
-    if (escaping) {
-      escaping = false;
-      continue;
-    }
-
-    if (char === '\\') {
-      escaping = true;
-      continue;
-    }
-
-    if (char === '"') {
-      inString = !inString;
-      continue;
-    }
-
-    if (inString) {
-      continue;
-    }
-
-    if (char === '{') {
-      if (depth === 0) {
-        startIndex = i;
-      }
-      depth++;
-    } else if (char === '}') {
-      depth--;
-      if (depth === 0 && startIndex !== -1) {
-        objects.push(rawText.slice(startIndex, i + 1));
-        startIndex = -1;
-      }
-    }
-  }
-
-  return objects;
-}
-
-function tryParseWithRepair(jsonString) {
-  try {
-    return JSON.parse(jsonString);
-  } catch (err) {
-    try {
-      return JSON.parse(jsonrepair(jsonString));
-    } catch (repairErr) {
-      return null;
-    }
-  }
-}
-
-function salvageQuestionArray(rawText, expectedCount) {
-  const objectStrings = extractTopLevelJsonObjects(rawText);
-  if (!objectStrings.length) {
-    return null;
-  }
-
-  const parsedObjects = objectStrings
-    .map(objText => tryParseWithRepair(objText))
-    .filter(Boolean);
-
-  if (parsedObjects.length === expectedCount) {
-    return parsedObjects;
-  }
-
-  return null;
 }
 
 // ============================================
@@ -417,125 +343,6 @@ router.get('/', requireAuth, async (req, res) => {
       // Get difficulty distribution
       const [difficultyStats] = await sequelize.query(`
         SELECT 
-          SUM(CASE WHEN LOWER(difficulty) = 'easy' THEN 1 ELSE 0 END) as easy_count,
-          SUM(CASE WHEN LOWER(difficulty) = 'medium' THEN 1 ELSE 0 END) as medium_count,
-          SUM(CASE WHEN LOWER(difficulty) = 'hard' THEN 1 ELSE 0 END) as hard_count,
-          COUNT(DISTINCT LOWER(difficulty)) as unique_difficulties
-        FROM questions 
-        WHERE quiz_id = ? AND difficulty IN ('easy', 'medium', 'hard', 'Easy', 'Medium', 'Hard')
-      `, {
-        replacements: [quiz.quiz_id]
-      });
-
-      const stats = difficultyStats[0] || { easy_count: 0, medium_count: 0, hard_count: 0, unique_difficulties: 0 };
-      
-      // Determine if adaptive mode is possible
-      quizData.difficulty_distribution = {
-        easy: parseInt(stats.easy_count) || 0,
-        medium: parseInt(stats.medium_count) || 0,
-        hard: parseInt(stats.hard_count) || 0
-      };
-      quizData.has_varied_difficulty = parseInt(stats.unique_difficulties) >= 2;
-      quizData.can_use_adaptive = quizData.total_questions >= 5 && quizData.has_varied_difficulty;
-      
-      return quizData;
-    }));
-
-    res.json({ quizzes: enhancedQuizzes });
-  } catch (err) {
-    console.error('❌ Get quizzes error:', err);
-    res.status(500).json({ error: 'Failed to fetch quizzes' });
-  }
-});
-
-// Get single quiz with questions
-router.get('/:id', requireAuth, async (req, res) => {
-  try {
-    const quizId = req.params.id;
-
-    const quiz = await Quiz.findByPk(quizId, {
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['username']
-      }]
-    });
-
-    if (!quiz) {
-      return res.status(404).json({ error: 'Quiz not found' });
-    }
-
-    // ACCESS CHECK
-    const userId = req.session.userId;
-    const isOwner = quiz.created_by === userId;
-    const isPublic = quiz.is_public;
-    
-    // Check if user is in an active battle with this quiz
-    const activeBattle = await BattleParticipant.findOne({
-      include: [{
-        model: QuizBattle,
-        as: 'battle',
-        where: {
-          quiz_id: quizId,
-          status: ['waiting', 'in_progress'] // Active battles only
-        }
-      }],
-      where: { user_id: userId }
-    });
-    
-    const isInBattle = !!activeBattle;
-    
-    // Allow access if: owner OR public OR in active battle
-    if (!isOwner && !isPublic && !isInBattle) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const questions = await Question.findAll({
-      where: { quiz_id: quizId },
-      order: [['question_order', 'ASC']]
-    });
-
-    // PARSE JSON FIELDS BEFORE SENDING
-    const parsedQuestions = questions.map(q => {
-      const questionData = q.toJSON();
-      
-      // Parse choices if it's a string
-      if (typeof questionData.choices === 'string') {
-        try {
-          questionData.choices = JSON.parse(questionData.choices);
-        } catch (e) {
-          questionData.choices = null;
-        }
-      }
-
-      // Parse matching_pairs if it's a string
-      if (typeof questionData.matching_pairs === 'string') {
-        try {
-          questionData.matching_pairs = JSON.parse(questionData.matching_pairs);
-        } catch (e) {
-          questionData.matching_pairs = null;
-        }
-      }
-
-      // Convert snake_case to camelCase for frontend
-      questionData.matchingPairs = questionData.matching_pairs;
-      questionData.correctAnswer = questionData.correct_answer;
-      questionData.questionOrder = questionData.question_order;
-      questionData.quizId = questionData.quiz_id;
-      questionData.questionId = questionData.question_id;
-
-      return questionData;
-    });
-
-    res.json({
-      quiz,
-      questions: parsedQuestions // always returns arrays
-    });
-  } catch (err) {
-    console.error('❌ Get quiz error:', err);
-    res.status(500).json({ error: 'Failed to fetch quiz' });
-  }
-});
 
 // Create new quiz
 router.post('/', requireAuth, async (req, res) => {
