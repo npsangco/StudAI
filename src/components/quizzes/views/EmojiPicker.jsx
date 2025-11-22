@@ -88,12 +88,12 @@ export const EmojiPicker = ({ onEmojiSelect, disabled = false, cooldown = 2000, 
         onClick={() => !disabled && !onCooldown && setIsOpen(!isOpen)}
         disabled={disabled || onCooldown}
         className={`
-          w-12 h-12 rounded-full shadow-lg transition-all transform
+          w-11 h-11 sm:w-12 sm:h-12 rounded-full shadow-lg transition-all transform
           ${disabled || onCooldown
             ? 'bg-gray-300 cursor-not-allowed opacity-50'
             : 'btn-branded-yellow hover:scale-110 active:scale-95'
           }
-          flex items-center justify-center text-2xl
+          flex items-center justify-center text-xl sm:text-2xl
         `}
         title="Send Reaction"
       >
@@ -102,13 +102,13 @@ export const EmojiPicker = ({ onEmojiSelect, disabled = false, cooldown = 2000, 
 
       {/* Emoji Popup */}
       {isOpen && (
-        <div className="absolute bottom-14 right-0 bg-white rounded-2xl shadow-2xl border-2 border-yellow-400 p-3 z-50 animate-fadeIn">
-          <div className="grid grid-cols-3 gap-2">
+        <div className="absolute top-14 right-0 bg-white rounded-2xl shadow-2xl border-2 border-yellow-400 p-2 sm:p-3 z-50 animate-fadeIn">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {BATTLE_EMOJIS.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleEmojiClick(item)}
-                className="w-14 h-14 flex items-center justify-center text-3xl hover:bg-yellow-50 rounded-xl transition-all transform hover:scale-125 active:scale-95"
+                className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center text-2xl sm:text-3xl hover:bg-yellow-50 rounded-xl transition-all transform hover:scale-110 active:scale-95"
                 title={item.label}
               >
                 {item.emoji}
@@ -117,7 +117,7 @@ export const EmojiPicker = ({ onEmojiSelect, disabled = false, cooldown = 2000, 
           </div>
 
           {/* Triangle pointer */}
-          <div className="absolute -bottom-2 right-4 w-4 h-4 bg-white border-r-2 border-b-2 border-yellow-400 transform rotate-45"></div>
+          <div className="absolute -top-2 right-4 w-4 h-4 bg-white border-l-2 border-t-2 border-yellow-400 transform rotate-45"></div>
         </div>
       )}
 
