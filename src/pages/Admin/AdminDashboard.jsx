@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Users, FileText, PlayCircle, StickyNote, Lock, Unlock, Clock, Menu } from "lucide-react";
+import { Users, FileText, PlayCircle, StickyNote, Menu } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import { API_URL } from "../../config/api.config";
 
 export default function AdminDashboard() {
+    const navigate = useNavigate();
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalQuizzes: 0,
@@ -60,25 +62,6 @@ export default function AdminDashboard() {
         fetchRecentSessions();
     }, []);
 
-    const handleUserAction = async (userId, action) => {
-        try {
-            await axios.post(
-                `${API_URL}/api/admin/users/${userId}/${action}`,
-                {},
-                { withCredentials: true }
-            );
-            setRecentUsers((prev) =>
-                prev.map((u) =>
-                    u.user_id === userId
-                        ? { ...u, status: action === "lock" ? "Locked" : "Active" }
-                        : u
-                )
-            );
-        } catch (err) {
-            console.error(`Failed to ${action} user:`, err);
-        }
-    };
-
     return (
         <div className="flex w-full min-h-screen bg-gray-100 relative">
             {/* Desktop Sidebar */}
@@ -88,7 +71,7 @@ export default function AdminDashboard() {
 
             {/* Mobile Sidebar Overlay */}
             <div
-                className={`fixed inset-0 bg-black bg-opacity-40 z-50 md:hidden transition-opacity ${sidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
+                className={`fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden transition-opacity ${sidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
                     }`}
                 onClick={() => setSidebarOpen(false)}
             >
@@ -175,7 +158,10 @@ export default function AdminDashboard() {
                             <h2 className="text-base sm:text-lg font-semibold text-gray-900">
                                 Recent User Activity
                             </h2>
-                            <button className="text-xs sm:text-sm bg-yellow-400 text-black font-medium px-3 sm:px-4 py-1.5 rounded-lg hover:bg-yellow-500 transition">
+                            <button
+                                onClick={() => navigate('/admin/users')}
+                                className="text-xs sm:text-sm bg-black text-white font-medium px-3 sm:px-4 py-1.5 rounded-lg hover:bg-gray-800 transition"
+                            >
                                 View All Users
                             </button>
                         </div>
@@ -189,7 +175,6 @@ export default function AdminDashboard() {
                                         <th className="py-2 px-2 sm:px-3 w-40 sm:w-56">Email</th>
                                         <th className="py-2 px-2 sm:px-3 w-24 sm:w-28">Status</th>
                                         <th className="py-2 px-2 sm:px-3 w-32 sm:w-40">Last Activity</th>
-                                        <th className="py-2 px-2 sm:px-3 w-28 sm:w-32">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -216,35 +201,12 @@ export default function AdminDashboard() {
                                                 <td className="py-2 px-2 sm:px-3 text-gray-500 truncate">
                                                     {user.lastActivity}
                                                 </td>
-                                                <td className="py-2 px-2 sm:px-3">
-                                                    {user.status === "Active" ? (
-                                                        <button
-                                                            onClick={() =>
-                                                                handleUserAction(user.user_id, "lock")
-                                                            }
-                                                            className="flex items-center bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
-                                                        >
-                                                            <Lock className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">Lock</span>
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() =>
-                                                                handleUserAction(user.user_id, "unlock")
-                                                            }
-                                                            className="flex items-center bg-green-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-green-600"
-                                                        >
-                                                            <Unlock className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">Unlock</span>
-                                                        </button>
-                                                    )}
-                                                </td>
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
                                             <td
-                                                colSpan="6"
+                                                colSpan="5"
                                                 className="text-center py-4 text-gray-500"
                                             >
                                                 No recent user activity
@@ -262,7 +224,10 @@ export default function AdminDashboard() {
                             <h2 className="text-base sm:text-lg font-semibold text-gray-900">
                                 Recent Study Sessions
                             </h2>
-                            <button className="text-xs sm:text-sm bg-yellow-400 text-black font-medium px-3 sm:px-4 py-1.5 rounded-lg hover:bg-yellow-500 transition">
+                            <button
+                                onClick={() => navigate('/admin/sessions')}
+                                className="text-xs sm:text-sm bg-black text-white font-medium px-3 sm:px-4 py-1.5 rounded-lg hover:bg-gray-800 transition"
+                            >
                                 View All Sessions
                             </button>
                         </div>
