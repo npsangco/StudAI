@@ -299,9 +299,10 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
           <div className="mb-3">
             <h3
               onClick={() => !isEmpty && onSelect(quiz)}
-              className={`font-semibold text-lg text-gray-900 mb-1 ${
+              className={`font-semibold text-lg text-gray-900 mb-1 truncate ${
                 isEmpty ? 'cursor-not-allowed text-gray-400' : 'cursor-pointer hover:text-indigo-600 transition-colors'
               }`}
+              title={quiz.title}
             >
               {quiz.title}
               {isEmpty && (

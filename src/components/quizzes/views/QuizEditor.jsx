@@ -694,16 +694,20 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               </button>
 
               {isEditing ? (
-                <input
-                  type="text"
-                  value={tempTitle}
-                  onChange={(e) => setTempTitle(e.target.value)}
-                  onBlur={handleTitleBlur}
-                  onKeyDown={handleTitleKeyDown}
-                  autoFocus
-                  className="text-2xl font-bold text-gray-900 border-2 border-blue-500 rounded-lg px-3 py-1.5 focus:outline-none flex-1 min-w-0"
-                  placeholder="Enter quiz title..."
-                />
+                <div className="flex-1 min-w-0">
+                  <input
+                    type="text"
+                    value={tempTitle}
+                    onChange={(e) => setTempTitle(e.target.value)}
+                    onBlur={handleTitleBlur}
+                    onKeyDown={handleTitleKeyDown}
+                    autoFocus
+                    maxLength={50}
+                    className="text-2xl font-bold text-gray-900 border-2 border-blue-500 rounded-lg px-3 py-1.5 focus:outline-none w-full"
+                    placeholder="Enter quiz title..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1 px-3">{tempTitle.length}/50</p>
+                </div>
               ) : (
                 <h1
                   onClick={handleTitleClick}
@@ -812,16 +816,20 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               </button>
 
               {isEditing ? (
-                <input
-                  type="text"
-                  value={tempTitle}
-                  onChange={(e) => setTempTitle(e.target.value)}
-                  onBlur={handleTitleBlur}
-                  onKeyDown={handleTitleKeyDown}
-                  autoFocus
-                  className="text-lg font-bold text-gray-900 border-2 border-blue-500 rounded px-2 py-1 focus:outline-none flex-1"
-                  placeholder="Enter quiz title..."
-                />
+                <div className="flex-1 min-w-0">
+                  <input
+                    type="text"
+                    value={tempTitle}
+                    onChange={(e) => setTempTitle(e.target.value)}
+                    onBlur={handleTitleBlur}
+                    onKeyDown={handleTitleKeyDown}
+                    autoFocus
+                    maxLength={50}
+                    className="text-lg font-bold text-gray-900 border-2 border-blue-500 rounded px-2 py-1 focus:outline-none w-full"
+                    placeholder="Enter quiz title..."
+                  />
+                  <p className="text-xs text-gray-500 mt-0.5 px-2">{tempTitle.length}/50</p>
+                </div>
               ) : (
                 <h1
                   onClick={handleTitleClick}

@@ -147,12 +147,14 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
         <div className="mb-4">
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Quiz Title
+            <span className="text-xs text-slate-500 ml-2">({quizTitle.length}/50)</span>
           </label>
           <input
             type="text"
             value={quizTitle}
             onChange={(e) => setQuizTitle(e.target.value)}
             placeholder="Enter quiz title..."
+            maxLength={50}
             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
             disabled={isLoading}
           />
