@@ -1,43 +1,44 @@
 import AuditLog from "../models/AuditLog.js";
 
 const actionMap = {
-    // Notes
+    // NOTES
     "POST /api/notes/create": { action: "Create Note", target: "Note" },
     "PUT /api/notes/:id": { action: "Update Note", target: "Note" },
     "DELETE /api/notes/:id": { action: "Delete Note", target: "Note" },
+    "POST /api/notes/archive-all": { action: "Archive All Notes", target: "Note" },
+    "POST /api/notes/:id/archive": { action: "Archive Note", target: "Note" },
+    "POST /api/notes/:id/restore": { action: "Restore Note", target: "Note" },
+    "POST /api/notes/:id/pin": { action: "Pin Note", target: "Note" },
+    "POST /api/notes/:id/unpin": { action: "Unpin Note", target: "Note" },
 
-    // Categories
+    // NOTE CATEGORIES
     "POST /api/notes/categories": { action: "Create Category", target: "Note Category" },
 
-    // Shared Notes
+    // SHARED NOTES
     "POST /api/notes/:id/share": { action: "Share Note", target: "Shared Note" },
     "POST /api/notes/shared/retrieve": { action: "Retrieve Shared Note", target: "Shared Note" },
     "DELETE /api/notes/:id/share": { action: "Deactivate Shared Note", target: "Shared Note" },
 
-    // Pin/Unpin Notes
-    "POST /api/notes/:id/pin": { action: "Pin Note", target: "Note" },
-    "POST /api/notes/:id/unpin": { action: "Unpin Note", target: "Note" },
-
-    // Plans
+    // PLANS/PLANNER
     "POST /api/plans": { action: "Create Plan", target: "Plan" },
     "POST /api/plans/": { action: "Create Plan", target: "Plan" },
     "PUT /api/plans/:id": { action: "Update Plan", target: "Plan" },
     "DELETE /api/plans/:id": { action: "Delete Plan", target: "Plan" },
 
-    // Quizzes
+    // QUIZZES
     "POST /api/quizzes": { action: "Create Quiz", target: "Quiz" },
     "PUT /api/quizzes/:id": { action: "Update Quiz", target: "Quiz" },
     "DELETE /api/quizzes/:id": { action: "Delete Quiz", target: "Quiz" },
 
-    // Quiz Questions
+    // QUIZ QUESTIONS
     "POST /api/quizzes/:id/questions": { action: "Add Question", target: "Quiz Question" },
     "PUT /api/quizzes/:id/questions/:questionId": { action: "Update Question", target: "Quiz Question" },
     "DELETE /api/quizzes/:id/questions/:questionId": { action: "Delete Question", target: "Quiz Question" },
 
-    // Quiz Attempts
+    // QUIZ ATTEMPTS
     "POST /api/quizzes/:id/attempt": { action: "Attempt Quiz", target: "Quiz Attempt" },
 
-    // Quiz Battles
+    // QUIZ BATTLES
     "POST /api/quizzes/:id/battle/create": { action: "Create Quiz Battle", target: "Quiz Battle" },
     "POST /api/quizzes/battle/join": { action: "Join Quiz Battle", target: "Quiz Battle" },
     "POST /api/quizzes/battle/:gamePin/ready": { action: "Mark Ready in Battle", target: "Quiz Battle" },
@@ -45,7 +46,7 @@ const actionMap = {
     "POST /api/quizzes/battle/:gamePin/submit": { action: "Submit Battle Score", target: "Quiz Battle" },
     "POST /api/quizzes/battle/:gamePin/end": { action: "End Quiz Battle", target: "Quiz Battle" },
 
-    // === PET SYSTEM ===
+    // PET SYSTEM
     "POST /api/pet": { action: "Adopt Pet", target: "Pet" },
     "PUT /api/pet/name": { action: "Update Pet Name", target: "Pet" },
     "POST /api/pet/action": { action: "Perform Pet Action", target: "Pet" },
@@ -54,25 +55,32 @@ const actionMap = {
     "POST /api/pet/inventory/use": { action: "Use Item", target: "Pet Inventory" },
     "POST /api/pet/shop/purchase": { action: "Purchase Shop Item", target: "Pet Shop" },
 
-    // === USER PROFILE ===
+    // ACHIEVEMENTS
+    "POST /api/achievements/equip": { action: "Equip Achievement", target: "Achievement" },
+    "POST /api/achievements/check": { action: "Check Achievements", target: "Achievement" },
+
+    // USER PROFILE
     "PUT /api/user/profile": { action: "Update Profile", target: "User" },
     "POST /api/upload/profile": { action: "Upload Profile Picture", target: "User" },
     "POST /api/user/request-password-update": { action: "Request Password Update", target: "User" },
+    "GET /api/user/confirm-password-update": { action: "Confirm Password Update", target: "User" },
 
-    // === FILE UPLOADS ===
+    // FILE UPLOADS
     "POST /api/upload": { action: "Upload File", target: "File" },
     "POST /api/extract-pptx": { action: "Extract PPTX Text", target: "File" },
 
-    // === SUMMARY GENERATION ===
-    "POST /api/generate-summary": { action: "Generate Summary", target: "Note" },
+    // AI FEATURES
+    "POST /api/generate-summary": { action: "Generate AI Summary", target: "Note" },
+    "POST /api/openai/summarize": { action: "AI Summarization Request", target: "AI Service" },
+    "POST /api/openai/chat": { action: "AI Chat Request", target: "AI Service" },
 
-    // === SESSIONS ===
-    "POST /api/sessions": { action: "Create Study Session", target: "Study Session" },
-    "PUT /api/sessions/:id": { action: "Update Study Session", target: "Study Session" },
-    "DELETE /api/sessions/:id": { action: "Delete Study Session", target: "Study Session" },
-    "POST /api/sessions/:id/complete": { action: "Complete Study Session", target: "Study Session" },
+    // STUDY SESSIONS (Jitsi)
+    "POST /api/jitsi/sessions": { action: "Create Study Session", target: "Study Session" },
+    "DELETE /api/jitsi/sessions/:id": { action: "Delete Study Session", target: "Study Session" },
+    "PATCH /api/jitsi/sessions/:id/status": { action: "Update Session Status", target: "Study Session" },
+    "POST /api/jitsi/sessions/:id/join": { action: "Join Study Session", target: "Study Session" },
 
-    // === AUTHENTICATION ===
+    // AUTHENTICATION
     "POST /api/auth/signup": { action: "Sign Up", target: "User" },
     "POST /api/auth/login": { action: "Login", target: "User" },
     "POST /api/auth/logout": { action: "Logout", target: "User" },
@@ -80,15 +88,9 @@ const actionMap = {
     "POST /api/auth/reset-request": { action: "Request Password Reset", target: "User" },
     "POST /api/auth/reset-password": { action: "Reset Password", target: "User" },
 
-    // === USER PROFILE ROUTES ===
-    "GET /api/user/confirm-password-update": { action: "Confirm Password Update", target: "User" },
-
-    // === ACHIEVEMENTS ===
-    "POST /api/achievements/equip": { action: "Equip Achievement", target: "Achievement" },
-
-    // === ADMIN ACTIONS ===
-    "POST /api/admin/users/:userId/lock": { action: "Lock User", target: "User" },
-    "POST /api/admin/users/:userId/unlock": { action: "Unlock User", target: "User" },
+    // ADMIN ACTIONS
+    "POST /api/admin/users/:userId/lock": { action: "Lock User (Admin)", target: "User" },
+    "POST /api/admin/users/:userId/unlock": { action: "Unlock User (Admin)", target: "User" },
     "DELETE /api/admin/quizzes/:quizId": { action: "Delete Quiz (Admin)", target: "Quiz" },
     "DELETE /api/admin/questions/:questionId": { action: "Delete Question (Admin)", target: "Quiz Question" },
     "PUT /api/admin/sessions/:sessionId/end": { action: "End Study Session (Admin)", target: "Study Session" },
@@ -103,7 +105,18 @@ export async function auditMiddleware(req, res, next) {
             const mapping = actionMap[key];
 
             if (res.statusCode < 400 && mapping) {
-                const record_id = req.params?.id || req.params?.userId || req.params?.quizId || req.params?.questionId || req.params?.sessionId || req.params?.gamePin || req.body?.id || null;
+                const record_id = 
+                    req.params?.id || 
+                    req.params?.userId || 
+                    req.params?.quizId || 
+                    req.params?.questionId || 
+                    req.params?.sessionId || 
+                    req.params?.gamePin || 
+                    req.body?.id || 
+                    req.body?.note_id ||
+                    req.body?.quiz_id ||
+                    req.body?.file_id ||
+                    null;
 
                 await AuditLog.create({
                     user_id,

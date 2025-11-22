@@ -216,7 +216,7 @@ export default function QuizManagement() {
                                 >
                                     <option value="All">All Status</option>
                                     <option value="Open">Open</option>
-                                    <option value="Closed">Closed</option>
+                                    <option value="Private">Private</option>
                                 </select>
                             </div>
                         </div>

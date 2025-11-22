@@ -9,7 +9,6 @@ export default function AuditLogs() {
     const [currentPage, setCurrentPage] = useState(1);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    const [filterAction, setFilterAction] = useState("All");
     const logsPerPage = 13;
 
     useEffect(() => {
@@ -26,17 +25,14 @@ export default function AuditLogs() {
         fetchLogs();
     }, []);
 
-    const uniqueActions = ["All", ...new Set(logs.map(log => log.action))];
-
-    // Filter and search
+    // Search
     const filteredLogs = logs.filter((log) => {
         const matchesSearch =
             log.User?.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             log.table_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             log.log_id?.toString().includes(searchTerm) ||
             log.record_id?.toString().includes(searchTerm);
-        const matchesFilter = filterAction === "All" || log.action === filterAction;
-        return matchesSearch && matchesFilter;
+        return matchesSearch;
     });
 
     const indexOfLastLog = currentPage * logsPerPage;
@@ -49,7 +45,7 @@ export default function AuditLogs() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, filterAction]);
+    }, [searchTerm]);
 
     return (
         <div className="flex w-full min-h-screen bg-gray-100 relative">
@@ -95,29 +91,16 @@ export default function AuditLogs() {
                                 System Audit Logs
                             </h2>
 
-                            {/* Search and Filter */}
-                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                                <div className="relative flex-1 sm:flex-none">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search logs..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full sm:w-64"
-                                    />
-                                </div>
-                                <select
-                                    value={filterAction}
-                                    onChange={(e) => setFilterAction(e.target.value)}
-                                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                                >
-                                    {uniqueActions.map(action => (
-                                        <option key={action} value={action}>
-                                            {action === "All" ? "All Actions" : action}
-                                        </option>
-                                    ))}
-                                </select>
+                            {/* Search only */}
+                            <div className="relative w-full sm:w-auto">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search logs..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full sm:w-64"
+                                />
                             </div>
                         </div>
 
