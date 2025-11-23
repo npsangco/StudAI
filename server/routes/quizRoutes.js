@@ -15,7 +15,7 @@ import { jsonrepair } from 'jsonrepair';
 const router = express.Router();
 
 const AI_QUIZ_RULES = {
-  requiredQuestionCount: 20,
+  requiredQuestionCount: 15,
   batchSize: 10,
   validTypes: ['Multiple Choice', 'Fill in the blanks', 'True/False', 'Matching']
 };

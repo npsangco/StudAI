@@ -40,7 +40,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const quizLimitReached = !isUsageLoading && quizRemaining <= 0;
   
   // Fixed 10-question default
-  const questionCount = 10;
+  const questionCount = 15;
 
   const handleTypeToggle = (type) => {
     setSelectedQuestionTypes((prev) => {
