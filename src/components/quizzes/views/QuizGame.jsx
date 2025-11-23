@@ -1127,13 +1127,50 @@ const QuizGame = ({
       
       console.log('✅ Player finished, waiting for Firebase to sync...');
       
-      // ⏳ Wait 500ms for Firebase to propagate the update
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // ⏳ Wait 1 second for Firebase to propagate the update
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       console.log('🔍 Now checking if all players done...');
       
-      // Show waiting screen
+      // Import the check function
+      const { checkAllPlayersFinished } = await import('../../../firebase/battleOperations');
+      
+      // First, do an immediate check
+      const immediateCheck = await checkAllPlayersFinished(quiz.gamePin);
+      console.log(`📊 Immediate check: ${immediateCheck.finishedCount}/${immediateCheck.totalPlayers} finished`);
+      
+      if (immediateCheck.allFinished) {
+        console.log('🎉 All players already finished! Proceeding to leaderboard immediately...');
+        
+        // Get fresh player data from Firebase
+        const { get, ref } = await import('firebase/database');
+        const { realtimeDb } = await import('../../../firebase/config');
+        const playersRef = ref(realtimeDb, `battles/${quiz.gamePin}/players`);
+        const snapshot = await get(playersRef);
+        const players = snapshot.exists() ? Object.values(snapshot.val()).filter(p => p && p.userId && p.name) : [];
+        
+        // Prepare results with all players' final scores
+        results.players = players.map(player => ({
+          id: `player_${player.userId}`,
+          userId: player.userId,
+          name: player.name,
+          initial: player.initial || player.name?.[0] || '?',
+          score: player.score || 0,
+          forfeited: player.forfeited || false
+        }));
+        
+        results.winner = results.players.reduce((prev, current) => 
+          prev.score > current.score ? prev : current
+        );
+        
+        onComplete(results);
+        return;
+      }
+      
+      // Not all finished yet - show waiting screen and listen
+      console.log('⏳ Not all players finished, setting up listener...');
       setWaitingForPlayers(true);
+      setFinishedPlayersCount({ finished: immediateCheck.finishedCount, total: immediateCheck.totalPlayers });
       
       // Listen for all players to finish
       const unsubscribe = listenForAllPlayersFinished(quiz.gamePin, ({ allFinished, finishedCount, totalPlayers, players }) => {
