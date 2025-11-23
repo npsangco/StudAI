@@ -3,6 +3,13 @@ import { X, Loader, CheckCircle, AlertCircle, Brain } from 'lucide-react';
 import { quizApi } from '../api/api';
 import { aiUsageApi } from '../api/api';
 
+const QUESTION_TYPES = [
+  'Multiple Choice',
+  'Fill in the blanks',
+  'True/False',
+  'Matching'
+];
+
 const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -11,6 +18,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const [generatedQuizId, setGeneratedQuizId] = useState(null);
   const [usageSnapshot, setUsageSnapshot] = useState(null);
   const [isUsageLoading, setIsUsageLoading] = useState(true);
+  const [selectedQuestionTypes, setSelectedQuestionTypes] = useState(QUESTION_TYPES);
 
   const refreshUsage = useCallback(async () => {
     try {
@@ -34,9 +42,27 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   // Fixed 10-question default
   const questionCount = 10;
 
+  const handleTypeToggle = (type) => {
+    setSelectedQuestionTypes((prev) => {
+      if (prev.includes(type)) {
+        if (prev.length === 1) {
+          return prev;
+        }
+        return prev.filter((t) => t !== type);
+      }
+      return [...prev, type];
+    });
+    setError(null);
+  };
+
   const handleGenerateQuiz = async () => {
     if (!quizTitle.trim()) {
       setError('Please enter a quiz title');
+      return;
+    }
+
+    if (!selectedQuestionTypes.length) {
+      setError('Select at least one question type');
       return;
     }
 
@@ -54,7 +80,8 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
         noteId: note.id,
         noteContent: note.content,
         noteTitle: note.title,
-        quizTitle: quizTitle.trim()
+        quizTitle: quizTitle.trim(),
+        questionTypes: selectedQuestionTypes
       });
 
       if (response.data && response.data.quiz) {
@@ -160,11 +187,36 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
           />
         </div>
 
+        {/* Question Types */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Question Types
+          </label>
+          <p className="text-xs text-slate-500 mb-3">Choose at least one format. The AI will only generate questions using the selected types.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {QUESTION_TYPES.map((type) => (
+              <label
+                key={type}
+                className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm cursor-pointer transition ${selectedQuestionTypes.includes(type) ? 'border-indigo-300 bg-indigo-50 text-indigo-900' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+              >
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-indigo-600"
+                  checked={selectedQuestionTypes.includes(type)}
+                  onChange={() => handleTypeToggle(type)}
+                  disabled={isLoading}
+                />
+                <span>{type}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* Question Count Display */}
         <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-6">
           <p className="text-sm font-medium text-indigo-900 mb-1">Quiz Details</p>
           <p className="text-sm text-indigo-800">
-            <strong>{questionCount} questions</strong> will be generated with a mix of multiple choice, fill in the blanks, true/false, and matching types.
+            <strong>{questionCount} questions</strong> will be generated using: <span className="font-semibold">{selectedQuestionTypes.join(', ')}</span>.
           </p>
         </div>
 

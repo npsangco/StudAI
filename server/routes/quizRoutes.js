@@ -20,6 +20,13 @@ const AI_QUIZ_RULES = {
   validTypes: ['Multiple Choice', 'Fill in the blanks', 'True/False', 'Matching']
 };
 
+const QUESTION_TYPE_PROMPT_EXAMPLES = {
+  'Multiple Choice': '{"type":"Multiple Choice","question":"What is the main idea of the passage?","choices":["Option A","Option B","Option C","Option D"],"correctAnswer":"Option A"}',
+  'Fill in the blanks': '{"type":"Fill in the blanks","question":"The process is called ___.","answer":"photosynthesis"}',
+  'True/False': '{"type":"True/False","question":"The heart pumps blood.","correctAnswer":"True"}',
+  'Matching': '{"type":"Matching","question":"Match each scientist to their discovery","matchingPairs":[{"left":"Newton","right":"Gravity"},{"left":"Curie","right":"Radioactivity"}]}'
+};
+
 // ============================================
 // CONFIGURATION (Pet Buddy)
 // ============================================
@@ -47,7 +54,7 @@ const QUIZ_CONFIG = {
   }
 };
 
-function normalizeAiQuestion(rawQuestion, index) {
+function normalizeAiQuestion(rawQuestion, index, allowedTypes = AI_QUIZ_RULES.validTypes) {
   if (!rawQuestion || typeof rawQuestion !== 'object') {
     throw new Error(`Question ${index + 1} is not valid JSON data.`);
   }
@@ -57,7 +64,11 @@ function normalizeAiQuestion(rawQuestion, index) {
     throw new Error(`Question ${index + 1} is missing the question text.`);
   }
 
-  const type = AI_QUIZ_RULES.validTypes.includes(rawQuestion.type) ? rawQuestion.type : null;
+  const validTypes = Array.isArray(allowedTypes) && allowedTypes.length
+    ? allowedTypes
+    : AI_QUIZ_RULES.validTypes;
+
+  const type = validTypes.includes(rawQuestion.type) ? rawQuestion.type : null;
   if (!type) {
     throw new Error(`Question ${index + 1} has an unsupported type: ${rawQuestion.type || 'undefined'}.`);
   }
@@ -195,7 +206,16 @@ function salvageQuestionArray(rawText, expectedCount) {
   return null;
 }
 
-async function generateAiQuestionBatch({ batchCount, truncatedContent, openAiApiKey }) {
+async function generateAiQuestionBatch({ batchCount, truncatedContent, openAiApiKey, allowedTypes }) {
+  const typeWhitelist = Array.isArray(allowedTypes) && allowedTypes.length
+    ? allowedTypes
+    : AI_QUIZ_RULES.validTypes;
+
+  const exampleSnippets = typeWhitelist
+    .map(type => QUESTION_TYPE_PROMPT_EXAMPLES[type])
+    .filter(Boolean)
+    .join(',\n');
+
   const prompt = `Generate EXACTLY ${batchCount} valid JSON quiz questions. CRITICAL RULES:
 1. Return ONLY JSON array in brackets [], nothing else
 2. NO markdown, NO code blocks, NO text outside JSON
@@ -204,6 +224,7 @@ async function generateAiQuestionBatch({ batchCount, truncatedContent, openAiApi
 5. NEVER use: "_blank1_", "_blank2_", "blank" fields, or underscore keys
 6. For Fill blanks: ALWAYS use "answer" key with single word value ONLY
 7. Each question must have all required fields for its type
+8. You MUST use ONLY these question types (spellings must match exactly): ${typeWhitelist.join(', ')}
 
 CRITICAL: If you generate any field with underscore or blank numbers, the entire response fails!
 
@@ -211,10 +232,7 @@ Content: "${truncatedContent}"
 
 Generate EXACTLY in this format - no variations:
 [
-{"type":"Multiple Choice","question":"What...?","choices":["opt1","opt2","opt3","opt4"],"correctAnswer":"opt1"},
-{"type":"Fill in the blanks","question":"The ___ is...","answer":"word"},
-{"type":"True/False","question":"Is...true?","correctAnswer":"True"},
-{"type":"Matching","question":"Match these","matchingPairs":[{"left":"A","right":"1"},{"left":"B","right":"2"}]}
+${exampleSnippets}
 ]`;
 
   const maxAiAttempts = 3;
@@ -356,7 +374,7 @@ Generate EXACTLY in this format - no variations:
     }
 
     try {
-      normalizedQuestions = questionsData.map((questionData, index) => normalizeAiQuestion(questionData, index));
+      normalizedQuestions = questionsData.map((questionData, index) => normalizeAiQuestion(questionData, index, typeWhitelist));
       break;
     } catch (validationError) {
       lastErrorMessage = validationError.message;
@@ -766,7 +784,7 @@ router.post('/', requireAuth, async (req, res) => {
 router.post('/generate-from-notes', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
-    const { noteId, noteContent, noteTitle, quizTitle, questionCount } = req.body;
+    const { noteId, noteContent, noteTitle, quizTitle, questionCount, questionTypes } = req.body;
 
     const quizQuota = await ensureQuizAvailable(userId);
     if (!quizQuota.allowed) {
@@ -775,6 +793,14 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
         limits: DAILY_AI_LIMITS,
         remaining: quizQuota.remaining
       });
+    }
+
+    const requestedTypes = Array.isArray(questionTypes)
+      ? questionTypes.filter(type => AI_QUIZ_RULES.validTypes.includes(type))
+      : AI_QUIZ_RULES.validTypes;
+
+    if (!requestedTypes.length) {
+      return res.status(400).json({ error: 'Select at least one valid question type for AI generation.' });
     }
 
     // Validate inputs
@@ -838,7 +864,8 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
         const batchQuestions = await generateAiQuestionBatch({
           batchCount: currentBatchSize,
           truncatedContent,
-          openAiApiKey
+          openAiApiKey,
+          allowedTypes: requestedTypes
         });
 
         for (const questionData of batchQuestions) {
