@@ -243,6 +243,36 @@ export const getBattleMetadata = async (gamePin) => {
 };
 
 /**
+ * Clean questions data - Remove undefined values for Firebase
+ */
+const cleanQuestionsForFirebase = (questions) => {
+  return questions.map(q => {
+    const cleaned = {
+      id: q.id || null,
+      type: q.type || 'Multiple Choice',
+      question: q.question || '',
+      difficulty: q.difficulty || 'medium'
+    };
+
+    // Add type-specific fields, convert undefined to null
+    if (q.choices !== undefined) {
+      cleaned.choices = q.choices;
+    }
+    if (q.correctAnswer !== undefined) {
+      cleaned.correctAnswer = q.correctAnswer;
+    }
+    if (q.answer !== undefined) {
+      cleaned.answer = q.answer;
+    }
+    if (q.matchingPairs !== undefined) {
+      cleaned.matchingPairs = q.matchingPairs;
+    }
+
+    return cleaned;
+  });
+};
+
+/**
  * Store quiz questions in Firebase (called by HOST when starting)
  */
 export const storeQuizQuestions = async (gamePin, questions) => {
@@ -264,9 +294,17 @@ export const storeQuizQuestions = async (gamePin, questions) => {
       throw new Error('No gamePin provided');
     }
 
+    // Clean questions to remove undefined values
+    const cleanedQuestions = cleanQuestionsForFirebase(questions);
+    console.log('🔥 Firebase - Cleaned questions:', {
+      original: questions.length,
+      cleaned: cleanedQuestions.length,
+      sample: cleanedQuestions[0]
+    });
+
     const questionsRef = ref(realtimeDb, `battles/${gamePin}/questions`);
     console.log('🔥 Firebase - Setting questions at:', `battles/${gamePin}/questions`);
-    await set(questionsRef, questions);
+    await set(questionsRef, cleanedQuestions);
     console.log('✅ Firebase - Questions stored successfully');
     
     // ALSO update metadata with actual question count
