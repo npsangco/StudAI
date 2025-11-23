@@ -430,19 +430,27 @@ if (sessionStore) {
         session({
             secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
             resave: false,
-            saveUninitialized: false,
+            saveUninitialized: true, // Allow session creation for unauthenticated users
             store: sessionStore,
             name: "studai_session",
+            proxy: true, // Trust proxy headers (required for Digital Ocean)
             cookie: {
-                httpOnly: true,
-                secure: isProduction, // Only require HTTPS in production
-                maxAge: 1000 * 60 * 60 * 24,
-                sameSite: isProduction ? 'none' : 'lax', // 'lax' for local dev, 'none' for production
-                domain: isProduction ? '.walrus-app-umg67.ondigitalocean.app' : undefined, // No domain restriction in dev
+                httpOnly: true, // Prevents client-side JS access (XSS protection)
+                secure: isProduction, // HTTPS only in production
+                maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+                sameSite: 'lax', // 'lax' works with same-site requests & works in Safari/Firefox/Brave/Incognito
+                domain: undefined, // Let browser handle domain (better compatibility)
+                path: '/', // Available for all paths
             },
-            rolling: true,
+            rolling: true, // Refresh session on each request
         })
     );
+    
+    console.log('🍪 Session Configuration:');
+    console.log('   Environment:', isProduction ? 'Production' : 'Development');
+    console.log('   Secure:', isProduction);
+    console.log('   SameSite: lax (Safari/Firefox/Brave compatible)');
+    console.log('   MaxAge: 7 days');
 }
 
 // ----------------- PASSPORT (Google OAuth) -----------------

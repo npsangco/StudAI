@@ -76,11 +76,16 @@ function calculateDecay(lastActionTime, currentTime, statType) {
   if (!lastActionTime) return 0;
   
   const config = CONFIG.stats[statType];
-  const minutesElapsed = (currentTime - new Date(lastActionTime)) / (1000 * 60);
+  
+  // Ensure both times are Date objects for proper comparison
+  const lastTime = new Date(lastActionTime);
+  const now = new Date(currentTime);
+  
+  const minutesElapsed = (now - lastTime) / (1000 * 60);
   
   // Prevent negative decay if timestamps are in the future (timezone issues)
   if (minutesElapsed < 0) {
-    console.warn(`[Pet Decay] Negative time elapsed for ${statType}: ${minutesElapsed.toFixed(1)} minutes`);
+    console.warn(`[Pet Decay] Negative time for ${statType}: ${minutesElapsed.toFixed(1)} min (lastTime: ${lastTime.toISOString()}, now: ${now.toISOString()})`);
     return 0;
   }
   
@@ -90,11 +95,14 @@ function calculateDecay(lastActionTime, currentTime, statType) {
 }
 
 async function applyStatDecay(pet) {
-  const now = getPhilippinesTime();
+  // Use UTC time for consistency (database stores in UTC)
+  const now = new Date();
 
   const hungerDecay = calculateDecay(pet.last_fed, now, 'hunger');
   const happinessDecay = calculateDecay(pet.last_played, now, 'happiness');
   const cleanlinessDecay = calculateDecay(pet.last_cleaned, now, 'cleanliness');
+  
+  console.log(`[Pet Decay] User ${pet.user_id}: hunger=-${hungerDecay}, happiness=-${happinessDecay}, cleanliness=-${cleanlinessDecay}`);
 
   // Energy replenishment (same calculation as decay - uses minutes)
   let energyReplenish = 0;
@@ -154,6 +162,7 @@ async function applyStatDecay(pet) {
   }
 
   await pet.update(updatedStats);
+  await pet.reload(); // Reload the pet to get updated values
   return pet;
 }
 
@@ -268,7 +277,7 @@ function clearUserCache(userId) {
 // ============================================
 
 async function logDailyStats(userId, activityType, points, exp) {
-  const today = getPhilippinesTime().toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
   
   // Use findOrCreate to ensure we only have one record per user per day
   const [dailyStat, created] = await UserDailyStat.findOrCreate({
@@ -386,7 +395,7 @@ router.post("/", generalLimiter, requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Pet name cannot exceed 20 characters." });
     }
 
-    const now = getPhilippinesTime();
+    const now = new Date();
     const newPet = await PetCompanion.create({
       user_id: userId,
       pet_type: petType,
@@ -431,7 +440,7 @@ router.put("/name", generalLimiter, requireAuth, async (req, res) => {
 
     await pet.update({
       pet_name: petName.trim(),
-      last_updated: getPhilippinesTime(),
+      last_updated: new Date(),
     });
 
     clearUserCache(userId);
@@ -454,7 +463,7 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
 
     pet = await applyStatDecay(pet);
 
-    const now = getPhilippinesTime();
+    const now = new Date();
     const updates = { last_updated: now };
     let totalExpGain = 0;
     let itemsUsed = [];
