@@ -1576,7 +1576,7 @@ router.get('/battle/:gamePin', requireAuth, async (req, res) => {
       where: { battle_id: battle.battle_id },
       include: [{
         model: User,
-        as: 'user',
+        as: 'player',
         attributes: ['user_id', 'username', 'profile_picture']
       }],
       order: [['joined_at', 'ASC']]
@@ -1608,7 +1608,7 @@ router.get('/battle/:gamePin', requireAuth, async (req, res) => {
         player_name: p.player_name,
         player_initial: p.player_initial,
         is_ready: p.is_ready,
-        profile_picture: p.user?.profile_picture
+        profile_picture: p.player?.profile_picture
       }))
     });
   } catch (err) {
@@ -1866,10 +1866,11 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
 });
 
 // 🔍 DIAGNOSTIC ENDPOINT - Check battle readiness before starting
-router.get('/battle/:gamePin/diagnostic', requireAuth, async (req, res) => {
+// NOTE: No requireAuth - this is a debugging tool that should always work
+router.get('/battle/:gamePin/diagnostic', async (req, res) => {
   try {
     const gamePin = req.params.gamePin;
-    const userId = req.session.userId;
+    const userId = req.session?.userId || null; // Optional auth
     
     const battle = await QuizBattle.findOne({
       where: { game_pin: gamePin },
@@ -1907,7 +1908,7 @@ router.get('/battle/:gamePin/diagnostic', requireAuth, async (req, res) => {
       where: { battle_id: battle.battle_id },
       include: [{
         model: User,
-        as: 'user',
+        as: 'player',
         attributes: ['user_id', 'username']
       }]
     });
@@ -1915,11 +1916,13 @@ router.get('/battle/:gamePin/diagnostic', requireAuth, async (req, res) => {
     const diagnostic = {
       success: true,
       timestamp: new Date().toISOString(),
+      userLoggedIn: !!userId,
+      currentUserId: userId || null,
       battle: {
         gamePin: battle.game_pin,
         status: battle.status,
         hostId: battle.host_id,
-        isUserHost: battle.host_id === userId,
+        isUserHost: userId ? (battle.host_id === userId) : null,
         quizId: battle.quiz_id,
         quizExists: !!battle.quiz,
         quizTitle: battle.quiz?.title || 'N/A',
@@ -1945,7 +1948,7 @@ router.get('/battle/:gamePin/diagnostic', requireAuth, async (req, res) => {
       },
       players: participants.map(p => ({
         userId: p.user_id,
-        username: p.user?.username || 'Unknown',
+        username: p.player?.username || 'Unknown',
         isReady: p.is_ready,
         isHost: p.user_id === battle.host_id
       })),
@@ -1953,6 +1956,9 @@ router.get('/battle/:gamePin/diagnostic', requireAuth, async (req, res) => {
     };
     
     // Add recommendations
+    if (!userId) {
+      diagnostic.recommendations.push('⚠️ You are not logged in - log in to see full diagnostic');
+    }
     if (!diagnostic.battle.quizExists) {
       diagnostic.recommendations.push('❌ Quiz was deleted - battle cannot start');
     }
@@ -1965,10 +1971,10 @@ router.get('/battle/:gamePin/diagnostic', requireAuth, async (req, res) => {
     if (!diagnostic.validation.isWaitingStatus) {
       diagnostic.recommendations.push(`⚠️ Battle is already ${battle.status}`);
     }
-    if (!diagnostic.battle.isUserHost) {
+    if (userId && !diagnostic.battle.isUserHost) {
       diagnostic.recommendations.push('⚠️ Only the host can start this battle');
     }
-    if (diagnostic.validation.canStart) {
+    if (diagnostic.validation.canStart && userId) {
       diagnostic.recommendations.push('✅ Battle is ready to start!');
     }
     
@@ -2045,7 +2051,7 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
       where: { battle_id: battle.battle_id },
       include: [{
         model: User,
-        as: 'user',
+        as: 'player',
         attributes: ['username', 'profile_picture']
       }],
       order: [['score', 'DESC']]
@@ -2062,8 +2068,8 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
       results: participants.map((p, index) => ({
         rank: index + 1,
         player_name: p.player_name,
-        username: p.user.username,
-        profile_picture: p.user.profile_picture,
+        username: p.player.username,
+        profile_picture: p.player.profile_picture,
         score: p.score,
         is_winner: p.is_winner, // Γ£à Use database value (supports ties)
         points_earned: p.points_earned,
@@ -2495,7 +2501,7 @@ router.get('/battle/:gamePin/verify-sync', requireAuth, async (req, res) => {
           as: 'participants',
           include: [{
             model: User,
-            as: 'user',
+            as: 'player',
             attributes: ['username']
           }]
         }
@@ -2513,7 +2519,7 @@ router.get('/battle/:gamePin/verify-sync', requireAuth, async (req, res) => {
       completedAt: battle.completed_at,
       participants: battle.participants.map(p => ({
         userId: p.user_id,
-        username: p.user.username,
+        username: p.player.username,
         score: p.score,
         pointsEarned: p.points_earned,
         isWinner: p.is_winner
