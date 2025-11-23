@@ -21,7 +21,7 @@ export const QuizLandingView = ({
   toast
 }) => {
   return (
-    <div className="bg-gray-50">
+    <div className="bg-gray-50 min-h-screen">
 
       {/* DESKTOP VIEW (lg and up) - 2 Column Grid (70/30 Split) */}
       <div className="hidden lg:flex items-start justify-center p-4 lg:p-6 min-h-screen overflow-x-hidden">
@@ -115,7 +115,7 @@ export const QuizLandingView = ({
       {/* MOBILE VIEW (below md) - Single View with Bottom Tab Bar */}
       <div className="flex md:hidden flex-col min-h-screen bg-gray-50">
         {/* Content Area */}
-        <div className="p-3 pb-20">
+        <div className="p-3 pb-16">
           {activeView === 'quizzes' ? (
             <QuizList
               quizzes={quizData.list}
