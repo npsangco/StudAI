@@ -1148,6 +1148,12 @@ router.post('/:id/questions', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
+    // Check if quiz has reached maximum questions limit (150)
+    const currentQuestionCount = await Question.count({ where: { quiz_id: quizId } });
+    if (currentQuestionCount >= 150) {
+      return res.status(400).json({ error: 'Quiz has reached maximum limit of 150 questions' });
+    }
+
     const newQuestion = await Question.create({
       quiz_id: quizId,
       type,

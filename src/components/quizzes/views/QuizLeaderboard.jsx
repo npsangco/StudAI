@@ -6,6 +6,7 @@ import {
   incrementViewers,
   decrementViewersAndCleanup
 } from '../../../firebase/battleOperations';
+import { invalidateReconnectionToken } from '../../../firebase/reconnectionTokens';
 import { quizApi } from '../../../api/api';
 
 const QuizLeaderboard = ({ isOpen, onClose, results }) => {
@@ -32,6 +33,21 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
       setSyncComplete(false);
     }
   }, [isOpen]);
+
+  // Invalidate reconnection tokens when leaderboard opens (battle completed)
+  useEffect(() => {
+    if (isOpen && results?.gamePin) {
+      const gamePin = results.gamePin;
+      const userId = results.currentUserId;
+      
+      if (userId) {
+        console.log('🔒 Battle completed - invalidating reconnection token for user', userId);
+        invalidateReconnectionToken(gamePin, userId).catch(err => {
+          console.error('❌ Failed to invalidate reconnection token:', err);
+        });
+      }
+    }
+  }, [isOpen, results?.gamePin, results?.currentUserId]);
 
   // SYNC WITH MYSQL (HOST ONLY) - Must happen BEFORE fetching results
   useEffect(() => {

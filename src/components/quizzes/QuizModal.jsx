@@ -7,7 +7,7 @@ import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy, FileTe
 export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) => {
   const totalQuestions = quiz?.questionCount || 10;
   const minQuestions = Math.min(5, totalQuestions);
-  const maxSelectableQuestions = totalQuestions > 5 ? totalQuestions - 5 : totalQuestions;
+  const maxSelectableQuestions = Math.min(totalQuestions > 5 ? totalQuestions - 5 : totalQuestions, 100);
   const [questionCount, setQuestionCount] = React.useState(maxSelectableQuestions);
 
   // Reset question count when quiz changes
@@ -90,11 +90,11 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                   className="w-20 px-2 py-1.5 text-sm border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                 />
                 <span className="text-xs text-gray-600">
-                  (Max: {maxSelectableQuestions}, keeps {totalQuestions - maxSelectableQuestions} in reserve)
+                  (Max: 100 questions per session)
                 </span>
               </div>
               <p className="text-[10px] text-gray-500 mt-1.5">
-                💡 We keep at least 5 questions in the quiz bank for variety
+                We keep at least 5 questions in the quiz bank for variety
               </p>
             </div>
           )}

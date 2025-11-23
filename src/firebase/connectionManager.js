@@ -313,16 +313,23 @@ export const canRejoinBattle = async (gamePin) => {
     
     const metadata = snapshot.val();
     
-    // Can rejoin if status is 'in_progress'
+    // ❌ CANNOT rejoin completed battles
+    if (metadata.status === 'completed' || metadata.status === 'finished') {
+      return { canRejoin: false, reason: 'Battle already completed' };
+    }
+    
+    // ✅ Can rejoin if status is 'in_progress'
     if (metadata.status === 'in_progress') {
       return { canRejoin: true };
     }
     
+    // ✅ Can rejoin if status is 'waiting' (lobby)
     if (metadata.status === 'waiting') {
       return { canRejoin: true, reason: 'Battle in lobby' };
     }
     
-    return { canRejoin: false, reason: 'Battle already completed' };
+    // Default: Cannot rejoin
+    return { canRejoin: false, reason: 'Battle not active' };
     
   } catch (error) {
     console.error('❌ Error checking rejoin eligibility:', error);

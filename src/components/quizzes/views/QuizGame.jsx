@@ -11,9 +11,6 @@ import { realtimeDb } from '../../../firebase/config';
 import { useReconnection } from '../hooks/useReconnection';
 import { ReconnectionModal } from './ReconnectionModal';
 import { QuizBackgroundPattern } from '../utils/QuizPatterns';
-import { EmojiPicker } from './EmojiPicker';
-import { EmojiReactions } from './EmojiReactions';
-import { sendReaction } from '../../../firebase/reactionOperations';
 import {
   sortQuestionsByDifficulty,
   getMaxScore,
@@ -1111,6 +1108,7 @@ const QuizGame = ({
       questions: questions, // Pass questions for difficulty breakdown
       gamePin: quiz?.gamePin,
       isHost: mode === 'battle' ? (quiz?.isHost || false) : false,
+      currentUserId: quiz?.currentUserId, // Pass currentUserId for token invalidation
     };
 
     // ADAPTIVE DIFFICULTY: Add journey data if adaptive mode was used

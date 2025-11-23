@@ -223,7 +223,13 @@ const JitsiSessions = () => {
     });
   };
 
-  const SessionCard = ({ session, isMine }) => (
+  const SessionCard = ({ session, isMine }) => {
+    // Check if session has expired
+    const startTime = new Date(session.start_time);
+    const endTime = new Date(startTime.getTime() + session.duration * 60000);
+    const isExpired = new Date() > endTime;
+    
+    return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
@@ -267,10 +273,16 @@ const JitsiSessions = () => {
       <div className="flex gap-2">
         <button
           onClick={() => joinSession(session)}
-          className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+          disabled={isExpired}
+          className={`flex-1 px-4 py-2 rounded-md transition-colors flex items-center justify-center gap-2 ${
+            isExpired 
+              ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+          title={isExpired ? 'This session has ended' : ''}
         >
           <Video className="w-4 h-4" />
-          Join Meeting
+          {isExpired ? 'Session Ended' : 'Join Meeting'}
         </button>
         <button
           onClick={() => copyToClipboard(session.jitsi_url, session.session_id)}
@@ -284,7 +296,8 @@ const JitsiSessions = () => {
         </button>
       </div>
     </div>
-  );
+    );
+  };
 
   if (initialLoading) {
     return <AppLoader />;
@@ -458,14 +471,24 @@ const JitsiSessions = () => {
             <SessionCard key={session.session_id} session={session} isMine={true} />
           ))}
 
-          {activeTab === 'public' && publicSessions.length === 0 && (
+          {activeTab === 'public' && publicSessions.filter(session => {
+            const startTime = new Date(session.start_time);
+            const endTime = new Date(startTime.getTime() + session.duration * 60000);
+            return new Date() <= endTime;
+          }).length === 0 && (
             <div className="col-span-full text-center py-12 text-gray-500">
               No public sessions available at the moment.
             </div>
           )}
-          {activeTab === 'public' && publicSessions.map(session => (
-            <SessionCard key={session.session_id} session={session} isMine={false} />
-          ))}
+          {activeTab === 'public' && publicSessions
+            .filter(session => {
+              const startTime = new Date(session.start_time);
+              const endTime = new Date(startTime.getTime() + session.duration * 60000);
+              return new Date() <= endTime;
+            })
+            .map(session => (
+              <SessionCard key={session.session_id} session={session} isMine={false} />
+            ))}
         </div>
       </div>
 
