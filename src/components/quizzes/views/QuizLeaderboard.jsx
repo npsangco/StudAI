@@ -74,45 +74,56 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
           new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
         ]);
         
-        console.log('✅ MySQL Results:', response);
-        console.log('📊 Raw results array:', response.results);
+        console.log('✅ MySQL Response received:', {
+          hasBattle: !!response.battle,
+          resultsCount: response.results?.length || 0,
+          battleStatus: response.battle?.status
+        });
+        
+        if (!response.results || response.results.length === 0) {
+          console.error('❌ No battle participants found in database!');
+          throw new Error('No battle results available');
+        }
         
         const mysqlResults = response.results || [];
         
+        console.log('📋 Raw MySQL results:', mysqlResults.map(p => ({
+          user_id: p.user_id,
+          player_name: p.player_name,
+          username: p.username,
+          score: p.score,
+          is_winner: p.is_winner
+        })));
+        
         const formattedResults = mysqlResults.map(player => {
-          console.log('🔍 Formatting player:', {
-            raw: player,
-            player_name: player.player_name,
-            username: player.username,
-            user_id: player.user_id
-          });
+          // Use player_name from battle_participants as primary source
+          const displayName = player.player_name || player.username || `Player ${player.user_id}`;
+          const initial = player.player_initial || displayName.charAt(0).toUpperCase();
           
           return {
             id: `user_${player.user_id}`,
-            userId: player.user_id, // Numeric user_id from MySQL
-            username: player.username,
-            name: player.player_name || player.username || 'Unknown',
+            userId: player.user_id,
+            username: displayName, // Use display name for consistency
+            name: displayName,
             score: player.score || 0,
-            initial: player.player_initial || player.player_name?.[0] || player.username?.[0] || '?',
+            initial: initial,
             profilePicture: player.profile_picture,
-            forfeited: player.score === 0,
+            forfeited: false, // Don't mark as forfeited based on score alone
             isWinner: player.is_winner || false,
             pointsEarned: player.points_earned || 0,
             expEarned: player.exp_earned || 0
           };
         });
         
+        console.log('✅ Formatted players for display:', formattedResults.map(p => ({
+          name: p.name,
+          score: p.score,
+          isWinner: p.isWinner
+        })));
+        
         setFinalPlayers(formattedResults);
         setBattleData(response.battle);
         setLoading(false);
-        
-        console.log('✅ Leaderboard loaded from MySQL:', formattedResults.length, 'players');
-        console.log('🎯 Formatted player data:', formattedResults.map(p => ({
-          userId: p.userId,
-          name: p.name,
-          username: p.username,
-          score: p.score
-        })));
         
       } catch (error) {
         console.error('❌ Failed to fetch MySQL results:', error);

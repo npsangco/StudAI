@@ -2091,6 +2091,8 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
   try {
     const gamePin = req.params.gamePin;
     
+    console.log('📊 Getting battle results for PIN:', gamePin);
+    
     const battle = await QuizBattle.findOne({
       where: { game_pin: gamePin },
       include: [{
@@ -2101,42 +2103,76 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
     });
     
     if (!battle) {
+      console.error('❌ Battle not found:', gamePin);
       return res.status(404).json({ error: 'Battle not found' });
     }
     
+    console.log('✅ Battle found:', {
+      battle_id: battle.battle_id,
+      status: battle.status,
+      is_tied: battle.is_tied
+    });
+    
+    // Get participants - rely ONLY on battle_participants table data
+    // Don't depend on User join to avoid null data issues
     const participants = await BattleParticipant.findAll({
       where: { battle_id: battle.battle_id },
       include: [{
         model: User,
         as: 'player',
-        attributes: ['user_id', 'username', 'profile_picture']
+        attributes: ['user_id', 'username', 'profile_picture'],
+        required: false // LEFT JOIN - don't filter out rows if User doesn't exist
       }],
-      order: [['score', 'DESC']]
+      order: [['score', 'DESC'], ['participant_id', 'ASC']]
     });
     
-    // Use is_winner flag from database (supports ties)
-    res.json({
-      battle: {
-        quiz_title: battle.quiz.title,
-        status: battle.status,
-        is_tied: battle.is_tied || false,
-        winner_ids: battle.winner_ids || [battle.winner_id]
-      },
-      results: participants.map((p, index) => ({
+    console.log('📋 Participants found:', participants.length);
+    console.log('📊 Participant details:', participants.map(p => ({
+      user_id: p.user_id,
+      player_name: p.player_name,
+      score: p.score,
+      is_winner: p.is_winner,
+      has_user_join: !!p.player
+    })));
+    
+    // Use battle_participants data as primary source
+    // Only use User join data for profile picture
+    const results = participants.map((p, index) => {
+      const playerName = p.player_name || `Player ${p.user_id}`;
+      const initial = p.player_initial || playerName.charAt(0).toUpperCase();
+      
+      return {
         rank: index + 1,
         user_id: p.user_id,
-        player_name: p.player_name,
-        player_initial: p.player_initial,
-        username: p.player ? p.player.username : p.player_name,
+        player_name: playerName,
+        player_initial: initial,
+        username: playerName, // Use player_name as username for display
         profile_picture: p.player ? p.player.profile_picture : null,
-        score: p.score,
-        is_winner: p.is_winner, // Γ£à Use database value (supports ties)
-        points_earned: p.points_earned,
-        exp_earned: p.exp_earned
-      }))
+        score: p.score || 0,
+        is_winner: p.is_winner || false,
+        points_earned: p.points_earned || 0,
+        exp_earned: p.exp_earned || 0
+      };
+    });
+    
+    console.log('✅ Formatted results:', results.map(r => ({
+      player_name: r.player_name,
+      score: r.score,
+      is_winner: r.is_winner
+    })));
+    
+    res.json({
+      battle: {
+        quiz_title: battle.quiz?.title || 'Quiz Battle',
+        status: battle.status,
+        is_tied: battle.is_tied || false,
+        winner_ids: battle.winner_ids || (battle.winner_id ? [battle.winner_id] : [])
+      },
+      results: results
     });
   } catch (err) {
-    console.error('Γ¥î Get results error:', err);
+    console.error('❌ Get results error:', err);
+    console.error('❌ Error stack:', err.stack);
     res.status(500).json({ error: 'Failed to get results' });
   }
 });
