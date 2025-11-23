@@ -239,7 +239,7 @@ export default function LandingPage() {
                         {[
                             { name: 'Bunyi, Denise Arielle', role: 'Developer', image: '' },
                             { name: 'Sangco, Nimrod', role: 'Developer', image: '' },
-                            { name: 'Taloyo, Denniel Gerald', role: 'Developer', image: '/Taloyo_Pic.png' },
+                            { name: 'Taloyo, Denniel Gerald', role: 'Developer', image: '' },
                             { name: 'Viaña, Vince Carl', role: 'Developer', image: '' },
                         ].map((dev, index) => (
                             <div key={index} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl md:rounded-2xl p-4 md:p-6 text-center hover:shadow-xl transition-all transform hover:-translate-y-2">
