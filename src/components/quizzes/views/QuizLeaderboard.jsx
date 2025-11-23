@@ -75,28 +75,44 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
         ]);
         
         console.log('✅ MySQL Results:', response);
+        console.log('📊 Raw results array:', response.results);
         
         const mysqlResults = response.results || [];
         
-        const formattedResults = mysqlResults.map(player => ({
-          id: `user_${player.user_id}`,
-          userId: player.user_id, // Numeric user_id from MySQL
-          username: player.username,
-          name: player.player_name,
-          score: player.score || 0,
-          initial: player.player_initial || player.player_name?.[0] || '?',
-          profilePicture: player.profile_picture,
-          forfeited: player.score === 0,
-          isWinner: player.is_winner || false,
-          pointsEarned: player.points_earned || 0,
-          expEarned: player.exp_earned || 0
-        }));
+        const formattedResults = mysqlResults.map(player => {
+          console.log('🔍 Formatting player:', {
+            raw: player,
+            player_name: player.player_name,
+            username: player.username,
+            user_id: player.user_id
+          });
+          
+          return {
+            id: `user_${player.user_id}`,
+            userId: player.user_id, // Numeric user_id from MySQL
+            username: player.username,
+            name: player.player_name || player.username || 'Unknown',
+            score: player.score || 0,
+            initial: player.player_initial || player.player_name?.[0] || player.username?.[0] || '?',
+            profilePicture: player.profile_picture,
+            forfeited: player.score === 0,
+            isWinner: player.is_winner || false,
+            pointsEarned: player.points_earned || 0,
+            expEarned: player.exp_earned || 0
+          };
+        });
         
         setFinalPlayers(formattedResults);
         setBattleData(response.battle);
         setLoading(false);
         
         console.log('✅ Leaderboard loaded from MySQL:', formattedResults.length, 'players');
+        console.log('🎯 Formatted player data:', formattedResults.map(p => ({
+          userId: p.userId,
+          name: p.name,
+          username: p.username,
+          score: p.score
+        })));
         
       } catch (error) {
         console.error('❌ Failed to fetch MySQL results:', error);

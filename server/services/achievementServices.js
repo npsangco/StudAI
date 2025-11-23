@@ -38,17 +38,16 @@ export async function checkAndUnlockAchievements(userId) {
       }
     });
 
-    console.log(`🔍 Checking ${lockedAchievements.length} locked achievements for user ${userId}`);
+    // Checking locked achievements silently
 
     // Calculate current stats based on ACTUAL database requirement types
     const stats = await calculateUserStats(userId, user);
-    console.log(`📊 User stats:`, stats);
 
     const newlyUnlocked = [];
 
     // Check each locked achievement
     for (const achievement of lockedAchievements) {
-      console.log(`⚔️ Checking achievement: ${achievement.title} (type: ${achievement.requirement_type}, required: ${achievement.requirement_value}, current: ${stats[achievement.requirement_type]})`);
+      // Silently check achievement requirement
       
       const requirementMet = await checkAchievementRequirement(
         achievement,
@@ -174,7 +173,7 @@ function checkAchievementRequirement(achievement, stats) {
   const currentValue = stats[reqType] || 0;
 
   const isMet = currentValue >= reqValue;
-  console.log(`  → ${reqType}: ${currentValue} >= ${reqValue}? ${isMet}`);
+  // Silent check
   return isMet;
 }
 
