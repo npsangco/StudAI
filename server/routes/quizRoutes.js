@@ -1285,6 +1285,18 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Score and total_questions are required' });
     }
 
+    // Get quiz to check for original_quiz_id (for shared quiz leaderboard tracking)
+    const quiz = await Quiz.findOne({
+      where: { quiz_id: quizId },
+      attributes: ['quiz_id', 'original_quiz_id']
+    });
+
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    const originalQuizId = quiz.original_quiz_id || null;
+
     // Prepare answers data with adaptive journey if provided
     const answersData = answers ? {
       answers: Array.isArray(answers) ? answers : [],
@@ -1317,6 +1329,7 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       
       const attempt = await QuizAttempt.create({
         quiz_id: quizId,
+        original_quiz_id: originalQuizId,
         user_id: userId,
         score,
         total_questions,
@@ -1351,6 +1364,7 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
 
     const attempt = await QuizAttempt.create({
       quiz_id: quizId,
+      original_quiz_id: originalQuizId,
       user_id: userId,
       score,
       total_questions,
@@ -1414,23 +1428,82 @@ router.get('/:id/attempts', requireAuth, async (req, res) => {
 
 router.get('/:id/leaderboard', requireAuth, async (req, res) => {
   try {
-    const quizId = req.params.id;
+    const quizId = parseInt(req.params.id);
 
-    const leaderboard = await QuizAttempt.findAll({
+    // Get the quiz to check if it has an original_quiz_id
+    const quiz = await Quiz.findOne({ 
       where: { quiz_id: quizId },
+      attributes: ['quiz_id', 'original_quiz_id']
+    });
+
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    // Determine the root quiz ID (original or current)
+    const rootQuizId = quiz.original_quiz_id || quizId;
+
+    // Get all quiz IDs that are part of this quiz family (original + all imports)
+    const relatedQuizIds = await Quiz.findAll({
+      where: {
+        [sequelize.Op.or]: [
+          { quiz_id: rootQuizId },
+          { original_quiz_id: rootQuizId }
+        ]
+      },
+      attributes: ['quiz_id']
+    });
+
+    const quizIdList = relatedQuizIds.map(q => q.quiz_id);
+
+    // Get leaderboard from all related quizzes
+    const leaderboard = await QuizAttempt.findAll({
+      where: { 
+        quiz_id: quizIdList
+      },
       include: [{
         model: User,
         as: 'student',
-        attributes: ['username', 'profile_picture']
+        attributes: ['user_id', 'username', 'profile_picture']
       }],
       order: [
         ['score', 'DESC'],
-        ['time_spent', 'ASC']
-      ],
-      limit: 10
+        [sequelize.literal('CAST(time_spent AS UNSIGNED)'), 'ASC'],
+        ['completed_at', 'ASC']
+      ]
     });
 
-    res.json({ leaderboard });
+    // Group by user and keep only their best attempt
+    const userBestAttempts = new Map();
+    leaderboard.forEach(attempt => {
+      const userId = attempt.user_id;
+      const existing = userBestAttempts.get(userId);
+      
+      if (!existing) {
+        userBestAttempts.set(userId, attempt);
+      } else {
+        // Compare: higher score wins, or same score with lower time
+        const timeExisting = parseInt(existing.time_spent) || 999999;
+        const timeCurrent = parseInt(attempt.time_spent) || 999999;
+        
+        if (attempt.score > existing.score || 
+            (attempt.score === existing.score && timeCurrent < timeExisting)) {
+          userBestAttempts.set(userId, attempt);
+        }
+      }
+    });
+
+    // Convert to array and sort again
+    const uniqueLeaderboard = Array.from(userBestAttempts.values())
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        const timeA = parseInt(a.time_spent) || 999999;
+        const timeB = parseInt(b.time_spent) || 999999;
+        return timeA - timeB;
+      })
+      .slice(0, 10);
+
+    res.json({ leaderboard: uniqueLeaderboard });
   } catch (err) {
     console.error('Γ¥î Get leaderboard error:', err);
     res.status(500).json({ error: 'Failed to fetch leaderboard' });

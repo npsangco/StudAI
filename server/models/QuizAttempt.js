@@ -15,6 +15,15 @@ const QuizAttempt = sequelize.define('QuizAttempt', {
       key: 'quiz_id'
     }
   },
+  original_quiz_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'quizzes',
+      key: 'quiz_id'
+    },
+    comment: 'References the original quiz for imported/shared quizzes to maintain unified leaderboard'
+  },
   user_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
