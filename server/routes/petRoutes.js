@@ -131,6 +131,17 @@ async function applyStatDecay(pet) {
     energy_level: Math.max(0, Math.min(100, pet.energy_level + energyReplenish)),
   };
   
+  // Update timestamps when stats reach 0 to prevent infinite decay accumulation
+  if (updatedStats.hunger_level === 0 && hungerDecay > 0) {
+    updatedStats.last_fed = now;
+  }
+  if (updatedStats.happiness_level === 0 && happinessDecay > 0) {
+    updatedStats.last_played = now;
+  }
+  if (updatedStats.cleanliness_level === 0 && cleanlinessDecay > 0) {
+    updatedStats.last_cleaned = now;
+  }
+  
   // Only update last_updated if energy actually replenished
   if (energyReplenish > 0) {
     updatedStats.last_updated = now;
@@ -482,6 +493,13 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
     }
 
     const { effectType, statKey, timestampKey } = actionEffectMap[actionType];
+
+    // Check if pet has enough energy for playing
+    if (actionType === 'play' && pet.energy_level < 10) {
+      return res.status(400).json({ 
+        error: "Your pet doesn't have enough energy to play! Energy recharges over time." 
+      });
+    }
 
     const equippedItems = await getEquippedItems(userId, effectType);
 
