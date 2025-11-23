@@ -1104,6 +1104,7 @@ const QuizGame = ({
     const results = {
       ...game.getResults(),
       quizTitle: quiz.title,
+      quizId: quiz.quiz_id || quiz.id, // Add quizId for leaderboard fetching
       answers: finalAnswers,
       questions: questions, // Pass questions for difficulty breakdown
       gamePin: quiz?.gamePin,

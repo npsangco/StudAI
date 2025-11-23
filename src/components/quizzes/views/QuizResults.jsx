@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
-import { Trophy, RotateCcw, X, Sparkles, Star, FileText, BarChart3 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trophy, RotateCcw, X, Sparkles, Star, FileText, BarChart3, Medal, Award } from 'lucide-react';
 import {
   calculateDifficultyBreakdown,
   getDifficultyDisplay,
   getMaxScore
 } from '../utils/adaptiveDifficultyManager';
 import AnswerReviewModal from './AnswerReviewModal';
+import { quizApi } from '../../../api/api';
 
 const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
   const [showAnswerReview, setShowAnswerReview] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
 
   // Memoize particle positions to prevent flickering
   const [particles] = useState(() =>
@@ -19,6 +22,26 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
       colorType: i % 3
     }))
   );
+
+  // Fetch leaderboard when quiz results open
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      if (!isOpen || !results?.quizId) return;
+      
+      try {
+        setLoadingLeaderboard(true);
+        const response = await quizApi.getLeaderboard(results.quizId);
+        setLeaderboard(response.leaderboard || []);
+      } catch (error) {
+        console.error('Failed to fetch leaderboard:', error);
+        setLeaderboard([]);
+      } finally {
+        setLoadingLeaderboard(false);
+      }
+    };
+
+    fetchLeaderboard();
+  }, [isOpen, results?.quizId]);
 
   if (!isOpen) return null;
 
@@ -92,14 +115,17 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
           <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl" />
         </div>
 
-        {/* Frosted glass card */}
-        <div className="relative w-full max-w-sm sm:max-w-md mx-auto">
-          <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/40 border-2 border-white/60 transform translate-y-2 translate-x-2" style={{
-            boxShadow: '0 20px 40px rgba(129, 140, 248, 0.15)'
-          }} />
-          <div className="relative rounded-3xl backdrop-blur-xl bg-white/70 border-2 border-white/80 overflow-hidden" style={{
-            boxShadow: '0 25px 50px rgba(251, 191, 36, 0.3), 0 10px 30px rgba(129, 140, 248, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
-          }}>
+        {/* Two Column Layout: Results + Leaderboard */}
+        <div className="relative w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          
+          {/* LEFT: Results Card */}
+          <div className="relative w-full">
+            <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/40 border-2 border-white/60 transform translate-y-2 translate-x-2" style={{
+              boxShadow: '0 20px 40px rgba(129, 140, 248, 0.15)'
+            }} />
+            <div className="relative rounded-3xl backdrop-blur-xl bg-white/70 border-2 border-white/80 overflow-hidden" style={{
+              boxShadow: '0 25px 50px rgba(251, 191, 36, 0.3), 0 10px 30px rgba(129, 140, 248, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
+            }}>
 
           {/* Content */}
           <div className="p-5 sm:p-6">
@@ -286,6 +312,126 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
 
           </div>
           </div>
+          </div>
+
+          {/* RIGHT: Leaderboard Card */}
+          <div className="relative w-full">
+            <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/40 border-2 border-white/60 transform translate-y-2 translate-x-2" style={{
+              boxShadow: '0 20px 40px rgba(129, 140, 248, 0.15)'
+            }} />
+            <div className="relative rounded-3xl backdrop-blur-xl bg-white/70 border-2 border-white/80 overflow-hidden" style={{
+              boxShadow: '0 25px 50px rgba(251, 191, 36, 0.3), 0 10px 30px rgba(129, 140, 248, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
+            }}>
+              <div className="p-5 sm:p-6">
+                {/* Leaderboard Header */}
+                <div className="text-center mb-4">
+                  <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent drop-shadow-sm flex items-center justify-center gap-2">
+                    <Trophy className="w-5 h-5 text-purple-500" />
+                    Leaderboard
+                  </h2>
+                  <p className="text-xs text-gray-600 mt-1">Top scores across all attempts</p>
+                </div>
+
+                {/* Leaderboard Content */}
+                <div className="backdrop-blur-xl bg-gradient-to-br from-purple-50/80 to-pink-50/80 rounded-2xl p-3 sm:p-4 border-2 border-purple-300/60 shadow-xl max-h-[500px] overflow-y-auto">
+                  {loadingLeaderboard ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-2"></div>
+                      <span className="text-xs text-gray-600">Loading rankings...</span>
+                    </div>
+                  ) : leaderboard.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 font-medium">No attempts yet</p>
+                      <p className="text-xs text-gray-500 mt-1">Be the first to complete this quiz!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {leaderboard.map((entry, index) => {
+                        const rank = index + 1;
+                        const isTopThree = rank <= 3;
+                        const getRankIcon = () => {
+                          if (rank === 1) return <Award className="w-4 h-4 text-yellow-500 fill-yellow-500" />;
+                          if (rank === 2) return <Medal className="w-4 h-4 text-gray-400 fill-gray-400" />;
+                          if (rank === 3) return <Medal className="w-4 h-4 text-amber-600 fill-amber-600" />;
+                          return null;
+                        };
+
+                        const getUserInitial = (username) => {
+                          return username ? username.charAt(0).toUpperCase() : '?';
+                        };
+
+                        const timeInSeconds = entry.time_spent ? parseInt(entry.time_spent) : 0;
+                        const minutes = Math.floor(timeInSeconds / 60);
+                        const seconds = timeInSeconds % 60;
+                        const timeDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                        return (
+                          <div
+                            key={entry.attempt_id}
+                            className={`backdrop-blur-md rounded-xl p-3 border-2 transition-all ${
+                              isTopThree
+                                ? 'bg-gradient-to-r from-yellow-50/80 to-amber-50/80 border-yellow-300/60 shadow-md'
+                                : 'bg-white/50 border-purple-200/60'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                {/* Rank */}
+                                <div className="flex-shrink-0 w-8 text-center">
+                                  {getRankIcon() || (
+                                    <span className="text-sm font-bold text-gray-600">#{rank}</span>
+                                  )}
+                                </div>
+
+                                {/* Avatar */}
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
+                                  isTopThree ? 'bg-gradient-to-br from-yellow-500 to-amber-600' : 'bg-gradient-to-br from-purple-500 to-pink-500'
+                                }`}>
+                                  {entry.student?.profile_picture ? (
+                                    <img 
+                                      src={entry.student.profile_picture} 
+                                      alt={entry.student.username}
+                                      className="w-full h-full rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    getUserInitial(entry.student?.username)
+                                  )}
+                                </div>
+
+                                {/* Username */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-gray-900 truncate">
+                                    {entry.student?.username || 'Anonymous'}
+                                  </p>
+                                  <p className="text-xs text-gray-600">
+                                    {timeDisplay}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Score */}
+                              <div className="text-right flex-shrink-0 ml-2">
+                                <p className={`text-lg font-bold ${
+                                  isTopThree ? 'text-amber-700' : 'text-purple-700'
+                                }`}>
+                                  {entry.score}
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                  {entry.percentage}%
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
