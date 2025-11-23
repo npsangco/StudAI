@@ -67,8 +67,9 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
         const mysqlResults = response.results || [];
         
         const formattedResults = mysqlResults.map(player => ({
-          id: `user_${player.username}`,
-          userId: player.username, // Username from MySQL
+          id: `user_${player.user_id}`,
+          userId: player.user_id, // Numeric user_id from MySQL
+          username: player.username,
           name: player.player_name,
           score: player.score || 0,
           initial: player.player_name?.[0] || '?',

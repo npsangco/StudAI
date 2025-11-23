@@ -2083,7 +2083,7 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
       include: [{
         model: User,
         as: 'player',
-        attributes: ['username', 'profile_picture']
+        attributes: ['user_id', 'username', 'profile_picture']
       }],
       order: [['score', 'DESC']]
     });
@@ -2098,6 +2098,7 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
       },
       results: participants.map((p, index) => ({
         rank: index + 1,
+        user_id: p.player.user_id,
         player_name: p.player_name,
         username: p.player.username,
         profile_picture: p.player.profile_picture,
@@ -2377,6 +2378,15 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         const isWinner = winnerIds.includes(player.userId);
         
         console.log(`≡ƒô¥ Updating player ${player.userId}: score=${player.score}, points=${pointsEarned}, isWinner=${isWinner}`);
+        console.log(`   Player data from Firebase:`, JSON.stringify(player));
+        
+        // DEBUG: Check what participants exist in database
+        const existingParticipants = await BattleParticipant.findAll({
+          where: { battle_id: battle.battle_id },
+          attributes: ['user_id', 'player_name'],
+          transaction
+        });
+        console.log(`   Existing participants in DB:`, existingParticipants.map(p => ({ user_id: p.user_id, name: p.player_name })));
         
         // Update participant record
         const [updateCount] = await BattleParticipant.update(
@@ -2397,6 +2407,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         
         if (updateCount === 0) {
           console.warn('ΓÜá∩╕Å Participant not found for user:', player.userId);
+          console.warn('   Looking for: battle_id =', battle.battle_id, ', user_id =', player.userId, typeof player.userId);
           updateErrors.push(`Player ${player.userId} not found in battle`);
           continue;
         }
