@@ -78,14 +78,14 @@ const styles = `
   }
 
   .nav-pill:hover:not(.active) {
-    border-color: #fbbf24;
-    background: #fef3c7;
+    border-color: #e5e7eb;
+    background: #f9fafb;
   }
 
   .nav-pill.active {
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.25);
-    border-color: #f59e0b;
+    background: #4f46e5;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+    border-color: #4f46e5;
   }
 
   /* Smooth content transitions */
@@ -105,12 +105,12 @@ const styles = `
   }
 
   .bottom-tab.active {
-    color: #f59e0b;
+    color: #4f46e5;
     font-weight: 600;
   }
 
   .bottom-tab:not(.active):hover {
-    color: #fbbf24;
+    color: #6366f1;
   }
 
   /* Safe area for iOS devices */

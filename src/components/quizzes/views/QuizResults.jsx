@@ -94,8 +94,7 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
 
         {/* Results Card */}
         <div className="relative w-full max-w-sm sm:max-w-md mx-auto">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/40 border-2 border-white/60 transform translate-y-2 translate-x-2" style={{
+          <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/40 border-2 border-white/60 transform translate-y-2 translate-x-2" style={{
               boxShadow: '0 20px 40px rgba(129, 140, 248, 0.15)'
             }} />
             <div className="relative rounded-3xl backdrop-blur-xl bg-white/70 border-2 border-white/80 overflow-hidden" style={{
@@ -284,8 +283,6 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
                 </button>
               </div>
             </div>
-
-          </div>
           </div>
         </div>
       </div>

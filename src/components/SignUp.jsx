@@ -363,7 +363,7 @@ function Signup() {
     }
 
     return (
-        <div className="h-screen flex overflow-hidden">
+        <div className="min-h-screen flex">
             <ToastContainer toasts={toasts} onDismiss={removeToast} />
             {/* Left Side - StudAI Branding */}
             <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 relative overflow-hidden">
@@ -416,10 +416,9 @@ function Signup() {
             </div>
 
             {/* Right Side - Form */}
-            <div className="w-full lg:w-1/2 bg-white flex flex-col overflow-hidden relative z-20">
-                <div className="flex-1 overflow-y-auto">
-                    <div className="min-h-full flex items-center justify-center p-6 sm:p-8 lg:p-12">
-                        <div className="w-full max-w-md py-4">{/* Back Button */}
+            <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-6 sm:p-8 lg:p-12 relative z-20 overflow-y-auto">
+                <div className="w-full max-w-md my-auto">
+                    {/* Back Button */}
                             <button
                                 onClick={() => navigate("/")}
                                 className="flex items-center text-gray-600 hover:text-gray-900 mb-8 transition-colors group"
@@ -683,8 +682,6 @@ function Signup() {
                                 </button>
                             </form>
                         </div>
-                    </div>
-                </div>
             </div>
 
             {/* Terms and Conditions Modal */}

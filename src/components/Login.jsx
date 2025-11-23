@@ -133,8 +133,8 @@ function Login() {
       </div>
 
       {/* Right Side - Form */}
-      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-6 sm:p-8 lg:p-12 relative z-20">
-        <div className="w-full max-w-md">
+      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-6 sm:p-8 lg:p-12 relative z-20 overflow-y-auto">
+        <div className="w-full max-w-md my-auto">
           {/* Back Button */}
           <button
             onClick={() => navigate("/")}
