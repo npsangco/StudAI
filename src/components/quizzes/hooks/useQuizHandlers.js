@@ -63,7 +63,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     updateQuizData({ selected: null });
   };
 
-  const handleSoloQuiz = async () => {
+  const handleSoloQuiz = async (requestedQuestionCount) => {
     // Load questions before starting
     const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
 
@@ -73,26 +73,13 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       return;
     }
 
-    // Update selected quiz with fresh data including timer_per_question
-    updateQuizData({
-      selected: {
-        ...quizData.selected,
-        ...data.quiz
-      }
-    });
-    setQuestions(data.questions);
-    updateUiState({ showModal: false, currentView: VIEWS.LOADING });
-    countdown.start();
-  };
-
-  const handleQuizBattle = async () => {
-    // Load questions
-    const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
-
-    if (!data || !data.questions || data.questions.length === 0) {
-      setError('This quiz has no questions yet. Please add questions before starting a battle.');
-      updateUiState({ showModal: false });
-      return;
+    // Shuffle and limit questions based on user selection
+    let questionsToUse = [...data.questions];
+    if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
+      // Shuffle questions randomly
+      questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
+      // Take only the requested number
+      questionsToUse = questionsToUse.slice(0, requestedQuestionCount);
     }
 
     // Update selected quiz with fresh data including timer_per_question
@@ -102,7 +89,38 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         ...data.quiz
       }
     });
-    setQuestions(data.questions);
+    setQuestions(questionsToUse);
+    updateUiState({ showModal: false, currentView: VIEWS.LOADING });
+    countdown.start();
+  };
+
+  const handleQuizBattle = async (requestedQuestionCount) => {
+    // Load questions
+    const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
+
+    if (!data || !data.questions || data.questions.length === 0) {
+      setError('This quiz has no questions yet. Please add questions before starting a battle.');
+      updateUiState({ showModal: false });
+      return;
+    }
+
+    // Shuffle and limit questions based on user selection
+    let questionsToUse = [...data.questions];
+    if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
+      // Shuffle questions randomly
+      questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
+      // Take only the requested number
+      questionsToUse = questionsToUse.slice(0, requestedQuestionCount);
+    }
+
+    // Update selected quiz with fresh data including timer_per_question
+    updateQuizData({
+      selected: {
+        ...quizData.selected,
+        ...data.quiz
+      }
+    });
+    setQuestions(questionsToUse);
 
     // 1️⃣ Create battle in MySQL (existing API call)
     const battleData = await quizAPI.createBattle(quizData.selected.id);
@@ -117,7 +135,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
           quizId: quizData.selected.id,
           quizTitle: quizData.selected.title,
           hostId: currentUser.id,
-          totalQuestions: data.questions.length
+          totalQuestions: questionsToUse.length
         });
 
         // 3️⃣ Add host as first player

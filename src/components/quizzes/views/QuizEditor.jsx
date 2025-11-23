@@ -86,19 +86,39 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
   };
 
   const handleTimerChange = (newTimer) => {
-    setTimerValue(newTimer);
+    const parsedTimer = parseInt(newTimer);
+    const validTimer = isNaN(parsedTimer) || parsedTimer < 0 ? 30 : parsedTimer;
+    setTimerValue(validTimer);
     if (onTimerChange) {
-      onTimerChange(newTimer);
+      onTimerChange(validTimer);
     }
   };
 
-  const timerOptions = [
-    { value: 15, label: '15s', icon: Zap },
-    { value: 30, label: '30s', icon: Timer },
-    { value: 45, label: '45s', icon: Clock },
-    { value: 60, label: '60s', icon: Clock },
-    { value: 0, label: 'No Limit', icon: Infinity }
-  ];
+  const handleTimerInputChange = (e) => {
+    const value = e.target.value;
+    // Allow empty string while typing
+    if (value === '') {
+      setTimerValue('');
+      return;
+    }
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue >= 0) {
+      setTimerValue(numValue);
+    }
+  };
+
+  const handleTimerBlur = () => {
+    // Set default if empty on blur
+    if (timerValue === '' || timerValue < 0) {
+      const defaultTimer = 30;
+      setTimerValue(defaultTimer);
+      if (onTimerChange) {
+        onTimerChange(defaultTimer);
+      }
+    } else if (onTimerChange) {
+      onTimerChange(timerValue);
+    }
+  };
 
   return (
     <div className="bg-gray-50 border-b border-gray-200">
@@ -152,29 +172,30 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
           </div>
 
           {/* Timer Section */}
-          <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
+          <div className="flex items-center gap-2 md:gap-3">
             <span className="text-xs md:text-sm font-medium text-gray-700 flex-shrink-0">Timer:</span>
-
-            {/* Timer Buttons - Horizontal */}
-            <div className="flex items-center gap-1.5">
-              {timerOptions.map((option) => {
-                const IconComponent = option.icon;
-                const isSelected = timerValue === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => handleTimerChange(option.value)}
-                    className={`flex items-center gap-1 px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 ${
-                      isSelected
-                        ? 'bg-yellow-400 text-gray-900 shadow-sm'
-                        : 'bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:bg-yellow-50'
-                    }`}
-                  >
-                    <IconComponent className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                    <span className="whitespace-nowrap">{option.label}</span>
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                value={timerValue}
+                onChange={handleTimerInputChange}
+                onBlur={handleTimerBlur}
+                placeholder="30"
+                className="w-16 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none"
+              />
+              <span className="text-xs text-gray-600">seconds</span>
+              <button
+                onClick={() => handleTimerChange(0)}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+                  timerValue === 0
+                    ? 'bg-yellow-400 text-gray-900'
+                    : 'bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:bg-yellow-50'
+                }`}
+                title="No time limit"
+              >
+                <Infinity className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
