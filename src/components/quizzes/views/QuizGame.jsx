@@ -5,7 +5,7 @@ import { QuizGameHeader } from '../QuizGameHeader';
 import { QuizQuestion } from '../QuizCore';
 import { LiveLeaderboard } from './QuizLiveLeaderboard';
 import { ANSWER_DISPLAY_DURATION } from '../utils/constants';
-import { listenToPlayers, updatePlayerScore, updatePlayerProgress } from '../../../firebase/battleOperations';
+import { listenToPlayers, updatePlayerScore, updatePlayerProgress, markPlayerFinished, listenForAllPlayersFinished } from '../../../firebase/battleOperations';
 import { ref, update, get } from 'firebase/database';
 import { realtimeDb } from '../../../firebase/config';
 import { useReconnection } from '../hooks/useReconnection';
@@ -155,6 +155,10 @@ const QuizGame = ({
   const [showPetMessage, setShowPetMessage] = useState(false);
   const [petAnswerCorrect, setPetAnswerCorrect] = useState(null);
   const [showEncouragement, setShowEncouragement] = useState(false);
+  
+  // Battle: Waiting for other players
+  const [waitingForPlayers, setWaitingForPlayers] = useState(false);
+  const [finishedPlayersCount, setFinishedPlayersCount] = useState({ finished: 0, total: 0 });
   const encouragementTimerRef = useRef(null);
 
   // 🔒 SUBMISSION MUTEX: Prevent race condition between timer and manual submission
@@ -1092,7 +1096,7 @@ const QuizGame = ({
     return '';
   };
 
-  const finishQuizWithAnswers = (finalAnswers) => {
+  const finishQuizWithAnswers = async (finalAnswers) => {
 
 
     const results = {
@@ -1114,16 +1118,48 @@ const QuizGame = ({
     }
 
     if (mode === 'battle') {
-      results.players = allPlayers.map(player =>
-        player.name === 'You'
-          ? { ...player, score: game.scoreRef.current } 
-          : player
-      );
-      results.winner = results.players.reduce((prev, current) => 
-        prev.score > current.score ? prev : current
-      );
+      // Mark this player as finished in Firebase
+      const finalScore = game.scoreRef.current;
+      await markPlayerFinished(quiz.gamePin, quiz.currentUserId, finalScore);
+      
+      console.log('✅ Player finished, checking if all players done...');
+      
+      // Show waiting screen
+      setWaitingForPlayers(true);
+      
+      // Listen for all players to finish
+      const unsubscribe = listenForAllPlayersFinished(quiz.gamePin, ({ allFinished, finishedCount, totalPlayers, players }) => {
+        console.log(`📊 ${finishedCount}/${totalPlayers} players finished`);
+        
+        setFinishedPlayersCount({ finished: finishedCount, total: totalPlayers });
+        
+        if (allFinished) {
+          console.log('🎉 All players finished! Showing leaderboard...');
+          unsubscribe(); // Stop listening
+          
+          // Prepare results with all players' final scores from Firebase
+          results.players = players.map(player => ({
+            id: `player_${player.userId}`,
+            userId: player.userId,
+            name: player.name,
+            initial: player.initial || player.name?.[0] || '?',
+            score: player.score || 0,
+            forfeited: player.forfeited || false
+          }));
+          
+          results.winner = results.players.reduce((prev, current) => 
+            prev.score > current.score ? prev : current
+          );
+          
+          setWaitingForPlayers(false);
+          onComplete(results);
+        }
+      });
+      
+      return; // Don't call onComplete yet, wait for all players
     }
     
+    // Solo mode: Complete immediately
     onComplete(results);
   };
 
@@ -1508,6 +1544,32 @@ const QuizGame = ({
         />
       )}
 
+      {/* WAITING FOR OTHER PLAYERS MODAL */}
+      {waitingForPlayers && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border-4 border-yellow-400 transform animate-bounce-gentle">
+            <div className="text-6xl mb-4 animate-pulse">⏳</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Waiting for Other Players...</h2>
+            <p className="text-gray-600 mb-6">
+              You finished the quiz! Hold on while others complete their questions.
+            </p>
+            
+            <div className="bg-gradient-to-r from-yellow-100 to-amber-100 rounded-2xl p-4 mb-6 border-2 border-yellow-300">
+              <div className="text-5xl font-bold text-yellow-600 mb-1">
+                {finishedPlayersCount.finished}/{finishedPlayersCount.total}
+              </div>
+              <div className="text-sm text-gray-700 font-semibold">Players Finished</div>
+            </div>
+            
+            <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+              <span className="animate-pulse">●</span>
+              <span className="animate-pulse animation-delay-200">●</span>
+              <span className="animate-pulse animation-delay-400">●</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 🐾 PET COMPANION */}
       <QuizPetCompanion
         isCorrect={petAnswerCorrect}
@@ -1516,6 +1578,22 @@ const QuizGame = ({
         onMessageShown={() => setShowPetMessage(false)}
         onEncouragementShown={() => setShowEncouragement(false)}
       />
+      
+      <style jsx>{`
+        @keyframes bounce-gentle {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-gentle {
+          animation: bounce-gentle 2s ease-in-out infinite;
+        }
+        .animation-delay-200 {
+          animation-delay: 0.2s;
+        }
+        .animation-delay-400 {
+          animation-delay: 0.4s;
+        }
+      `}</style>
     </div>
   );
 }

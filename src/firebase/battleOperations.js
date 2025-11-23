@@ -911,6 +911,83 @@ export const canSafelyCleanup = async (gamePin) => {
 };
 
 /**
+ * Mark player as finished in battle
+ * @param {string} gamePin 
+ * @param {number} userId 
+ * @param {number} finalScore 
+ */
+export const markPlayerFinished = async (gamePin, userId, finalScore) => {
+  try {
+    const playerRef = ref(realtimeDb, `battles/${gamePin}/players/player_${userId}`);
+    await update(playerRef, {
+      finished: true,
+      score: finalScore,
+      finishedAt: Date.now()
+    });
+    
+    console.log(`✅ Player ${userId} marked as finished with score ${finalScore}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error marking player finished:', error);
+    return false;
+  }
+};
+
+/**
+ * Check if all players have finished
+ * @param {string} gamePin 
+ * @returns {Promise<{allFinished: boolean, finishedCount: number, totalPlayers: number}>}
+ */
+export const checkAllPlayersFinished = async (gamePin) => {
+  try {
+    const playersRef = ref(realtimeDb, `battles/${gamePin}/players`);
+    const snapshot = await get(playersRef);
+    
+    if (!snapshot.exists()) {
+      return { allFinished: false, finishedCount: 0, totalPlayers: 0 };
+    }
+    
+    const players = Object.values(snapshot.val());
+    const totalPlayers = players.length;
+    const finishedCount = players.filter(p => p.finished === true).length;
+    const allFinished = finishedCount === totalPlayers;
+    
+    console.log(`📊 Finished: ${finishedCount}/${totalPlayers} players`);
+    
+    return { allFinished, finishedCount, totalPlayers };
+  } catch (error) {
+    console.error('❌ Error checking finished players:', error);
+    return { allFinished: false, finishedCount: 0, totalPlayers: 0 };
+  }
+};
+
+/**
+ * Listen for all players to finish
+ * @param {string} gamePin 
+ * @param {function} callback - Called when all players finish
+ * @returns {function} Unsubscribe function
+ */
+export const listenForAllPlayersFinished = (gamePin, callback) => {
+  const playersRef = ref(realtimeDb, `battles/${gamePin}/players`);
+  
+  const unsubscribe = onValue(playersRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      callback({ allFinished: false, finishedCount: 0, totalPlayers: 0 });
+      return;
+    }
+    
+    const players = Object.values(snapshot.val());
+    const totalPlayers = players.length;
+    const finishedCount = players.filter(p => p.finished === true).length;
+    const allFinished = finishedCount === totalPlayers && totalPlayers > 0;
+    
+    callback({ allFinished, finishedCount, totalPlayers, players });
+  });
+  
+  return unsubscribe;
+};
+
+/**
  * Schedule Firebase battle cleanup after a delay
  * This allows players to view results while ensuring eventual cleanup
  * 
