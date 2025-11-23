@@ -101,13 +101,49 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
       } catch (error) {
         console.error('❌ Failed to fetch MySQL results:', error);
         
-        // FALLBACK: Use results passed from props if MySQL fetch fails
-        console.log('⚠️ Falling back to prop results:', results?.players);
+        // Try one more time with a longer timeout
+        console.log('🔄 Retrying MySQL fetch...');
         
-        if (results?.players && results.players.length > 0) {
-          setFinalPlayers(results.players);
-        } else {
-          console.error('❌ No players data available in fallback');
+        try {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const retryResponse = await quizApi.getBattleResults(results.gamePin);
+          
+          const retryResults = retryResponse.results || [];
+          const formattedRetry = retryResults.map(player => ({
+            id: `user_${player.user_id}`,
+            userId: player.user_id,
+            username: player.username,
+            name: player.player_name,
+            score: player.score || 0,
+            initial: player.player_initial || player.player_name?.[0] || '?',
+            profilePicture: player.profile_picture,
+            forfeited: player.score === 0,
+            isWinner: player.is_winner || false,
+            pointsEarned: player.points_earned || 0,
+            expEarned: player.exp_earned || 0
+          }));
+          
+          if (formattedRetry.length > 0) {
+            console.log('✅ Retry successful:', formattedRetry.length, 'players');
+            setFinalPlayers(formattedRetry);
+            setBattleData(retryResponse.battle);
+          } else {
+            console.log('⚠️ Retry returned empty, falling back to prop results');
+            if (results?.players && results.players.length > 0) {
+              setFinalPlayers(results.players);
+            }
+          }
+        } catch (retryError) {
+          console.error('❌ Retry also failed:', retryError);
+          
+          // FINAL FALLBACK: Use results passed from props
+          console.log('⚠️ Final fallback to prop results:', results?.players);
+          
+          if (results?.players && results.players.length > 0) {
+            setFinalPlayers(results.players);
+          } else {
+            console.error('❌ No players data available anywhere');
+          }
         }
         
         setLoading(false);
