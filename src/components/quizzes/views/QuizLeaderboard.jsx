@@ -72,7 +72,8 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
           username: player.username,
           name: player.player_name,
           score: player.score || 0,
-          initial: player.player_name?.[0] || '?',
+          initial: player.player_initial || player.player_name?.[0] || '?',
+          profilePicture: player.profile_picture,
           forfeited: player.score === 0,
           isWinner: player.is_winner || false,
           pointsEarned: player.points_earned || 0,
@@ -170,10 +171,17 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
   const answers = results?.answers || [];
   const quizTitle = battleData?.quiz_title || results?.quizTitle || 'Quiz Battle';
   
+  console.log('🎯 Leaderboard Display - validPlayers:', validPlayers);
+  console.log('🎯 battleData:', battleData);
+  
   const sortedPlayers = [...validPlayers].sort((a, b) => b.score - a.score);
   
   // Use MySQL winner flags if available, otherwise compute from scores
-  const winners = validPlayers.filter(p => p.isWinner) || sortedPlayers.filter(p => p.score === sortedPlayers[0]?.score);
+  const mysqlWinners = validPlayers.filter(p => p.isWinner);
+  const winners = mysqlWinners.length > 0 ? mysqlWinners : sortedPlayers.filter(p => p.score === sortedPlayers[0]?.score);
+  
+  console.log('🏆 Winners computed:', winners);
+  
   const isTie = battleData?.is_tied || winners.length > 1;
   const highestScore = winners.length > 0 ? winners[0].score : 0;
 

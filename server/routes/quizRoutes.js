@@ -2100,6 +2100,7 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
         rank: index + 1,
         user_id: p.player.user_id,
         player_name: p.player_name,
+        player_initial: p.player_initial,
         username: p.player.username,
         profile_picture: p.player.profile_picture,
         score: p.score,
