@@ -2386,7 +2386,11 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
           attributes: ['user_id', 'player_name'],
           transaction
         });
-        console.log(`   Existing participants in DB:`, existingParticipants.map(p => ({ user_id: p.user_id, name: p.player_name })));
+        console.log(`   Existing participants in DB:`, existingParticipants.map(p => ({ user_id: p.user_id, user_id_type: typeof p.user_id, name: p.player_name })));
+        
+        // Ensure userId is a number
+        const numericUserId = parseInt(player.userId, 10);
+        console.log(`   Converting userId: ${player.userId} (${typeof player.userId}) -> ${numericUserId} (${typeof numericUserId})`);
         
         // Update participant record
         const [updateCount] = await BattleParticipant.update(
@@ -2399,15 +2403,15 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
           { 
             where: { 
               battle_id: battle.battle_id, 
-              user_id: player.userId 
+              user_id: numericUserId 
             },
             transaction 
           }
         );
         
         if (updateCount === 0) {
-          console.warn('ΓÜá∩╕Å Participant not found for user:', player.userId);
-          console.warn('   Looking for: battle_id =', battle.battle_id, ', user_id =', player.userId, typeof player.userId);
+          console.warn('⚠️❌ Participant not found for user:', numericUserId);
+          console.warn('   Looking for: battle_id =', battle.battle_id, ', user_id =', numericUserId, typeof numericUserId);
           updateErrors.push(`Player ${player.userId} not found in battle`);
           continue;
         }
@@ -2417,19 +2421,19 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         // Award points to user account
         await User.increment('points', {
           by: pointsEarned,
-          where: { user_id: player.userId },
+          where: { user_id: numericUserId },
           transaction
         });
         
         // Award achievements for ALL tied winners
         if (isWinner) {
-          console.log(`≡ƒÅå Player ${player.userId} is a winner (tied: ${isTied})`);
+          console.log(`🏆 Player ${numericUserId} is a winner (tied: ${isTied})`);
         }
         
-        console.log(`Γ£à Updated player ${player.userId}`);
+        console.log(`✅ Updated player ${numericUserId}`);
         
       } catch (playerError) {
-        console.error(`Γ¥î Error updating player ${player.userId}:`, playerError);
+        console.error(`❌ Error updating player ${player.userId}:`, playerError);
         updateErrors.push(`Failed to update player ${player.userId}: ${playerError.message}`);
         
         // If any player fails, rollback entire transaction
@@ -2467,7 +2471,8 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     // All tied winners should get "battles_won" achievements
     for (const player of players) {
       try {
-        await checkAchievements(player.userId);
+        const numericUserId = parseInt(player.userId, 10);
+        await checkAchievements(numericUserId);
         
         const isWinner = winnerIds.includes(player.userId);
         if (isWinner) {

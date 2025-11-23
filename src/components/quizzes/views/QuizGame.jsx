@@ -1172,48 +1172,7 @@ const QuizGame = ({
       // Not all finished yet - show waiting screen and listen
       console.log('⏳ Not all players finished, setting up listener...');
       setWaitingForPlayers(true);
-      setWaitingTimeRemaining(60);
       setFinishedPlayersCount({ finished: immediateCheck.finishedCount, total: immediateCheck.totalPlayers });
-      
-      // Start 1-minute countdown
-      const countdownInterval = setInterval(() => {
-        setWaitingTimeRemaining(prev => {
-          if (prev <= 1) {
-            clearInterval(countdownInterval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      // Set 1-minute timeout to force show leaderboard
-      waitingTimeoutRef.current = setTimeout(() => {
-        console.log('⏰ 1-minute timeout reached, forcing leaderboard...');
-        clearInterval(countdownInterval);
-        if (unsubscribe) unsubscribe();
-        
-        // Prepare results with current players' scores
-        results.players = players.map(player => ({
-          id: `player_${player.userId}`,
-          userId: player.userId,
-          name: player.name,
-          initial: player.initial || player.name?.[0] || '?',
-          score: player.score || 0,
-          forfeited: !player.hasFinished || false
-        }));
-        
-        results.winner = results.players.reduce((prev, current) => 
-          prev.score > current.score ? prev : current
-        );
-        
-        setWaitingForPlayers(false);
-        console.log('🚀 TIMEOUT - CALLING onComplete with results:', { 
-          gamePin: results.gamePin, 
-          isHost: results.isHost, 
-          playersCount: results.players?.length 
-        });
-        onComplete(results);
-      }, 60000); // 60 seconds
       
       // Listen for all players to finish
       const unsubscribe = listenForAllPlayersFinished(quiz.gamePin, ({ allFinished, finishedCount, totalPlayers, players }) => {
@@ -1223,8 +1182,6 @@ const QuizGame = ({
         
         if (allFinished) {
           console.log('🎉 All players finished! Showing leaderboard...');
-          clearInterval(countdownInterval);
-          clearTimeout(waitingTimeoutRef.current);
           unsubscribe(); // Stop listening
           
           // Prepare results with all players' final scores from Firebase
