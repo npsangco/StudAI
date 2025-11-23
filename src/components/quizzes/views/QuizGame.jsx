@@ -6,6 +6,7 @@ import { QuizQuestion } from '../QuizCore';
 import { LiveLeaderboard } from './QuizLiveLeaderboard';
 import { ANSWER_DISPLAY_DURATION } from '../utils/constants';
 import { listenToPlayers, updatePlayerScore, updatePlayerProgress, markPlayerFinished, listenForAllPlayersFinished } from '../../../firebase/battleOperations';
+import { sendReaction } from '../../../firebase/reactionOperations';
 import { ref, update, get } from 'firebase/database';
 import { realtimeDb } from '../../../firebase/config';
 import { useReconnection } from '../hooks/useReconnection';
