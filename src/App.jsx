@@ -28,6 +28,7 @@ import SupportPage from "./pages/SupportPage";
 import ZoomDocumentationPage from "./pages/ZoomDocumentationPage";
 import Footer from "./components/Footer";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
 import DevMenu from "./components/DevMenu";
 import 'primereact/resources/themes/lara-light-blue/theme.css';
 import 'primereact/resources/primereact.min.css';
@@ -81,13 +82,13 @@ function App() {
           <Route path="/resetpassword" element={<ResetPassword />} />
           <Route path="/passwordrecovery" element={<PassRecovery />} />
 
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/notes" element={<Notes />} />
-          <Route path="/quizzes" element={<Quizzes />} />
-          <Route path="/sessions" element={<JitsiSessions />} />
-          <Route path="/zoom-sessions" element={<ZoomSessions />} />
-          <Route path="/planner" element={<Planner />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+          <Route path="/quizzes" element={<ProtectedRoute><Quizzes /></ProtectedRoute>} />
+          <Route path="/sessions" element={<ProtectedRoute><JitsiSessions /></ProtectedRoute>} />
+          <Route path="/zoom-sessions" element={<ProtectedRoute><ZoomSessions /></ProtectedRoute>} />
+          <Route path="/planner" element={<ProtectedRoute><Planner /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
           <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
           <Route path="/admin/users" element={<ProtectedAdminRoute><UserManagement /></ProtectedAdminRoute>} />

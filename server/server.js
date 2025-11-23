@@ -292,8 +292,22 @@ async function ensureChatbotForeignKey() {
 // ============================================
 
 // ----------- CORS -----------------
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? ['https://studai.dev', 'https://www.studai.dev', 'https://walrus-app-umg67.ondigitalocean.app']
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
 app.use(cors({
-    origin: ['https://studai.dev'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️  CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -410,6 +424,8 @@ sequelize.authenticate()
 
 // ----------------- Session Configuration -----------------
 if (sessionStore) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     app.use(
         session({
             secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
@@ -419,10 +435,10 @@ if (sessionStore) {
             name: "studai_session",
             cookie: {
                 httpOnly: true,
-                secure: true,
+                secure: isProduction, // Only require HTTPS in production
                 maxAge: 1000 * 60 * 60 * 24,
-                sameSite: 'none',
-                domain: '.walrus-app-umg67.ondigitalocean.app',
+                sameSite: isProduction ? 'none' : 'lax', // 'lax' for local dev, 'none' for production
+                domain: isProduction ? '.walrus-app-umg67.ondigitalocean.app' : undefined, // No domain restriction in dev
             },
             rolling: true,
         })
@@ -1165,7 +1181,17 @@ app.post("/api/auth/logout", async (req, res) => {
     if (req.session) {
         req.session.destroy((err) => {
             if (err) return res.status(500).json({ error: "Logout failed" });
-            res.clearCookie("studai_session");
+            
+            // Clear cookie with same options as set (environment-aware)
+            const isProduction = process.env.NODE_ENV === 'production';
+            res.clearCookie("studai_session", {
+                httpOnly: true,
+                secure: isProduction,
+                sameSite: isProduction ? 'none' : 'lax',
+                domain: isProduction ? '.walrus-app-umg67.ondigitalocean.app' : undefined,
+                path: '/'
+            });
+            
             res.json({ message: "Logged out successfully" });
         });
     } else {

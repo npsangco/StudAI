@@ -86,10 +86,19 @@ export default function Sidebar({ isOpen, onClose }) {
     const handleLogout = async () => {
         try {
             await axios.post(`${API_BASE}/api/auth/logout`, {}, { withCredentials: true });
-            navigate("/login");
+            // Clear any cached data
+            sessionStorage.clear();
+            localStorage.removeItem('lastVisited');
+            // Force navigate and replace history
+            navigate("/login", { replace: true });
+            // Reload to clear all state
+            window.location.reload();
         } catch (err) {
             console.error("Logout error:", err);
-            toast.error("Failed to log out");
+            // Even if logout fails on server, clear client and redirect
+            sessionStorage.clear();
+            navigate("/login", { replace: true });
+            window.location.reload();
         }
     };
 
