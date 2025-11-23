@@ -1125,14 +1125,19 @@ const QuizGame = ({
       const finalScore = game.scoreRef.current;
       await markPlayerFinished(quiz.gamePin, quiz.currentUserId, finalScore);
       
-      console.log('✅ Player finished, checking if all players done...');
+      console.log('✅ Player finished, waiting for Firebase to sync...');
+      
+      // ⏳ Wait 500ms for Firebase to propagate the update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log('🔍 Now checking if all players done...');
       
       // Show waiting screen
       setWaitingForPlayers(true);
       
       // Listen for all players to finish
       const unsubscribe = listenForAllPlayersFinished(quiz.gamePin, ({ allFinished, finishedCount, totalPlayers, players }) => {
-        console.log(`📊 ${finishedCount}/${totalPlayers} players finished`);
+        console.log(`📊 Listener fired: ${finishedCount}/${totalPlayers} players finished`);
         
         setFinishedPlayersCount({ finished: finishedCount, total: totalPlayers });
         
