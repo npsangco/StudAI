@@ -591,6 +591,11 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
           // Don't fail the whole sync if verification fails
         }
         
+        // 🧹 SCHEDULE FIREBASE AUTO-CLEANUP (1 hour delay)
+        // This allows players to view results for a while before deletion
+        console.log('⏰ Scheduling Firebase cleanup in 1 hour for PIN:', gamePin);
+        scheduleFirebaseCleanup(gamePin, 60 * 60 * 1000); // 1 hour
+        
         // Release lock
         await releaseSyncLock(gamePin);
         
@@ -902,6 +907,58 @@ export const canSafelyCleanup = async (gamePin) => {
   } catch (error) {
     console.error('❌ Error checking cleanup safety:', error);
     return { canCleanup: false, reason: `Error: ${error.message}` };
+  }
+};
+
+/**
+ * Schedule Firebase battle cleanup after a delay
+ * This allows players to view results while ensuring eventual cleanup
+ * 
+ * @param {string} gamePin - The battle game PIN
+ * @param {number} delayMs - Delay in milliseconds (default: 1 hour)
+ */
+export const scheduleFirebaseCleanup = async (gamePin, delayMs = 60 * 60 * 1000) => {
+  try {
+    // Store cleanup request in Firebase
+    const cleanupRef = ref(realtimeDb, `battles/${gamePin}/metadata/scheduledCleanup`);
+    const cleanupTime = Date.now() + delayMs;
+    
+    await set(cleanupRef, {
+      scheduledAt: Date.now(),
+      cleanupAt: cleanupTime,
+      reason: 'auto-cleanup-after-sync'
+    });
+    
+    console.log('✅ Cleanup scheduled for:', new Date(cleanupTime).toLocaleString());
+    
+    // Set a timer to perform cleanup
+    setTimeout(async () => {
+      try {
+        console.log('🧹 Auto-cleanup timer triggered for PIN:', gamePin);
+        
+        // Verify battle still exists and is safe to cleanup
+        const safetyCheck = await canSafelyCleanup(gamePin);
+        
+        if (safetyCheck.canCleanup) {
+          console.log('✅ Safety check passed, deleting Firebase battle:', gamePin);
+          await deleteBattleRoom(gamePin);
+          console.log('✅ Firebase battle deleted successfully:', gamePin);
+        } else {
+          console.log('⚠️ Safety check failed, skipping cleanup:', safetyCheck.reason);
+          
+          // If viewers are still present, schedule another cleanup attempt
+          if (safetyCheck.reason.includes('viewers')) {
+            console.log('⏰ Rescheduling cleanup in 30 minutes');
+            scheduleFirebaseCleanup(gamePin, 30 * 60 * 1000); // Retry in 30 min
+          }
+        }
+      } catch (error) {
+        console.error('❌ Auto-cleanup error:', error);
+      }
+    }, delayMs);
+    
+  } catch (error) {
+    console.error('❌ Error scheduling cleanup:', error);
   }
 };
 
