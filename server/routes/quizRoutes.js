@@ -2430,10 +2430,17 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         );
         
         if (updateCount === 0) {
-          console.warn('⚠️❌ Update returned 0 rows for user:', numericUserId);
-          console.warn('   But findOne found participant! This should not happen.');
-          updateErrors.push(`Player ${player.userId} update failed mysteriously`);
-          continue;
+          // If update returns 0, check if values are the same (normal for score=0)
+          if (participantExists.score === player.score && 
+              participantExists.points_earned === pointsEarned &&
+              participantExists.is_winner === isWinner) {
+            console.log(`ℹ️ Player ${numericUserId} values unchanged (score=${player.score}, already up to date)`);
+          } else {
+            console.warn('⚠️❌ Update returned 0 rows for user:', numericUserId);
+            console.warn('   But findOne found participant! This should not happen.');
+            updateErrors.push(`Player ${player.userId} update failed mysteriously`);
+            continue;
+          }
         }
         
         updatedCount++;
