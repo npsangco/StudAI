@@ -159,7 +159,9 @@ const QuizGame = ({
   // Battle: Waiting for other players
   const [waitingForPlayers, setWaitingForPlayers] = useState(false);
   const [finishedPlayersCount, setFinishedPlayersCount] = useState({ finished: 0, total: 0 });
+  const [waitingTimeRemaining, setWaitingTimeRemaining] = useState(60); // 1 minute countdown
   const encouragementTimerRef = useRef(null);
+  const waitingTimeoutRef = useRef(null);
 
   // 🔒 SUBMISSION MUTEX: Prevent race condition between timer and manual submission
   const submissionLockRef = useRef({ locked: false, timestamp: 0 });
@@ -1170,7 +1172,43 @@ const QuizGame = ({
       // Not all finished yet - show waiting screen and listen
       console.log('⏳ Not all players finished, setting up listener...');
       setWaitingForPlayers(true);
+      setWaitingTimeRemaining(60);
       setFinishedPlayersCount({ finished: immediateCheck.finishedCount, total: immediateCheck.totalPlayers });
+      
+      // Start 1-minute countdown
+      const countdownInterval = setInterval(() => {
+        setWaitingTimeRemaining(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      // Set 1-minute timeout to force show leaderboard
+      waitingTimeoutRef.current = setTimeout(() => {
+        console.log('⏰ 1-minute timeout reached, forcing leaderboard...');
+        clearInterval(countdownInterval);
+        if (unsubscribe) unsubscribe();
+        
+        // Prepare results with current players' scores
+        results.players = players.map(player => ({
+          id: `player_${player.userId}`,
+          userId: player.userId,
+          name: player.name,
+          initial: player.initial || player.name?.[0] || '?',
+          score: player.score || 0,
+          forfeited: !player.hasFinished || false
+        }));
+        
+        results.winner = results.players.reduce((prev, current) => 
+          prev.score > current.score ? prev : current
+        );
+        
+        setWaitingForPlayers(false);
+        onComplete(results);
+      }, 60000); // 60 seconds
       
       // Listen for all players to finish
       const unsubscribe = listenForAllPlayersFinished(quiz.gamePin, ({ allFinished, finishedCount, totalPlayers, players }) => {
@@ -1180,6 +1218,8 @@ const QuizGame = ({
         
         if (allFinished) {
           console.log('🎉 All players finished! Showing leaderboard...');
+          clearInterval(countdownInterval);
+          clearTimeout(waitingTimeoutRef.current);
           unsubscribe(); // Stop listening
           
           // Prepare results with all players' final scores from Firebase
@@ -1595,15 +1635,23 @@ const QuizGame = ({
           <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border-4 border-yellow-400 transform animate-bounce-gentle">
             <div className="text-6xl mb-4 animate-pulse">⏳</div>
             <h2 className="text-2xl font-bold text-gray-800 mb-3">Waiting for Other Players...</h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-4">
               You finished the quiz! Hold on while others complete their questions.
             </p>
             
-            <div className="bg-gradient-to-r from-yellow-100 to-amber-100 rounded-2xl p-4 mb-6 border-2 border-yellow-300">
+            <div className="bg-gradient-to-r from-yellow-100 to-amber-100 rounded-2xl p-4 mb-4 border-2 border-yellow-300">
               <div className="text-5xl font-bold text-yellow-600 mb-1">
                 {finishedPlayersCount.finished}/{finishedPlayersCount.total}
               </div>
               <div className="text-sm text-gray-700 font-semibold">Players Finished</div>
+            </div>
+
+            {/* Countdown Timer */}
+            <div className="bg-gradient-to-r from-red-100 to-orange-100 rounded-xl p-3 mb-4 border-2 border-red-300">
+              <div className="text-2xl font-bold text-red-600 mb-1">
+                {Math.floor(waitingTimeRemaining / 60)}:{(waitingTimeRemaining % 60).toString().padStart(2, '0')}
+              </div>
+              <div className="text-xs text-gray-700 font-medium">Time Remaining</div>
             </div>
             
             <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">

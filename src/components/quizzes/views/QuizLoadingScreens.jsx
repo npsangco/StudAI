@@ -700,20 +700,6 @@ export const BattleLobbyScreen = ({
                     : '🚀 Start Battle'
                   }
                 </button>
-                
-                {/* Diagnostic Button - Only show if start is disabled */}
-                {(totalPlayers < 2 || !allReady) && (
-                  <button
-                    onClick={async () => {
-                      const { runBattleDiagnostic } = await import('../../../utils/battleDiagnostic');
-                      await runBattleDiagnostic(gamePin);
-                      alert('Check browser console (F12) for detailed diagnostic report');
-                    }}
-                    className="px-6 py-2.5 bg-blue-500 text-white rounded-full text-sm font-medium hover:bg-blue-600 transition-all shadow-md hover:shadow-lg"
-                  >
-                    🔍 Run Diagnostic
-                  </button>
-                )}
               </>
             )}
 

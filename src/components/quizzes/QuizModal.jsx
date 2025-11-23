@@ -5,10 +5,17 @@ import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy, FileTe
 // QUIZ MODE SELECTION MODAL
 // ============================================
 export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) => {
-  const [questionCount, setQuestionCount] = React.useState(quiz?.questionCount || 10);
   const totalQuestions = quiz?.questionCount || 10;
   const minQuestions = Math.min(5, totalQuestions);
-  const maxSelectableQuestions = Math.max(minQuestions, totalQuestions - 5);
+  const maxSelectableQuestions = totalQuestions > 5 ? totalQuestions - 5 : totalQuestions;
+  const [questionCount, setQuestionCount] = React.useState(maxSelectableQuestions);
+
+  // Reset question count when quiz changes
+  React.useEffect(() => {
+    if (quiz) {
+      setQuestionCount(maxSelectableQuestions);
+    }
+  }, [quiz?.id, maxSelectableQuestions]);
 
   if (!isOpen || !quiz) return null;
 

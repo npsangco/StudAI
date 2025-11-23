@@ -16,6 +16,15 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
   const [syncComplete, setSyncComplete] = useState(false);
   const syncAttempted = useRef(false);
 
+  // Debug: Log when component receives props
+  useEffect(() => {
+    console.log('🎯 QuizLeaderboard Props Changed:');
+    console.log('   isOpen:', isOpen);
+    console.log('   results:', results);
+    console.log('   gamePin:', results?.gamePin);
+    console.log('   isHost:', results?.isHost);
+  }, [isOpen, results]);
+
   // Reset flags when modal closes or reopens
   useEffect(() => {
     if (!isOpen) {
@@ -60,7 +69,10 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
         
         console.log('📊 Fetching leaderboard from MySQL for PIN:', results.gamePin);
         
-        const response = await quizApi.getBattleResults(results.gamePin);
+        const response = await Promise.race([
+          quizApi.getBattleResults(results.gamePin),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
+        ]);
         
         console.log('✅ MySQL Results:', response);
         
@@ -90,8 +102,14 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
         console.error('❌ Failed to fetch MySQL results:', error);
         
         // FALLBACK: Use results passed from props if MySQL fetch fails
-        console.log('⚠️ Falling back to prop results');
-        setFinalPlayers(results?.players || []);
+        console.log('⚠️ Falling back to prop results:', results?.players);
+        
+        if (results?.players && results.players.length > 0) {
+          setFinalPlayers(results.players);
+        } else {
+          console.error('❌ No players data available in fallback');
+        }
+        
         setLoading(false);
       }
     };
@@ -173,6 +191,8 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
   
   console.log('🎯 Leaderboard Display - validPlayers:', validPlayers);
   console.log('🎯 battleData:', battleData);
+  console.log('🎯 isOpen:', isOpen);
+  console.log('🎯 results:', results);
   
   const sortedPlayers = [...validPlayers].sort((a, b) => b.score - a.score);
   
