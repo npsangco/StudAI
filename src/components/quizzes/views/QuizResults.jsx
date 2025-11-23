@@ -26,17 +26,22 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
   // Fetch leaderboard when modal opens (solo mode only)
   useEffect(() => {
     const fetchLeaderboard = async () => {
+      console.log('🏆 Leaderboard fetch check:', { isOpen, mode, quizId: results?.quizId });
+      
       if (!isOpen || mode !== 'solo' || !results?.quizId) {
+        console.log('❌ Leaderboard fetch skipped');
         setLoadingLeaderboard(false);
         return;
       }
 
       try {
         setLoadingLeaderboard(true);
+        console.log('📡 Fetching leaderboard for quiz:', results.quizId);
         const response = await quizApi.getLeaderboard(results.quizId);
+        console.log('✅ Leaderboard response:', response);
         setLeaderboard(response.leaderboard || []);
       } catch (error) {
-        console.error('Failed to fetch leaderboard:', error);
+        console.error('❌ Failed to fetch leaderboard:', error);
         setLeaderboard([]);
       } finally {
         setLoadingLeaderboard(false);

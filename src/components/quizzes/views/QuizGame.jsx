@@ -27,6 +27,7 @@ import {
 import { AdaptiveFeedback } from '../components/AdaptiveFeedback';
 import QuizPetCompanion from '../QuizPetCompanion';
 import { EmojiReactions } from './EmojiReactions';
+import { EmojiPicker } from './EmojiPicker';
 
 const QuizGame = ({
   quiz,
