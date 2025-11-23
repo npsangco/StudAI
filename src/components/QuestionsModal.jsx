@@ -74,21 +74,19 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                                             : 'bg-gray-50 border border-gray-200'
                                     }`}
                                 >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1">
-                                            <span className={`font-semibold mr-2 ${
-                                                isCorrect ? 'text-green-900' : 'text-gray-700'
-                                            }`}>
-                                                {String.fromCharCode(65 + idx)}.
-                                            </span>
-                                            <span className={isCorrect ? 'text-green-900 font-medium' : 'text-gray-700'}>
-                                                {choice}
-                                            </span>
-                                        </div>
+                                    <div className="flex items-start gap-3">
+                                        <span className={`font-semibold flex-shrink-0 ${
+                                            isCorrect ? 'text-green-900' : 'text-gray-700'
+                                        }`}>
+                                            {String.fromCharCode(65 + idx)}.
+                                        </span>
+                                        <span className={`flex-1 ${isCorrect ? 'text-green-900 font-medium' : 'text-gray-700'}`}>
+                                            {choice}
+                                        </span>
                                         {isCorrect && (
                                             <span className="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded flex items-center gap-1 flex-shrink-0">
                                                 <Check className="w-3 h-3" />
-                                                CORRECT ANSWER
+                                                CORRECT
                                             </span>
                                         )}
                                     </div>
@@ -101,14 +99,17 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
             case 'True/False':
                 return (
                     <div className="mt-3">
-                        <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-50 border-2 border-green-300 rounded-lg">
-                            <span className="text-sm font-semibold text-green-900">
-                                {question.correct_answer || 'N/A'}
-                            </span>
-                            <span className="px-2 py-0.5 bg-green-600 text-white text-xs font-bold rounded flex items-center gap-1">
-                                <Check className="w-3 h-3" />
-                                CORRECT
-                            </span>
+                        <div className="px-4 py-3 bg-green-50 border-2 border-green-300 rounded-lg">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                    <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">
+                                        Correct Answer:
+                                    </p>
+                                    <p className="text-sm font-medium text-green-900">
+                                        {question.correct_answer || 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 );
@@ -142,33 +143,41 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                 
                 return (
                     <div className="mt-3">
-                        <div className="mb-2">
+                        <div className="mb-3">
                             <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">
                                 Correct Matches:
                             </span>
                         </div>
-                        <div className="space-y-2">
-                            {matchingPairs.map((pair, idx) => (
-                                <div 
-                                    key={idx} 
-                                    className="flex items-center gap-3 px-4 py-3 bg-purple-50 border-2 border-purple-300 rounded-lg"
-                                >
-                                    <span className="text-sm font-semibold text-purple-900 flex-shrink-0">
-                                        {pair.left || ''}
-                                    </span>
-                                    <div className="flex items-center gap-2 flex-1">
-                                        <div className="h-px flex-1 bg-purple-300"></div>
-                                        <span className="px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded flex items-center gap-1">
-                                            <Check className="w-3 h-3" />
-                                            MATCH
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Left Column */}
+                            <div className="space-y-2">
+                                <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Column A</h4>
+                                {matchingPairs.map((pair, idx) => (
+                                    <div
+                                        key={`left-${idx}`}
+                                        className="px-3 py-2 bg-purple-50 border-2 border-purple-300 rounded-lg"
+                                    >
+                                        <span className="text-sm font-semibold text-purple-900">
+                                            {pair.left || ''}
                                         </span>
-                                        <div className="h-px flex-1 bg-purple-300"></div>
                                     </div>
-                                    <span className="text-sm font-semibold text-purple-900 flex-shrink-0">
-                                        {pair.right || ''}
-                                    </span>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
+                            
+                            {/* Right Column */}
+                            <div className="space-y-2">
+                                <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Column B</h4>
+                                {matchingPairs.map((pair, idx) => (
+                                    <div
+                                        key={`right-${idx}`}
+                                        className="px-3 py-2 bg-purple-50 border-2 border-purple-300 rounded-lg"
+                                    >
+                                        <span className="text-sm font-semibold text-purple-900">
+                                            {pair.right || ''}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 );
