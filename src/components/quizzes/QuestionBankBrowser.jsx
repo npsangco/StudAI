@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Database, X, Plus, CheckCircle, Loader, ChevronDown, ChevronUp } from 'lucide-react';
-import { API_URL } from '../../../config/api.config.js';
+import { API_URL } from '../../config/api.config';
 
 // ============================================
 // QUESTION BANK BROWSER COMPONENT
