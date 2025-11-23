@@ -861,10 +861,15 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
 
     const quizQuota = await ensureQuizAvailable(userId);
     if (!quizQuota.allowed) {
+      const errorMessage = quizQuota.reason === 'cooldown'
+        ? 'AI quiz generation is limited to once every other day.'
+        : 'AI quiz generation limit reached.';
       return res.status(429).json({
-        error: 'Daily AI quiz limit reached',
+        error: errorMessage,
         limits: DAILY_AI_LIMITS,
-        remaining: quizQuota.remaining
+        remaining: quizQuota.remaining,
+        nextAvailableOn: quizQuota.nextAvailableOn,
+        cooldown: quizQuota.cooldown
       });
     }
 
@@ -999,10 +1004,15 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
 
       const recordResult = await recordQuizUsage(userId);
       if (!recordResult.allowed) {
+        const errorMessage = recordResult.reason === 'cooldown'
+          ? 'AI quiz generation is limited to once every other day.'
+          : 'AI quiz generation limit reached.';
         return res.status(429).json({
-          error: 'Daily AI quiz limit reached',
+          error: errorMessage,
           limits: DAILY_AI_LIMITS,
-          remaining: 0
+          remaining: recordResult.remaining,
+          nextAvailableOn: recordResult.nextAvailableOn,
+          cooldown: recordResult.cooldown
         });
       }
 

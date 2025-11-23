@@ -1,9 +1,12 @@
+import { Op } from 'sequelize';
 import sequelize from '../db.js';
 import AIUsageStat from '../models/AIUsageStat.js';
 
 const DEFAULT_SUMMARY_LIMIT = Number(process.env.AI_SUMMARY_DAILY_LIMIT || process.env.AI_SUMMARY_LIMIT) || 2;
-const DEFAULT_QUIZ_LIMIT = Number(process.env.AI_QUIZ_DAILY_LIMIT || process.env.AI_QUIZ_LIMIT) || 2;
+const DEFAULT_QUIZ_LIMIT = Number(process.env.AI_QUIZ_DAILY_LIMIT || process.env.AI_QUIZ_LIMIT) || 1;
 const DEFAULT_CHATBOT_LIMIT = Number(process.env.AI_CHATBOT_TOKEN_LIMIT || process.env.CHATBOT_TOKEN_LIMIT) || 5000;
+const QUIZ_COOLDOWN_DAYS = Number(process.env.AI_QUIZ_COOLDOWN_DAYS) || 2;
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export const DAILY_AI_LIMITS = {
   summary: DEFAULT_SUMMARY_LIMIT,
@@ -21,6 +24,68 @@ const defaultUsagePayload = (userId, date) => ({
 });
 
 const todayString = () => new Date().toISOString().split('T')[0];
+
+const normalizeDateOnly = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? new Date(value) : new Date(`${value}T00:00:00Z`);
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+};
+
+const addDaysToDateString = (dateString, days) => {
+  const date = normalizeDateOnly(dateString);
+  if (!date) return null;
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().split('T')[0];
+};
+
+async function getLastQuizUsage(userId, { transaction } = {}) {
+  return AIUsageStat.findOne({
+    where: {
+      user_id: userId,
+      quizzes_used: {
+        [Op.gt]: 0
+      }
+    },
+    order: [['date', 'DESC']],
+    transaction
+  });
+}
+
+async function getQuizCooldownInfo(userId, { transaction } = {}) {
+  const lastUsage = await getLastQuizUsage(userId, { transaction });
+  const today = todayString();
+  const todayDate = normalizeDateOnly(today);
+
+  if (!lastUsage) {
+    return {
+      inCooldown: false,
+      lastUsedOn: null,
+      nextAvailableOn: today,
+      daysUntilAvailable: 0
+    };
+  }
+
+  const lastUsageDate = normalizeDateOnly(lastUsage.date);
+  const diffDays = Math.floor(Math.max(0, (todayDate - lastUsageDate) / DAY_IN_MS));
+
+  if (diffDays >= QUIZ_COOLDOWN_DAYS) {
+    return {
+      inCooldown: false,
+      lastUsedOn: lastUsage.date,
+      nextAvailableOn: today,
+      daysUntilAvailable: 0
+    };
+  }
+
+  const nextAvailableOn = addDaysToDateString(lastUsage.date, QUIZ_COOLDOWN_DAYS);
+  return {
+    inCooldown: true,
+    lastUsedOn: lastUsage.date,
+    nextAvailableOn,
+    daysUntilAvailable: Math.max(QUIZ_COOLDOWN_DAYS - diffDays, 0)
+  };
+}
 
 async function getUsageRecord(userId, { transaction, lockRow = false } = {}) {
   const date = todayString();
@@ -57,7 +122,16 @@ async function getUsageRecord(userId, { transaction, lockRow = false } = {}) {
 export async function getUsageSnapshot(userId) {
   if (!userId) return null;
   const usage = await getUsageRecord(userId);
-  return formatUsageResponse(usage);
+  const snapshot = formatUsageResponse(usage);
+  const quizCooldown = await getQuizCooldownInfo(userId);
+  snapshot.cooldowns = {
+    ...(snapshot.cooldowns || {}),
+    quiz: quizCooldown
+  };
+  if (quizCooldown.inCooldown) {
+    snapshot.remaining.quiz = 0;
+  }
+  return snapshot;
 }
 
 export async function ensureSummaryAvailable(userId) {
@@ -70,11 +144,25 @@ export async function ensureSummaryAvailable(userId) {
 }
 
 export async function ensureQuizAvailable(userId) {
+  const quizCooldown = await getQuizCooldownInfo(userId);
+  if (quizCooldown.inCooldown) {
+    return {
+      allowed: false,
+      remaining: 0,
+      reason: 'cooldown',
+      nextAvailableOn: quizCooldown.nextAvailableOn,
+      cooldown: quizCooldown
+    };
+  }
+
   const usage = await getUsageRecord(userId);
   const remaining = Math.max(DAILY_AI_LIMITS.quiz - usage.quizzes_used, 0);
   return {
     allowed: remaining > 0,
-    remaining
+    remaining,
+    reason: remaining > 0 ? 'available' : 'limit',
+    nextAvailableOn: quizCooldown.nextAvailableOn,
+    cooldown: quizCooldown
   };
 }
 
@@ -102,11 +190,25 @@ export async function recordSummaryUsage(userId) {
 
 export async function recordQuizUsage(userId) {
   return sequelize.transaction(async (transaction) => {
+    const quizCooldown = await getQuizCooldownInfo(userId, { transaction });
+    if (quizCooldown.inCooldown) {
+      return {
+        allowed: false,
+        remaining: 0,
+        reason: 'cooldown',
+        nextAvailableOn: quizCooldown.nextAvailableOn,
+        cooldown: quizCooldown
+      };
+    }
+
     const usage = await getUsageRecord(userId, { transaction, lockRow: true });
     if (usage.quizzes_used >= DAILY_AI_LIMITS.quiz) {
       return {
         allowed: false,
-        remaining: 0
+        remaining: 0,
+        reason: 'limit',
+        nextAvailableOn: quizCooldown.nextAvailableOn,
+        cooldown: quizCooldown
       };
     }
 
@@ -114,10 +216,15 @@ export async function recordQuizUsage(userId) {
       quizzes_used: usage.quizzes_used + 1
     }, { transaction });
 
-    const remaining = Math.max(DAILY_AI_LIMITS.quiz - (usage.quizzes_used + 1), 0);
+    const quizzesUsedAfter = usage.quizzes_used + 1;
+    const remaining = Math.max(DAILY_AI_LIMITS.quiz - quizzesUsedAfter, 0);
+    const updatedCooldown = await getQuizCooldownInfo(userId, { transaction });
     return {
       allowed: true,
-      remaining
+      remaining,
+      reason: 'available',
+      nextAvailableOn: updatedCooldown.nextAvailableOn,
+      cooldown: updatedCooldown
     };
   });
 }
