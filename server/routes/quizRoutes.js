@@ -1369,7 +1369,7 @@ router.get('/:id/leaderboard', requireAuth, async (req, res) => {
       where: { quiz_id: quizId },
       include: [{
         model: User,
-        as: 'user',
+        as: 'student',
         attributes: ['username', 'profile_picture']
       }],
       order: [
@@ -2098,11 +2098,11 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
       },
       results: participants.map((p, index) => ({
         rank: index + 1,
-        user_id: p.player.user_id,
+        user_id: p.user_id,
         player_name: p.player_name,
         player_initial: p.player_initial,
-        username: p.player.username,
-        profile_picture: p.player.profile_picture,
+        username: p.player ? p.player.username : p.player_name,
+        profile_picture: p.player ? p.player.profile_picture : null,
         score: p.score,
         is_winner: p.is_winner, // Γ£à Use database value (supports ties)
         points_earned: p.points_earned,
