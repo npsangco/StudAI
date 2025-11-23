@@ -23,22 +23,20 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
     }))
   );
 
-  // Fetch leaderboard when quiz results open
+  // Fetch leaderboard when modal opens (solo mode only)
   useEffect(() => {
     const fetchLeaderboard = async () => {
-      if (!isOpen || !results?.quizId) {
-        console.log('🔍 Leaderboard fetch skipped:', { isOpen, quizId: results?.quizId, results });
+      if (!isOpen || mode !== 'solo' || !results?.quizId) {
+        setLoadingLeaderboard(false);
         return;
       }
-      
+
       try {
-        console.log('📊 Fetching leaderboard for quiz:', results.quizId);
         setLoadingLeaderboard(true);
         const response = await quizApi.getLeaderboard(results.quizId);
-        console.log('📊 Leaderboard response:', response);
         setLeaderboard(response.leaderboard || []);
       } catch (error) {
-        console.error('❌ Failed to fetch leaderboard:', error);
+        console.error('Failed to fetch leaderboard:', error);
         setLeaderboard([]);
       } finally {
         setLoadingLeaderboard(false);
@@ -46,7 +44,7 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
     };
 
     fetchLeaderboard();
-  }, [isOpen, results?.quizId]);
+  }, [isOpen, mode, results?.quizId]);
 
   if (!isOpen) return null;
 
@@ -120,11 +118,11 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
           <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl" />
         </div>
 
-        {/* Two Column Layout: Results + Leaderboard */}
-        <div className="relative w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        {/* Two-column layout: Results + Leaderboard */}
+        <div className="relative w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 items-start">
           
-          {/* LEFT: Results Card */}
-          <div className="relative w-full">
+          {/* Results Card */}
+          <div className="relative">
             <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/40 border-2 border-white/60 transform translate-y-2 translate-x-2" style={{
               boxShadow: '0 20px 40px rgba(129, 140, 248, 0.15)'
             }} />
@@ -319,123 +317,97 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
           </div>
           </div>
 
-          {/* RIGHT: Leaderboard Card */}
-          <div className="relative w-full">
-            <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/40 border-2 border-white/60 transform translate-y-2 translate-x-2" style={{
-              boxShadow: '0 20px 40px rgba(129, 140, 248, 0.15)'
-            }} />
-            <div className="relative rounded-3xl backdrop-blur-xl bg-white/70 border-2 border-white/80 overflow-hidden" style={{
-              boxShadow: '0 25px 50px rgba(251, 191, 36, 0.3), 0 10px 30px rgba(129, 140, 248, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
-            }}>
-              <div className="p-5 sm:p-6">
-                {/* Leaderboard Header */}
-                <div className="text-center mb-4">
-                  <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent drop-shadow-sm flex items-center justify-center gap-2">
-                    <Trophy className="w-5 h-5 text-purple-500" />
-                    Leaderboard
-                  </h2>
-                  <p className="text-xs text-gray-600 mt-1">Top scores across all attempts</p>
-                </div>
+          {/* Leaderboard Card (Solo Mode Only) */}
+          {mode === 'solo' && (
+            <div className="relative">
+              <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/40 border-2 border-white/60 transform translate-y-2 translate-x-2" style={{
+                boxShadow: '0 20px 40px rgba(129, 140, 248, 0.15)'
+              }} />
+              <div className="relative rounded-3xl backdrop-blur-xl bg-white/70 border-2 border-white/80 overflow-hidden" style={{
+                boxShadow: '0 25px 50px rgba(251, 191, 36, 0.3), 0 10px 30px rgba(129, 140, 248, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
+              }}>
+                <div className="p-5">
+                  {/* Header */}
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent drop-shadow-sm flex items-center justify-center gap-2">
+                      <Trophy className="w-5 h-5 text-purple-500" />
+                      Leaderboard
+                    </h3>
+                    <p className="text-xs text-gray-600 mt-1">Top scores across all attempts</p>
+                  </div>
 
-                {/* Leaderboard Content */}
-                <div className="backdrop-blur-xl bg-gradient-to-br from-purple-50/80 to-pink-50/80 rounded-2xl p-3 sm:p-4 border-2 border-purple-300/60 shadow-xl max-h-[500px] overflow-y-auto">
+                  {/* Leaderboard Content */}
                   {loadingLeaderboard ? (
                     <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-2"></div>
-                      <span className="text-xs text-gray-600">Loading rankings...</span>
+                      <div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto"></div>
+                      <p className="text-sm text-gray-600 mt-2">Loading...</p>
                     </div>
                   ) : leaderboard.length === 0 ? (
-                    <div className="text-center py-8">
+                    <div className="text-center py-8 backdrop-blur-md bg-pink-50/50 rounded-2xl border-2 border-pink-200/50">
                       <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm text-gray-600 font-medium">No attempts yet</p>
                       <p className="text-xs text-gray-500 mt-1">Be the first to complete this quiz!</p>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      {leaderboard.map((entry, index) => {
-                        const rank = index + 1;
-                        const isTopThree = rank <= 3;
-                        const getRankIcon = () => {
-                          if (rank === 1) return <Award className="w-4 h-4 text-yellow-500 fill-yellow-500" />;
-                          if (rank === 2) return <Medal className="w-4 h-4 text-gray-400 fill-gray-400" />;
-                          if (rank === 3) return <Medal className="w-4 h-4 text-amber-600 fill-amber-600" />;
-                          return null;
-                        };
-
-                        const getUserInitial = (username) => {
-                          return username ? username.charAt(0).toUpperCase() : '?';
-                        };
-
-                        const timeInSeconds = entry.time_spent ? parseInt(entry.time_spent) : 0;
-                        const minutes = Math.floor(timeInSeconds / 60);
-                        const seconds = timeInSeconds % 60;
-                        const timeDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-                        return (
-                          <div
-                            key={entry.attempt_id}
-                            className={`backdrop-blur-md rounded-xl p-3 border-2 transition-all ${
-                              isTopThree
-                                ? 'bg-gradient-to-r from-yellow-50/80 to-amber-50/80 border-yellow-300/60 shadow-md'
-                                : 'bg-white/50 border-purple-200/60'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                {/* Rank */}
-                                <div className="flex-shrink-0 w-8 text-center">
-                                  {getRankIcon() || (
-                                    <span className="text-sm font-bold text-gray-600">#{rank}</span>
-                                  )}
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {leaderboard.map((entry, index) => (
+                        <div
+                          key={entry.attempt_id}
+                          className={`backdrop-blur-md rounded-xl p-3 border-2 transition-all ${
+                            index === 0
+                              ? 'bg-gradient-to-r from-amber-100/80 to-yellow-100/80 border-amber-300/60'
+                              : index === 1
+                              ? 'bg-gradient-to-r from-gray-100/80 to-slate-100/80 border-gray-300/60'
+                              : index === 2
+                              ? 'bg-gradient-to-r from-orange-100/80 to-amber-100/80 border-orange-300/60'
+                              : 'bg-white/60 border-gray-200/60'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {/* Rank */}
+                            <div className="flex-shrink-0">
+                              {index === 0 ? (
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg">
+                                  <Trophy className="w-4 h-4 text-white" />
                                 </div>
-
-                                {/* Avatar */}
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
-                                  isTopThree ? 'bg-gradient-to-br from-yellow-500 to-amber-600' : 'bg-gradient-to-br from-purple-500 to-pink-500'
-                                }`}>
-                                  {entry.student?.profile_picture ? (
-                                    <img 
-                                      src={entry.student.profile_picture} 
-                                      alt={entry.student.username}
-                                      className="w-full h-full rounded-full object-cover"
-                                    />
-                                  ) : (
-                                    getUserInitial(entry.student?.username)
-                                  )}
+                              ) : index === 1 ? (
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center shadow-lg">
+                                  <Medal className="w-4 h-4 text-white" />
                                 </div>
-
-                                {/* Username */}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-bold text-gray-900 truncate">
-                                    {entry.student?.username || 'Anonymous'}
-                                  </p>
-                                  <p className="text-xs text-gray-600">
-                                    {timeDisplay}
-                                  </p>
+                              ) : index === 2 ? (
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-300 to-amber-400 flex items-center justify-center shadow-lg">
+                                  <Award className="w-4 h-4 text-white" />
                                 </div>
-                              </div>
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                                  {index + 1}
+                                </div>
+                              )}
+                            </div>
 
-                              {/* Score */}
-                              <div className="text-right flex-shrink-0 ml-2">
-                                <p className={`text-lg font-bold ${
-                                  isTopThree ? 'text-amber-700' : 'text-purple-700'
-                                }`}>
-                                  {entry.score}
-                                </p>
-                                <p className="text-xs text-gray-600">
-                                  {entry.percentage}%
-                                </p>
-                              </div>
+                            {/* User Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-gray-900 truncate">
+                                {entry.student?.username || 'Unknown'}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                {entry.score} pts • {entry.percentage}%
+                              </p>
+                            </div>
+
+                            {/* Time */}
+                            <div className="text-right text-xs text-gray-500">
+                              {Math.floor(entry.time_spent / 60)}:{String(entry.time_spent % 60).padStart(2, '0')}
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
         </div>
       </div>
