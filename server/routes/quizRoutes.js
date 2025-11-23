@@ -2392,6 +2392,26 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         const numericUserId = parseInt(player.userId, 10);
         console.log(`   Converting userId: ${player.userId} (${typeof player.userId}) -> ${numericUserId} (${typeof numericUserId})`);
         
+        // First, check if participant exists
+        const participantExists = await BattleParticipant.findOne({
+          where: { 
+            battle_id: battle.battle_id, 
+            user_id: numericUserId 
+          },
+          transaction
+        });
+        
+        console.log(`   🔍 Participant exists check:`, participantExists ? 
+          `Yes (participant_id: ${participantExists.participant_id}, score: ${participantExists.score})` : 
+          'NO - PARTICIPANT NOT FOUND!');
+        
+        if (!participantExists) {
+          console.error('❌ CRITICAL: Participant does not exist in database!');
+          console.error('   battle_id:', battle.battle_id, 'user_id:', numericUserId);
+          updateErrors.push(`Player ${numericUserId} does not exist in battle ${battle.battle_id}`);
+          continue;
+        }
+        
         // Update participant record
         const [updateCount] = await BattleParticipant.update(
           { 
@@ -2410,9 +2430,9 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         );
         
         if (updateCount === 0) {
-          console.warn('⚠️❌ Participant not found for user:', numericUserId);
-          console.warn('   Looking for: battle_id =', battle.battle_id, ', user_id =', numericUserId, typeof numericUserId);
-          updateErrors.push(`Player ${player.userId} not found in battle`);
+          console.warn('⚠️❌ Update returned 0 rows for user:', numericUserId);
+          console.warn('   But findOne found participant! This should not happen.');
+          updateErrors.push(`Player ${player.userId} update failed mysteriously`);
           continue;
         }
         
