@@ -1433,36 +1433,10 @@ router.get('/:id/leaderboard', requireAuth, async (req, res) => {
   try {
     const quizId = parseInt(req.params.id);
 
-    // Get the quiz to check if it has an original_quiz_id
-    const quiz = await Quiz.findOne({ 
-      where: { quiz_id: quizId },
-      attributes: ['quiz_id', 'original_quiz_id']
-    });
-
-    if (!quiz) {
-      return res.status(404).json({ error: 'Quiz not found' });
-    }
-
-    // Determine the root quiz ID (original or current)
-    const rootQuizId = quiz.original_quiz_id || quizId;
-
-    // Get all quiz IDs that are part of this quiz family (original + all imports)
-    const relatedQuizIds = await Quiz.findAll({
-      where: {
-        [Op.or]: [
-          { quiz_id: rootQuizId },
-          { original_quiz_id: rootQuizId }
-        ]
-      },
-      attributes: ['quiz_id']
-    });
-
-    const quizIdList = relatedQuizIds.map(q => q.quiz_id);
-
-    // Get leaderboard from all related quizzes
+    // Get ALL attempts for this quiz, sorted by score and time
     const leaderboard = await QuizAttempt.findAll({
       where: { 
-        quiz_id: quizIdList
+        quiz_id: quizId
       },
       include: [{
         model: User,
