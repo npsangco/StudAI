@@ -45,8 +45,14 @@ const QuizGame = ({
   const adaptiveCheck = mode === 'solo' ? canUseAdaptiveMode(rawQuestions) : { enabled: false };
   const useAdaptiveMode = adaptiveCheck.enabled;
 
-  // 🔥 Question Bank: Random 10 selection for all modes
+  // 🔥 Question Bank: Random 10 selection for solo modes, use all for battle
   const [questions, setQuestions] = useState(() => {
+    // Battle: Use ALL questions passed (already shuffled and limited by host)
+    if (mode === 'battle') {
+      return rawQuestions;
+    }
+
+    // Solo modes: Random 10 selection
     const QUESTION_BANK_SIZE = 10;
 
     // Step 1: Randomly select 10 questions from Question Bank
@@ -59,12 +65,6 @@ const QuizGame = ({
       const { orderedQuestions, startingDifficulty} = initializeAdaptiveQueue(selectedQuestions);
 
       return orderedQuestions;
-    }
-
-    if (mode === 'battle') {
-      // Battle: Use selected 10 as-is (all players get same random 10)
-
-      return selectedQuestions;
     }
 
     // Solo Classic: Sort selected 10 by difficulty
@@ -1207,6 +1207,11 @@ const QuizGame = ({
         );
         
         setWaitingForPlayers(false);
+        console.log('🚀 TIMEOUT - CALLING onComplete with results:', { 
+          gamePin: results.gamePin, 
+          isHost: results.isHost, 
+          playersCount: results.players?.length 
+        });
         onComplete(results);
       }, 60000); // 60 seconds
       
@@ -1237,6 +1242,12 @@ const QuizGame = ({
           );
           
           setWaitingForPlayers(false);
+          console.log('🚀 CALLING onComplete with results:', { 
+            gamePin: results.gamePin, 
+            isHost: results.isHost, 
+            playersCount: results.players?.length,
+            hasPlayers: !!results.players 
+          });
           onComplete(results);
         }
       });

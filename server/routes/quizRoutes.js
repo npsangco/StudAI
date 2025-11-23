@@ -462,8 +462,7 @@ async function checkAchievements(userId) {
     const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
     const unlockedAchievements = await checkAndUnlockAchievements(userId);
     if (unlockedAchievements && unlockedAchievements.length > 0) {
-      console.log(`≡ƒÅå User ${userId} unlocked ${unlockedAchievements.length} achievement(s):`, 
-        unlockedAchievements.map(a => a.title).join(', '));
+      // Achievement unlocked silently
     }
     return unlockedAchievements;
   } catch (err) {
@@ -2472,7 +2471,7 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         
         const isWinner = winnerIds.includes(player.userId);
         if (isWinner) {
-          console.log(`≡ƒÄû∩╕Å Checking achievements for winner: ${player.userId}`);
+          // Checking achievements for winner
         }
       } catch (achievementError) {
         console.error(`Error checking achievements for user ${player.userId}:`, achievementError);

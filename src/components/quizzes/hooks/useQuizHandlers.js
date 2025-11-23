@@ -626,8 +626,16 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   };
 
   const handleShowLeaderboard = (results) => {
+    console.log('🎯 handleShowLeaderboard CALLED with results:', {
+      gamePin: results?.gamePin,
+      isHost: results?.isHost,
+      playersCount: results?.players?.length,
+      hasPlayers: !!results?.players,
+      results: results
+    });
     updateGameState({ results });
     updateUiState({ showLeaderboard: true });
+    console.log('✅ showLeaderboard set to TRUE');
   };
 
   const handleCloseLeaderboard = () => {
