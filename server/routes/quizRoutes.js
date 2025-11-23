@@ -7,6 +7,7 @@ import UserDailyStat from '../models/UserDailyStat.js';
 import QuizBattle from '../models/QuizBattle.js';
 import BattleParticipant from '../models/BattleParticipant.js';
 import sequelize from '../db.js';
+import { Op } from 'sequelize';
 import { validateQuizRequest, validateTitle, validateNumericId } from '../middleware/validationMiddleware.js';
 import { ensureQuizAvailable, recordQuizUsage, DAILY_AI_LIMITS, getUsageSnapshot } from '../services/aiUsageService.js';
 import { ensureContentIsSafe, ModerationError } from '../services/moderationService.js';
@@ -435,8 +436,7 @@ async function logDailyStats(userId, activityType, points, exp) {
       quizzes_completed_today: 0,
       planner_updates_today: 0,
       points_earned_today: 0,
-      exp_earned_today: 0,
-      streak_active: false
+      exp_earned_today: 0
     }
   });
   
@@ -1346,6 +1346,9 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       // Log EXP to daily stats (even though no points)
       await logDailyStats(userId, 'quiz', 0, exp_earned);
 
+      // Get user data for streak
+      const user = await User.findByPk(userId, { attributes: ['study_streak'] });
+      
       return res.status(200).json({
         attempt,
         points_earned: 0,
@@ -1353,7 +1356,7 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
         petLevelUp,
         dailyCapReached: true,
         message: `${QUIZ_CONFIG.points.capMessage} (Still earned ${exp_earned} EXP!)`,
-        study_streak: user.study_streak
+        study_streak: user?.study_streak || 0
       });
     }
 
@@ -1446,7 +1449,7 @@ router.get('/:id/leaderboard', requireAuth, async (req, res) => {
     // Get all quiz IDs that are part of this quiz family (original + all imports)
     const relatedQuizIds = await Quiz.findAll({
       where: {
-        [sequelize.Op.or]: [
+        [Op.or]: [
           { quiz_id: rootQuizId },
           { original_quiz_id: rootQuizId }
         ]
@@ -1468,7 +1471,7 @@ router.get('/:id/leaderboard', requireAuth, async (req, res) => {
       }],
       order: [
         ['score', 'DESC'],
-        [sequelize.literal('CAST(time_spent AS UNSIGNED)'), 'ASC'],
+        ['time_spent', 'ASC'],
         ['completed_at', 'ASC']
       ]
     });
