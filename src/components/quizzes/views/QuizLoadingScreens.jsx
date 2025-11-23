@@ -409,7 +409,8 @@ export const BattleLobbyScreen = ({
 }) => {
   const [playerPositions, setLocalPlayerPositions] = useState([]);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [showLeaveModal, setShowLeaveModal] = useState(false); 
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [lobbyCountdown, setLobbyCountdown] = useState(60); // 1 minute lobby countdown 
 
   // Copy PIN function
   const handleCopyPin = () => {
@@ -419,6 +420,36 @@ export const BattleLobbyScreen = ({
       setTimeout(() => setCopySuccess(false), 2000);
     }
   };
+
+  // Lobby countdown timer (host only, cancels if player joins)
+  useEffect(() => {
+    if (!isHost) return; // Only host has countdown
+    
+    const totalPlayers = lobbyPlayers?.length || 0;
+    
+    // If a player joined (more than 1 player), cancel countdown
+    if (totalPlayers > 1) {
+      setLobbyCountdown(60); // Reset for display but don't restart
+      return;
+    }
+    
+    // Only host in lobby, start countdown
+    const countdownInterval = setInterval(() => {
+      setLobbyCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          // Countdown reached 0, go back to quiz page
+          if (onLeave) {
+            onLeave();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(countdownInterval);
+  }, [isHost, lobbyPlayers?.length, onLeave]);
 
   useEffect(() => {
     if (externalPositions && externalPositions.length > 0) {
@@ -539,6 +570,11 @@ export const BattleLobbyScreen = ({
   const readyPlayers = lobbyPlayers.filter(p => p.isReady).length;
   const allReady = totalPlayers > 1 && lobbyPlayers.every(p => p.isReady);
   
+  // Debug: Log when ready state changes
+  useEffect(() => {
+    console.log(`🎮 BattleLobby: ${readyPlayers}/${totalPlayers} ready, allReady: ${allReady}, can start: ${totalPlayers >= 2 && allReady}`);
+  }, [readyPlayers, totalPlayers, allReady]);
+  
   return (
     <>
       <style>{styles}</style>
@@ -588,6 +624,16 @@ export const BattleLobbyScreen = ({
                 </div>
               </div>
             </div>
+            
+            {/* Lobby countdown banner (only show for host when alone) */}
+            {isHost && totalPlayers === 1 && (
+              <div className="mt-3 text-center animate-slide-up">
+                <div className="inline-block bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-2 rounded-full text-sm font-semibold shadow-md">
+                  ⏳ Lobby closes in: {Math.floor(lobbyCountdown / 60)}:{(lobbyCountdown % 60).toString().padStart(2, '0')}
+                </div>
+                <p className="text-white text-xs mt-1">Waiting for players to join...</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -655,6 +701,30 @@ export const BattleLobbyScreen = ({
             {/* HOST VIEW */}
             {isHost && onStartBattle && (
               <>
+                {/* Host Ready/Unready Button */}
+                {(() => {
+                  const hostPlayer = lobbyPlayers.find(p => p.userId === currentUserId);
+                  const isHostReady = hostPlayer?.isReady || false;
+
+                  return !isHostReady ? (
+                    <button
+                      onClick={onUserReady}
+                      className="px-10 md:px-14 py-4 md:py-4.5 bg-blue-500 text-white rounded-full font-bold text-lg md:text-xl hover:bg-blue-600 transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-100"
+                    >
+                      Ready Up
+                    </button>
+                  ) : (
+                    <button
+                      onClick={onUserUnready}
+                      className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-green-500 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:bg-green-600 hover:scale-105 active:scale-100 transition-all"
+                    >
+                      <span className="text-xl">✓</span>
+                      <span>Ready (Click to unready)</span>
+                    </button>
+                  );
+                })()}
+
+                {/* Start Battle Button */}
                 <button
                   onClick={onStartBattle}
                   disabled={totalPlayers < 2 || !allReady}

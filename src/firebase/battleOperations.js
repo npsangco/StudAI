@@ -243,19 +243,83 @@ export const getBattleMetadata = async (gamePin) => {
 };
 
 /**
+ * Clean questions data - Remove undefined values for Firebase
+ */
+const cleanQuestionsForFirebase = (questions) => {
+  return questions.map(q => {
+    const cleaned = {
+      id: q.id || null,
+      type: q.type || 'Multiple Choice',
+      question: q.question || '',
+      difficulty: q.difficulty || 'medium'
+    };
+
+    // Add type-specific fields, convert undefined to null
+    if (q.choices !== undefined) {
+      cleaned.choices = q.choices;
+    }
+    if (q.correctAnswer !== undefined) {
+      cleaned.correctAnswer = q.correctAnswer;
+    }
+    if (q.answer !== undefined) {
+      cleaned.answer = q.answer;
+    }
+    if (q.matchingPairs !== undefined) {
+      cleaned.matchingPairs = q.matchingPairs;
+    }
+
+    return cleaned;
+  });
+};
+
+/**
  * Store quiz questions in Firebase (called by HOST when starting)
  */
 export const storeQuizQuestions = async (gamePin, questions) => {
   try {
+    console.log('🔥 Firebase - storeQuizQuestions called:', {
+      gamePin,
+      questionsCount: questions?.length,
+      hasQuestions: !!questions && questions.length > 0,
+      firstQuestion: questions?.[0]
+    });
+
+    if (!questions || questions.length === 0) {
+      console.error('❌ Firebase - No questions to store!');
+      throw new Error('No questions to store');
+    }
+
+    if (!gamePin) {
+      console.error('❌ Firebase - No gamePin provided!');
+      throw new Error('No gamePin provided');
+    }
+
+    // Clean questions to remove undefined values
+    const cleanedQuestions = cleanQuestionsForFirebase(questions);
+    console.log('🔥 Firebase - Cleaned questions:', {
+      original: questions.length,
+      cleaned: cleanedQuestions.length,
+      sample: cleanedQuestions[0]
+    });
+
     const questionsRef = ref(realtimeDb, `battles/${gamePin}/questions`);
-    await set(questionsRef, questions);
+    console.log('🔥 Firebase - Setting questions at:', `battles/${gamePin}/questions`);
+    await set(questionsRef, cleanedQuestions);
+    console.log('✅ Firebase - Questions stored successfully');
     
     // ALSO update metadata with actual question count
     const metadataRef = ref(realtimeDb, `battles/${gamePin}/metadata/totalQuestions`);
+    console.log('🔥 Firebase - Setting totalQuestions:', questions.length);
     await set(metadataRef, questions.length);
+    console.log('✅ Firebase - Metadata updated successfully');
     
   } catch (error) {
-    console.error('❌ Error storing questions:', error);
+    console.error('❌ Firebase - Error storing questions:', error);
+    console.error('❌ Firebase - Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     throw error;
   }
 };
@@ -526,6 +590,11 @@ export const syncBattleResultsToMySQL = async (gamePin, maxRetries = 3) => {
           console.warn('⚠️ Verification request failed:', verifyError.message);
           // Don't fail the whole sync if verification fails
         }
+        
+        // 🧹 SCHEDULE FIREBASE AUTO-CLEANUP (1 hour delay)
+        // This allows players to view results for a while before deletion
+        console.log('⏰ Scheduling Firebase cleanup in 1 hour for PIN:', gamePin);
+        scheduleFirebaseCleanup(gamePin, 60 * 60 * 1000); // 1 hour
         
         // Release lock
         await releaseSyncLock(gamePin);
@@ -838,6 +907,140 @@ export const canSafelyCleanup = async (gamePin) => {
   } catch (error) {
     console.error('❌ Error checking cleanup safety:', error);
     return { canCleanup: false, reason: `Error: ${error.message}` };
+  }
+};
+
+/**
+ * Mark player as finished in battle
+ * @param {string} gamePin 
+ * @param {number} userId 
+ * @param {number} finalScore 
+ */
+export const markPlayerFinished = async (gamePin, userId, finalScore) => {
+  try {
+    const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
+    await update(playerRef, {
+      finished: true,
+      score: finalScore,
+      finishedAt: Date.now()
+    });
+    
+    console.log(`✅ Player ${userId} marked as finished with score ${finalScore}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error marking player finished:', error);
+    return false;
+  }
+};
+
+/**
+ * Check if all players have finished
+ * @param {string} gamePin 
+ * @returns {Promise<{allFinished: boolean, finishedCount: number, totalPlayers: number}>}
+ */
+export const checkAllPlayersFinished = async (gamePin) => {
+  try {
+    const playersRef = ref(realtimeDb, `battles/${gamePin}/players`);
+    const snapshot = await get(playersRef);
+    
+    if (!snapshot.exists()) {
+      return { allFinished: false, finishedCount: 0, totalPlayers: 0 };
+    }
+    
+    const players = Object.values(snapshot.val());
+    const totalPlayers = players.length;
+    const finishedCount = players.filter(p => p.finished === true).length;
+    const allFinished = finishedCount === totalPlayers;
+    
+    console.log(`📊 Finished: ${finishedCount}/${totalPlayers} players`);
+    
+    return { allFinished, finishedCount, totalPlayers };
+  } catch (error) {
+    console.error('❌ Error checking finished players:', error);
+    return { allFinished: false, finishedCount: 0, totalPlayers: 0 };
+  }
+};
+
+/**
+ * Listen for all players to finish
+ * @param {string} gamePin 
+ * @param {function} callback - Called when all players finish
+ * @returns {function} Unsubscribe function
+ */
+export const listenForAllPlayersFinished = (gamePin, callback) => {
+  const playersRef = ref(realtimeDb, `battles/${gamePin}/players`);
+  
+  const unsubscribe = onValue(playersRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      callback({ allFinished: false, finishedCount: 0, totalPlayers: 0 });
+      return;
+    }
+    
+    // Filter out invalid/incomplete player entries (must have userId and name)
+    const allPlayers = Object.values(snapshot.val());
+    const validPlayers = allPlayers.filter(p => p && p.userId && p.name);
+    
+    const totalPlayers = validPlayers.length;
+    const finishedCount = validPlayers.filter(p => p.finished === true).length;
+    const allFinished = finishedCount === totalPlayers && totalPlayers > 0;
+    
+    console.log(`📊 Battle Progress: ${finishedCount}/${totalPlayers} finished (${allPlayers.length} total entries in Firebase)`);
+    
+    callback({ allFinished, finishedCount, totalPlayers, players: validPlayers });
+  });
+  
+  return unsubscribe;
+};
+
+/**
+ * Schedule Firebase battle cleanup after a delay
+ * This allows players to view results while ensuring eventual cleanup
+ * 
+ * @param {string} gamePin - The battle game PIN
+ * @param {number} delayMs - Delay in milliseconds (default: 1 hour)
+ */
+export const scheduleFirebaseCleanup = async (gamePin, delayMs = 60 * 60 * 1000) => {
+  try {
+    // Store cleanup request in Firebase
+    const cleanupRef = ref(realtimeDb, `battles/${gamePin}/metadata/scheduledCleanup`);
+    const cleanupTime = Date.now() + delayMs;
+    
+    await set(cleanupRef, {
+      scheduledAt: Date.now(),
+      cleanupAt: cleanupTime,
+      reason: 'auto-cleanup-after-sync'
+    });
+    
+    console.log('✅ Cleanup scheduled for:', new Date(cleanupTime).toLocaleString());
+    
+    // Set a timer to perform cleanup
+    setTimeout(async () => {
+      try {
+        console.log('🧹 Auto-cleanup timer triggered for PIN:', gamePin);
+        
+        // Verify battle still exists and is safe to cleanup
+        const safetyCheck = await canSafelyCleanup(gamePin);
+        
+        if (safetyCheck.canCleanup) {
+          console.log('✅ Safety check passed, deleting Firebase battle:', gamePin);
+          await deleteBattleRoom(gamePin);
+          console.log('✅ Firebase battle deleted successfully:', gamePin);
+        } else {
+          console.log('⚠️ Safety check failed, skipping cleanup:', safetyCheck.reason);
+          
+          // If viewers are still present, schedule another cleanup attempt
+          if (safetyCheck.reason.includes('viewers')) {
+            console.log('⏰ Rescheduling cleanup in 30 minutes');
+            scheduleFirebaseCleanup(gamePin, 30 * 60 * 1000); // Retry in 30 min
+          }
+        }
+      } catch (error) {
+        console.error('❌ Auto-cleanup error:', error);
+      }
+    }, delayMs);
+    
+  } catch (error) {
+    console.error('❌ Error scheduling cleanup:', error);
   }
 };
 

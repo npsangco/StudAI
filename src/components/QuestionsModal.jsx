@@ -1,4 +1,4 @@
-import { X, Trash2, AlertCircle } from 'lucide-react';
+import { X, Trash2, AlertCircle, Check } from 'lucide-react';
 import { useState } from 'react';
 
 const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) => {
@@ -53,62 +53,132 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
 
         switch (question.type) {
             case 'Multiple Choice':
+                if (!choices || !Array.isArray(choices) || choices.length === 0) {
+                    return (
+                        <div className="mt-2 text-sm text-gray-500 italic">
+                            No choices available
+                        </div>
+                    );
+                }
+                
                 return (
-                    <div className="mt-2 space-y-2">
-                        {choices && Array.isArray(choices) && choices.length > 0 ? (
-                            choices.map((choice, idx) => (
+                    <div className="mt-3 space-y-2">
+                        {choices.map((choice, idx) => {
+                            const isCorrect = choice === question.correct_answer;
+                            return (
                                 <div
                                     key={idx}
-                                    className={`px-3 py-2 rounded-lg text-sm break-words ${choice === question.correct_answer
-                                        ? 'bg-green-50 border border-green-200 text-green-800 font-medium'
-                                        : 'bg-gray-50 border border-gray-200 text-gray-700'
-                                        }`}
+                                    className={`px-4 py-3 rounded-lg text-sm break-words transition-all ${
+                                        isCorrect
+                                            ? 'bg-green-50 border-2 border-green-300'
+                                            : 'bg-gray-50 border border-gray-200'
+                                    }`}
                                 >
-                                    {String.fromCharCode(65 + idx)}. {choice}
-                                    {choice === question.correct_answer && (
-                                        <span className="ml-2 text-xs">(Correct)</span>
-                                    )}
+                                    <div className="flex items-start gap-3">
+                                        <span className={`font-semibold flex-shrink-0 ${
+                                            isCorrect ? 'text-green-900' : 'text-gray-700'
+                                        }`}>
+                                            {String.fromCharCode(65 + idx)}.
+                                        </span>
+                                        <span className={`flex-1 ${isCorrect ? 'text-green-900 font-medium' : 'text-gray-700'}`}>
+                                            {choice}
+                                        </span>
+                                        {isCorrect && (
+                                            <span className="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded flex items-center gap-1 flex-shrink-0">
+                                                <Check className="w-3 h-3" />
+                                                CORRECT
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                            ))
-                        ) : (
-                            <p className="text-sm text-gray-500 italic">No choices available</p>
-                        )}
+                            );
+                        })}
                     </div>
                 );
 
             case 'True/False':
                 return (
-                    <div className="mt-2">
-                        <span className="inline-block px-3 py-1.5 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm font-medium">
-                            Correct Answer: {question.correct_answer || 'N/A'}
-                        </span>
+                    <div className="mt-3">
+                        <div className="px-4 py-3 bg-green-50 border-2 border-green-300 rounded-lg">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                    <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">
+                                        Correct Answer:
+                                    </p>
+                                    <p className="text-sm font-medium text-green-900">
+                                        {question.correct_answer || 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 );
 
             case 'Fill in the blanks':
                 return (
-                    <div className="mt-2">
-                        <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-xs text-blue-600 font-medium mb-1">Correct Answer:</p>
-                            <p className="text-sm text-blue-900">{question.answer || question.correct_answer || 'N/A'}</p>
+                    <div className="mt-3">
+                        <div className="px-4 py-3 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">
+                                        Correct Answer:
+                                    </p>
+                                    <p className="text-sm font-medium text-blue-900">
+                                        {question.answer || question.correct_answer || 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 );
 
             case 'Matching':
+                if (!matchingPairs || !Array.isArray(matchingPairs) || matchingPairs.length === 0) {
+                    return (
+                        <div className="mt-2 text-sm text-gray-500 italic">
+                            No matching pairs available
+                        </div>
+                    );
+                }
+                
                 return (
-                    <div className="mt-2 space-y-2">
-                        {matchingPairs && Array.isArray(matchingPairs) && matchingPairs.length > 0 ? (
-                            matchingPairs.map((pair, idx) => (
-                                <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg">
-                                    <span className="text-sm text-purple-900 font-medium">{pair.left || ''}</span>
-                                    <span className="text-purple-400">→</span>
-                                    <span className="text-sm text-purple-900">{pair.right || ''}</span>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-sm text-gray-500 italic">No matching pairs available</p>
-                        )}
+                    <div className="mt-3">
+                        <div className="mb-3">
+                            <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">
+                                Correct Matches:
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Left Column */}
+                            <div className="space-y-2">
+                                <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Column A</h4>
+                                {matchingPairs.map((pair, idx) => (
+                                    <div
+                                        key={`left-${idx}`}
+                                        className="px-3 py-2 bg-purple-50 border-2 border-purple-300 rounded-lg"
+                                    >
+                                        <span className="text-sm font-semibold text-purple-900">
+                                            {pair.left || ''}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {/* Right Column */}
+                            <div className="space-y-2">
+                                <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Column B</h4>
+                                {matchingPairs.map((pair, idx) => (
+                                    <div
+                                        key={`right-${idx}`}
+                                        className="px-3 py-2 bg-purple-50 border-2 border-purple-300 rounded-lg"
+                                    >
+                                        <span className="text-sm font-semibold text-purple-900">
+                                            {pair.right || ''}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 );
 

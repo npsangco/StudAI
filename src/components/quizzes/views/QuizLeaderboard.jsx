@@ -2,74 +2,172 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Trophy, Handshake, Medal, FileText, Award } from 'lucide-react';
 import AnswerReviewModal from './AnswerReviewModal';
 import {
-  listenToPlayers,
   syncBattleResultsToMySQL,
   incrementViewers,
   decrementViewersAndCleanup
 } from '../../../firebase/battleOperations';
+import { quizApi } from '../../../api/api';
 
 const QuizLeaderboard = ({ isOpen, onClose, results }) => {
   const [showAnswerReview, setShowAnswerReview] = useState(false);
   const [finalPlayers, setFinalPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [battleData, setBattleData] = useState(null);
+  const [syncComplete, setSyncComplete] = useState(false);
   const syncAttempted = useRef(false);
 
-  // Reset sync flag when modal closes or reopens
+  // Debug: Log when component receives props
+  useEffect(() => {
+    console.log('🎯 QuizLeaderboard Props Changed:');
+    console.log('   isOpen:', isOpen);
+    console.log('   results:', results);
+    console.log('   gamePin:', results?.gamePin);
+    console.log('   isHost:', results?.isHost);
+  }, [isOpen, results]);
+
+  // Reset flags when modal closes or reopens
   useEffect(() => {
     if (!isOpen) {
       syncAttempted.current = false;
+      setSyncComplete(false);
     }
   }, [isOpen]);
 
-  // FETCH FINAL SCORES FROM FIREBASE
+  // SYNC WITH MYSQL (HOST ONLY) - Must happen BEFORE fetching results
   useEffect(() => {
-    if (!isOpen) return;
-    
-    if (results?.gamePin) {
-
-      const unsubscribe = listenToPlayers(results.gamePin, (firebasePlayers) => {
-        const formattedResults = firebasePlayers.map(player => ({
-          id: `user_${player.userId}`,
-          userId: player.userId,
-          name: player.name,
-          score: player.forfeited ? 0 : (player.score || 0),
-          initial: player.initial || player.name[0],
-          forfeited: player.forfeited || false
-        }));
-        
-        setFinalPlayers(formattedResults);
-        setLoading(false);
-      });
-
-      return () => unsubscribe();
-    } else {
-      setFinalPlayers(results?.players || []);
-      setLoading(false);
-    }
-  }, [isOpen, results?.gamePin, results?.players]);
-  
-  // SYNC WITH MYSQL (HOST ONLY)
-  useEffect(() => {
-    if (!isOpen || !results?.gamePin || !results?.isHost) return;
-    if (syncAttempted.current || loading || finalPlayers.length === 0) return;
+    if (!isOpen || !results?.gamePin) return;
+    if (syncAttempted.current) return;
     
     syncAttempted.current = true;
     
-    const syncTimeout = setTimeout(async () => {
+    const syncAndFetch = async () => {
       try {
-        const result = await syncBattleResultsToMySQL(results.gamePin);
-        if (result.success) {
-
+        setLoading(true);
+        
+        // HOST: Sync to MySQL first
+        if (results?.isHost) {
+          console.log('🔄 Host syncing results to MySQL...');
+          const syncResult = await syncBattleResultsToMySQL(results.gamePin);
+          
+          if (syncResult.success) {
+            console.log('✅ MySQL sync successful');
+          } else {
+            console.log('⚠️ MySQL sync failed:', syncResult.error);
+          }
+          
+          // Wait a bit for database to commit
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } else {
+          // NON-HOST: Wait for host to sync (give them time)
+          console.log('⏳ Non-host waiting for host to sync...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
+        
+        setSyncComplete(true);
+        
+        // FETCH FROM MYSQL
+        
+        console.log('📊 Fetching leaderboard from MySQL for PIN:', results.gamePin);
+        
+        const response = await Promise.race([
+          quizApi.getBattleResults(results.gamePin),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
+        ]);
+        
+        console.log('✅ MySQL Results:', response);
+        console.log('📊 Raw results array:', response.results);
+        
+        const mysqlResults = response.results || [];
+        
+        const formattedResults = mysqlResults.map(player => {
+          console.log('🔍 Formatting player:', {
+            raw: player,
+            player_name: player.player_name,
+            username: player.username,
+            user_id: player.user_id
+          });
+          
+          return {
+            id: `user_${player.user_id}`,
+            userId: player.user_id, // Numeric user_id from MySQL
+            username: player.username,
+            name: player.player_name || player.username || 'Unknown',
+            score: player.score || 0,
+            initial: player.player_initial || player.player_name?.[0] || player.username?.[0] || '?',
+            profilePicture: player.profile_picture,
+            forfeited: player.score === 0,
+            isWinner: player.is_winner || false,
+            pointsEarned: player.points_earned || 0,
+            expEarned: player.exp_earned || 0
+          };
+        });
+        
+        setFinalPlayers(formattedResults);
+        setBattleData(response.battle);
+        setLoading(false);
+        
+        console.log('✅ Leaderboard loaded from MySQL:', formattedResults.length, 'players');
+        console.log('🎯 Formatted player data:', formattedResults.map(p => ({
+          userId: p.userId,
+          name: p.name,
+          username: p.username,
+          score: p.score
+        })));
+        
       } catch (error) {
-
+        console.error('❌ Failed to fetch MySQL results:', error);
+        
+        // Try one more time with a longer timeout
+        console.log('🔄 Retrying MySQL fetch...');
+        
+        try {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const retryResponse = await quizApi.getBattleResults(results.gamePin);
+          
+          const retryResults = retryResponse.results || [];
+          const formattedRetry = retryResults.map(player => ({
+            id: `user_${player.user_id}`,
+            userId: player.user_id,
+            username: player.username,
+            name: player.player_name,
+            score: player.score || 0,
+            initial: player.player_initial || player.player_name?.[0] || '?',
+            profilePicture: player.profile_picture,
+            forfeited: player.score === 0,
+            isWinner: player.is_winner || false,
+            pointsEarned: player.points_earned || 0,
+            expEarned: player.exp_earned || 0
+          }));
+          
+          if (formattedRetry.length > 0) {
+            console.log('✅ Retry successful:', formattedRetry.length, 'players');
+            setFinalPlayers(formattedRetry);
+            setBattleData(retryResponse.battle);
+          } else {
+            console.log('⚠️ Retry returned empty, falling back to prop results');
+            if (results?.players && results.players.length > 0) {
+              setFinalPlayers(results.players);
+            }
+          }
+        } catch (retryError) {
+          console.error('❌ Retry also failed:', retryError);
+          
+          // FINAL FALLBACK: Use results passed from props
+          console.log('⚠️ Final fallback to prop results:', results?.players);
+          
+          if (results?.players && results.players.length > 0) {
+            setFinalPlayers(results.players);
+          } else {
+            console.error('❌ No players data available anywhere');
+          }
+        }
+        
+        setLoading(false);
       }
-    }, 1000);
+    };
     
-    return () => clearTimeout(syncTimeout);
-  }, [isOpen, results?.gamePin, results?.isHost, finalPlayers, loading]); 
-
-  // VIEWER TRACKING
+    syncAndFetch();
+  }, [isOpen, results?.gamePin, results?.isHost]); // Removed results?.players dependency  // VIEWER TRACKING
   useEffect(() => {
     if (!isOpen || !results?.gamePin) return;
 
@@ -141,14 +239,25 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
   // COMPUTE RESULTS
   const validPlayers = finalPlayers || [];
   const answers = results?.answers || [];
-  const quizTitle = results?.quizTitle || 'Quiz Battle';
+  const quizTitle = battleData?.quiz_title || results?.quizTitle || 'Quiz Battle';
+  
+  console.log('🎯 Leaderboard Display - validPlayers:', validPlayers);
+  console.log('🎯 battleData:', battleData);
+  console.log('🎯 isOpen:', isOpen);
+  console.log('🎯 results:', results);
   
   const sortedPlayers = [...validPlayers].sort((a, b) => b.score - a.score);
-  const highestScore = sortedPlayers.length > 0 ? sortedPlayers[0].score : 0;
-  const winners = sortedPlayers.filter(p => p.score === highestScore);
-  const isTie = winners.length > 1;
+  
+  // Use MySQL winner flags if available, otherwise compute from scores
+  const mysqlWinners = validPlayers.filter(p => p.isWinner);
+  const winners = mysqlWinners.length > 0 ? mysqlWinners : sortedPlayers.filter(p => p.score === sortedPlayers[0]?.score);
+  
+  console.log('🏆 Winners computed:', winners);
+  
+  const isTie = battleData?.is_tied || winners.length > 1;
+  const highestScore = winners.length > 0 ? winners[0].score : 0;
 
-  const pointsEarned = highestScore * 10;
+  const pointsEarned = winners[0]?.pointsEarned || (highestScore * 10);
 
   // RENDER
   return (

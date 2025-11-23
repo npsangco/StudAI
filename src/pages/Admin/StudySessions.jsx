@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Menu } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import ToastContainer from "../../components/ToastContainer";
 import { useToast } from "../../hooks/useToast";
@@ -14,6 +14,8 @@ export default function StudySessions() {
     const [sessions, setSessions] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filterStatus, setFilterStatus] = useState("All");
     const sessionsPerPage = 13;
 
     useEffect(() => {
@@ -58,13 +60,27 @@ export default function StudySessions() {
         });
     };
 
+    // Filter and search
+    const filteredSessions = sessions.filter((session) => {
+        const matchesSearch =
+            session.host?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            session.topic?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            session.session_id?.toString().includes(searchTerm);
+        const matchesFilter = filterStatus === "All" || session.status === filterStatus;
+        return matchesSearch && matchesFilter;
+    });
+
     const indexOfLastSession = currentPage * sessionsPerPage;
     const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
-    const currentSessions = sessions.slice(indexOfFirstSession, indexOfLastSession);
-    const totalPages = Math.ceil(sessions.length / sessionsPerPage);
+    const currentSessions = filteredSessions.slice(indexOfFirstSession, indexOfLastSession);
+    const totalPages = Math.ceil(filteredSessions.length / sessionsPerPage);
 
     const handleNext = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
     const handlePrev = () => currentPage > 1 && setCurrentPage(currentPage - 1);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterStatus]);
 
     return (
         <div className="flex w-full min-h-screen bg-gray-100 relative">
@@ -122,9 +138,35 @@ export default function StudySessions() {
                 {/* Table */}
                 <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 py-6 sm:py-8">
                     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-6">
-                        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-                            Active & Past Sessions
-                        </h2>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                                Active & Past Sessions
+                            </h2>
+
+                            {/* Search and Filter */}
+                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                <div className="relative flex-1 sm:flex-none">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search sessions..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full sm:w-64"
+                                    />
+                                </div>
+                                <select
+                                    value={filterStatus}
+                                    onChange={(e) => setFilterStatus(e.target.value)}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                                >
+                                    <option value="All">All Status</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Completed">Completed</option>
+                                </select>
+                            </div>
+                        </div>
 
                         <div className="overflow-x-auto">
                             <table className="min-w-full table-fixed text-xs sm:text-sm text-left">

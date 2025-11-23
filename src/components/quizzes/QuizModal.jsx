@@ -5,7 +5,34 @@ import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy, FileTe
 // QUIZ MODE SELECTION MODAL
 // ============================================
 export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) => {
+  const totalQuestions = quiz?.questionCount || 10;
+  const minQuestions = Math.min(5, totalQuestions);
+  const maxSelectableQuestions = totalQuestions > 5 ? totalQuestions - 5 : totalQuestions;
+  const [questionCount, setQuestionCount] = React.useState(maxSelectableQuestions);
+
+  // Reset question count when quiz changes
+  React.useEffect(() => {
+    if (quiz) {
+      setQuestionCount(maxSelectableQuestions);
+    }
+  }, [quiz?.id, maxSelectableQuestions]);
+
   if (!isOpen || !quiz) return null;
+
+  const handleQuestionCountChange = (e) => {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value) && value >= minQuestions && value <= maxSelectableQuestions) {
+      setQuestionCount(value);
+    }
+  };
+
+  const handleSoloQuiz = () => {
+    onSoloQuiz(questionCount);
+  };
+
+  const handleQuizBattle = () => {
+    onQuizBattle(questionCount);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
@@ -34,7 +61,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
         </div>
 
         {/* Quiz Info - Minified */}
-        <div className="px-4 sm:px-6 mt-3 mb-3">
+        <div className="px-4 sm:px-6 mt-3 mb-3 space-y-2">
           <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg sm:rounded-xl shadow-lg p-2.5 sm:p-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 backdrop-blur-sm rounded-md flex items-center justify-center flex-shrink-0">
@@ -42,17 +69,42 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-white text-[11px] sm:text-xs line-clamp-1" title={quiz.title}>{quiz.title}</h3>
-                <p className="text-[9px] sm:text-[10px] text-white/80">{quiz.questionCount} questions</p>
+                <p className="text-[9px] sm:text-[10px] text-white/80">{totalQuestions} questions available</p>
               </div>
             </div>
           </div>
+
+          {/* Question Count Selector */}
+          {totalQuestions > 5 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                How many questions do you want?
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={minQuestions}
+                  max={maxSelectableQuestions}
+                  value={questionCount}
+                  onChange={handleQuestionCountChange}
+                  className="w-20 px-2 py-1.5 text-sm border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                />
+                <span className="text-xs text-gray-600">
+                  (Max: {maxSelectableQuestions}, keeps {totalQuestions - maxSelectableQuestions} in reserve)
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-500 mt-1.5">
+                💡 We keep at least 5 questions in the quiz bank for variety
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Mode Selection */}
         <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-2.5 sm:space-y-3">
           {/* Solo Mode */}
           <button
-            onClick={onSoloQuiz}
+            onClick={handleSoloQuiz}
             className="group w-full bg-gradient-to-br from-yellow-50 to-orange-50 hover:from-yellow-100 hover:to-orange-100 border-2 border-yellow-200 hover:border-yellow-400 rounded-lg sm:rounded-xl p-3.5 sm:p-5 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
           >
             <div className="flex items-start gap-3 sm:gap-4">
@@ -73,7 +125,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
 
           {/* Battle Mode */}
           <button
-            onClick={onQuizBattle}
+            onClick={handleQuizBattle}
             className="group w-full bg-gradient-to-br from-orange-50 to-red-50 hover:from-orange-100 hover:to-red-100 border-2 border-orange-200 hover:border-orange-400 rounded-lg sm:rounded-xl p-3.5 sm:p-5 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
           >
             <div className="flex items-start gap-3 sm:gap-4">

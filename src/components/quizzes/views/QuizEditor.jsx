@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
-import { Copy, Check, Clock, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText, Info, X } from 'lucide-react';
+import { Copy, Check, Clock, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText, Info, X, Database } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 import { canUseAdaptiveMode } from '../utils/adaptiveDifficultyEngine';
 import { TEXT_LIMITS } from '../utils/constants';
+import { QuestionBankBrowser } from '../QuestionBankBrowser';
 
 // ============================================
 // COMPACT SETTINGS BAR COMPONENT
@@ -86,19 +87,39 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
   };
 
   const handleTimerChange = (newTimer) => {
-    setTimerValue(newTimer);
+    const parsedTimer = parseInt(newTimer);
+    const validTimer = isNaN(parsedTimer) || parsedTimer < 0 ? 30 : parsedTimer;
+    setTimerValue(validTimer);
     if (onTimerChange) {
-      onTimerChange(newTimer);
+      onTimerChange(validTimer);
     }
   };
 
-  const timerOptions = [
-    { value: 15, label: '15s', icon: Zap },
-    { value: 30, label: '30s', icon: Timer },
-    { value: 45, label: '45s', icon: Clock },
-    { value: 60, label: '60s', icon: Clock },
-    { value: 0, label: 'No Limit', icon: Infinity }
-  ];
+  const handleTimerInputChange = (e) => {
+    const value = e.target.value;
+    // Allow empty string while typing
+    if (value === '') {
+      setTimerValue('');
+      return;
+    }
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue >= 0) {
+      setTimerValue(numValue);
+    }
+  };
+
+  const handleTimerBlur = () => {
+    // Set default if empty on blur
+    if (timerValue === '' || timerValue < 0) {
+      const defaultTimer = 30;
+      setTimerValue(defaultTimer);
+      if (onTimerChange) {
+        onTimerChange(defaultTimer);
+      }
+    } else if (onTimerChange) {
+      onTimerChange(timerValue);
+    }
+  };
 
   return (
     <div className="bg-gray-50 border-b border-gray-200">
@@ -152,29 +173,30 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
           </div>
 
           {/* Timer Section */}
-          <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
+          <div className="flex items-center gap-2 md:gap-3">
             <span className="text-xs md:text-sm font-medium text-gray-700 flex-shrink-0">Timer:</span>
-
-            {/* Timer Buttons - Horizontal */}
-            <div className="flex items-center gap-1.5">
-              {timerOptions.map((option) => {
-                const IconComponent = option.icon;
-                const isSelected = timerValue === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => handleTimerChange(option.value)}
-                    className={`flex items-center gap-1 px-2 md:px-2.5 py-1 md:py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 ${
-                      isSelected
-                        ? 'bg-yellow-400 text-gray-900 shadow-sm'
-                        : 'bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:bg-yellow-50'
-                    }`}
-                  >
-                    <IconComponent className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                    <span className="whitespace-nowrap">{option.label}</span>
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                value={timerValue}
+                onChange={handleTimerInputChange}
+                onBlur={handleTimerBlur}
+                placeholder="30"
+                className="w-16 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none"
+              />
+              <span className="text-xs text-gray-600">seconds</span>
+              <button
+                onClick={() => handleTimerChange(0)}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+                  timerValue === 0
+                    ? 'bg-yellow-400 text-gray-900'
+                    : 'bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:bg-yellow-50'
+                }`}
+                title="No time limit"
+              >
+                <Infinity className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
@@ -602,7 +624,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
 // POLISHED HEADER COMPONENT
 // ============================================
 
-const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions, isDirty }) => {
+const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions, isDirty, onOpenQuestionBank }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempTitle, setTempTitle] = useState(quiz.title);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -779,6 +801,16 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 </button>
               )}
 
+              {/* Question Bank Button */}
+              <button
+                onClick={onOpenQuestionBank}
+                className="px-4 py-2 text-sm rounded-lg font-medium transition-all bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-sm flex items-center gap-2"
+                title="Browse and insert questions from your question bank"
+              >
+                <Database className="w-4 h-4" />
+                <span className="hidden lg:inline">Question Bank</span>
+              </button>
+
               {/* Add Question Button */}
               <button
                 onClick={onAddQuestion}
@@ -896,6 +928,15 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
             {/* Actions */}
             <div className="flex gap-2">
               <button
+                onClick={onOpenQuestionBank}
+                className="px-3 py-2 text-xs rounded-lg font-medium bg-purple-100 text-purple-700 flex items-center justify-center gap-1"
+                title="Question Bank"
+              >
+                <Database className="w-3.5 h-3.5" />
+                <span>Bank</span>
+              </button>
+
+              <button
                 onClick={onAddQuestion}
                 className="px-3 py-2 text-xs rounded-lg font-medium flex-1 bg-gray-200 text-gray-700"
               >
@@ -964,6 +1005,7 @@ export const QuizEditor = ({
   const [draggedQuestionIndex, setDraggedQuestionIndex] = useState(null);
   const [dragOverQuestionIndex, setDragOverQuestionIndex] = useState(null);
   const [touchStartY, setTouchStartY] = useState(null);
+  const [showQuestionBank, setShowQuestionBank] = useState(false);
 
   const handleQuestionDragStart = (e, index) => {
     setDraggedQuestionIndex(index);
@@ -1067,6 +1109,40 @@ export const QuizEditor = ({
     setTouchStartY(null);
   };
 
+  const handleInsertFromBank = async (selectedQuestions) => {
+    if (!quiz || !quiz.id) {
+      toast.error('Please save the quiz first before inserting questions');
+      return;
+    }
+
+    try {
+      const questionIds = selectedQuestions.map(q => q.question_id);
+
+      const response = await fetch(`${API_URL}/api/question-bank/insert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          quizId: quiz.id,
+          questionIds
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(`Inserted ${data.inserted} question${data.inserted !== 1 ? 's' : ''} successfully`);
+        // Trigger a refresh by calling onSave or reloading
+        window.location.reload();
+      } else {
+        toast.error(data.error || 'Failed to insert questions');
+      }
+    } catch (error) {
+      console.error('Error inserting questions:', error);
+      toast.error('Failed to insert questions from bank');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sticky Header Container - Minimal */}
@@ -1079,8 +1155,18 @@ export const QuizEditor = ({
           onAddQuestion={onAddQuestion}
           onSave={onSave}
           onUpdateTitle={onUpdateTitle}
+          onOpenQuestionBank={() => setShowQuestionBank(true)}
         />
       </div>
+
+      {/* Question Bank Browser Modal */}
+      {showQuestionBank && (
+        <QuestionBankBrowser
+          onSelectQuestions={handleInsertFromBank}
+          onClose={() => setShowQuestionBank(false)}
+          toast={toast}
+        />
+      )}
 
       <div className="max-w-5xl mx-auto p-4 md:p-6">
         {questions.length === 0 ? (

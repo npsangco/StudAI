@@ -462,8 +462,7 @@ async function checkAchievements(userId) {
     const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
     const unlockedAchievements = await checkAndUnlockAchievements(userId);
     if (unlockedAchievements && unlockedAchievements.length > 0) {
-      console.log(`≡ƒÅå User ${userId} unlocked ${unlockedAchievements.length} achievement(s):`, 
-        unlockedAchievements.map(a => a.title).join(', '));
+      // Achievement unlocked silently
     }
     return unlockedAchievements;
   } catch (err) {
@@ -1369,7 +1368,7 @@ router.get('/:id/leaderboard', requireAuth, async (req, res) => {
       where: { quiz_id: quizId },
       include: [{
         model: User,
-        as: 'user',
+        as: 'student',
         attributes: ['username', 'profile_picture']
       }],
       order: [
@@ -1576,7 +1575,7 @@ router.get('/battle/:gamePin', requireAuth, async (req, res) => {
       where: { battle_id: battle.battle_id },
       include: [{
         model: User,
-        as: 'user',
+        as: 'player',
         attributes: ['user_id', 'username', 'profile_picture']
       }],
       order: [['joined_at', 'ASC']]
@@ -1608,7 +1607,7 @@ router.get('/battle/:gamePin', requireAuth, async (req, res) => {
         player_name: p.player_name,
         player_initial: p.player_initial,
         is_ready: p.is_ready,
-        profile_picture: p.user?.profile_picture
+        profile_picture: p.player?.profile_picture
       }))
     });
   } catch (err) {
@@ -1645,6 +1644,37 @@ router.post('/battle/:gamePin/ready', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Γ¥î Ready error:', err);
     res.status(500).json({ error: 'Failed to mark ready' });
+  }
+});
+
+// 4.5. Mark player as unready
+router.post('/battle/:gamePin/unready', requireAuth, async (req, res) => {
+  try {
+    const gamePin = req.params.gamePin;
+    const userId = req.session.userId;
+    
+    const battle = await QuizBattle.findOne({
+      where: { game_pin: gamePin }
+    });
+    
+    if (!battle) {
+      return res.status(404).json({ error: 'Battle not found' });
+    }
+    
+    const participant = await BattleParticipant.findOne({
+      where: { battle_id: battle.battle_id, user_id: userId }
+    });
+    
+    if (!participant) {
+      return res.status(404).json({ error: 'You are not in this battle' });
+    }
+    
+    await participant.update({ is_ready: false });
+    
+    res.json({ message: 'Marked as unready' });
+  } catch (err) {
+    console.error('❌ Unready error:', err);
+    res.status(500).json({ error: 'Failed to mark unready' });
   }
 });
 
@@ -1865,6 +1895,132 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
   }
 });
 
+// 🔍 DIAGNOSTIC ENDPOINT - Check battle readiness before starting
+// NOTE: No requireAuth - this is a debugging tool that should always work
+router.get('/battle/:gamePin/diagnostic', async (req, res) => {
+  try {
+    const gamePin = req.params.gamePin;
+    const userId = req.session?.userId || null; // Optional auth
+    
+    const battle = await QuizBattle.findOne({
+      where: { game_pin: gamePin },
+      include: [{
+        model: Quiz,
+        as: 'quiz'
+      }]
+    });
+    
+    if (!battle) {
+      return res.json({
+        success: false,
+        error: 'Battle not found',
+        gamePin,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    const questionCount = await Question.count({
+      where: { quiz_id: battle.quiz_id }
+    });
+    
+    const currentPlayers = await BattleParticipant.count({
+      where: { battle_id: battle.battle_id }
+    });
+    
+    const readyPlayers = await BattleParticipant.count({
+      where: { 
+        battle_id: battle.battle_id,
+        is_ready: true
+      }
+    });
+    
+    const participants = await BattleParticipant.findAll({
+      where: { battle_id: battle.battle_id },
+      include: [{
+        model: User,
+        as: 'player',
+        attributes: ['user_id', 'username']
+      }]
+    });
+    
+    const diagnostic = {
+      success: true,
+      timestamp: new Date().toISOString(),
+      userLoggedIn: !!userId,
+      currentUserId: userId || null,
+      battle: {
+        gamePin: battle.game_pin,
+        status: battle.status,
+        hostId: battle.host_id,
+        isUserHost: userId ? (battle.host_id === userId) : null,
+        quizId: battle.quiz_id,
+        quizExists: !!battle.quiz,
+        quizTitle: battle.quiz?.title || 'N/A',
+        maxPlayers: battle.max_players
+      },
+      validation: {
+        hasQuiz: !!battle.quiz,
+        questionCount: questionCount,
+        hasQuestions: questionCount > 0,
+        currentPlayers: currentPlayers,
+        readyPlayers: readyPlayers,
+        allPlayersReady: currentPlayers > 0 && readyPlayers === currentPlayers,
+        meetsMinimumPlayers: currentPlayers >= 2,
+        isWaitingStatus: battle.status === 'waiting',
+        canStart: (
+          !!battle.quiz &&
+          questionCount > 0 &&
+          currentPlayers >= 2 &&
+          currentPlayers <= battle.max_players &&
+          battle.status === 'waiting' &&
+          battle.host_id === userId
+        )
+      },
+      players: participants.map(p => ({
+        userId: p.user_id,
+        username: p.player?.username || 'Unknown',
+        isReady: p.is_ready,
+        isHost: p.user_id === battle.host_id
+      })),
+      recommendations: []
+    };
+    
+    // Add recommendations
+    if (!userId) {
+      diagnostic.recommendations.push('⚠️ You are not logged in - log in to see full diagnostic');
+    }
+    if (!diagnostic.battle.quizExists) {
+      diagnostic.recommendations.push('❌ Quiz was deleted - battle cannot start');
+    }
+    if (diagnostic.validation.questionCount === 0) {
+      diagnostic.recommendations.push('❌ Quiz has no questions - add questions first');
+    }
+    if (diagnostic.validation.currentPlayers < 2) {
+      diagnostic.recommendations.push(`⚠️ Need at least 2 players (currently ${diagnostic.validation.currentPlayers})`);
+    }
+    if (!diagnostic.validation.isWaitingStatus) {
+      diagnostic.recommendations.push(`⚠️ Battle is already ${battle.status}`);
+    }
+    if (userId && !diagnostic.battle.isUserHost) {
+      diagnostic.recommendations.push('⚠️ Only the host can start this battle');
+    }
+    if (diagnostic.validation.canStart && userId) {
+      diagnostic.recommendations.push('✅ Battle is ready to start!');
+    }
+    
+    return res.json(diagnostic);
+    
+  } catch (err) {
+    console.error('❌ Diagnostic error:', err);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to run diagnostic',
+      details: err.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // 6. Submit battle score
 router.post('/battle/:gamePin/submit', requireAuth, async (req, res) => {
   try {
@@ -1925,8 +2081,8 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
       where: { battle_id: battle.battle_id },
       include: [{
         model: User,
-        as: 'user',
-        attributes: ['username', 'profile_picture']
+        as: 'player',
+        attributes: ['user_id', 'username', 'profile_picture']
       }],
       order: [['score', 'DESC']]
     });
@@ -1941,9 +2097,11 @@ router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
       },
       results: participants.map((p, index) => ({
         rank: index + 1,
+        user_id: p.user_id,
         player_name: p.player_name,
-        username: p.user.username,
-        profile_picture: p.user.profile_picture,
+        player_initial: p.player_initial,
+        username: p.player ? p.player.username : p.player_name,
+        profile_picture: p.player ? p.player.profile_picture : null,
         score: p.score,
         is_winner: p.is_winner, // Γ£à Use database value (supports ties)
         points_earned: p.points_earned,
@@ -2220,6 +2378,39 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         const isWinner = winnerIds.includes(player.userId);
         
         console.log(`≡ƒô¥ Updating player ${player.userId}: score=${player.score}, points=${pointsEarned}, isWinner=${isWinner}`);
+        console.log(`   Player data from Firebase:`, JSON.stringify(player));
+        
+        // DEBUG: Check what participants exist in database
+        const existingParticipants = await BattleParticipant.findAll({
+          where: { battle_id: battle.battle_id },
+          attributes: ['user_id', 'player_name'],
+          transaction
+        });
+        console.log(`   Existing participants in DB:`, existingParticipants.map(p => ({ user_id: p.user_id, user_id_type: typeof p.user_id, name: p.player_name })));
+        
+        // Ensure userId is a number
+        const numericUserId = parseInt(player.userId, 10);
+        console.log(`   Converting userId: ${player.userId} (${typeof player.userId}) -> ${numericUserId} (${typeof numericUserId})`);
+        
+        // First, check if participant exists
+        const participantExists = await BattleParticipant.findOne({
+          where: { 
+            battle_id: battle.battle_id, 
+            user_id: numericUserId 
+          },
+          transaction
+        });
+        
+        console.log(`   🔍 Participant exists check:`, participantExists ? 
+          `Yes (participant_id: ${participantExists.participant_id}, score: ${participantExists.score})` : 
+          'NO - PARTICIPANT NOT FOUND!');
+        
+        if (!participantExists) {
+          console.error('❌ CRITICAL: Participant does not exist in database!');
+          console.error('   battle_id:', battle.battle_id, 'user_id:', numericUserId);
+          updateErrors.push(`Player ${numericUserId} does not exist in battle ${battle.battle_id}`);
+          continue;
+        }
         
         // Update participant record
         const [updateCount] = await BattleParticipant.update(
@@ -2232,16 +2423,24 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
           { 
             where: { 
               battle_id: battle.battle_id, 
-              user_id: player.userId 
+              user_id: numericUserId 
             },
             transaction 
           }
         );
         
         if (updateCount === 0) {
-          console.warn('ΓÜá∩╕Å Participant not found for user:', player.userId);
-          updateErrors.push(`Player ${player.userId} not found in battle`);
-          continue;
+          // If update returns 0, check if values are the same (normal for score=0)
+          if (participantExists.score === player.score && 
+              participantExists.points_earned === pointsEarned &&
+              participantExists.is_winner === isWinner) {
+            console.log(`ℹ️ Player ${numericUserId} values unchanged (score=${player.score}, already up to date)`);
+          } else {
+            console.warn('⚠️❌ Update returned 0 rows for user:', numericUserId);
+            console.warn('   But findOne found participant! This should not happen.');
+            updateErrors.push(`Player ${player.userId} update failed mysteriously`);
+            continue;
+          }
         }
         
         updatedCount++;
@@ -2249,19 +2448,19 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
         // Award points to user account
         await User.increment('points', {
           by: pointsEarned,
-          where: { user_id: player.userId },
+          where: { user_id: numericUserId },
           transaction
         });
         
         // Award achievements for ALL tied winners
         if (isWinner) {
-          console.log(`≡ƒÅå Player ${player.userId} is a winner (tied: ${isTied})`);
+          console.log(`🏆 Player ${numericUserId} is a winner (tied: ${isTied})`);
         }
         
-        console.log(`Γ£à Updated player ${player.userId}`);
+        console.log(`✅ Updated player ${numericUserId}`);
         
       } catch (playerError) {
-        console.error(`Γ¥î Error updating player ${player.userId}:`, playerError);
+        console.error(`❌ Error updating player ${player.userId}:`, playerError);
         updateErrors.push(`Failed to update player ${player.userId}: ${playerError.message}`);
         
         // If any player fails, rollback entire transaction
@@ -2299,11 +2498,12 @@ router.post('/battle/:gamePin/sync-results', requireAuth, async (req, res) => {
     // All tied winners should get "battles_won" achievements
     for (const player of players) {
       try {
-        await checkAchievements(player.userId);
+        const numericUserId = parseInt(player.userId, 10);
+        await checkAchievements(numericUserId);
         
         const isWinner = winnerIds.includes(player.userId);
         if (isWinner) {
-          console.log(`≡ƒÄû∩╕Å Checking achievements for winner: ${player.userId}`);
+          // Checking achievements for winner
         }
       } catch (achievementError) {
         console.error(`Error checking achievements for user ${player.userId}:`, achievementError);
@@ -2375,7 +2575,7 @@ router.get('/battle/:gamePin/verify-sync', requireAuth, async (req, res) => {
           as: 'participants',
           include: [{
             model: User,
-            as: 'user',
+            as: 'player',
             attributes: ['username']
           }]
         }
@@ -2393,7 +2593,7 @@ router.get('/battle/:gamePin/verify-sync', requireAuth, async (req, res) => {
       completedAt: battle.completed_at,
       participants: battle.participants.map(p => ({
         userId: p.user_id,
-        username: p.user.username,
+        username: p.player.username,
         score: p.score,
         pointsEarned: p.points_earned,
         isWinner: p.is_winner

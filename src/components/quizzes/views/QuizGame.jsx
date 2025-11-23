@@ -5,7 +5,7 @@ import { QuizGameHeader } from '../QuizGameHeader';
 import { QuizQuestion } from '../QuizCore';
 import { LiveLeaderboard } from './QuizLiveLeaderboard';
 import { ANSWER_DISPLAY_DURATION } from '../utils/constants';
-import { listenToPlayers, updatePlayerScore, updatePlayerProgress } from '../../../firebase/battleOperations';
+import { listenToPlayers, updatePlayerScore, updatePlayerProgress, markPlayerFinished, listenForAllPlayersFinished } from '../../../firebase/battleOperations';
 import { ref, update, get } from 'firebase/database';
 import { realtimeDb } from '../../../firebase/config';
 import { useReconnection } from '../hooks/useReconnection';
@@ -45,8 +45,14 @@ const QuizGame = ({
   const adaptiveCheck = mode === 'solo' ? canUseAdaptiveMode(rawQuestions) : { enabled: false };
   const useAdaptiveMode = adaptiveCheck.enabled;
 
-  // 🔥 Question Bank: Random 10 selection for all modes
+  // 🔥 Question Bank: Random 10 selection for solo modes, use all for battle
   const [questions, setQuestions] = useState(() => {
+    // Battle: Use ALL questions passed (already shuffled and limited by host)
+    if (mode === 'battle') {
+      return rawQuestions;
+    }
+
+    // Solo modes: Random 10 selection
     const QUESTION_BANK_SIZE = 10;
 
     // Step 1: Randomly select 10 questions from Question Bank
@@ -59,12 +65,6 @@ const QuizGame = ({
       const { orderedQuestions, startingDifficulty} = initializeAdaptiveQueue(selectedQuestions);
 
       return orderedQuestions;
-    }
-
-    if (mode === 'battle') {
-      // Battle: Use selected 10 as-is (all players get same random 10)
-
-      return selectedQuestions;
     }
 
     // Solo Classic: Sort selected 10 by difficulty
@@ -155,7 +155,13 @@ const QuizGame = ({
   const [showPetMessage, setShowPetMessage] = useState(false);
   const [petAnswerCorrect, setPetAnswerCorrect] = useState(null);
   const [showEncouragement, setShowEncouragement] = useState(false);
+  
+  // Battle: Waiting for other players
+  const [waitingForPlayers, setWaitingForPlayers] = useState(false);
+  const [finishedPlayersCount, setFinishedPlayersCount] = useState({ finished: 0, total: 0 });
+  const [waitingTimeRemaining, setWaitingTimeRemaining] = useState(60); // 1 minute countdown
   const encouragementTimerRef = useRef(null);
+  const waitingTimeoutRef = useRef(null);
 
   // 🔒 SUBMISSION MUTEX: Prevent race condition between timer and manual submission
   const submissionLockRef = useRef({ locked: false, timestamp: 0 });
@@ -549,19 +555,22 @@ const QuizGame = ({
         // 1. Set score to 0 in Firebase
         await updatePlayerScore(quiz.gamePin, quiz.currentUserId, 0);
 
-        // 2. Mark as forfeited
+        // 2. Mark as forfeited AND finished (so other players don't wait)
         const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
         await update(playerRef, {
           forfeited: true,
+          finished: true, // Mark as finished so others don't wait
           forfeitedAt: Date.now(),
           isOnline: false
         });
+
+        console.log('✅ Player forfeited and marked as finished');
 
         // 3. Cleanup connection tracking
         await reconnection.disconnect();
 
       } catch (error) {
-
+        console.error('❌ Error during forfeit:', error);
       }
     }
     
@@ -1092,7 +1101,7 @@ const QuizGame = ({
     return '';
   };
 
-  const finishQuizWithAnswers = (finalAnswers) => {
+  const finishQuizWithAnswers = async (finalAnswers) => {
 
 
     const results = {
@@ -1114,16 +1123,96 @@ const QuizGame = ({
     }
 
     if (mode === 'battle') {
-      results.players = allPlayers.map(player =>
-        player.name === 'You'
-          ? { ...player, score: game.scoreRef.current } 
-          : player
-      );
-      results.winner = results.players.reduce((prev, current) => 
-        prev.score > current.score ? prev : current
-      );
+      // Mark this player as finished in Firebase
+      const finalScore = game.scoreRef.current;
+      await markPlayerFinished(quiz.gamePin, quiz.currentUserId, finalScore);
+      
+      console.log('✅ Player finished, waiting for Firebase to sync...');
+      
+      // ⏳ Wait 1 second for Firebase to propagate the update
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('🔍 Now checking if all players done...');
+      
+      // Import the check function
+      const { checkAllPlayersFinished } = await import('../../../firebase/battleOperations');
+      
+      // First, do an immediate check
+      const immediateCheck = await checkAllPlayersFinished(quiz.gamePin);
+      console.log(`📊 Immediate check: ${immediateCheck.finishedCount}/${immediateCheck.totalPlayers} finished`);
+      
+      if (immediateCheck.allFinished) {
+        console.log('🎉 All players already finished! Proceeding to leaderboard immediately...');
+        
+        // Get fresh player data from Firebase
+        const { get, ref } = await import('firebase/database');
+        const { realtimeDb } = await import('../../../firebase/config');
+        const playersRef = ref(realtimeDb, `battles/${quiz.gamePin}/players`);
+        const snapshot = await get(playersRef);
+        const players = snapshot.exists() ? Object.values(snapshot.val()).filter(p => p && p.userId && p.name) : [];
+        
+        // Prepare results with all players' final scores
+        results.players = players.map(player => ({
+          id: `player_${player.userId}`,
+          userId: player.userId,
+          name: player.name,
+          initial: player.initial || player.name?.[0] || '?',
+          score: player.score || 0,
+          forfeited: player.forfeited || false
+        }));
+        
+        results.winner = results.players.reduce((prev, current) => 
+          prev.score > current.score ? prev : current
+        );
+        
+        onComplete(results);
+        return;
+      }
+      
+      // Not all finished yet - show waiting screen and listen
+      console.log('⏳ Not all players finished, setting up listener...');
+      setWaitingForPlayers(true);
+      setFinishedPlayersCount({ finished: immediateCheck.finishedCount, total: immediateCheck.totalPlayers });
+      
+      // Listen for all players to finish
+      const unsubscribe = listenForAllPlayersFinished(quiz.gamePin, ({ allFinished, finishedCount, totalPlayers, players }) => {
+        console.log(`📊 Listener fired: ${finishedCount}/${totalPlayers} players finished`);
+        
+        setFinishedPlayersCount({ finished: finishedCount, total: totalPlayers });
+        
+        if (allFinished) {
+          console.log('🎉 All players finished! Showing leaderboard...');
+          unsubscribe(); // Stop listening
+          
+          // Prepare results with all players' final scores from Firebase
+          results.players = players.map(player => ({
+            id: `player_${player.userId}`,
+            userId: player.userId,
+            name: player.name,
+            initial: player.initial || player.name?.[0] || '?',
+            score: player.score || 0,
+            forfeited: player.forfeited || false
+          }));
+          
+          results.winner = results.players.reduce((prev, current) => 
+            prev.score > current.score ? prev : current
+          );
+          
+          setWaitingForPlayers(false);
+          console.log('🚀 CALLING onComplete with results:', { 
+            gamePin: results.gamePin, 
+            isHost: results.isHost, 
+            playersCount: results.players?.length,
+            hasPlayers: !!results.players 
+          });
+          onComplete(results);
+        }
+      });
+      
+      return; // Don't call onComplete yet, wait for all players
     }
     
+    // Solo mode: Complete immediately
     onComplete(results);
   };
 
@@ -1508,6 +1597,40 @@ const QuizGame = ({
         />
       )}
 
+      {/* WAITING FOR OTHER PLAYERS MODAL */}
+      {waitingForPlayers && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border-4 border-yellow-400 transform animate-bounce-gentle">
+            <div className="text-6xl mb-4 animate-pulse">⏳</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Waiting for Other Players...</h2>
+            <p className="text-gray-600 mb-4">
+              You finished the quiz! Hold on while others complete their questions.
+            </p>
+            
+            <div className="bg-gradient-to-r from-yellow-100 to-amber-100 rounded-2xl p-4 mb-4 border-2 border-yellow-300">
+              <div className="text-5xl font-bold text-yellow-600 mb-1">
+                {finishedPlayersCount.finished}/{finishedPlayersCount.total}
+              </div>
+              <div className="text-sm text-gray-700 font-semibold">Players Finished</div>
+            </div>
+
+            {/* Countdown Timer */}
+            <div className="bg-gradient-to-r from-red-100 to-orange-100 rounded-xl p-3 mb-4 border-2 border-red-300">
+              <div className="text-2xl font-bold text-red-600 mb-1">
+                {Math.floor(waitingTimeRemaining / 60)}:{(waitingTimeRemaining % 60).toString().padStart(2, '0')}
+              </div>
+              <div className="text-xs text-gray-700 font-medium">Time Remaining</div>
+            </div>
+            
+            <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+              <span className="animate-pulse">●</span>
+              <span className="animate-pulse animation-delay-200">●</span>
+              <span className="animate-pulse animation-delay-400">●</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 🐾 PET COMPANION */}
       <QuizPetCompanion
         isCorrect={petAnswerCorrect}
@@ -1516,6 +1639,22 @@ const QuizGame = ({
         onMessageShown={() => setShowPetMessage(false)}
         onEncouragementShown={() => setShowEncouragement(false)}
       />
+      
+      <style jsx>{`
+        @keyframes bounce-gentle {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-gentle {
+          animation: bounce-gentle 2s ease-in-out infinite;
+        }
+        .animation-delay-200 {
+          animation-delay: 0.2s;
+        }
+        .animation-delay-400 {
+          animation-delay: 0.4s;
+        }
+      `}</style>
     </div>
   );
 }

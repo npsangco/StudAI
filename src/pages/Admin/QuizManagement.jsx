@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Eye, Trash2, Menu } from "lucide-react";
+import { Eye, Trash2, Menu, Search } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import ToastContainer from "../../components/ToastContainer";
 import { useToast } from "../../hooks/useToast";
@@ -15,6 +15,8 @@ export default function QuizManagement() {
     const [quizzes, setQuizzes] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filterStatus, setFilterStatus] = useState("All");
     const quizzesPerPage = 13;
     const [questionsModalState, setQuestionsModalState] = useState({
         isOpen: false,
@@ -105,13 +107,27 @@ export default function QuizManagement() {
         });
     };
 
+    // Filter and search 
+    const filteredQuizzes = quizzes.filter((quiz) => {
+        const matchesSearch =
+            quiz.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            quiz.creator?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            quiz.quiz_id?.toString().includes(searchTerm);
+        const matchesFilter = filterStatus === "All" || quiz.status === filterStatus;
+        return matchesSearch && matchesFilter;
+    });
+
     const indexOfLastQuiz = currentPage * quizzesPerPage;
     const indexOfFirstQuiz = indexOfLastQuiz - quizzesPerPage;
-    const currentQuizzes = quizzes.slice(indexOfFirstQuiz, indexOfLastQuiz);
-    const totalPages = Math.ceil(quizzes.length / quizzesPerPage);
+    const currentQuizzes = filteredQuizzes.slice(indexOfFirstQuiz, indexOfLastQuiz);
+    const totalPages = Math.ceil(filteredQuizzes.length / quizzesPerPage);
 
     const handleNext = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
     const handlePrev = () => currentPage > 1 && setCurrentPage(currentPage - 1);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterStatus]);
 
     return (
         <div className="flex w-full min-h-screen bg-gray-100 relative">
@@ -176,9 +192,34 @@ export default function QuizManagement() {
                 {/* Table Section */}
                 <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 py-6 sm:py-8">
                     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-6">
-                        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-                            Quiz List
-                        </h2>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                                Quiz List
+                            </h2>
+
+                            {/* Search and Filter */}
+                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                <div className="relative flex-1 sm:flex-none">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search quizzes..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full sm:w-64"
+                                    />
+                                </div>
+                                <select
+                                    value={filterStatus}
+                                    onChange={(e) => setFilterStatus(e.target.value)}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                                >
+                                    <option value="All">All Status</option>
+                                    <option value="Open">Open</option>
+                                    <option value="Private">Private</option>
+                                </select>
+                            </div>
+                        </div>
 
                         <div className="overflow-x-auto">
                             <table className="min-w-full table-fixed text-xs sm:text-sm text-left">

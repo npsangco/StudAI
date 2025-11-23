@@ -63,7 +63,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     updateQuizData({ selected: null });
   };
 
-  const handleSoloQuiz = async () => {
+  const handleSoloQuiz = async (requestedQuestionCount) => {
     // Load questions before starting
     const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
 
@@ -73,26 +73,13 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       return;
     }
 
-    // Update selected quiz with fresh data including timer_per_question
-    updateQuizData({
-      selected: {
-        ...quizData.selected,
-        ...data.quiz
-      }
-    });
-    setQuestions(data.questions);
-    updateUiState({ showModal: false, currentView: VIEWS.LOADING });
-    countdown.start();
-  };
-
-  const handleQuizBattle = async () => {
-    // Load questions
-    const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
-
-    if (!data || !data.questions || data.questions.length === 0) {
-      setError('This quiz has no questions yet. Please add questions before starting a battle.');
-      updateUiState({ showModal: false });
-      return;
+    // Shuffle and limit questions based on user selection
+    let questionsToUse = [...data.questions];
+    if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
+      // Shuffle questions randomly
+      questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
+      // Take only the requested number
+      questionsToUse = questionsToUse.slice(0, requestedQuestionCount);
     }
 
     // Update selected quiz with fresh data including timer_per_question
@@ -102,7 +89,38 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         ...data.quiz
       }
     });
-    setQuestions(data.questions);
+    setQuestions(questionsToUse);
+    updateUiState({ showModal: false, currentView: VIEWS.LOADING });
+    countdown.start();
+  };
+
+  const handleQuizBattle = async (requestedQuestionCount) => {
+    // Load questions
+    const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
+
+    if (!data || !data.questions || data.questions.length === 0) {
+      setError('This quiz has no questions yet. Please add questions before starting a battle.');
+      updateUiState({ showModal: false });
+      return;
+    }
+
+    // Shuffle and limit questions based on user selection
+    let questionsToUse = [...data.questions];
+    if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
+      // Shuffle questions randomly
+      questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
+      // Take only the requested number
+      questionsToUse = questionsToUse.slice(0, requestedQuestionCount);
+    }
+
+    // Update selected quiz with fresh data including timer_per_question
+    updateQuizData({
+      selected: {
+        ...quizData.selected,
+        ...data.quiz
+      }
+    });
+    setQuestions(questionsToUse);
 
     // 1️⃣ Create battle in MySQL (existing API call)
     const battleData = await quizAPI.createBattle(quizData.selected.id);
@@ -117,7 +135,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
           quizId: quizData.selected.id,
           quizTitle: quizData.selected.title,
           hostId: currentUser.id,
-          totalQuestions: data.questions.length
+          totalQuestions: questionsToUse.length
         });
 
         // 3️⃣ Add host as first player
@@ -135,8 +153,19 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
           initial: currentUser.initial,
           profilePicture: profilePictureUrl
         });
-        // 🔥 Auto-mark host as ready!
-        await markPlayerReady(gamePin, currentUser.id);
+        
+        // Set game state for host
+        updateGameState({
+          gamePin: gamePin,
+          battleId: battle.battle_id,
+          isHost: true,
+          currentUserId: currentUser.id 
+        });
+        
+        // 4️⃣ Store questions in Firebase
+        await storeQuizQuestions(gamePin, data.questions);
+        
+        // Host should manually click "Ready Up" button like other players
 
         // Continue...
         updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
@@ -178,24 +207,51 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     // FIX: Get gamePin from gameState instead of quizData
     const currentGamePin = gameState.gamePin;
 
-    if (!currentGamePin) {
+    console.log('🎮 START BATTLE - Debug Info:', {
+      gamePin: currentGamePin,
+      questionsCount: questions?.length,
+      questionsData: questions,
+      hasQuestions: questions && questions.length > 0
+    });
 
+    if (!currentGamePin) {
+      console.error('❌ No game PIN found');
       setError('Game PIN not found. Please try creating the battle again.');
+      toast.error('Game PIN not found');
+      return;
+    }
+
+    if (!questions || questions.length === 0) {
+      console.error('❌ No questions loaded');
+      setError('No questions available. Please try creating the battle again.');
+      toast.error('No questions available');
       return;
     }
     
     try {
       // 1️⃣ Store questions in Firebase (so players can access them)
+      console.log('📤 Storing questions in Firebase...', {
+        gamePin: currentGamePin,
+        questionCount: questions.length
+      });
+      
       await storeQuizQuestions(currentGamePin, questions);
+      console.log('✅ Questions stored in Firebase');
 
       // 2️⃣ Update battle status in Firebase to "in_progress"
+      console.log('📤 Updating battle status in Firebase...');
       await updateBattleStatus(currentGamePin, 'in_progress');
+      console.log('✅ Battle status updated in Firebase');
 
       // 3️⃣ Update battle status in MySQL with comprehensive validation
+      console.log('📤 Starting battle in MySQL...');
       const result = await quizAPI.startBattle(currentGamePin);
+      
+      console.log('📥 MySQL response:', result);
       
       if (!result.success) {
         // Handle specific error cases
+        console.error('❌ MySQL start battle failed:', result);
 
         // Show user-friendly error message
         switch (result.errorCode) {
@@ -235,12 +291,17 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       }
       
       // 4️⃣ Transition to loading screen
-
+      console.log('✅ Battle started successfully, transitioning to loading screen');
       updateUiState({ currentView: VIEWS.LOADING_BATTLE });
       countdown.start();
       
     } catch (error) {
-
+      console.error('❌ CRITICAL ERROR in handleStartBattle:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       toast.error('Failed to start battle. Please try again.');
     }
   };
@@ -565,8 +626,16 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   };
 
   const handleShowLeaderboard = (results) => {
+    console.log('🎯 handleShowLeaderboard CALLED with results:', {
+      gamePin: results?.gamePin,
+      isHost: results?.isHost,
+      playersCount: results?.players?.length,
+      hasPlayers: !!results?.players,
+      results: results
+    });
     updateGameState({ results });
     updateUiState({ showLeaderboard: true });
+    console.log('✅ showLeaderboard set to TRUE');
   };
 
   const handleCloseLeaderboard = () => {

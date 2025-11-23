@@ -161,6 +161,7 @@ export const quizApi = {
   joinBattle: (data) => api.post('/quizzes/battle/join', data),
   getBattle: (gamePin) => api.get(`/quizzes/battle/${gamePin}`),
   markReady: (gamePin) => api.post(`/quizzes/battle/${gamePin}/ready`),
+  markUnready: (gamePin) => api.post(`/quizzes/battle/${gamePin}/unready`),
   startBattle: (gamePin) => api.post(`/quizzes/battle/${gamePin}/start`),
   submitBattleScore: (gamePin, data) => api.post(`/quizzes/battle/${gamePin}/submit`, data),
   getBattleResults: (gamePin) => api.get(`/quizzes/battle/${gamePin}/results`),
