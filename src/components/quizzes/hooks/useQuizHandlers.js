@@ -135,8 +135,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
           initial: currentUser.initial,
           profilePicture: profilePictureUrl
         });
-        // 🔥 Auto-mark host as ready!
-        await markPlayerReady(gamePin, currentUser.id);
+        
+        // Host should manually click "Ready Up" button like other players
 
         // Continue...
         updateUiState({ showModal: false, currentView: VIEWS.LOBBY });

@@ -918,7 +918,7 @@ export const canSafelyCleanup = async (gamePin) => {
  */
 export const markPlayerFinished = async (gamePin, userId, finalScore) => {
   try {
-    const playerRef = ref(realtimeDb, `battles/${gamePin}/players/player_${userId}`);
+    const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
     await update(playerRef, {
       finished: true,
       score: finalScore,
@@ -976,12 +976,17 @@ export const listenForAllPlayersFinished = (gamePin, callback) => {
       return;
     }
     
-    const players = Object.values(snapshot.val());
-    const totalPlayers = players.length;
-    const finishedCount = players.filter(p => p.finished === true).length;
+    // Filter out invalid/incomplete player entries (must have userId and name)
+    const allPlayers = Object.values(snapshot.val());
+    const validPlayers = allPlayers.filter(p => p && p.userId && p.name);
+    
+    const totalPlayers = validPlayers.length;
+    const finishedCount = validPlayers.filter(p => p.finished === true).length;
     const allFinished = finishedCount === totalPlayers && totalPlayers > 0;
     
-    callback({ allFinished, finishedCount, totalPlayers, players });
+    console.log(`📊 Battle Progress: ${finishedCount}/${totalPlayers} finished (${allPlayers.length} total entries in Firebase)`);
+    
+    callback({ allFinished, finishedCount, totalPlayers, players: validPlayers });
   });
   
   return unsubscribe;
