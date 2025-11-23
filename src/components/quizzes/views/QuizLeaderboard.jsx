@@ -97,7 +97,7 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
     };
     
     syncAndFetch();
-  }, [isOpen, results?.gamePin, results?.isHost, results?.players]);  // VIEWER TRACKING
+  }, [isOpen, results?.gamePin, results?.isHost]); // Removed results?.players dependency  // VIEWER TRACKING
   useEffect(() => {
     if (!isOpen || !results?.gamePin) return;
 
