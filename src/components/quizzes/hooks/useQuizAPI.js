@@ -291,18 +291,29 @@ export function useQuizAPI(quizDataHook, toast) {
    */
   const startBattle = async (gamePin) => {
     try {
+      console.log('🎮 API - startBattle called with PIN:', gamePin);
       setLoading(true);
       
       const response = await quizApi.startBattle(gamePin);
+      console.log('✅ API - startBattle success:', response.data);
       
       return { success: true, data: response.data };
     } catch (err) {
+      console.error('❌ API - startBattle error:', err);
+      console.error('❌ API - Error response:', err.response);
+      console.error('❌ API - Error data:', err.response?.data);
 
       const errorData = err.response?.data || {};
       const errorCode = errorData.errorCode || 'UNKNOWN_ERROR';
       const errorMessage = errorData.error || 'Failed to start battle';
       
       // Log specific error details for debugging
+      console.error('❌ API - Parsed error:', {
+        errorCode,
+        errorMessage,
+        shouldCleanup: errorData.shouldCleanup,
+        details: errorData
+      });
 
       setError(errorMessage);
       

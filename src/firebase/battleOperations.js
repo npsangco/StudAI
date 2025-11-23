@@ -247,15 +247,41 @@ export const getBattleMetadata = async (gamePin) => {
  */
 export const storeQuizQuestions = async (gamePin, questions) => {
   try {
+    console.log('🔥 Firebase - storeQuizQuestions called:', {
+      gamePin,
+      questionsCount: questions?.length,
+      hasQuestions: !!questions && questions.length > 0,
+      firstQuestion: questions?.[0]
+    });
+
+    if (!questions || questions.length === 0) {
+      console.error('❌ Firebase - No questions to store!');
+      throw new Error('No questions to store');
+    }
+
+    if (!gamePin) {
+      console.error('❌ Firebase - No gamePin provided!');
+      throw new Error('No gamePin provided');
+    }
+
     const questionsRef = ref(realtimeDb, `battles/${gamePin}/questions`);
+    console.log('🔥 Firebase - Setting questions at:', `battles/${gamePin}/questions`);
     await set(questionsRef, questions);
+    console.log('✅ Firebase - Questions stored successfully');
     
     // ALSO update metadata with actual question count
     const metadataRef = ref(realtimeDb, `battles/${gamePin}/metadata/totalQuestions`);
+    console.log('🔥 Firebase - Setting totalQuestions:', questions.length);
     await set(metadataRef, questions.length);
+    console.log('✅ Firebase - Metadata updated successfully');
     
   } catch (error) {
-    console.error('❌ Error storing questions:', error);
+    console.error('❌ Firebase - Error storing questions:', error);
+    console.error('❌ Firebase - Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     throw error;
   }
 };

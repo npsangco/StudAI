@@ -178,24 +178,51 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     // FIX: Get gamePin from gameState instead of quizData
     const currentGamePin = gameState.gamePin;
 
-    if (!currentGamePin) {
+    console.log('🎮 START BATTLE - Debug Info:', {
+      gamePin: currentGamePin,
+      questionsCount: questions?.length,
+      questionsData: questions,
+      hasQuestions: questions && questions.length > 0
+    });
 
+    if (!currentGamePin) {
+      console.error('❌ No game PIN found');
       setError('Game PIN not found. Please try creating the battle again.');
+      toast.error('Game PIN not found');
+      return;
+    }
+
+    if (!questions || questions.length === 0) {
+      console.error('❌ No questions loaded');
+      setError('No questions available. Please try creating the battle again.');
+      toast.error('No questions available');
       return;
     }
     
     try {
       // 1️⃣ Store questions in Firebase (so players can access them)
+      console.log('📤 Storing questions in Firebase...', {
+        gamePin: currentGamePin,
+        questionCount: questions.length
+      });
+      
       await storeQuizQuestions(currentGamePin, questions);
+      console.log('✅ Questions stored in Firebase');
 
       // 2️⃣ Update battle status in Firebase to "in_progress"
+      console.log('📤 Updating battle status in Firebase...');
       await updateBattleStatus(currentGamePin, 'in_progress');
+      console.log('✅ Battle status updated in Firebase');
 
       // 3️⃣ Update battle status in MySQL with comprehensive validation
+      console.log('📤 Starting battle in MySQL...');
       const result = await quizAPI.startBattle(currentGamePin);
+      
+      console.log('📥 MySQL response:', result);
       
       if (!result.success) {
         // Handle specific error cases
+        console.error('❌ MySQL start battle failed:', result);
 
         // Show user-friendly error message
         switch (result.errorCode) {
@@ -235,12 +262,17 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       }
       
       // 4️⃣ Transition to loading screen
-
+      console.log('✅ Battle started successfully, transitioning to loading screen');
       updateUiState({ currentView: VIEWS.LOADING_BATTLE });
       countdown.start();
       
     } catch (error) {
-
+      console.error('❌ CRITICAL ERROR in handleStartBattle:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       toast.error('Failed to start battle. Please try again.');
     }
   };
