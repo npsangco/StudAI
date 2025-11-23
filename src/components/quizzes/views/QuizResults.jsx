@@ -53,6 +53,8 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
 
   if (!isOpen) return null;
 
+  console.log('📋 QuizResults props:', { isOpen, mode, results, quizId: results?.quizId });
+
   const validScore = typeof results?.score === 'number' ? results.score : 0;
   const validTotal = typeof results?.totalQuestions === 'number' ? results.totalQuestions : 1;
   const validTitle = results?.quizTitle || 'Quiz';
