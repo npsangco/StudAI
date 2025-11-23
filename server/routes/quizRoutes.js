@@ -1865,6 +1865,126 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
   }
 });
 
+// 🔍 DIAGNOSTIC ENDPOINT - Check battle readiness before starting
+router.get('/battle/:gamePin/diagnostic', requireAuth, async (req, res) => {
+  try {
+    const gamePin = req.params.gamePin;
+    const userId = req.session.userId;
+    
+    const battle = await QuizBattle.findOne({
+      where: { game_pin: gamePin },
+      include: [{
+        model: Quiz,
+        as: 'quiz'
+      }]
+    });
+    
+    if (!battle) {
+      return res.json({
+        success: false,
+        error: 'Battle not found',
+        gamePin,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    const questionCount = await Question.count({
+      where: { quiz_id: battle.quiz_id }
+    });
+    
+    const currentPlayers = await BattleParticipant.count({
+      where: { battle_id: battle.battle_id }
+    });
+    
+    const readyPlayers = await BattleParticipant.count({
+      where: { 
+        battle_id: battle.battle_id,
+        is_ready: true
+      }
+    });
+    
+    const participants = await BattleParticipant.findAll({
+      where: { battle_id: battle.battle_id },
+      include: [{
+        model: User,
+        as: 'user',
+        attributes: ['user_id', 'username']
+      }]
+    });
+    
+    const diagnostic = {
+      success: true,
+      timestamp: new Date().toISOString(),
+      battle: {
+        gamePin: battle.game_pin,
+        status: battle.status,
+        hostId: battle.host_id,
+        isUserHost: battle.host_id === userId,
+        quizId: battle.quiz_id,
+        quizExists: !!battle.quiz,
+        quizTitle: battle.quiz?.title || 'N/A',
+        maxPlayers: battle.max_players
+      },
+      validation: {
+        hasQuiz: !!battle.quiz,
+        questionCount: questionCount,
+        hasQuestions: questionCount > 0,
+        currentPlayers: currentPlayers,
+        readyPlayers: readyPlayers,
+        allPlayersReady: currentPlayers > 0 && readyPlayers === currentPlayers,
+        meetsMinimumPlayers: currentPlayers >= 2,
+        isWaitingStatus: battle.status === 'waiting',
+        canStart: (
+          !!battle.quiz &&
+          questionCount > 0 &&
+          currentPlayers >= 2 &&
+          currentPlayers <= battle.max_players &&
+          battle.status === 'waiting' &&
+          battle.host_id === userId
+        )
+      },
+      players: participants.map(p => ({
+        userId: p.user_id,
+        username: p.user?.username || 'Unknown',
+        isReady: p.is_ready,
+        isHost: p.user_id === battle.host_id
+      })),
+      recommendations: []
+    };
+    
+    // Add recommendations
+    if (!diagnostic.battle.quizExists) {
+      diagnostic.recommendations.push('❌ Quiz was deleted - battle cannot start');
+    }
+    if (diagnostic.validation.questionCount === 0) {
+      diagnostic.recommendations.push('❌ Quiz has no questions - add questions first');
+    }
+    if (diagnostic.validation.currentPlayers < 2) {
+      diagnostic.recommendations.push(`⚠️ Need at least 2 players (currently ${diagnostic.validation.currentPlayers})`);
+    }
+    if (!diagnostic.validation.isWaitingStatus) {
+      diagnostic.recommendations.push(`⚠️ Battle is already ${battle.status}`);
+    }
+    if (!diagnostic.battle.isUserHost) {
+      diagnostic.recommendations.push('⚠️ Only the host can start this battle');
+    }
+    if (diagnostic.validation.canStart) {
+      diagnostic.recommendations.push('✅ Battle is ready to start!');
+    }
+    
+    return res.json(diagnostic);
+    
+  } catch (err) {
+    console.error('❌ Diagnostic error:', err);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to run diagnostic',
+      details: err.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // 6. Submit battle score
 router.post('/battle/:gamePin/submit', requireAuth, async (req, res) => {
   try {
