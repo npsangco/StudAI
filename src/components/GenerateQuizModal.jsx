@@ -10,6 +10,10 @@ const QUESTION_TYPES = [
   'Matching'
 ];
 
+const TITLE_CHAR_LIMIT = 50;
+const TITLE_LENGTH_ERROR = `Quiz title must be ${TITLE_CHAR_LIMIT} characters or fewer.`;
+const TITLE_REQUIRED_ERROR = 'Please enter a quiz title';
+
 const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -19,6 +23,9 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const [usageSnapshot, setUsageSnapshot] = useState(null);
   const [isUsageLoading, setIsUsageLoading] = useState(true);
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState(QUESTION_TYPES);
+
+  const trimmedTitle = quizTitle.trim();
+  const isTitleTooLong = quizTitle.length > TITLE_CHAR_LIMIT;
 
   const refreshUsage = useCallback(async () => {
     try {
@@ -39,8 +46,8 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const quizRemaining = usageSnapshot?.remaining?.quiz ?? quizLimit;
   const quizLimitReached = !isUsageLoading && quizRemaining <= 0;
   
-  // Fixed 10-question default
-  const questionCount = 10;
+  // Fixed 15-question default
+  const questionCount = 15;
 
   const handleTypeToggle = (type) => {
     setSelectedQuestionTypes((prev) => {
@@ -56,8 +63,13 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   };
 
   const handleGenerateQuiz = async () => {
-    if (!quizTitle.trim()) {
-      setError('Please enter a quiz title');
+    if (!trimmedTitle) {
+      setError(TITLE_REQUIRED_ERROR);
+      return;
+    }
+
+    if (isTitleTooLong) {
+      setError(TITLE_LENGTH_ERROR);
       return;
     }
 
@@ -80,7 +92,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
         noteId: note.id,
         noteContent: note.content,
         noteTitle: note.title,
-        quizTitle: quizTitle.trim(),
+        quizTitle: trimmedTitle,
         questionTypes: selectedQuestionTypes
       });
 
@@ -174,17 +186,32 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
         <div className="mb-4">
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Quiz Title
-            <span className="text-xs text-slate-500 ml-2">({quizTitle.length}/50)</span>
+            <span className="text-xs text-slate-500 ml-2">({quizTitle.length}/{TITLE_CHAR_LIMIT})</span>
           </label>
           <input
             type="text"
             value={quizTitle}
-            onChange={(e) => setQuizTitle(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setQuizTitle(value);
+              if (error) {
+                const resolvedLengthError = error === TITLE_LENGTH_ERROR && value.length <= TITLE_CHAR_LIMIT;
+                const resolvedEmptyError = error === TITLE_REQUIRED_ERROR && value.trim();
+                if (resolvedLengthError || resolvedEmptyError) {
+                  setError(null);
+                }
+              }
+            }}
             placeholder="Enter quiz title..."
-            maxLength={50}
+            maxLength={TITLE_CHAR_LIMIT}
             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
             disabled={isLoading}
           />
+          {isTitleTooLong && (
+            <p className="mt-1 text-xs text-red-600">
+              {TITLE_LENGTH_ERROR} Shorten the generated title or edit it manually.
+            </p>
+          )}
         </div>
 
         {/* Question Types */}
@@ -251,7 +278,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
           </button>
           <button
             onClick={handleGenerateQuiz}
-            disabled={isLoading || quizLimitReached}
+            disabled={isLoading || quizLimitReached || isTitleTooLong}
             className="flex-1 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
