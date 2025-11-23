@@ -1101,10 +1101,13 @@ const QuizGame = ({
   const finishQuizWithAnswers = async (finalAnswers) => {
 
 
+    const quizId = quiz.quiz_id || quiz.quizId || quiz.id;
+    console.log('🎯 Quiz ID detection:', { quiz_id: quiz.quiz_id, quizId: quiz.quizId, id: quiz.id, selected: quizId });
+    
     const results = {
       ...game.getResults(),
       quizTitle: quiz.title,
-      quizId: quiz.quiz_id || quiz.id, // Add quizId for leaderboard fetching
+      quizId: quizId, // Add quizId for leaderboard fetching
       answers: finalAnswers,
       questions: questions, // Pass questions for difficulty breakdown
       gamePin: quiz?.gamePin,
