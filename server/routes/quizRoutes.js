@@ -15,7 +15,7 @@ import { jsonrepair } from 'jsonrepair';
 const router = express.Router();
 
 const AI_QUIZ_RULES = {
-  requiredQuestionCount: 20,
+  requiredQuestionCount: 15,
   batchSize: 10,
   validTypes: ['Multiple Choice', 'Fill in the blanks', 'True/False', 'Matching']
 };
@@ -25,6 +25,13 @@ const QUESTION_TYPE_PROMPT_EXAMPLES = {
   'Fill in the blanks': '{"type":"Fill in the blanks","question":"The process is called ___.","answer":"photosynthesis"}',
   'True/False': '{"type":"True/False","question":"The heart pumps blood.","correctAnswer":"True"}',
   'Matching': '{"type":"Matching","question":"Match each scientist to their discovery","matchingPairs":[{"left":"Newton","right":"Gravity"},{"left":"Curie","right":"Radioactivity"}]}'
+};
+
+const EXAMPLE_QUESTION_TEXTS = {
+  'Multiple Choice': 'What is the main idea of the passage?',
+  'Fill in the blanks': 'The process is called ___.',
+  'True/False': 'The heart pumps blood.',
+  'Matching': 'Match each scientist to their discovery'
 };
 
 // ============================================
@@ -75,6 +82,11 @@ function normalizeAiQuestion(rawQuestion, index, allowedTypes = AI_QUIZ_RULES.va
 
   const normalized = { type, question: questionText };
 
+  const sampleQuestionText = EXAMPLE_QUESTION_TEXTS[type];
+  if (sampleQuestionText && questionText.toLowerCase() === sampleQuestionText.toLowerCase()) {
+    throw new Error(`Question ${index + 1} must not reuse provided sample questions. Create new content based on the note.`);
+  }
+
   if (type === 'Multiple Choice') {
     const rawChoices = Array.isArray(rawQuestion.choices) ? rawQuestion.choices : [];
     const cleanedChoices = rawChoices
@@ -107,6 +119,10 @@ function normalizeAiQuestion(rawQuestion, index, allowedTypes = AI_QUIZ_RULES.va
     }
     normalized.correctAnswer = rawCorrectAnswer === 'true' ? 'True' : 'False';
   } else if (type === 'Fill in the blanks') {
+    const blankMatches = questionText.match(/_{3,}/g) || [];
+    if (blankMatches.length !== 1) {
+      throw new Error(`Question ${index + 1} must contain exactly one blank placeholder (___).`);
+    }
     const answer = typeof rawQuestion.answer === 'string' ? rawQuestion.answer.trim() : '';
     if (!answer) {
       throw new Error(`Question ${index + 1} must specify the missing word or phrase.`);
@@ -214,7 +230,10 @@ async function generateAiQuestionBatch({ batchCount, truncatedContent, openAiApi
   const exampleSnippets = typeWhitelist
     .map(type => QUESTION_TYPE_PROMPT_EXAMPLES[type])
     .filter(Boolean)
+    .map(snippet => `  ${snippet}`)
     .join(',\n');
+
+  const exampleBlock = `Example format ONLY (structure reference — never copy text or answers):\n[\n${exampleSnippets}\n]`;
 
   const prompt = `Generate EXACTLY ${batchCount} valid JSON quiz questions. CRITICAL RULES:
 1. Return ONLY JSON array in brackets [], nothing else
@@ -222,18 +241,18 @@ async function generateAiQuestionBatch({ batchCount, truncatedContent, openAiApi
 3. NO escaped quotes (\"), NO newlines in strings
 4. ONLY use these exact keys: "type", "question", "choices", "correctAnswer", "answer", "matchingPairs"
 5. NEVER use: "_blank1_", "_blank2_", "blank" fields, or underscore keys
-6. For Fill blanks: ALWAYS use "answer" key with single word value ONLY
-7. Each question must have all required fields for its type
-8. You MUST use ONLY these question types (spellings must match exactly): ${typeWhitelist.join(', ')}
+6. Fill-in-the-blank question text MUST contain exactly one "___" placeholder (no numbered or multiple blanks)
+7. For Fill blanks: ALWAYS use "answer" key with a single word or short phrase matching that blank
+8. Each question must have all required fields for its type
+9. You MUST use ONLY these question types (spellings must match exactly): ${typeWhitelist.join(', ')}
 
 CRITICAL: If you generate any field with underscore or blank numbers, the entire response fails!
+CRITICAL: DO NOT reuse the sample questions below. They are format guides only and copying them will be rejected.
 
 Content: "${truncatedContent}"
 
 Generate EXACTLY in this format - no variations:
-[
-${exampleSnippets}
-]`;
+${exampleBlock}`;
 
   const maxAiAttempts = 3;
   let normalizedQuestions = null;
