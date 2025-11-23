@@ -8,6 +8,9 @@ const __dirname = path.dirname(__filename);
 // Load .env from root directory explicitly
 dotenv.config({ path: path.join(__dirname, '.env') });
 
+// Set timezone to Philippines (Asia/Manila) for consistent date handling
+process.env.TZ = 'Asia/Manila';
+
 // DEBUG: Check if Zoom environment variables are loaded
 console.log('🔍 Environment Variables Check:');
 console.log('📁 Current directory:', __dirname);
