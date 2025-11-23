@@ -48,10 +48,17 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
     if (!gamePin || !currentUserId) return;
 
     try {
+      // 1️⃣ Update Firebase (for real-time UI)
       await markPlayerReady(gamePin, currentUserId);
+      console.log('✅ Marked ready in Firebase');
+      
+      // 2️⃣ Update MySQL (for backend validation)
+      const { quizApi } = await import('../../../api/api');
+      await quizApi.markReady(gamePin);
+      console.log('✅ Marked ready in MySQL');
       
     } catch (error) {
-
+      console.error('❌ Error marking ready:', error);
     }
   };
 
@@ -60,10 +67,17 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
     if (!gamePin || !currentUserId) return;
 
     try {
+      // 1️⃣ Update Firebase (for real-time UI)
       await markPlayerUnready(gamePin, currentUserId);
+      console.log('✅ Marked unready in Firebase');
+      
+      // 2️⃣ Update MySQL (for backend validation)
+      const { quizApi } = await import('../../../api/api');
+      await quizApi.markUnready(gamePin);
+      console.log('✅ Marked unready in MySQL');
       
     } catch (error) {
-
+      console.error('❌ Error marking unready:', error);
     }
   };
 

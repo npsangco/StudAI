@@ -1648,6 +1648,37 @@ router.post('/battle/:gamePin/ready', requireAuth, async (req, res) => {
   }
 });
 
+// 4.5. Mark player as unready
+router.post('/battle/:gamePin/unready', requireAuth, async (req, res) => {
+  try {
+    const gamePin = req.params.gamePin;
+    const userId = req.session.userId;
+    
+    const battle = await QuizBattle.findOne({
+      where: { game_pin: gamePin }
+    });
+    
+    if (!battle) {
+      return res.status(404).json({ error: 'Battle not found' });
+    }
+    
+    const participant = await BattleParticipant.findOne({
+      where: { battle_id: battle.battle_id, user_id: userId }
+    });
+    
+    if (!participant) {
+      return res.status(404).json({ error: 'You are not in this battle' });
+    }
+    
+    await participant.update({ is_ready: false });
+    
+    res.json({ message: 'Marked as unready' });
+  } catch (err) {
+    console.error('❌ Unready error:', err);
+    res.status(500).json({ error: 'Failed to mark unready' });
+  }
+});
+
 // 5. Start battle (HOST only) - WITH COMPREHENSIVE VALIDATIONS
 router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
   const transaction = await sequelize.transaction();

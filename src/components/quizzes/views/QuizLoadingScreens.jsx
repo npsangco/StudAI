@@ -655,6 +655,30 @@ export const BattleLobbyScreen = ({
             {/* HOST VIEW */}
             {isHost && onStartBattle && (
               <>
+                {/* Host Ready/Unready Button */}
+                {(() => {
+                  const hostPlayer = lobbyPlayers.find(p => p.userId === currentUserId);
+                  const isHostReady = hostPlayer?.isReady || false;
+
+                  return !isHostReady ? (
+                    <button
+                      onClick={onUserReady}
+                      className="px-10 md:px-14 py-4 md:py-4.5 bg-blue-500 text-white rounded-full font-bold text-lg md:text-xl hover:bg-blue-600 transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-100"
+                    >
+                      Ready Up
+                    </button>
+                  ) : (
+                    <button
+                      onClick={onUserUnready}
+                      className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-green-500 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:bg-green-600 hover:scale-105 active:scale-100 transition-all"
+                    >
+                      <span className="text-xl">✓</span>
+                      <span>Ready (Click to unready)</span>
+                    </button>
+                  );
+                })()}
+
+                {/* Start Battle Button */}
                 <button
                   onClick={onStartBattle}
                   disabled={totalPlayers < 2 || !allReady}
