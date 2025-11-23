@@ -553,19 +553,22 @@ const QuizGame = ({
         // 1. Set score to 0 in Firebase
         await updatePlayerScore(quiz.gamePin, quiz.currentUserId, 0);
 
-        // 2. Mark as forfeited
+        // 2. Mark as forfeited AND finished (so other players don't wait)
         const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
         await update(playerRef, {
           forfeited: true,
+          finished: true, // Mark as finished so others don't wait
           forfeitedAt: Date.now(),
           isOnline: false
         });
+
+        console.log('✅ Player forfeited and marked as finished');
 
         // 3. Cleanup connection tracking
         await reconnection.disconnect();
 
       } catch (error) {
-
+        console.error('❌ Error during forfeit:', error);
       }
     }
     

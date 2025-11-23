@@ -240,8 +240,12 @@ export const markAsForfeited = async (gamePin, userId) => {
       isOnline: false,
       inGracePeriod: false,
       hasForfeited: true,
+      finished: true, // Mark as finished so other players don't wait
+      score: 0, // Forfeited players get 0 score
       forfeitedAt: Date.now()
     });
+    
+    console.log(`✅ Player ${userId} auto-forfeited (grace period expired) and marked as finished`);
     
     const connectionRef = ref(realtimeDb, `battles/${gamePin}/connections/user_${userId}`);
     await update(connectionRef, {

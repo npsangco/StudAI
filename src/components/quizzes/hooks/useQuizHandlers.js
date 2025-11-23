@@ -136,6 +136,17 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
           profilePicture: profilePictureUrl
         });
         
+        // Set game state for host
+        updateGameState({
+          gamePin: gamePin,
+          battleId: battle.battle_id,
+          isHost: true,
+          currentUserId: currentUser.id 
+        });
+        
+        // 4️⃣ Store questions in Firebase
+        await storeQuizQuestions(gamePin, data.questions);
+        
         // Host should manually click "Ready Up" button like other players
 
         // Continue...
