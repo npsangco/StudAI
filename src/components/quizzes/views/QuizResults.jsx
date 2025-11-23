@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, RotateCcw, X, Sparkles, Star, FileText } from 'lucide-react';
+import { Trophy, RotateCcw, X, Sparkles, Star, FileText, BarChart3 } from 'lucide-react';
 import {
   calculateDifficultyBreakdown,
   getDifficultyDisplay,
@@ -283,6 +283,7 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
                 </button>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
