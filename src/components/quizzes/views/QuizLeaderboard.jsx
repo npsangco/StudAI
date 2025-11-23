@@ -13,55 +13,50 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
   const [finalPlayers, setFinalPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [battleData, setBattleData] = useState(null);
+  const [syncComplete, setSyncComplete] = useState(false);
   const syncAttempted = useRef(false);
-  const fetchAttempted = useRef(false);
 
   // Reset flags when modal closes or reopens
   useEffect(() => {
     if (!isOpen) {
       syncAttempted.current = false;
-      fetchAttempted.current = false;
+      setSyncComplete(false);
     }
   }, [isOpen]);
 
   // SYNC WITH MYSQL (HOST ONLY) - Must happen BEFORE fetching results
   useEffect(() => {
-    if (!isOpen || !results?.gamePin || !results?.isHost) return;
+    if (!isOpen || !results?.gamePin) return;
     if (syncAttempted.current) return;
     
     syncAttempted.current = true;
     
-    const syncTimeout = setTimeout(async () => {
+    const syncAndFetch = async () => {
       try {
-        console.log('🔄 Host syncing results to MySQL...');
-        const result = await syncBattleResultsToMySQL(results.gamePin);
-        if (result.success) {
-          console.log('✅ MySQL sync successful');
-        } else {
-          console.log('⚠️ MySQL sync failed:', result.error);
-        }
-      } catch (error) {
-        console.error('❌ MySQL sync error:', error);
-      }
-    }, 500); // Reduced timeout for faster sync
-    
-    return () => clearTimeout(syncTimeout);
-  }, [isOpen, results?.gamePin, results?.isHost]);
-
-  // FETCH FINAL SCORES FROM MYSQL
-  useEffect(() => {
-    if (!isOpen || !results?.gamePin) return;
-    if (fetchAttempted.current) return;
-    
-    fetchAttempted.current = true;
-    setLoading(true);
-    
-    const fetchResults = async () => {
-      try {
-        // Wait a bit for host to sync if they just opened (host needs time to sync first)
+        setLoading(true);
+        
+        // HOST: Sync to MySQL first
         if (results?.isHost) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          console.log('🔄 Host syncing results to MySQL...');
+          const syncResult = await syncBattleResultsToMySQL(results.gamePin);
+          
+          if (syncResult.success) {
+            console.log('✅ MySQL sync successful');
+          } else {
+            console.log('⚠️ MySQL sync failed:', syncResult.error);
+          }
+          
+          // Wait a bit for database to commit
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } else {
+          // NON-HOST: Wait for host to sync (give them time)
+          console.log('⏳ Non-host waiting for host to sync...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
+        
+        setSyncComplete(true);
+        
+        // FETCH FROM MYSQL
         
         console.log('📊 Fetching leaderboard from MySQL for PIN:', results.gamePin);
         
@@ -99,10 +94,8 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
       }
     };
     
-    fetchResults();
-  }, [isOpen, results?.gamePin, results?.isHost, results?.players]); 
-
-  // VIEWER TRACKING
+    syncAndFetch();
+  }, [isOpen, results?.gamePin, results?.isHost, results?.players]);  // VIEWER TRACKING
   useEffect(() => {
     if (!isOpen || !results?.gamePin) return;
 
