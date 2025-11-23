@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Trophy, RotateCcw, X, Sparkles, Star, FileText, BarChart3, Medal, Award } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trophy, RotateCcw, X, Sparkles, Star, FileText } from 'lucide-react';
 import {
   calculateDifficultyBreakdown,
   getDifficultyDisplay,
   getMaxScore
 } from '../utils/adaptiveDifficultyManager';
 import AnswerReviewModal from './AnswerReviewModal';
-import { quizApi } from '../../../api/api';
 
 const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
   const [showAnswerReview, setShowAnswerReview] = useState(false);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
 
   // Memoize particle positions to prevent flickering
   const [particles] = useState(() =>
@@ -23,37 +20,7 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
     }))
   );
 
-  // Fetch leaderboard when modal opens (solo mode only)
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      console.log('🏆 Leaderboard fetch check:', { isOpen, mode, quizId: results?.quizId });
-      
-      if (!isOpen || mode !== 'solo' || !results?.quizId) {
-        console.log('❌ Leaderboard fetch skipped');
-        setLoadingLeaderboard(false);
-        return;
-      }
-
-      try {
-        setLoadingLeaderboard(true);
-        console.log('📡 Fetching leaderboard for quiz:', results.quizId);
-        const response = await quizApi.getLeaderboard(results.quizId);
-        console.log('✅ Leaderboard response:', response);
-        setLeaderboard(response.leaderboard || []);
-      } catch (error) {
-        console.error('❌ Failed to fetch leaderboard:', error);
-        setLeaderboard([]);
-      } finally {
-        setLoadingLeaderboard(false);
-      }
-    };
-
-    fetchLeaderboard();
-  }, [isOpen, mode, results?.quizId]);
-
   if (!isOpen) return null;
-
-  console.log('📋 QuizResults props:', { isOpen, mode, results, quizId: results?.quizId });
 
   const validScore = typeof results?.score === 'number' ? results.score : 0;
   const validTotal = typeof results?.totalQuestions === 'number' ? results.totalQuestions : 1;
@@ -125,10 +92,8 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
           <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl" />
         </div>
 
-        {/* Two-column layout: Results + Leaderboard */}
-        <div className="relative w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 items-start">
-          
-          {/* Results Card */}
+        {/* Results Card */}
+        <div className="relative w-full max-w-sm sm:max-w-md mx-auto">
           <div className="relative">
             <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/40 border-2 border-white/60 transform translate-y-2 translate-x-2" style={{
               boxShadow: '0 20px 40px rgba(129, 140, 248, 0.15)'
@@ -322,100 +287,6 @@ const QuizResults = ({ isOpen, onClose, onRetry, results, mode = 'solo' }) => {
 
           </div>
           </div>
-          </div>
-
-          {/* Leaderboard Card (Solo Mode Only) */}
-          {mode === 'solo' && (
-            <div className="relative">
-              <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/40 border-2 border-white/60 transform translate-y-2 translate-x-2" style={{
-                boxShadow: '0 20px 40px rgba(129, 140, 248, 0.15)'
-              }} />
-              <div className="relative rounded-3xl backdrop-blur-xl bg-white/70 border-2 border-white/80 overflow-hidden" style={{
-                boxShadow: '0 25px 50px rgba(251, 191, 36, 0.3), 0 10px 30px rgba(129, 140, 248, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
-              }}>
-                <div className="p-5">
-                  {/* Header */}
-                  <div className="text-center mb-4">
-                    <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent drop-shadow-sm flex items-center justify-center gap-2">
-                      <Trophy className="w-5 h-5 text-purple-500" />
-                      Leaderboard
-                    </h3>
-                    <p className="text-xs text-gray-600 mt-1">Top scores across all attempts</p>
-                  </div>
-
-                  {/* Leaderboard Content */}
-                  {loadingLeaderboard ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto"></div>
-                      <p className="text-sm text-gray-600 mt-2">Loading...</p>
-                    </div>
-                  ) : leaderboard.length === 0 ? (
-                    <div className="text-center py-8 backdrop-blur-md bg-pink-50/50 rounded-2xl border-2 border-pink-200/50">
-                      <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600 font-medium">No attempts yet</p>
-                      <p className="text-xs text-gray-500 mt-1">Be the first to complete this quiz!</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {leaderboard.map((entry, index) => (
-                        <div
-                          key={entry.attempt_id}
-                          className={`backdrop-blur-md rounded-xl p-3 border-2 transition-all ${
-                            index === 0
-                              ? 'bg-gradient-to-r from-amber-100/80 to-yellow-100/80 border-amber-300/60'
-                              : index === 1
-                              ? 'bg-gradient-to-r from-gray-100/80 to-slate-100/80 border-gray-300/60'
-                              : index === 2
-                              ? 'bg-gradient-to-r from-orange-100/80 to-amber-100/80 border-orange-300/60'
-                              : 'bg-white/60 border-gray-200/60'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {/* Rank */}
-                            <div className="flex-shrink-0">
-                              {index === 0 ? (
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg">
-                                  <Trophy className="w-4 h-4 text-white" />
-                                </div>
-                              ) : index === 1 ? (
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center shadow-lg">
-                                  <Medal className="w-4 h-4 text-white" />
-                                </div>
-                              ) : index === 2 ? (
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-300 to-amber-400 flex items-center justify-center shadow-lg">
-                                  <Award className="w-4 h-4 text-white" />
-                                </div>
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
-                                  {index + 1}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* User Info */}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-gray-900 truncate">
-                                {entry.student?.username || 'Unknown'}
-                              </p>
-                              <p className="text-xs text-gray-600">
-                                {entry.score} pts • {entry.percentage}%
-                              </p>
-                            </div>
-
-                            {/* Time */}
-                            <div className="text-right text-xs text-gray-500">
-                              {Math.floor(entry.time_spent / 60)}:{String(entry.time_spent % 60).padStart(2, '0')}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
         </div>
       </div>
 
