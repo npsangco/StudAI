@@ -47,7 +47,7 @@ export default function LandingPage() {
                                 onClick={() => window.location.href = '/signup'}
                                 className="bg-gradient-to-r from-yellow-500 to-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all transform hover:-translate-y-1 hover:scale-105"
                             >
-                                Start Learning Free
+                                Start Learning
                             </button>
                             <button
                                 onClick={() => scrollToSection('features')}
@@ -237,10 +237,10 @@ export default function LandingPage() {
 
                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 max-w-6xl mx-auto">
                         {[
-                            { name: 'name', role: 'Developer', image: '' },
-                            { name: 'name', role: 'Developer', image: '' },
-                            { name: 'name', role: 'Developer', image: '' },
-                            { name: 'name', role: 'Developer', image: '' },
+                            { name: 'Bunyi, Denise Arielle', role: 'Developer', image: '' },
+                            { name: 'Sangco, Nimrod', role: 'Developer', image: '' },
+                            { name: 'Taloyo, Denniel Gerald', role: 'Developer', image: '/Taloyo_Pic.png' },
+                            { name: 'Viaña, Vince Carl', role: 'Developer', image: '' },
                         ].map((dev, index) => (
                             <div key={index} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl md:rounded-2xl p-4 md:p-6 text-center hover:shadow-xl transition-all transform hover:-translate-y-2">
                                 <div className="text-4xl md:text-6xl mb-2 md:mb-4">{dev.image}</div>
