@@ -33,6 +33,12 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
         };
       });
 
+      // Debug logging for ready states
+      console.log('🎮 Player ready states:', transformedPlayers.map(p => ({
+        name: p.name,
+        isReady: p.isReady
+      })));
+
       setPlayers(transformedPlayers);
     });
     
@@ -87,6 +93,13 @@ export function useLobby(isActive, gamePin, currentUserId, isHost) {
   // Check if all players are ready
   const readyCount = players.filter(p => p.isReady).length;
   const allReady = players.length > 1 && players.every(p => p.isReady);
+  
+  // Debug logging for ready state
+  useEffect(() => {
+    if (players.length > 0) {
+      console.log(`🎯 Lobby Status: ${readyCount}/${players.length} ready, allReady: ${allReady}`);
+    }
+  }, [readyCount, players.length, allReady]);
 
   // Generate initial positions for new players
   useEffect(() => {

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
-import { Copy, Check, Clock, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText, Info, X } from 'lucide-react';
+import { Copy, Check, Clock, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText, Info, X, Database } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 import { canUseAdaptiveMode } from '../utils/adaptiveDifficultyEngine';
 import { TEXT_LIMITS } from '../utils/constants';
+import { QuestionBankBrowser } from '../QuestionBankBrowser';
 
 // ============================================
 // COMPACT SETTINGS BAR COMPONENT
@@ -623,7 +624,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
 // POLISHED HEADER COMPONENT
 // ============================================
 
-const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions, isDirty }) => {
+const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions, isDirty, onOpenQuestionBank }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempTitle, setTempTitle] = useState(quiz.title);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -800,6 +801,16 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 </button>
               )}
 
+              {/* Question Bank Button */}
+              <button
+                onClick={onOpenQuestionBank}
+                className="px-4 py-2 text-sm rounded-lg font-medium transition-all bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-sm flex items-center gap-2"
+                title="Browse and insert questions from your question bank"
+              >
+                <Database className="w-4 h-4" />
+                <span className="hidden lg:inline">Question Bank</span>
+              </button>
+
               {/* Add Question Button */}
               <button
                 onClick={onAddQuestion}
@@ -917,6 +928,15 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
             {/* Actions */}
             <div className="flex gap-2">
               <button
+                onClick={onOpenQuestionBank}
+                className="px-3 py-2 text-xs rounded-lg font-medium bg-purple-100 text-purple-700 flex items-center justify-center gap-1"
+                title="Question Bank"
+              >
+                <Database className="w-3.5 h-3.5" />
+                <span>Bank</span>
+              </button>
+
+              <button
                 onClick={onAddQuestion}
                 className="px-3 py-2 text-xs rounded-lg font-medium flex-1 bg-gray-200 text-gray-700"
               >
@@ -985,6 +1005,7 @@ export const QuizEditor = ({
   const [draggedQuestionIndex, setDraggedQuestionIndex] = useState(null);
   const [dragOverQuestionIndex, setDragOverQuestionIndex] = useState(null);
   const [touchStartY, setTouchStartY] = useState(null);
+  const [showQuestionBank, setShowQuestionBank] = useState(false);
 
   const handleQuestionDragStart = (e, index) => {
     setDraggedQuestionIndex(index);
@@ -1088,6 +1109,40 @@ export const QuizEditor = ({
     setTouchStartY(null);
   };
 
+  const handleInsertFromBank = async (selectedQuestions) => {
+    if (!quiz || !quiz.id) {
+      toast.error('Please save the quiz first before inserting questions');
+      return;
+    }
+
+    try {
+      const questionIds = selectedQuestions.map(q => q.question_id);
+
+      const response = await fetch(`${API_URL}/api/question-bank/insert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          quizId: quiz.id,
+          questionIds
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(`Inserted ${data.inserted} question${data.inserted !== 1 ? 's' : ''} successfully`);
+        // Trigger a refresh by calling onSave or reloading
+        window.location.reload();
+      } else {
+        toast.error(data.error || 'Failed to insert questions');
+      }
+    } catch (error) {
+      console.error('Error inserting questions:', error);
+      toast.error('Failed to insert questions from bank');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sticky Header Container - Minimal */}
@@ -1100,8 +1155,18 @@ export const QuizEditor = ({
           onAddQuestion={onAddQuestion}
           onSave={onSave}
           onUpdateTitle={onUpdateTitle}
+          onOpenQuestionBank={() => setShowQuestionBank(true)}
         />
       </div>
+
+      {/* Question Bank Browser Modal */}
+      {showQuestionBank && (
+        <QuestionBankBrowser
+          onSelectQuestions={handleInsertFromBank}
+          onClose={() => setShowQuestionBank(false)}
+          toast={toast}
+        />
+      )}
 
       <div className="max-w-5xl mx-auto p-4 md:p-6">
         {questions.length === 0 ? (
