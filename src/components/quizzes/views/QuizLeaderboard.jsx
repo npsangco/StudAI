@@ -223,9 +223,15 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
     };
   }, [isOpen, results?.gamePin]);
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('❌ Leaderboard NOT OPEN - isOpen:', isOpen);
+    return null;
+  }
+
+  console.log('✅ LEADERBOARD IS OPEN - Rendering leaderboard');
 
   if (loading) {
+    console.log('⏳ Leaderboard is LOADING...');
     return (
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl p-8 text-center shadow-2xl">
@@ -235,6 +241,8 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
       </div>
     );
   }
+
+  console.log('🎨 Leaderboard rendering with data - validPlayers:', validPlayers.length);
 
   // COMPUTE RESULTS
   const validPlayers = finalPlayers || [];
