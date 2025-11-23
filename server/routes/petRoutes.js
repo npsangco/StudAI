@@ -8,7 +8,6 @@ import User from "../models/User.js";
 import UserDailyStat from "../models/UserDailyStat.js";
 import rateLimit from "express-rate-limit";
 import NodeCache from "node-cache";
-import { getPhilippinesTime } from "../utils/timezone.js";
 
 const router = express.Router();
 
@@ -130,8 +129,12 @@ async function applyStatDecay(pet) {
     happiness_level: Math.max(0, Math.min(100, pet.happiness_level - happinessDecay)),
     cleanliness_level: Math.max(0, Math.min(100, pet.cleanliness_level - cleanlinessDecay)),
     energy_level: Math.max(0, Math.min(100, pet.energy_level + energyReplenish)),
-    last_updated: now,
   };
+  
+  // Only update last_updated if energy actually replenished
+  if (energyReplenish > 0) {
+    updatedStats.last_updated = now;
+  }
 
   // EXP depletion when all stats reach 0
   if (updatedStats.hunger_level === 0 && 
