@@ -23,9 +23,27 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const [usageSnapshot, setUsageSnapshot] = useState(null);
   const [isUsageLoading, setIsUsageLoading] = useState(true);
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState(QUESTION_TYPES);
+  const formatDateForDisplay = useCallback((dateString) => {
+    if (!dateString) return null;
+    const date = new Date(`${dateString}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }, []);
 
   const trimmedTitle = quizTitle.trim();
   const isTitleTooLong = quizTitle.length > TITLE_CHAR_LIMIT;
+  const quizCooldown = usageSnapshot?.cooldowns?.quiz;
+  const quizLimit = usageSnapshot?.limits?.quiz ?? 1;
+  const quizRemaining = usageSnapshot?.remaining?.quiz ?? quizLimit;
+  const isQuizCooldownActive = Boolean(quizCooldown?.inCooldown);
+  const nextAvailableDate = quizCooldown?.nextAvailableOn || null;
+  const formattedNextAvailable = formatDateForDisplay(nextAvailableDate);
+  const quizLimitReached = !isUsageLoading && (quizRemaining <= 0 || isQuizCooldownActive);
+  const quizAvailabilityMessage = quizLimitReached
+    ? formattedNextAvailable
+      ? `Next available on ${formattedNextAvailable}.`
+      : 'Next available once your cooldown resets.'
+    : 'You can generate a quiz today.';
 
   const refreshUsage = useCallback(async () => {
     try {
@@ -42,10 +60,6 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
     refreshUsage();
   }, [refreshUsage]);
 
-  const quizLimit = usageSnapshot?.limits?.quiz ?? 2;
-  const quizRemaining = usageSnapshot?.remaining?.quiz ?? quizLimit;
-  const quizLimitReached = !isUsageLoading && quizRemaining <= 0;
-  
   // Fixed 15-question default
   const questionCount = 15;
 
@@ -78,10 +92,13 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
       return;
     }
 
-     if (quizLimitReached) {
-       setError('Daily AI quiz limit reached. Try again tomorrow.');
-       return;
-     }
+    if (quizLimitReached) {
+      const cooldownNote = formattedNextAvailable
+        ? `You can generate another quiz on ${formattedNextAvailable}.`
+        : 'Please try again once your cooldown resets.';
+      setError(`AI quiz generation is limited to once every other day. ${cooldownNote}`);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -247,16 +264,16 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
           </p>
         </div>
 
-        {/* Daily Limit Info */}
+        {/* Cooldown Info */}
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
           <p className="text-xs text-amber-800">
-            <strong>⏰ Daily Limit:</strong> {quizLimit} AI quiz{quizLimit > 1 ? 'zes' : ''} per day. {quizLimitReached ? 'Limit reached for today.' : `${quizRemaining} left today.`}
+            <strong>⏰ Limit:</strong> {quizLimit} AI quiz{quizLimit !== 1 ? 'zes' : ''} every other day. {quizAvailabilityMessage}
           </p>
         </div>
 
         {quizLimitReached && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6 text-sm text-red-700">
-            You have used your AI quiz generation for today. Please try again tomorrow.
+            You can generate one AI quiz every other day. {quizAvailabilityMessage}
           </div>
         )}
 

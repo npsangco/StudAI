@@ -409,6 +409,60 @@ ${exampleBlock}`;
   return normalizedQuestions;
 }
 
+async function buildAiQuizQuestions({
+  targetQuestionCount,
+  truncatedContent,
+  openAiApiKey,
+  allowedTypes,
+  batchSize = AI_QUIZ_RULES.batchSize
+}) {
+  const normalizedQuestions = [];
+  const seenQuestions = new Set();
+  const safeBatchSize = Math.max(1, batchSize || targetQuestionCount);
+  const maxBatchIterations = Math.max(3, Math.ceil(targetQuestionCount / safeBatchSize) + 2);
+  let batchIterations = 0;
+
+  while (normalizedQuestions.length < targetQuestionCount && batchIterations < maxBatchIterations) {
+    batchIterations++;
+    const remainingNeeded = targetQuestionCount - normalizedQuestions.length;
+    const currentBatchSize = Math.min(safeBatchSize, remainingNeeded);
+    let batchQuestions;
+
+    try {
+      batchQuestions = await generateAiQuestionBatch({
+        batchCount: currentBatchSize,
+        truncatedContent,
+        openAiApiKey,
+        allowedTypes
+      });
+    } catch (batchError) {
+      console.warn(`[AI] Batch generation attempt ${batchIterations} failed: ${batchError.message}`);
+      if (batchIterations >= maxBatchIterations) {
+        throw batchError;
+      }
+      continue;
+    }
+
+    for (const questionData of batchQuestions) {
+      const questionKey = `${questionData.type}:${(questionData.question || '').trim().toLowerCase()}`;
+      if (seenQuestions.has(questionKey)) {
+        continue;
+      }
+      seenQuestions.add(questionKey);
+      normalizedQuestions.push(questionData);
+      if (normalizedQuestions.length === targetQuestionCount) {
+        break;
+      }
+    }
+  }
+
+  if (normalizedQuestions.length !== targetQuestionCount) {
+    throw new Error(`AI returned only ${normalizedQuestions.length} unique questions after batching. Please try again.`);
+  }
+
+  return normalizedQuestions;
+}
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -807,10 +861,15 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
 
     const quizQuota = await ensureQuizAvailable(userId);
     if (!quizQuota.allowed) {
+      const errorMessage = quizQuota.reason === 'cooldown'
+        ? 'AI quiz generation is limited to once every other day.'
+        : 'AI quiz generation limit reached.';
       return res.status(429).json({
-        error: 'Daily AI quiz limit reached',
+        error: errorMessage,
         limits: DAILY_AI_LIMITS,
-        remaining: quizQuota.remaining
+        remaining: quizQuota.remaining,
+        nextAvailableOn: quizQuota.nextAvailableOn,
+        cooldown: quizQuota.cooldown
       });
     }
 
@@ -846,17 +905,7 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
       return res.status(400).json({ error: `AI-generated quizzes must have exactly ${targetQuestionCount} questions` });
     }
 
-    // Create the quiz first
-    const newQuiz = await Quiz.create({
-      title: quizTitle.trim(),
-      description: `AI-generated quiz from "${noteTitle}"`,
-      created_by: userId,
-      is_public: false,
-      timer_per_question: 30,
-      total_questions: 0,
-      total_attempts: 0,
-      average_score: 0
-    });
+    let newQuiz = null;
 
     // Generate questions using OpenAI
     try {
@@ -872,39 +921,43 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
         : noteContent;
 
       const batchSize = AI_QUIZ_RULES.batchSize || targetQuestionCount;
-      const normalizedQuestions = [];
-      const seenQuestions = new Set();
-      const maxBatchIterations = Math.max(3, Math.ceil(targetQuestionCount / batchSize) + 2);
-      let batchIterations = 0;
+      const maxGenerationAttempts = 3;
+      let normalizedQuestions = null;
+      let lastGenerationError = null;
 
-      while (normalizedQuestions.length < targetQuestionCount && batchIterations < maxBatchIterations) {
-        const remainingNeeded = targetQuestionCount - normalizedQuestions.length;
-        const currentBatchSize = Math.min(batchSize, remainingNeeded);
-        const batchQuestions = await generateAiQuestionBatch({
-          batchCount: currentBatchSize,
-          truncatedContent,
-          openAiApiKey,
-          allowedTypes: requestedTypes
-        });
-
-        for (const questionData of batchQuestions) {
-          const dedupeKey = `${questionData.type}:${(questionData.question || '').trim().toLowerCase()}`;
-          if (seenQuestions.has(dedupeKey)) {
-            continue;
-          }
-          seenQuestions.add(dedupeKey);
-          normalizedQuestions.push(questionData);
-          if (normalizedQuestions.length === targetQuestionCount) {
-            break;
+      for (let attempt = 1; attempt <= maxGenerationAttempts; attempt++) {
+        try {
+          normalizedQuestions = await buildAiQuizQuestions({
+            targetQuestionCount,
+            truncatedContent,
+            openAiApiKey,
+            allowedTypes: requestedTypes,
+            batchSize
+          });
+          break;
+        } catch (attemptError) {
+          lastGenerationError = attemptError;
+          console.warn(`[AI] Quiz generation attempt ${attempt} failed: ${attemptError.message}`);
+          if (attempt === maxGenerationAttempts) {
+            throw attemptError;
           }
         }
-
-        batchIterations++;
       }
 
-      if (normalizedQuestions.length !== targetQuestionCount) {
-        throw new Error(`AI returned only ${normalizedQuestions.length} unique questions after batching. Please try again.`);
+      if (!normalizedQuestions || normalizedQuestions.length !== targetQuestionCount) {
+        throw lastGenerationError || new Error('Failed to generate AI quiz questions.');
       }
+
+      newQuiz = await Quiz.create({
+        title: quizTitle.trim(),
+        description: `AI-generated quiz from "${noteTitle}"`,
+        created_by: userId,
+        is_public: false,
+        timer_per_question: 30,
+        total_questions: 0,
+        total_attempts: 0,
+        average_score: 0
+      });
 
       // Create questions in the quiz
       const questions = [];
@@ -951,10 +1004,15 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
 
       const recordResult = await recordQuizUsage(userId);
       if (!recordResult.allowed) {
+        const errorMessage = recordResult.reason === 'cooldown'
+          ? 'AI quiz generation is limited to once every other day.'
+          : 'AI quiz generation limit reached.';
         return res.status(429).json({
-          error: 'Daily AI quiz limit reached',
+          error: errorMessage,
           limits: DAILY_AI_LIMITS,
-          remaining: 0
+          remaining: recordResult.remaining,
+          nextAvailableOn: recordResult.nextAvailableOn,
+          cooldown: recordResult.cooldown
         });
       }
 
@@ -1001,7 +1059,9 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
 
     } catch (aiError) {
       // If AI generation fails, delete the quiz and return error
-      await newQuiz.destroy();
+      if (newQuiz) {
+        await newQuiz.destroy();
+      }
       console.error('Γ¥î AI Generation error:', aiError);
       const errorMessage = aiError.message || 'Failed to generate questions using AI';
       return res.status(400).json({ 
