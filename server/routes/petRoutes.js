@@ -18,10 +18,10 @@ const router = express.Router();
 
 const CONFIG = {
   stats: {
-    hunger: { decay: 10, interval: 1, max: 100 },      // 10 decay per 180 minutes (3 hours)
-    happiness: { decay: 10, interval: 1, max: 100 },   // 10 decay per 180 minutes (3 hours)
-    cleanliness: { decay: 5, interval: 2, max: 100 },  // 5 decay per 240 minutes (4 hours)
-    energy: { replenish: 10, interval: 1, max: 100 }    // 10 energy per 30 minutes
+    hunger: { decay: 10, interval: 1, max: 100 },      // 10 decay per 1 minute (TESTING)
+    happiness: { decay: 10, interval: 1, max: 100 },   // 10 decay per 1 minute (TESTING)
+    cleanliness: { decay: 5, interval: 2, max: 100 },  // 5 decay per 2 minutes (TESTING)
+    energy: { replenish: 10, interval: 1, max: 100 }    // 10 energy per 1 minute (TESTING)
   },
   exp: {
     perItem: 4,  // EXP per item used
@@ -334,24 +334,15 @@ router.get("/", generalLimiter, requireAuth, async (req, res) => {
     return res.status(401).json({ error: 'Not logged in' });
   }
   try {
-    const cacheKey = `pet:${userId}`;
-    const cachedPet = cache.get(cacheKey);
-    
-    if (cachedPet) {
-      return res.json(cachedPet);
-    }
-
     let pet = await PetCompanion.findOne({ where: { user_id: userId } });
     
     if (!pet) {
-      const response = { choosePet: true };
-      cache.set(cacheKey, response, 60);
-      return res.json(response);
+      return res.json({ choosePet: true });
     }
 
+    // Always apply decay calculation (no caching to ensure accurate stats)
     pet = await applyStatDecay(pet);
     
-    cache.set(cacheKey, pet, 30);
     res.json(pet);
   } catch (err) {
     console.error("Get pet error:", err);
