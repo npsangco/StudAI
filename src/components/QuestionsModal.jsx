@@ -37,7 +37,6 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
             }
         } catch (e) {
             console.error('Error parsing choices:', e);
-            console.error('Raw choices value:', question.choices);
             choices = null;
         }
 
@@ -49,35 +48,36 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
             }
         } catch (e) {
             console.error('Error parsing matching pairs:', e);
-            console.error('Raw matching_pairs value:', question.matching_pairs);
             matchingPairs = null;
         }
 
         switch (question.type) {
             case 'Multiple Choice':
+                if (!choices || !Array.isArray(choices) || choices.length === 0) {
+                    return (
+                        <div className="mt-2 text-sm text-gray-500 italic">
+                            No choices available
+                        </div>
+                    );
+                }
+                
                 return (
                     <div className="mt-2 space-y-2">
-                        {choices && Array.isArray(choices) && choices.length > 0 ? (
-                            choices.map((choice, idx) => (
-                                <div
-                                    key={idx}
-                                    className={`px-3 py-2 rounded-lg text-sm break-words ${choice === question.correct_answer
+                        {choices.map((choice, idx) => (
+                            <div
+                                key={idx}
+                                className={`px-3 py-2 rounded-lg text-sm break-words ${
+                                    choice === question.correct_answer
                                         ? 'bg-green-50 border border-green-200 text-green-800 font-medium'
                                         : 'bg-gray-50 border border-gray-200 text-gray-700'
-                                        }`}
-                                >
-                                    {String.fromCharCode(65 + idx)}. {choice}
-                                    {choice === question.correct_answer && (
-                                        <span className="ml-2 text-xs">(Correct)</span>
-                                    )}
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-sm text-gray-500 italic">
-                                <p>No choices available</p>
-                                <p className="text-xs mt-1">Raw data: {JSON.stringify(question.choices)}</p>
+                                }`}
+                            >
+                                {String.fromCharCode(65 + idx)}. {choice}
+                                {choice === question.correct_answer && (
+                                    <span className="ml-2 text-xs font-semibold">✓ Correct Answer</span>
+                                )}
                             </div>
-                        )}
+                        ))}
                     </div>
                 );
 
@@ -101,22 +101,26 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                 );
 
             case 'Matching':
+                if (!matchingPairs || !Array.isArray(matchingPairs) || matchingPairs.length === 0) {
+                    return (
+                        <div className="mt-2 text-sm text-gray-500 italic">
+                            No matching pairs available
+                        </div>
+                    );
+                }
+                
                 return (
-                    <div className="mt-2 space-y-2">
-                        {matchingPairs && Array.isArray(matchingPairs) && matchingPairs.length > 0 ? (
-                            matchingPairs.map((pair, idx) => (
+                    <div className="mt-2">
+                        <p className="text-xs text-purple-600 font-medium mb-2">Correct Matches:</p>
+                        <div className="space-y-2">
+                            {matchingPairs.map((pair, idx) => (
                                 <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg">
                                     <span className="text-sm text-purple-900 font-medium">{pair.left || ''}</span>
                                     <span className="text-purple-400">→</span>
                                     <span className="text-sm text-purple-900">{pair.right || ''}</span>
                                 </div>
-                            ))
-                        ) : (
-                            <div className="text-sm text-gray-500 italic">
-                                <p>No matching pairs available</p>
-                                <p className="text-xs mt-1">Raw data: {JSON.stringify(question.matching_pairs)}</p>
-                            </div>
-                        )}
+                            ))}
+                        </div>
                     </div>
                 );
 
