@@ -1,11 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { BookOpen, Trophy, MessageCircle, Users, Calendar, FileText, Video, Brain, Github, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
 import ToastContainer from "../components/ToastContainer";
 import { useToast } from "../hooks/useToast";
+import { API_URL } from "../config/api.config";
 
 export default function LandingPage() {
     const { toasts, toast, removeToast } = useToast();
     const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
+    const [stats, setStats] = useState({
+        totalUsers: 0,
+        totalNotes: 0
+    });
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await axios.get(`${API_URL}/api/admin/stats`, {
+                    withCredentials: true,
+                });
+                setStats({
+                    totalUsers: res.data.totalUsers || 0,
+                    totalNotes: res.data.totalNotes || 0
+                });
+            } catch (err) {
+                console.error("Failed to fetch stats:", err);
+                // Keep default values of 0 if fetch fails
+            }
+        };
+
+        fetchStats();
+    }, []);
 
     const scrollToSection = (id) => {
         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -59,11 +84,11 @@ export default function LandingPage() {
 
                         <div className="mt-16 grid grid-cols-3 gap-8 max-w-2xl mx-auto">
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-yellow-600">0</div>
+                                <div className="text-3xl font-bold text-yellow-600">{stats.totalUsers}</div>
                                 <div className="text-sm text-gray-600 mt-1">Active Students</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-blue-600">0</div>
+                                <div className="text-3xl font-bold text-blue-600">{stats.totalNotes}</div>
                                 <div className="text-sm text-gray-600 mt-1">Notes Generated</div>
                             </div>
                             <div className="text-center">
