@@ -218,8 +218,8 @@ export const validateQuestions = (questions) => {
   if (questions.length < MIN_QUESTIONS_FOR_BANK) {
     errors.push({
       questionNumber: null,
-      message: `Question Bank requires minimum ${MIN_QUESTIONS_FOR_BANK} questions`,
-      details: `Currently: ${questions.length} question${questions.length !== 1 ? 's' : ''}. Add ${MIN_QUESTIONS_FOR_BANK - questions.length} more question${MIN_QUESTIONS_FOR_BANK - questions.length !== 1 ? 's' : ''} to enable variety and prevent memorization.`,
+      message: `Question Bank needs ${MIN_QUESTIONS_FOR_BANK}+ questions to work its magic!`,
+      details: `Add at least ${MIN_QUESTIONS_FOR_BANK} questions to unlock random selection per session—keeping every attempt fresh and unpredictable.`,
       isGlobalError: true
     });
   }
@@ -638,14 +638,6 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
         questionNumber: 0,
         message: 'Quiz title is empty',
         details: 'Please add a title to your quiz'
-      });
-    }
-
-    if (questions.length === 0) {
-      errors.push({
-        questionNumber: 0,
-        message: 'No questions added',
-        details: 'Add at least 1 question to save this quiz'
       });
     }
 
