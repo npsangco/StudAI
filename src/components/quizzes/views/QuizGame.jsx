@@ -45,29 +45,26 @@ const QuizGame = ({
   const adaptiveCheck = mode === 'solo' ? canUseAdaptiveMode(rawQuestions) : { enabled: false };
   const useAdaptiveMode = adaptiveCheck.enabled;
 
-  // 🔥 Question Bank: Random 10 selection for solo modes, use all for battle
+  // 🔥 Question Bank: Use questions already shuffled and limited by handleSoloQuiz/handleQuizBattle
   const [questions, setQuestions] = useState(() => {
     // Battle: Use ALL questions passed (already shuffled and limited by host)
     if (mode === 'battle') {
       return rawQuestions;
     }
 
-    // Solo modes: Random 10 selection
-    const QUESTION_BANK_SIZE = 10;
+    // Solo modes: Use questions already shuffled and sliced by handleSoloQuiz
+    // (handleSoloQuiz already did the random selection based on user's choice)
+    const selectedQuestions = rawQuestions;
 
-    // Step 1: Randomly select 10 questions from Question Bank
-    const shuffled = [...rawQuestions].sort(() => Math.random() - 0.5);
-    const selectedQuestions = shuffled.slice(0, Math.min(QUESTION_BANK_SIZE, shuffled.length));
-
-    // Step 2: Apply mode-specific ordering/logic
+    // Apply mode-specific ordering/logic
     if (useAdaptiveMode) {
-      // Solo Adaptive: Initialize adaptive queue with selected 10
+      // Solo Adaptive: Initialize adaptive queue with selected questions
       const { orderedQuestions, startingDifficulty} = initializeAdaptiveQueue(selectedQuestions);
 
       return orderedQuestions;
     }
 
-    // Solo Classic: Sort selected 10 by difficulty
+    // Solo Classic: Sort selected questions by difficulty
     const sorted = sortQuestionsByDifficulty(selectedQuestions);
 
     return sorted;
