@@ -168,7 +168,7 @@ export default function Planner() {
         setPlans(prev => [...prev, result.plan]);
         
         if (result.queued) {
-          toast.info('📱 Offline: Plan will sync when back online');
+          toast.info('📱 Offline: Task will sync when back online');
         } else {
           toast.success('Task created successfully!');
           // Trigger quest refresh
@@ -188,8 +188,8 @@ export default function Planner() {
         }
       }
     } catch (err) {
-      console.error("Failed to create plan:", err);
-      toast.error('Failed to create plan. Please try again.');
+      console.error("Failed to create task:", err);
+      toast.error('Failed to create task. Please try again.');
     }
   };
 
@@ -231,18 +231,18 @@ export default function Planner() {
         if (result.queued) {
           toast.info('📱 Offline: Changes will sync when back online');
         } else {
-          toast.success('Plan updated successfully!');
+          toast.success('Task updated successfully!');
         }
 
         cancelEditing();
       } else if (result.error) {
         toast.error(`Error: ${result.error}`);
       } else {
-        toast.error('Failed to update plan. Please try again.');
+        toast.error('Failed to update task. Please try again.');
       }
     } catch (err) {
-      console.error('Failed to update plan:', err);
-      toast.error('Failed to update plan. Please try again.');
+      console.error('Failed to update task:', err);
+      toast.error('Failed to update task. Please try again.');
     } finally {
       setIsSavingEdit(false);
     }

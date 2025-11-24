@@ -309,13 +309,13 @@ const JitsiSessions = () => {
       {confirmState.isOpen && (
         <ConfirmDialog
           isOpen={confirmState.isOpen}
+          onClose={closeConfirm}
+          onConfirm={confirmState.onConfirm}
           title={confirmState.title}
           message={confirmState.message}
           confirmText={confirmState.confirmText}
           cancelText={confirmState.cancelText}
           variant={confirmState.variant}
-          onConfirm={confirmState.onConfirm}
-          onCancel={closeConfirm}
         />
       )}
 
