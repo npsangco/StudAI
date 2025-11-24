@@ -138,15 +138,13 @@ export function validateAllQuestions(questions) {
 
 /**
  * Checks if quiz meets requirements for adaptive difficulty mode
+ * Requirements: Just 2+ different difficulty levels (no minimum question count)
  */
 export function validateAdaptiveRequirements(questions) {
-  const MIN_QUESTIONS = 5;
-
-  if (!questions || questions.length < MIN_QUESTIONS) {
-    const remaining = MIN_QUESTIONS - (questions?.length || 0);
+  if (!questions || questions.length === 0) {
     return {
       canUseAdaptive: false,
-      warning: `Classic Mode: Add ${remaining} more question${remaining > 1 ? 's' : ''} to unlock Adaptive Mode (intelligently adjusts difficulty based on student performance)`
+      warning: 'Classic Mode: Add questions to unlock Adaptive Mode (intelligently adjusts difficulty based on student performance)'
     };
   }
 

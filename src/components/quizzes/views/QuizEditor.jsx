@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
-import { Copy, Check, Clock, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, Info, X, Database } from 'lucide-react';
+import { Copy, Check, ArrowLeft, Globe, Lock, Zap, Infinity, Target, Circle, AlertCircle, Save, Sparkles, Info, X, Database } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 import { canUseAdaptiveMode } from '../utils/adaptiveDifficultyEngine';
 import { TEXT_LIMITS } from '../utils/constants';
@@ -543,7 +543,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
                 <div className="flex-1">
                   <h4 className="font-bold text-purple-900 text-xs mb-1">Question Bank</h4>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
-                    Build a pool of 15+ questions. Before each quiz, you choose how many to use (up to 100). System randomly picks from your bank to keep things fresh.
+                    Questions auto-save to your bank for reuse across multiple quizzes. Easily add saved questions to any quiz. System randomly selects questions per session for variety (15+ needed).
                   </p>
                 </div>
               </div>
@@ -1190,7 +1190,7 @@ export const QuizEditor = ({
                 </div>
                 <h4 className="font-bold text-purple-900 text-lg mb-2">Question Bank</h4>
                 <p className="text-gray-700 text-sm mb-3">
-                  Build a pool of 15+ questions. Before starting, choose how many questions you want (up to 100 per session). System randomly picks from your bank each time to prevent memorization and create variety.
+                  Questions auto-save to your bank for reuse across multiple quizzes. Easily add saved questions to any quiz. Build a pool of 15+ questions and the system randomly selects them per session for variety.
                 </p>
               </div>
 

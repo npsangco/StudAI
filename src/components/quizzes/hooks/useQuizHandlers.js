@@ -365,25 +365,25 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
 
   const handleUpdatePublicStatus = (isPublic, shareCode) => {
     if (quizData.editing) {
-      const updatedQuiz = { 
-        ...quizData.editing, 
+      const updatedQuiz = {
+        ...quizData.editing,
         isPublic,
         share_code: shareCode || quizData.editing.share_code // Preserve share_code
       };
       updateQuizData({ editing: updatedQuiz });
-      
+      setIsDirty(true); // Mark as dirty when public status changes
     }
   };
 
   // Timer handler
   const handleUpdateQuizTimer = (timerValue) => {
     if (quizData.editing) {
-      const updatedQuiz = { 
-        ...quizData.editing, 
+      const updatedQuiz = {
+        ...quizData.editing,
         timer_per_question: timerValue
       };
       updateQuizData({ editing: updatedQuiz });
-      
+      setIsDirty(true); // Mark as dirty when timer changes
     }
   };
 

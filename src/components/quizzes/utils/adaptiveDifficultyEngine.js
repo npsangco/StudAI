@@ -1,12 +1,12 @@
 /**
  * Adaptive Difficulty Engine
  * Dynamically adjusts quiz difficulty based on real-time performance
- * Only active for quizzes with 5+ questions in solo mode
+ * Only active for quizzes with 2+ difficulty levels in solo mode
  */
 
 // Configuration
 export const ADAPTIVE_CONFIG = {
-  MIN_QUESTIONS_FOR_ADAPTIVE: 5,  // Minimum questions to enable adaptive mode
+  MIN_QUESTIONS_FOR_ADAPTIVE: 2,  // Minimum questions to enable adaptive mode (just need 2 for the check interval)
   CHECK_INTERVAL: 2,               // Check accuracy every N questions
   ACCURACY_THRESHOLDS: {
     PERFECT: 100,    // 100% (2/2 correct) = Perfect! Level up
