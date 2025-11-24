@@ -705,7 +705,7 @@ router.get('/', requireAuth, async (req, res) => {
       quizData.difficulty_distribution = difficultyDistribution;
       quizData.difficultyDistribution = difficultyDistribution; // legacy camelCase consumer
       quizData.has_varied_difficulty = hasVariedDifficulty;
-      quizData.can_use_adaptive = hasAllDifficulties && totalQuestions >= 9;
+      quizData.can_use_adaptive = hasVariedDifficulty; // Adaptive mode only requires 2+ difficulty levels
       quizData.supportsAdaptiveMode = quizData.can_use_adaptive;
       quizData.total_questions = totalQuestions;
 
@@ -798,7 +798,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       difficulty_distribution: difficultyDistribution,
       difficultyDistribution,
       has_varied_difficulty: hasVariedDifficulty,
-      can_use_adaptive: hasAllDifficulties && totalQuestions >= 9
+      can_use_adaptive: hasVariedDifficulty // Adaptive mode only requires 2+ difficulty levels
     };
 
     return res.json({ quiz: quizPayload, questions: parsedQuestions });
