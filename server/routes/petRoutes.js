@@ -578,13 +578,15 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
       // Log daily stats
       await logDailyStats(userId, 'pet_action', 0, totalExpGain);
 
-      // Check achievements (Dedicated Caretaker, Pet Trainer, etc.)
-      if (levelsGained > 0) {
-        await checkPetAchievements(userId);
-      }
-
       await transaction.commit();
       clearUserCache(userId);
+
+      // Check achievements after transaction commit (Dedicated Caretaker, Pet Trainer, etc.)
+      if (levelsGained > 0) {
+        checkPetAchievements(userId).catch(err => {
+          console.error('Error checking achievements:', err);
+        });
+      }
 
       const updatedPet = await PetCompanion.findOne({ where: { user_id: userId } });
       
@@ -768,11 +770,13 @@ router.post("/shop/purchase", purchaseLimiter, requireAuth, async (req, res) => 
       // Auto-equip if first purchase
       await autoEquipFirstItems(userId, transaction);
 
-      // Check Shopping Spree achievement
-      await checkPetAchievements(userId);
-
       await transaction.commit();
       clearUserCache(userId);
+
+      // Check Shopping Spree achievement after transaction commit
+      checkPetAchievements(userId).catch(err => {
+        console.error('Error checking achievements:', err);
+      });
 
       const updatedUser = await User.findByPk(userId);
       res.json({ 
