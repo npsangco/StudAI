@@ -41,6 +41,9 @@ export function useQuizData() {
   // Dirty state tracking (for unsaved changes)
   const [isDirty, setIsDirty] = useState(false);
 
+  // Saving state (for long save operations)
+  const [isSaving, setIsSaving] = useState(false);
+
   // Game state
   const [gameState, setGameState] = useState({
     results: null,
@@ -88,6 +91,7 @@ export function useQuizData() {
     setShowValidationModal(false);
     setValidationStatus(null);
     setIsDirty(false);
+    setIsSaving(false);
   };
 
   return {
@@ -104,6 +108,7 @@ export function useQuizData() {
     gameState,
     deleteState,
     isDirty,
+    isSaving,
 
     // Setters
     setLoading,
@@ -118,6 +123,7 @@ export function useQuizData() {
     setGameState,
     setDeleteState,
     setIsDirty,
+    setIsSaving,
 
     // Update helpers
     updateQuizData,

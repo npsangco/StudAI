@@ -19,6 +19,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     setError,
     setQuestions,
     setIsDirty,
+    setIsSaving,
     quizData,
     questions,
     gameState  // ← Make sure we have access to gameState
@@ -388,20 +389,31 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   };
 
   const handleSaveQuiz = async () => {
-    // Show immediate feedback
-    toast.info('Saving quiz...');
+    // Set saving state to disable UI
+    setIsSaving(true);
 
-    const success = await quizAPI.saveQuiz();
+    // Show immediate feedback with question count
+    const questionCount = questions.length;
+    toast.info(`Saving ${questionCount} question${questionCount !== 1 ? 's' : ''}... Please wait`);
 
-    if (success) {
-      setIsDirty(false); // Reset dirty state after successful save
-      toast.success('Quiz saved successfully!');
-      // Small delay to let user see the toast before navigating away
-      setTimeout(() => {
-        handleBackToList();
-      }, 500);
-    } else {
-      toast.error('Failed to save quiz. Please try again.');
+    try {
+      const success = await quizAPI.saveQuiz();
+
+      if (success) {
+        setIsDirty(false); // Reset dirty state after successful save
+        toast.success('Quiz saved successfully!');
+        // Small delay to let user see the toast before navigating away
+        setTimeout(() => {
+          setIsSaving(false);
+          handleBackToList();
+        }, 500);
+      } else {
+        setIsSaving(false);
+        toast.error('Failed to save quiz. Please try again.');
+      }
+    } catch (error) {
+      setIsSaving(false);
+      toast.error('An error occurred while saving. Please try again.');
     }
   };
 

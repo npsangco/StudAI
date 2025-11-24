@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
-import { Copy, Check, ArrowLeft, Globe, Lock, Zap, Infinity, Target, Circle, AlertCircle, Save, Sparkles, Info, X, Database } from 'lucide-react';
+import { Copy, Check, ArrowLeft, Globe, Lock, Zap, Infinity, Target, Circle, AlertCircle, Save, Sparkles, Info, X, Database, Loader2 } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 import { canUseAdaptiveMode } from '../utils/adaptiveDifficultyEngine';
 import { TEXT_LIMITS } from '../utils/constants';
@@ -519,14 +519,14 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header - Compact */}
-          <div className="sticky top-0 bg-yellow-50 border-b border-yellow-200 px-4 py-2.5 flex items-center justify-between rounded-t-xl">
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between rounded-t-xl">
             <h2 className="text-base font-bold text-gray-900 flex items-center gap-1.5">
-              <Info className="w-4 h-4 text-yellow-600" />
+              <Info className="w-4 h-4 text-gray-600" />
               Quiz Modes: How It Works
             </h2>
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-yellow-100 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <X className="w-4 h-4 text-gray-500" />
             </button>
@@ -543,7 +543,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
                 <div className="flex-1">
                   <h4 className="font-bold text-purple-900 text-xs mb-1">Question Bank</h4>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
-                    Questions auto-save to your bank for reuse across multiple quizzes. Easily add saved questions to any quiz. System randomly selects questions per session for variety (15+ needed).
+                    Your personal question library! Every question auto-saves here for instant reuse across any quiz. Build a pool of 15+ and each session pulls fresh, randomized questions—no two attempts feel the same!
                   </p>
                 </div>
               </div>
@@ -558,7 +558,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
                 <div className="flex-1">
                   <h4 className="font-bold text-gray-900 text-xs mb-1">Classic Difficulty</h4>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
-                    Fixed difficulty throughout. Used in Battle Mode or when all questions are the same difficulty level.
+                    Consistent challenge from start to finish. Perfect for competitive Battle Mode or when your questions share the same difficulty level.
                   </p>
                 </div>
               </div>
@@ -573,7 +573,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
                 <div className="flex-1">
                   <h4 className="font-bold text-gray-900 text-xs mb-1">Adaptive Difficulty</h4>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
-                    Adjusts difficulty based on your performance every 2 questions. Needs <strong>2+ difficulty levels</strong> in your question bank.
+                    Smart system that reads your performance! Levels up when you ace it, scales down when you struggle. Requires <strong>2+ difficulty levels</strong> to activate.
                   </p>
                 </div>
               </div>
@@ -624,7 +624,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
 // POLISHED HEADER COMPONENT
 // ============================================
 
-const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions, isDirty, onOpenQuestionBank }) => {
+const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions, isDirty, onOpenQuestionBank, isSaving }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempTitle, setTempTitle] = useState(quiz.title);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -709,8 +709,13 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
             <div className="flex items-center gap-4 flex-1 min-w-0">
               <button
                 onClick={onBack}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Back to quizzes"
+                disabled={isSaving}
+                className={`p-2 rounded-lg transition-colors ${
+                  isSaving
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+                title={isSaving ? 'Please wait while saving...' : 'Back to quizzes'}
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -812,8 +817,13 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 {/* Question Bank Button */}
                 <button
                   onClick={onOpenQuestionBank}
-                  className="px-4 py-2 text-sm rounded-lg font-medium transition-all bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-sm flex items-center gap-2"
-                  title="Browse and insert questions from your question bank"
+                  disabled={isSaving}
+                  className={`px-4 py-2 text-sm rounded-lg font-medium transition-all flex items-center gap-2 ${
+                    isSaving
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-sm'
+                  }`}
+                  title={isSaving ? 'Please wait while saving...' : 'Browse and insert questions from your question bank'}
                 >
                   <Database className="w-4 h-4" />
                   <span className="hidden lg:inline">Question Bank</span>
@@ -822,7 +832,13 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 {/* Add Question Button */}
                 <button
                   onClick={onAddQuestion}
-                  className="px-4 py-2 text-sm rounded-lg font-medium transition-all bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-sm"
+                  disabled={isSaving}
+                  className={`px-4 py-2 text-sm rounded-lg font-medium transition-all ${
+                    isSaving
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-sm'
+                  }`}
+                  title={isSaving ? 'Please wait while saving...' : 'Add a new question'}
                 >
                   + Add Question
                 </button>
@@ -830,16 +846,30 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 {/* Save Button - Yellow Primary */}
                 <button
                   onClick={handleSaveClick}
-                  disabled={hasErrors || !isDirty}
+                  disabled={hasErrors || !isDirty || isSaving}
                   className={`flex items-center gap-2 px-5 py-2 text-sm rounded-lg font-medium transition-all ${
-                    hasErrors || !isDirty
+                    hasErrors || !isDirty || isSaving
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-yellow-500 text-white hover:bg-yellow-600 shadow-md hover:shadow-lg'
                   }`}
-                  title={hasErrors ? 'Fix errors before saving' : !isDirty ? 'No changes to save' : 'Save quiz'}
+                  title={
+                    isSaving ? `Saving ${questionCount} questions... Please wait` :
+                    hasErrors ? 'Fix errors before saving' :
+                    !isDirty ? 'No changes to save' :
+                    'Save quiz'
+                  }
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Save</span>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Save</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -994,6 +1024,7 @@ export const QuizEditor = ({
   quiz,
   questions,
   isDirty,
+  isSaving,
   onBack,
   onSave,
   onUpdateTitle,
@@ -1160,6 +1191,7 @@ export const QuizEditor = ({
           quiz={quiz}
           questions={questions}
           isDirty={isDirty}
+          isSaving={isSaving}
           onBack={onBack}
           onAddQuestion={onAddQuestion}
           onSave={onSave}
@@ -1190,7 +1222,7 @@ export const QuizEditor = ({
                 </div>
                 <h4 className="font-bold text-purple-900 text-lg mb-2">Question Bank</h4>
                 <p className="text-gray-700 text-sm mb-3">
-                  Questions auto-save to your bank for reuse across multiple quizzes. Easily add saved questions to any quiz. Build a pool of 15+ questions and the system randomly selects them per session for variety.
+                  Your personal question library! Every question auto-saves here for instant reuse across any quiz. Build a pool of 15+ questions and each session pulls fresh, randomized questions—no two attempts feel the same!
                 </p>
               </div>
 
@@ -1201,8 +1233,8 @@ export const QuizEditor = ({
                 </div>
                 <h4 className="font-bold text-gray-900 text-lg mb-2">Quiz Modes</h4>
                 <p className="text-gray-700 text-sm">
-                  <strong>Solo:</strong> Practice alone - choose question count before each attempt<br/>
-                  <strong>Battle:</strong> Challenge up to 5 players - all get the same random questions
+                  <strong>Solo:</strong> Study at your own pace—pick how many questions you want per session<br/>
+                  <strong>Battle:</strong> Compete with up to 5 players—everyone gets identical randomized questions!
                 </p>
               </div>
 
@@ -1213,8 +1245,8 @@ export const QuizEditor = ({
                 </div>
                 <h4 className="font-bold text-gray-900 text-lg mb-2">Difficulty Types</h4>
                 <p className="text-gray-700 text-sm">
-                  <strong className="text-purple-700">Adaptive:</strong> Adjusts difficulty based on your performance (2+ difficulty levels)<br/>
-                  <strong className="text-amber-700">Classic:</strong> Fixed difficulty throughout
+                  <strong className="text-purple-700">Adaptive:</strong> Smart system reads your performance—levels up when you excel, scales down when you struggle (needs 2+ difficulty levels)<br/>
+                  <strong className="text-amber-700">Classic:</strong> Consistent challenge from start to finish
                 </p>
               </div>
             </div>
