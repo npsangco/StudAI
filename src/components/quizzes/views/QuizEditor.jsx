@@ -649,11 +649,11 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
       });
     }
 
-    if (questions.length > 30) {
+    if (questions.length > 105) {
       errors.push({
         questionNumber: 0,
         message: 'Too many questions',
-        details: `You have ${questions.length} questions. Maximum is 30 questions per quiz.`
+        details: `You have ${questions.length} questions. Maximum is 105 questions per quiz.`
       });
     }
 
