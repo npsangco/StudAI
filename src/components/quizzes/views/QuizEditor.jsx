@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { QuestionCard } from '../QuizComponents';
 import { ValidationErrorModal } from '../QuizModal';
-import { Copy, Check, Clock, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, FileText, Info, X, Database } from 'lucide-react';
+import { Copy, Check, Clock, ArrowLeft, Globe, Lock, Zap, Timer, Infinity, Target, Circle, AlertCircle, Save, Sparkles, Info, X, Database } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
 import { canUseAdaptiveMode } from '../utils/adaptiveDifficultyEngine';
 import { TEXT_LIMITS } from '../utils/constants';
@@ -535,15 +535,15 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
           {/* Content - 4 Tiles */}
           <div className="p-4 space-y-2">
             {/* Question Bank Tile */}
-            <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
               <div className="flex items-start gap-2">
-                <div className="w-6 h-6 bg-yellow-500 rounded flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-3.5 h-3.5 text-white" />
+                <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center flex-shrink-0">
+                  <Database className="w-3.5 h-3.5 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-bold text-gray-900 text-xs mb-1">Question Bank</h4>
+                  <h4 className="font-bold text-purple-900 text-xs mb-1">Question Bank</h4>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
-                    Every quiz randomly selects <strong>10 questions</strong> from your bank to keep things fresh. Need at least <strong>15 questions</strong> to start.
+                    Build a pool of 15+ questions. Before each quiz, you choose how many to use (up to 100). System randomly picks from your bank to keep things fresh.
                   </p>
                 </div>
               </div>
@@ -742,97 +742,106 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
             </div>
 
             {/* Right: Badges + Actions */}
-            <div className="flex items-center gap-3">
-              {/* Question Count Badge */}
-              <span className={`px-3 py-1.5 text-sm rounded-full font-medium ${
-                questionCount === 0
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-green-100 text-green-700'
-              }`}>
-                {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
-              </span>
+            <div className="flex items-center gap-4">
+              {/* Status Badges Group */}
+              <div className="flex items-center gap-2.5">
+                {/* Question Count Badge */}
+                <span className={`px-3 py-1.5 text-sm rounded-full font-medium ${
+                  questionCount === 0
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-green-100 text-green-700'
+                }`}>
+                  {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
+                </span>
 
-              {/* Adaptive Mode Indicator with Info Icon */}
-              {(() => {
-                // Check adaptive mode eligibility
-                const adaptiveCheck = canUseAdaptiveMode(questions);
-                
-                if (adaptiveCheck.enabled) {
-                  // ✅ Adaptive Difficulty Enabled
-                  return (
-                    <button
-                      onClick={() => setShowModesInfoModal(true)}
-                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1.5 hover:bg-purple-200 transition-colors cursor-pointer"
-                      title="Click to learn how Question Bank and difficulty modes work"
-                    >
-                      <Target className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Adaptive Difficulty</span>
-                      <span className="sm:hidden">Adaptive</span>
-                      <Info className="w-3.5 h-3.5 opacity-70" />
-                    </button>
-                  );
-                } else if (questionCount > 0) {
-                  // ❌ Classic Difficulty
-                  return (
-                    <button
-                      onClick={() => setShowModesInfoModal(true)}
-                      className="px-3 py-1.5 text-sm rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1.5 hover:bg-amber-200 transition-colors cursor-pointer"
-                      title="Click to learn how Question Bank and difficulty modes work"
-                    >
-                      <Circle className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Classic Difficulty</span>
-                      <span className="sm:hidden">Classic</span>
-                      <Info className="w-3.5 h-3.5 opacity-70" />
-                    </button>
-                  );
-                }
-                return null;
-              })()}
+                {/* Adaptive Mode Indicator with Info Icon */}
+                {(() => {
+                  // Check adaptive mode eligibility
+                  const adaptiveCheck = canUseAdaptiveMode(questions);
 
-              {/* Error Badge */}
-              {hasErrors && (
+                  if (adaptiveCheck.enabled) {
+                    // ✅ Adaptive Difficulty Enabled
+                    return (
+                      <button
+                        onClick={() => setShowModesInfoModal(true)}
+                        className="px-3 py-1.5 text-sm rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1.5 hover:bg-purple-200 transition-colors cursor-pointer"
+                        title="Click to learn how Question Bank and difficulty modes work"
+                      >
+                        <Target className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Adaptive Difficulty</span>
+                        <span className="sm:hidden">Adaptive</span>
+                        <Info className="w-3.5 h-3.5 opacity-70" />
+                      </button>
+                    );
+                  } else if (questionCount > 0) {
+                    // ❌ Classic Difficulty
+                    return (
+                      <button
+                        onClick={() => setShowModesInfoModal(true)}
+                        className="px-3 py-1.5 text-sm rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1.5 hover:bg-amber-200 transition-colors cursor-pointer"
+                        title="Click to learn how Question Bank and difficulty modes work"
+                      >
+                        <Circle className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Classic Difficulty</span>
+                        <span className="sm:hidden">Classic</span>
+                        <Info className="w-3.5 h-3.5 opacity-70" />
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Error Badge */}
+                {hasErrors && (
+                  <button
+                    onClick={() => setShowErrorModal(true)}
+                    className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-full font-medium hover:bg-red-600 transition-all animate-pulse cursor-pointer shadow-md flex items-center gap-1.5"
+                    title="Click to view all errors"
+                  >
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>{errors.length} {errors.length === 1 ? 'Error' : 'Errors'}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="h-8 w-px bg-gray-300"></div>
+
+              {/* Action Buttons Group */}
+              <div className="flex items-center gap-2.5">
+                {/* Question Bank Button */}
                 <button
-                  onClick={() => setShowErrorModal(true)}
-                  className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-full font-medium hover:bg-red-600 transition-all animate-pulse cursor-pointer shadow-md flex items-center gap-1.5"
-                  title="Click to view all errors"
+                  onClick={onOpenQuestionBank}
+                  className="px-4 py-2 text-sm rounded-lg font-medium transition-all bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-sm flex items-center gap-2"
+                  title="Browse and insert questions from your question bank"
                 >
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span>{errors.length} {errors.length === 1 ? 'Error' : 'Errors'}</span>
+                  <Database className="w-4 h-4" />
+                  <span className="hidden lg:inline">Question Bank</span>
                 </button>
-              )}
 
-              {/* Question Bank Button */}
-              <button
-                onClick={onOpenQuestionBank}
-                className="px-4 py-2 text-sm rounded-lg font-medium transition-all bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-sm flex items-center gap-2"
-                title="Browse and insert questions from your question bank"
-              >
-                <Database className="w-4 h-4" />
-                <span className="hidden lg:inline">Question Bank</span>
-              </button>
+                {/* Add Question Button */}
+                <button
+                  onClick={onAddQuestion}
+                  className="px-4 py-2 text-sm rounded-lg font-medium transition-all bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-sm"
+                >
+                  + Add Question
+                </button>
 
-              {/* Add Question Button */}
-              <button
-                onClick={onAddQuestion}
-                className="px-4 py-2 text-sm rounded-lg font-medium transition-all bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-sm"
-              >
-                + Add Question
-              </button>
-
-              {/* Save Button - Yellow Primary */}
-              <button
-                onClick={handleSaveClick}
-                disabled={hasErrors || !isDirty}
-                className={`flex items-center gap-2 px-5 py-2 text-sm rounded-lg font-medium transition-all ${
-                  hasErrors || !isDirty
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-yellow-500 text-white hover:bg-yellow-600 shadow-md hover:shadow-lg'
-                }`}
-                title={hasErrors ? 'Fix errors before saving' : !isDirty ? 'No changes to save' : 'Save quiz'}
-              >
-                <Save className="w-4 h-4" />
-                <span>Save</span>
-              </button>
+                {/* Save Button - Yellow Primary */}
+                <button
+                  onClick={handleSaveClick}
+                  disabled={hasErrors || !isDirty}
+                  className={`flex items-center gap-2 px-5 py-2 text-sm rounded-lg font-medium transition-all ${
+                    hasErrors || !isDirty
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-yellow-500 text-white hover:bg-yellow-600 shadow-md hover:shadow-lg'
+                  }`}
+                  title={hasErrors ? 'Fix errors before saving' : !isDirty ? 'No changes to save' : 'Save quiz'}
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1175,13 +1184,13 @@ export const QuizEditor = ({
             {/* Card Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto mb-8">
               {/* Row 1: Question Bank (Full Width) */}
-              <div className="md:col-span-2 bg-yellow-50 rounded-xl p-6 text-left border border-yellow-200 shadow-sm">
-                <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center mb-4">
-                  <FileText className="w-6 h-6 text-white" />
+              <div className="md:col-span-2 bg-purple-50 rounded-xl p-6 text-left border border-purple-200 shadow-sm">
+                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-4">
+                  <Database className="w-6 h-6 text-white" />
                 </div>
-                <h4 className="font-bold text-gray-900 text-lg mb-2">Question Bank</h4>
+                <h4 className="font-bold text-purple-900 text-lg mb-2">Question Bank</h4>
                 <p className="text-gray-700 text-sm mb-3">
-                  Build a pool of 15+ questions - system randomly selects 10 per attempt to prevent memorization and create variety
+                  Build a pool of 15+ questions. Before starting, choose how many questions you want (up to 100 per session). System randomly picks from your bank each time to prevent memorization and create variety.
                 </p>
               </div>
 
@@ -1192,8 +1201,8 @@ export const QuizEditor = ({
                 </div>
                 <h4 className="font-bold text-gray-900 text-lg mb-2">Quiz Modes</h4>
                 <p className="text-gray-700 text-sm">
-                  <strong>Solo:</strong> Practice alone with random 10 questions each retry<br/>
-                  <strong>Battle:</strong> Challenge up to 5 players - all get the same 10 questions
+                  <strong>Solo:</strong> Practice alone - choose question count before each attempt<br/>
+                  <strong>Battle:</strong> Challenge up to 5 players - all get the same random questions
                 </p>
               </div>
 
