@@ -427,6 +427,15 @@ const getCatSprite = (level) => {
   }
 };
 
+// Get dog sprite based on level (age)
+const getDogSprite = (level) => {
+  if (level >= 1 && level <= 16) {
+    return "/dog-puppy.gif"; // Puppy (levels 1-16)
+  } else {
+    return "/dog.gif"; // Adult (levels 17-50)
+  }
+};
+
 // Pet Bubble Dialog Component
 const PetBubbleDialog = ({ pet }) => {
   const [currentDialog, setCurrentDialog] = useState(null);
@@ -591,7 +600,7 @@ const PetBubbleDialog = ({ pet }) => {
 
 const CompactPetImage = ({ pet }) => {
   const petImage = pet.pet_type === "Dog" 
-    ? "/dog.gif" 
+    ? getDogSprite(pet.level)
     : getCatSprite(pet.level);
   
   return (

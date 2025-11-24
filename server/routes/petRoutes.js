@@ -17,10 +17,10 @@ const router = express.Router();
 
 const CONFIG = {
   stats: {
-    hunger: { decay: 10, interval: 1, max: 100 },      // 10 decay per 1 minute (TESTING)
-    happiness: { decay: 10, interval: 1, max: 100 },   // 10 decay per 1 minute (TESTING)
-    cleanliness: { decay: 5, interval: 2, max: 100 },  // 5 decay per 2 minutes (TESTING)
-    energy: { replenish: 10, interval: 1, max: 100 }    // 10 energy per 1 minute (TESTING)
+    hunger: { decay: 10, interval: 180, max: 100 },      // 10 decay per 180 minutes (3 hours)
+    happiness: { decay: 10, interval: 240, max: 100 },   // 10 decay per 240 minutes (4 hours)
+    cleanliness: { decay: 5, interval: 240, max: 100 },  // 5 decay per 240 minutes (4 hours)
+    energy: { replenish: 10, interval: 60, max: 100 }    // 10 energy per 60 minutes (1 hour)
   },
   exp: {
     perItem: 4,  // EXP per item used

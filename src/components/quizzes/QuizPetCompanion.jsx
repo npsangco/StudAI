@@ -35,6 +35,15 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
     }
   };
 
+  // Get dog sprite based on level
+  const getDogSprite = (level) => {
+    if (level >= 1 && level <= 16) {
+      return "/dog-puppy.gif"; // Puppy (levels 1-16)
+    } else {
+      return "/dog.gif"; // Adult (levels 17-50)
+    }
+  };
+
   // Motivating messages for quiz
   const motivatingMessages = useMemo(() => ({
     correct: [
@@ -138,7 +147,7 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
   if (!pet) return null;
 
   const petImage = pet.pet_type === "Dog" 
-    ? "/dog.gif" 
+    ? getDogSprite(pet.level)
     : getCatSprite(pet.level);
 
   const getBubbleColors = () => {
