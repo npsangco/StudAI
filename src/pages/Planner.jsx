@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, Plus, Trash2, Info, X, Calendar, Check } from "lucide-react";
+import { ChevronLeft, Plus, Info, X, Calendar, Check, Pencil } from "lucide-react";
 import { plannerService } from "../utils/syncService";
 import ToastContainer from "../components/ToastContainer";
 import AppLoader from "../components/AppLoader";
@@ -27,6 +27,10 @@ export default function Planner() {
   const { showTutorial, completeTutorial, skipTutorial } = useTutorial('planner');
   const [dailyTaskStatus, setDailyTaskStatus] = useState({ used: 0, remaining: 3, max: 3 });
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const months = [
     "January", "February", "March", "April", "May", "June",
@@ -186,6 +190,61 @@ export default function Planner() {
     } catch (err) {
       console.error("Failed to create plan:", err);
       toast.error('Failed to create plan. Please try again.');
+    }
+  };
+
+  const startEditingPlan = (plan) => {
+    if (!plan) return;
+    const planId = plan.planner_id || plan.id;
+    if (!planId) return;
+    setEditingPlanId(planId);
+    setEditTitle(plan.title || "");
+    setEditDesc(plan.description || "");
+  };
+
+  const cancelEditing = () => {
+    setEditingPlanId(null);
+    setEditTitle("");
+    setEditDesc("");
+  };
+
+  const savePlanEdits = async () => {
+    if (!editingPlanId || !editTitle.trim()) return;
+    setIsSavingEdit(true);
+
+    const updates = {
+      title: editTitle.trim(),
+      description: editDesc.trim(),
+    };
+
+    try {
+      const result = await plannerService.updatePlan(editingPlanId, updates);
+
+      if (result.success) {
+        const updatedData = result.plan || updates;
+        setPlans(prev => prev.map(plan =>
+          (plan.planner_id === editingPlanId || plan.id === editingPlanId)
+            ? { ...plan, ...updatedData }
+            : plan
+        ));
+
+        if (result.queued) {
+          toast.info('📱 Offline: Changes will sync when back online');
+        } else {
+          toast.success('Plan updated successfully!');
+        }
+
+        cancelEditing();
+      } else if (result.error) {
+        toast.error(`Error: ${result.error}`);
+      } else {
+        toast.error('Failed to update plan. Please try again.');
+      }
+    } catch (err) {
+      console.error('Failed to update plan:', err);
+      toast.error('Failed to update plan. Please try again.');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -515,10 +574,13 @@ export default function Planner() {
                 const indicators = getPlanIndicators(selectedYear, selectedMonth, selectedDate);
                 const planIndicator = indicators[selectedDatePlans.indexOf(plan)];
                 const isTemp = typeof plan.id === 'string' && plan.id.startsWith('temp_');
+                const planId = plan.planner_id || plan.id;
+                const isEditing = editingPlanId === planId;
+                const editDisabled = isTemp || (editingPlanId && editingPlanId !== planId);
                 
                 return (
                   <div
-                    key={plan.planner_id || plan.id}
+                    key={planId}
                     className={`bg-white border-2 p-4 sm:p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 shadow-lg hover:shadow-xl transition-all ${
                       plan.completed 
                         ? 'opacity-60 bg-gray-50 border-gray-200' 
@@ -529,56 +591,132 @@ export default function Planner() {
                             : 'border-green-200 bg-green-50/50'
                     }`}
                   >
-                    <div className="flex-1 w-full sm:w-auto">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap" data-tutorial="task-indicators">
-                        {!plan.completed && (
-                          <div className={`w-3 h-3 rounded-full shadow-sm flex-shrink-0 ${
-                            planIndicator === 'red' ? 'bg-red-500' :
-                            planIndicator === 'yellow' ? 'bg-yellow-400' :
-                            'bg-green-500'
-                          }`}></div>
-                        )}
-                        <h3 className={`text-lg sm:text-xl font-bold break-words ${
-                          plan.completed ? 'text-gray-500 line-through' : 'text-gray-800'
-                        }`}>
-                          {plan.title}
-                        </h3>
-                        {isTemp && (
-                          <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full border border-amber-300">
-                            Pending Sync
+                    {isEditing ? (
+                      <div className="w-full">
+                        <div className="flex items-center gap-2 mb-3" data-tutorial="task-indicators">
+                          {!plan.completed && (
+                            <div className={`w-3 h-3 rounded-full shadow-sm flex-shrink-0 ${
+                              planIndicator === 'red' ? 'bg-red-500' :
+                              planIndicator === 'yellow' ? 'bg-yellow-400' :
+                              'bg-green-500'
+                            }`}></div>
+                          )}
+                          <span className="text-sm font-semibold text-indigo-700 flex items-center gap-1">
+                            <Pencil className="w-4 h-4" />
+                            Editing plan
                           </span>
-                        )}
-                        {plan.completed && (
-                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full border border-green-300">
-                            Completed
-                          </span>
-                        )}
+                        </div>
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          placeholder="Plan Title *"
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-indigo-200 rounded-xl text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors"
+                        />
+                        <textarea
+                          value={editDesc}
+                          onChange={(e) => setEditDesc(e.target.value)}
+                          placeholder="Plan Description"
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-indigo-200 rounded-xl min-h-[100px] sm:min-h-[120px] text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors resize-none mt-3"
+                        />
+                        <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                          <button
+                            onClick={savePlanEdits}
+                            disabled={!editTitle.trim() || isSavingEdit}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-semibold transition-all shadow-lg ${
+                              editTitle.trim() && !isSavingEdit
+                                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-xl'
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                          >
+                            {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            disabled={isSavingEdit}
+                            className={`px-4 sm:px-6 py-2.5 sm:py-3 border-2 rounded-xl text-sm sm:text-base font-semibold transition-all ${
+                              isSavingEdit
+                                ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
-                      {plan.description && (
-                        <p className={`text-sm sm:text-base break-words ml-0 sm:ml-5 ${
-                          plan.completed ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
-                          {plan.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                      {!plan.completed ? (
-                        <button
-                          onClick={() => markAsDone(plan.planner_id || plan.id)}
-                          className="flex items-center justify-center gap-2 bg-green-500 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-green-600 font-semibold transition-all shadow-md hover:shadow-lg w-full sm:w-auto text-sm sm:text-base"
-                          data-tutorial="complete-task"
-                        >
-                          <Check className="w-4 h-4" />
-                          Mark Done
-                        </button>
-                      ) : (
-                        <span className="flex items-center justify-center gap-2 bg-gray-400 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-semibold w-full sm:w-auto text-sm sm:text-base">
-                          <Check className="w-4 h-4" />
-                          Completed
-                        </span>
-                      )}
-                    </div>
+                    ) : (
+                      <>
+                        <div className="flex-1 w-full sm:w-auto">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap" data-tutorial="task-indicators">
+                            {!plan.completed && (
+                              <div className={`w-3 h-3 rounded-full shadow-sm flex-shrink-0 ${
+                                planIndicator === 'red' ? 'bg-red-500' :
+                                planIndicator === 'yellow' ? 'bg-yellow-400' :
+                                'bg-green-500'
+                              }`}></div>
+                            )}
+                            <h3 className={`text-lg sm:text-xl font-bold break-words ${
+                              plan.completed ? 'text-gray-500 line-through' : 'text-gray-800'
+                            }`}>
+                              {plan.title}
+                            </h3>
+                            {isTemp && (
+                              <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full border border-amber-300">
+                                Pending Sync
+                              </span>
+                            )}
+                            {plan.completed && (
+                              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full border border-green-300">
+                                Completed
+                              </span>
+                            )}
+                          </div>
+                          {plan.description && (
+                            <p className={`text-sm sm:text-base break-words ml-0 sm:ml-5 ${
+                              plan.completed ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
+                              {plan.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                          {!plan.completed ? (
+                            <button
+                              onClick={() => markAsDone(planId)}
+                              className="flex items-center justify-center gap-2 bg-green-500 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-green-600 font-semibold transition-all shadow-md hover:shadow-lg w-full sm:w-auto text-sm sm:text-base"
+                              data-tutorial="complete-task"
+                            >
+                              <Check className="w-4 h-4" />
+                              Mark Done
+                            </button>
+                          ) : (
+                            <span className="flex items-center justify-center gap-2 bg-gray-400 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-semibold w-full sm:w-auto text-sm sm:text-base">
+                              <Check className="w-4 h-4" />
+                              Completed
+                            </span>
+                          )}
+                          <button
+                            onClick={() => startEditingPlan(plan)}
+                            disabled={editDisabled}
+                            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-semibold border-2 transition-all w-full sm:w-auto text-sm sm:text-base ${
+                              editDisabled
+                                ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                : 'bg-white border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-gray-700 shadow-md'
+                            }`}
+                            title={
+                              isTemp
+                                ? 'Plan is pending sync. Try again once it is saved online.'
+                                : editingPlanId && editingPlanId !== planId
+                                  ? 'Finish your current edit first.'
+                                  : 'Edit plan'
+                            }
+                          >
+                            <Pencil className="w-4 h-4" />
+                            Edit
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 );
               })
