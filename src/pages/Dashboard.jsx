@@ -992,6 +992,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                     let badgeClass = "";
                     let iconColor = "";
                     let formattedDate = "";
+                    let diffDays;
 
                     if (!plan.due_date) {
                       label = "No deadline";
@@ -1004,7 +1005,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                       today.setHours(0, 0, 0, 0);
                       dueDate.setHours(0, 0, 0, 0);
                       const diffTime = dueDate - today;
-                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                       formattedDate = dueDate.toLocaleDateString('en-US', { 
                         month: 'short', 
