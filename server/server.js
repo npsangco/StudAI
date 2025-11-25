@@ -523,6 +523,22 @@ app.use("/api/admin", requireAdmin, auditRoutes);
 app.use("/api/admin", requireAdmin, adminRoutes);
 app.use("/api/chat", sessionLockCheck, chatRoutes);
 
+// Public stats for landing page
+app.get("/api/public/stats", async (req, res) => {
+    try {
+        const totalUsers = await User.count();
+        const totalNotes = Note ? await Note.count() : 0;
+
+        res.json({
+            totalUsers,
+            totalNotes
+        });
+    } catch (error) {
+        console.error("Error fetching public stats:", error);
+        res.status(500).json({ error: "Failed to fetch stats" });
+    }
+});
+
 app.get("/api/ai-usage/today", sessionLockCheck, async (req, res) => {
     try {
         const userId = req.session?.userId;

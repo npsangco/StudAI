@@ -16,9 +16,7 @@ export default function LandingPage() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await axios.get(`${API_URL}/api/admin/stats`, {
-                    withCredentials: true,
-                });
+                const res = await axios.get(`${API_URL}/api/public/stats`);
                 setStats({
                     totalUsers: res.data.totalUsers || 0,
                     totalNotes: res.data.totalNotes || 0
