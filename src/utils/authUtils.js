@@ -13,8 +13,10 @@ export function extractTokenFromURL() {
   const token = urlParams.get('token');
   
   if (token) {
+    console.log('🎫 Extracting token from URL:', token.substring(0, 20) + '...');
     // Store token in localStorage
     localStorage.setItem('authToken', token);
+    console.log('✅ Token stored in localStorage');
     
     // Clean up URL by removing token parameter
     const newUrl = new URL(window.location.href);
@@ -24,6 +26,7 @@ export function extractTokenFromURL() {
     return token;
   }
   
+  console.log('ℹ️ No token found in URL');
   return null;
 }
 
