@@ -47,6 +47,9 @@ function Login() {
       // Store JWT token (fallback for browsers that don't support cookies)
       if (data.token) {
         localStorage.setItem("authToken", data.token);
+        console.log('🔑 Token stored:', data.token.substring(0, 20) + '...');
+      } else {
+        console.warn('⚠️ No token in login response');
       }
       
       // Store user data

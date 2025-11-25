@@ -14,11 +14,10 @@ import { aiUsageApi } from '../api/api';
 import { extractTokenFromURL } from '../utils/authUtils';
 import { FileText, BookOpen, Trophy, TrendingUp, Clock, Calendar, Target, Zap } from 'lucide-react';
 
+// Import the configured api instance with interceptors for hybrid auth
+import api from '../api/api';
+
 export default function Dashboard() {
-  // Extract token from URL if present (from OAuth or email verification)
-  useEffect(() => {
-    extractTokenFromURL();
-  }, []);
   const [user, setUser] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [error, setError] = useState('');
@@ -67,11 +66,16 @@ export default function Dashboard() {
   const summaryLimitReached = !isUsageLoading && summaryRemaining <= 0;
 
   useEffect(() => {
+    // Extract token from URL if present (from OAuth or email verification)
+    extractTokenFromURL();
+    
     const fetchUser = async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/user/profile`, {
-          withCredentials: true,
-        });
+        // Debug: Check if token exists
+        const token = localStorage.getItem('authToken');
+        console.log('🔑 Auth token present:', !!token);
+        
+        const res = await api.get('/user/profile');
         setUser(res.data);
         
         // Set the streak stat
@@ -91,9 +95,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchEquippedAchievement = async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/achievements`, {
-          withCredentials: true,
-        });
+        const res = await api.get('/achievements');
         
         if (res.data.success) {
           const equipped = res.data.achievements.find(a => a.is_equipped);
@@ -110,9 +112,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchRecentAchievements = async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/achievements/unlocked`, {
-          withCredentials: true,
-        });
+        const res = await api.get('/achievements/unlocked');
         
         if (res.data.success) {
           // Get the 3 most recently unlocked achievements
@@ -132,7 +132,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/plans`, { withCredentials: true });
+        const res = await api.get('/plans');
         if (Array.isArray(res.data.plans)) {
           const withDueDate = res.data.plans
             .filter(p => p.due_date)
@@ -151,7 +151,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchRecentNotes = async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/notes`, { withCredentials: true });
+        const res = await api.get('/notes');
         if (Array.isArray(res.data.notes)) {
           const sortedNotes = res.data.notes
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -170,14 +170,10 @@ export default function Dashboard() {
     const fetchQuizData = async () => {
       try {
         // Fetch available quizzes
-        const quizRes = await axios.get(`${API_URL}/api/quizzes`, { 
-          withCredentials: true 
-        });
+        const quizRes = await api.get('/quizzes');
         
         // Fetch actual quiz attempts count
-        const attemptsRes = await axios.get(`${API_URL}/api/quiz-attempts/count`, { 
-          withCredentials: true 
-        });
+        const attemptsRes = await api.get('/quiz-attempts/count');
         
         if (Array.isArray(quizRes.data.quizzes)) {
           const sortedQuizzes = quizRes.data.quizzes
@@ -278,16 +274,10 @@ ${content}
 
 Please format the summary in a clear, organized manner with proper headings and bullet points where appropriate.`;
 
-      const response = await axios.post(
-        `${API_URL}/api/openai/summarize`,
-        {
-          text: userPrompt,
-          systemPrompt: systemPrompt
-        },
-        {
-          withCredentials: true
-        }
-      );
+      const response = await api.post('/openai/summarize', {
+        text: userPrompt,
+        systemPrompt: systemPrompt
+      });
 
       if (!response.data || !response.data.summary) {
         console.error('🤖 [AI Summary] ERROR: No summary in response:', response.data);
@@ -365,9 +355,8 @@ Please format the summary in a clear, organized manner with proper headings and 
       const formData = new FormData();
       formData.append("myFile", uploadedFiles[0]);
 
-      const uploadRes = await axios.post(`${API_URL}/api/upload`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true
+      const uploadRes = await api.post('/upload', formData, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
 
       const uploadedFileId = uploadRes?.data?.file_id ?? null;
@@ -385,11 +374,7 @@ Please format the summary in a clear, organized manner with proper headings and 
         }
       };
 
-      const summaryRes = await axios.post(
-        `${API_URL}/api/generate-summary`,
-        payload,
-        { withCredentials: true }
-      );
+      const summaryRes = await api.post('/generate-summary', payload);
 
       toast.success("Summary generated and saved successfully!");
       refreshAiUsage();
@@ -400,7 +385,7 @@ Please format the summary in a clear, organized manner with proper headings and 
       setRestriction({ uploaded: false, openai: false });
 
       // Refresh recent notes
-      const notesRes = await axios.get(`${API_URL}/api/notes`, { withCredentials: true });
+      const notesRes = await api.get('/notes');
       if (Array.isArray(notesRes.data.notes)) {
         const sortedNotes = notesRes.data.notes
           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))

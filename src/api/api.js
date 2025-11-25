@@ -19,6 +19,9 @@ api.interceptors.request.use(
     if (token) {
       // Add Authorization header with Bearer token
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔐 Adding token to request:', config.url);
+    } else {
+      console.log('⚠️ No token found for request:', config.url);
     }
     
     return config;
