@@ -2086,11 +2086,8 @@ const frontendIndexHtml = path.join(frontendDistPath, 'index.html');
 app.use(express.static(frontendDistPath));
 
 // Only intercept GET requests that are not meant for backend routes
-app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/auth') || req.path.startsWith('/uploads')) {
-        return next();
-    }
-
+// Regex skips /api, /auth, /uploads prefixes so backend routes keep control
+app.get(/^\/(?!api|auth|uploads).*$/, (req, res) => {
     res.sendFile(frontendIndexHtml);
 });
 
