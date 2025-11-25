@@ -984,51 +984,103 @@ Please format the summary in a clear, organized manner with proper headings and 
                   upcomingPlans.map((plan) => {
                     let label = "";
                     let colorClass = "";
+                    let badgeClass = "";
+                    let iconColor = "";
+                    let formattedDate = "";
 
                     if (!plan.due_date) {
                       label = "No deadline";
                       colorClass = "bg-gray-50 border-gray-200";
+                      badgeClass = "bg-gray-100 text-gray-600";
+                      iconColor = "text-gray-400";
                     } else {
                       const dueDate = new Date(plan.due_date);
                       const today = new Date();
-                      const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+                      today.setHours(0, 0, 0, 0);
+                      dueDate.setHours(0, 0, 0, 0);
+                      const diffTime = dueDate - today;
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                      formattedDate = dueDate.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: dueDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+                      });
 
                       if (diffDays < 0) {
-                        label = "Overdue";
-                        colorClass = "bg-red-50 border-red-200";
+                        label = `Overdue (${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''})`;
+                        colorClass = "bg-red-50 border-red-200 shadow-sm";
+                        badgeClass = "bg-red-500 text-white";
+                        iconColor = "text-red-500";
                       } else if (diffDays === 0) {
                         label = "Due today";
-                        colorClass = "bg-orange-50 border-orange-200";
+                        colorClass = "bg-orange-50 border-orange-200 shadow-sm";
+                        badgeClass = "bg-orange-500 text-white";
+                        iconColor = "text-orange-500";
                       } else if (diffDays === 1) {
                         label = "Tomorrow";
                         colorClass = "bg-yellow-50 border-yellow-200";
+                        badgeClass = "bg-yellow-500 text-white";
+                        iconColor = "text-yellow-600";
+                      } else if (diffDays <= 3) {
+                        label = `${diffDays} days`;
+                        colorClass = "bg-yellow-50 border-yellow-200";
+                        badgeClass = "bg-yellow-400 text-white";
+                        iconColor = "text-yellow-500";
                       } else if (diffDays < 7) {
                         label = `${diffDays} days`;
                         colorClass = "bg-blue-50 border-blue-200";
+                        badgeClass = "bg-blue-400 text-white";
+                        iconColor = "text-blue-500";
                       } else {
-                        label = dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        colorClass = "bg-gray-50 border-gray-200";
+                        label = formattedDate;
+                        colorClass = "bg-green-50 border-green-200";
+                        badgeClass = "bg-green-100 text-green-700";
+                        iconColor = "text-green-500";
                       }
                     }
 
                     return (
                       <div
                         key={plan.planner_id}
-                        className={`border rounded-xl p-4 ${colorClass} transition-all hover:shadow-sm`}
+                        className={`border rounded-xl p-4 ${colorClass} transition-all hover:shadow-md cursor-pointer group`}
+                        onClick={() => window.location.href = '/planner'}
                       >
-                        <div className="flex items-start justify-between">
-                          <p className="font-medium text-gray-900 flex-1 text-sm">{plan.title}</p>
-                          <span className="ml-3 text-xs font-medium text-gray-600 bg-white px-2 py-1 rounded-full whitespace-nowrap">
-                            {label}
-                          </span>
+                        <div className="flex items-start gap-3">
+                          <div className={`mt-0.5 ${iconColor}`}>
+                            <Calendar className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 text-sm mb-1 group-hover:text-indigo-600 transition-colors line-clamp-2">
+                              {plan.title}
+                            </p>
+                            {plan.description && (
+                              <p className="text-xs text-gray-600 line-clamp-1 mb-2">
+                                {plan.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badgeClass} shadow-sm`}>
+                                {label}
+                              </span>
+                              {formattedDate && diffDays >= 0 && diffDays < 7 && (
+                                <span className="text-xs text-gray-500">
+                                  {formattedDate}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     );
                   })
                 ) : (
-                  <div className="text-center py-6 text-gray-500">
-                    <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm">No upcoming deadlines</p>
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Calendar className="w-8 h-8 text-gray-300" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-600">No upcoming deadlines</p>
+                    <p className="text-xs text-gray-400 mt-1">Create a plan with a deadline to see it here</p>
                   </div>
                 )}
               </div>

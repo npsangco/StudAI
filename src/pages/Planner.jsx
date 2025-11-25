@@ -19,6 +19,7 @@ export default function Planner() {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [showIndicatorsInfo, setShowIndicatorsInfo] = useState(false);
   
@@ -30,6 +31,7 @@ export default function Planner() {
   const [editingPlanId, setEditingPlanId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const months = [
@@ -155,13 +157,14 @@ export default function Planner() {
       return;
     }
 
-    const dueDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
+    // Use the dueDate from state, or fall back to selected date
+    const dueDateValue = dueDate || `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
 
     try {
       const result = await plannerService.addPlan({
         title: title.trim(),
         description: desc.trim(),
-        due_date: dueDate
+        due_date: dueDateValue
       });
 
       if (result.success) {
@@ -177,6 +180,7 @@ export default function Planner() {
 
         setTitle("");
         setDesc("");
+        setDueDate("");
         setShowForm(false);
       } else {
         // Handle validation errors (like daily limit)
@@ -200,12 +204,16 @@ export default function Planner() {
     setEditingPlanId(planId);
     setEditTitle(plan.title || "");
     setEditDesc(plan.description || "");
+    // Extract date in YYYY-MM-DD format for date input
+    const dueDateStr = plan.due_date ? new Date(plan.due_date).toISOString().split('T')[0] : "";
+    setEditDueDate(dueDateStr);
   };
 
   const cancelEditing = () => {
     setEditingPlanId(null);
     setEditTitle("");
     setEditDesc("");
+    setEditDueDate("");
   };
 
   const savePlanEdits = async () => {
@@ -215,6 +223,7 @@ export default function Planner() {
     const updates = {
       title: editTitle.trim(),
       description: editDesc.trim(),
+      due_date: editDueDate || null,
     };
 
     try {
@@ -619,6 +628,17 @@ export default function Planner() {
                           placeholder="Plan Description"
                           className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-indigo-200 rounded-xl min-h-[100px] sm:min-h-[120px] text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors resize-none mt-3"
                         />
+                        <div className="mt-3">
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Due Date
+                          </label>
+                          <input
+                            type="date"
+                            value={editDueDate}
+                            onChange={(e) => setEditDueDate(e.target.value)}
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-indigo-200 rounded-xl text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors"
+                          />
+                        </div>
                         <div className="flex flex-col sm:flex-row gap-2 mt-4">
                           <button
                             onClick={savePlanEdits}
@@ -672,11 +692,45 @@ export default function Planner() {
                             )}
                           </div>
                           {plan.description && (
-                            <p className={`text-sm sm:text-base break-words ml-0 sm:ml-5 ${
+                            <p className={`text-sm sm:text-base break-words ml-0 sm:ml-5 mb-2 ${
                               plan.completed ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                               {plan.description}
                             </p>
+                          )}
+                          {plan.due_date && (
+                            <div className={`flex items-center gap-2 ml-0 sm:ml-5 text-xs sm:text-sm ${
+                              plan.completed ? 'text-gray-400' : 'text-gray-700'
+                            }`}>
+                              <Calendar className="w-4 h-4" />
+                              <span className="font-medium">
+                                Due: {new Date(plan.due_date).toLocaleDateString('en-US', { 
+                                  weekday: 'short',
+                                  month: 'short', 
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
+                              </span>
+                              {!plan.completed && (() => {
+                                const dueDate = new Date(plan.due_date);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                dueDate.setHours(0, 0, 0, 0);
+                                const diffTime = dueDate - today;
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                
+                                if (diffDays < 0) {
+                                  return <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-semibold">Overdue</span>;
+                                } else if (diffDays === 0) {
+                                  return <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full font-semibold">Today</span>;
+                                } else if (diffDays === 1) {
+                                  return <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-semibold">Tomorrow</span>;
+                                } else if (diffDays <= 3) {
+                                  return <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-semibold">{diffDays} days</span>;
+                                }
+                                return null;
+                              })()}
+                            </div>
                           )}
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -740,6 +794,19 @@ export default function Planner() {
                 onChange={(e) => setDesc(e.target.value)}
                 className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl min-h-[100px] sm:min-h-[120px] text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors resize-none"
               />
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Due Date *
+                </label>
+                <input
+                  type="date"
+                  value={dueDate || `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors"
+                />
+                <p className="text-xs text-gray-500 mt-1">Defaults to selected date, editable to any future date</p>
+              </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={addPlan}
@@ -758,6 +825,7 @@ export default function Planner() {
                     setShowForm(false);
                     setTitle("");
                     setDesc("");
+                    setDueDate("");
                   }}
                   className="px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 text-sm sm:text-base font-semibold transition-all"
                 >

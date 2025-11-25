@@ -304,10 +304,11 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Plan not found' });
     }
 
+    // Allow explicit null/undefined values for due_date (to clear deadline)
     const updateData = { 
       title: title !== undefined ? title : plan.title,
       description: description !== undefined ? description : plan.description,
-      due_date: due_date !== undefined ? due_date : plan.due_date
+      due_date: due_date !== undefined ? (due_date === null || due_date === '' ? null : due_date) : plan.due_date
     };
 
     let pointsAwarded = 0;
