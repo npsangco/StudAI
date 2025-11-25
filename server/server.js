@@ -315,7 +315,8 @@ app.use(cors({
 
 // ----------------- EXPRESS MIDDLEWARE -----------------
 app.use(express.json());
-app.use("/uploads", express.static("uploads"));
+const uploadsDir = path.join(__dirname, 'uploads');
+app.use("/uploads", express.static(uploadsDir));
 
 app.use("/api", auditMiddleware);
 
@@ -426,6 +427,19 @@ sequelize.authenticate()
 if (sessionStore) {
     const isProduction = process.env.NODE_ENV === 'production';
     
+    const sessionCookieDomain = process.env.SESSION_COOKIE_DOMAIN;
+
+    const cookieConfig = {
+        httpOnly: true,
+        secure: isProduction, // Only require HTTPS in production
+        maxAge: 1000 * 60 * 60 * 24,
+        sameSite: isProduction ? 'none' : 'lax', // 'lax' for local dev, 'none' for production
+    };
+
+    if (isProduction && sessionCookieDomain) {
+        cookieConfig.domain = sessionCookieDomain;
+    }
+
     app.use(
         session({
             secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || "fallback-secret",
@@ -433,13 +447,7 @@ if (sessionStore) {
             saveUninitialized: false,
             store: sessionStore,
             name: "studai_session",
-            cookie: {
-                httpOnly: true,
-                secure: isProduction, // Only require HTTPS in production
-                maxAge: 1000 * 60 * 60 * 24,
-                sameSite: isProduction ? 'none' : 'lax', // 'lax' for local dev, 'none' for production
-                domain: isProduction ? '.walrus-app-umg67.ondigitalocean.app' : undefined, // No domain restriction in dev
-            },
+            cookie: cookieConfig,
             rolling: true,
         })
     );
@@ -1240,13 +1248,18 @@ app.post("/api/auth/logout", async (req, res) => {
             
             // Clear cookie with same options as set (environment-aware)
             const isProduction = process.env.NODE_ENV === 'production';
-            res.clearCookie("studai_session", {
+            const cookieClearConfig = {
                 httpOnly: true,
                 secure: isProduction,
                 sameSite: isProduction ? 'none' : 'lax',
-                domain: isProduction ? '.walrus-app-umg67.ondigitalocean.app' : undefined,
                 path: '/'
-            });
+            };
+
+            if (isProduction && process.env.SESSION_COOKIE_DOMAIN) {
+                cookieClearConfig.domain = process.env.SESSION_COOKIE_DOMAIN;
+            }
+
+            res.clearCookie("studai_session", cookieClearConfig);
             
             res.json({ message: "Logged out successfully" });
         });
@@ -1396,7 +1409,7 @@ app.get("/api/user/daily-stats", async (req, res) => {
 
 const profileStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/profile_pictures');
+        cb(null, profilePicturesDir);
     },
     filename: function (req, file, cb) {
         const ext = path.extname(file.originalname);
@@ -1419,7 +1432,7 @@ app.post('/api/upload/profile', profileUpload.single('profilePic'), async (req, 
     }
 });
 
-app.use('/uploads/profile_pictures', express.static('uploads/profile_pictures'));
+app.use('/uploads/profile_pictures', express.static(profilePicturesDir));
 
 // ----------------- PASSWORD UPDATE WITH EMAIL VERIFICATION -----------------
 const transporter = nodemailer.createTransport({
@@ -1557,8 +1570,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
 //----------------- FILE UPLOAD -----------------
 // Ensure uploads directories exist
-const uploadsDir = path.join(__dirname, 'uploads');
-const profilePicturesDir = path.join(__dirname, 'uploads', 'profile_pictures');
+const profilePicturesDir = path.join(uploadsDir, 'profile_pictures');
 console.log('📁 [Server] Uploads directory path:', uploadsDir);
 console.log('📁 [Server] Profile pictures directory path:', profilePicturesDir);
 

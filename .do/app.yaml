@@ -36,6 +36,8 @@ services:
       - key: SESSION_SECRET
         scope: RUN_TIME
         type: SECRET
+      - key: SESSION_COOKIE_DOMAIN
+        value: "studai.dev"
       - key: JWT_SECRET
         scope: RUN_TIME
         type: SECRET
