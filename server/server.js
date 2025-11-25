@@ -2079,16 +2079,19 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ----------------- SERVE FRONTEND -----------------
-// Serve static files from the React app
-app.use(express.static(path.join(__dirname, '../dist')));
+// Serve the built Vite app so the SPA + API share the same origin
+const frontendDistPath = path.join(__dirname, '..', 'dist');
+const frontendIndexHtml = path.join(frontendDistPath, 'index.html');
 
-// Handle React routing - return all non-API requests to React app
-app.use((req, res, next) => {
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/auth') && !req.path.startsWith('/uploads')) {
-        res.sendFile(path.join(__dirname, '../dist', 'index.html'));
-    } else {
-        next();
+app.use(express.static(frontendDistPath));
+
+// Only intercept GET requests that are not meant for backend routes
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/auth') || req.path.startsWith('/uploads')) {
+        return next();
     }
+
+    res.sendFile(frontendIndexHtml);
 });
 
 // ----------------- GLOBAL ERROR HANDLER -----------------

@@ -40,11 +40,11 @@ services:
         scope: RUN_TIME
         type: SECRET
       - key: CLIENT_URL
-        value: "https://walrus-app-umg67.ondigitalocean.app"
+        value: "https://studai.dev"
       - key: SERVER_URL
-        value: "https://walrus-app-umg67.ondigitalocean.app"
+        value: "https://studai.dev"
       - key: FRONTEND_URL
-        value: "https://studai-9eah7.ondigitalocean.app"
+        value: "https://studai.dev"
       - key: EMAIL_USER
         scope: RUN_TIME
         type: SECRET
@@ -57,8 +57,8 @@ services:
       - key: ZOOM_CLIENT_SECRET
         scope: RUN_TIME
         type: SECRET
-      - key: ZOOM_REDIRECT_URI
-        value: "https://studai-9eah7.ondigitalocean.app/api/zoom/callback"
+      - key: ZOOM_REDIRECT_URL
+        value: "https://studai.dev/api/zoom/callback"
       - key: ZOOM_WEBHOOK_SECRET_TOKEN
         scope: RUN_TIME
         type: SECRET
@@ -96,7 +96,7 @@ services:
         scope: RUN_TIME
         type: SECRET
       - key: GOOGLE_CALLBACK_URL
-        value: "https://walrus-app-umg67.ondigitalocean.app/auth/google/callback"
+        value: "https://studai.dev/auth/google/callback"
       - key: CA_CERT
         scope: RUN_TIME
         type: SECRET
