@@ -10,6 +10,11 @@ export default function UserManagement() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("All");
+    const [showModal, setShowModal] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [actionType, setActionType] = useState(null);
+    const [reason, setReason] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const usersPerPage = 10;
 
     useEffect(() => {
@@ -28,9 +33,10 @@ export default function UserManagement() {
 
     const handleUserAction = async (userId, action) => {
         try {
+            setIsSubmitting(true);
             await axios.post(
                 `${API_URL}/api/admin/users/${userId}/${action}`,
-                {},
+                { reason },
                 { withCredentials: true }
             );
             setUsers((prev) =>
@@ -40,9 +46,29 @@ export default function UserManagement() {
                         : u
                 )
             );
+            setShowModal(false);
+            setReason("");
+            setSelectedUser(null);
+            setActionType(null);
         } catch (err) {
             console.error(`Failed to ${action} user:`, err);
+            alert(`Failed to ${action} user. Please try again.`);
+        } finally {
+            setIsSubmitting(false);
         }
+    };
+
+    const openActionModal = (user, action) => {
+        setSelectedUser(user);
+        setActionType(action);
+        setShowModal(true);
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        setReason("");
+        setSelectedUser(null);
+        setActionType(null);
     };
 
     // Filter and search 
@@ -175,7 +201,7 @@ export default function UserManagement() {
                                                 <td className="py-2 px-2 sm:px-3">
                                                     {user.status === "Active" ? (
                                                         <button
-                                                            onClick={() => handleUserAction(user.user_id, "lock")}
+                                                            onClick={() => openActionModal(user, "lock")}
                                                             className="flex items-center bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
                                                         >
                                                             <Lock className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
@@ -183,7 +209,7 @@ export default function UserManagement() {
                                                         </button>
                                                     ) : (
                                                         <button
-                                                            onClick={() => handleUserAction(user.user_id, "unlock")}
+                                                            onClick={() => openActionModal(user, "unlock")}
                                                             className="flex items-center bg-green-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-green-600"
                                                         >
                                                             <Unlock className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
@@ -233,6 +259,69 @@ export default function UserManagement() {
                     )}
                 </div>
             </div>
+
+            {/* Action Modal */}
+            {showModal && selectedUser && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-6 sm:p-8 w-full max-w-lg shadow-xl">
+                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                            {actionType === "lock" ? "Lock User Account" : "Unlock User Account"}
+                        </h2>
+                        <p className="text-gray-600 mb-6">
+                            {actionType === "lock" 
+                                ? `You are about to lock the account for ${selectedUser.username}.`
+                                : `You are about to unlock the account for ${selectedUser.username}.`
+                            }
+                        </p>
+
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Reason <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                value={reason}
+                                onChange={(e) => setReason(e.target.value)}
+                                placeholder={actionType === "lock" 
+                                    ? "Enter the reason for locking this account (will be sent to the user via email)..."
+                                    : "Enter the reason for unlocking this account (will be sent to the user via email)..."
+                                }
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
+                                rows="4"
+                                required
+                            />
+                            <p className="text-xs text-gray-500 mt-2">
+                                This reason will be included in the email notification sent to {selectedUser.email}
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                                onClick={closeModal}
+                                disabled={isSubmitting}
+                                className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleUserAction(selectedUser.user_id, actionType)}
+                                disabled={!reason.trim() || isSubmitting}
+                                className={`flex-1 ${
+                                    actionType === "lock" 
+                                        ? "bg-red-500 hover:bg-red-600" 
+                                        : "bg-green-500 hover:bg-green-600"
+                                } text-white py-3 px-4 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                                {isSubmitting 
+                                    ? "Processing..." 
+                                    : actionType === "lock" 
+                                        ? "Lock Account" 
+                                        : "Unlock Account"
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

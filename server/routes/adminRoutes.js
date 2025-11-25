@@ -8,6 +8,8 @@ import JitsiSession from "../models/JitsiSession.js";
 import sequelize from "../db.js";
 import Note from "../models/Note.js";
 import Question from "../models/Question.js";
+import { sendAccountStatusEmail } from "../services/emailService.js";
+import nodemailer from "nodemailer";
 
 const router = express.Router();
 
@@ -80,11 +82,27 @@ router.get("/users", async (req, res) => {
 router.post("/users/:userId/lock", async (req, res) => {
     try {
         const { userId } = req.params;
+        const { reason } = req.body;
 
+        // Get user details before locking
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Update user status
         await User.update(
             { status: "locked" },
             { where: { user_id: userId } }
         );
+
+        // Send email notification
+        try {
+            await sendAccountStatusEmail(user.email, user.username, "locked", reason || "No reason provided");
+        } catch (emailError) {
+            console.error("Failed to send lock notification email:", emailError);
+            // Continue even if email fails
+        }
 
         res.json({ message: "User locked successfully" });
     } catch (error) {
@@ -97,11 +115,27 @@ router.post("/users/:userId/lock", async (req, res) => {
 router.post("/users/:userId/unlock", async (req, res) => {
     try {
         const { userId } = req.params;
+        const { reason } = req.body;
 
+        // Get user details before unlocking
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Update user status
         await User.update(
             { status: "active" },
             { where: { user_id: userId } }
         );
+
+        // Send email notification
+        try {
+            await sendAccountStatusEmail(user.email, user.username, "unlocked", reason || "No reason provided");
+        } catch (emailError) {
+            console.error("Failed to send unlock notification email:", emailError);
+            // Continue even if email fails
+        }
 
         res.json({ message: "User unlocked successfully" });
     } catch (error) {
