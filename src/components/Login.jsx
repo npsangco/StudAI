@@ -44,9 +44,9 @@ function Login() {
         password,
       }, { withCredentials: true });
       
-      // Store token if provided
+      // Store JWT token (fallback for browsers that don't support cookies)
       if (data.token) {
-        localStorage.setItem("token", data.token);
+        localStorage.setItem("authToken", data.token);
       }
       
       // Store user data

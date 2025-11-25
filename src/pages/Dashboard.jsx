@@ -11,9 +11,14 @@ import { useTutorial } from '../hooks/useTutorial';
 import { dashboardTutorialSteps } from '../config/tutorialSteps';
 import { API_URL } from '../config/api.config';
 import { aiUsageApi } from '../api/api';
+import { extractTokenFromURL } from '../utils/authUtils';
 import { FileText, BookOpen, Trophy, TrendingUp, Clock, Calendar, Target, Zap } from 'lucide-react';
 
 export default function Dashboard() {
+  // Extract token from URL if present (from OAuth or email verification)
+  useEffect(() => {
+    extractTokenFromURL();
+  }, []);
   const [user, setUser] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [error, setError] = useState('');

@@ -903,11 +903,24 @@ app.get(
             req.session.username = req.user.username;
             req.session.role = req.user.role;
 
+            // Generate JWT token as fallback
+            const token = jwt.sign(
+                {
+                    userId: req.user.user_id,
+                    email: req.user.email,
+                    username: req.user.username,
+                    role: req.user.role,
+                },
+                process.env.JWT_SECRET || "fallback-secret",
+                { expiresIn: "7d" }
+            );
+
             // Force session save before redirect
             req.session.save((err) => {
                 if (err) {
                     console.error("❌ Session save error:", err);
-                    return res.redirect(`${CLIENT_URL}/?error=session_failed`);
+                    // If session fails, redirect with token in URL for fallback
+                    return res.redirect(`${CLIENT_URL}/?token=${token}&authMethod=token`);
                 }
                 
                 console.log("✅ Google login session saved:", {
@@ -916,7 +929,8 @@ app.get(
                     username: req.session.username
                 });
                 
-                res.redirect(`${CLIENT_URL}/dashboard`);
+                // Redirect with token as backup (frontend can use it if session cookie fails)
+                res.redirect(`${CLIENT_URL}/dashboard?token=${token}`);
             });
         } catch (err) {
             console.error("❌ Google login error:", err);
@@ -1059,7 +1073,7 @@ app.get("/api/auth/verify-email", async (req, res) => {
         }
 
         // Create actual user account
-        await User.create({
+        const newUser = await User.create({
             email: pendingUser.email,
             username: pendingUser.username,
             password: pendingUser.password,
@@ -1067,10 +1081,23 @@ app.get("/api/auth/verify-email", async (req, res) => {
             status: "active",
         });
 
+        // Generate JWT token for auto-login fallback
+        const authToken = jwt.sign(
+            {
+                userId: newUser.user_id,
+                email: newUser.email,
+                username: newUser.username,
+                role: newUser.role,
+            },
+            process.env.JWT_SECRET || "fallback-secret",
+            { expiresIn: "7d" }
+        );
+
         // Delete pending user
         await pendingUser.destroy();
 
-        res.redirect(`${CLIENT_URL}/verify-status?type=verified`);
+        // Redirect with token for browsers that may not support session cookies
+        res.redirect(`${CLIENT_URL}/verify-status?type=verified&token=${authToken}`);
     } catch (err) {
         console.error("Verification error:", err.message);
         res.redirect(`${CLIENT_URL}/verify-status?type=error`);
@@ -1150,11 +1177,23 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
-        // Set session
+        // Set session (primary method for most users)
         req.session.userId = user.user_id;
         req.session.email = user.email;
         req.session.username = user.username;
         req.session.role = user.role;
+
+        // Generate JWT token (fallback for browsers that don't support cookies)
+        const token = jwt.sign(
+            {
+                userId: user.user_id,
+                email: user.email,
+                username: user.username,
+                role: user.role,
+            },
+            process.env.JWT_SECRET || "fallback-secret",
+            { expiresIn: "7d" } // 7 days
+        );
 
         // await updateUserStreak(user.user_id);
 
@@ -1162,6 +1201,7 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
 
         res.status(200).json({
             message: "Login successful",
+            token, // JWT token for fallback authentication
             user: {
                 id: updatedUser.user_id,
                 email: updatedUser.email,

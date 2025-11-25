@@ -32,11 +32,23 @@ const NOTE_CONFIG = {
 // HELPER FUNCTIONS
 // ============================================
 
+// Hybrid authentication middleware - supports both session cookies and JWT tokens
 const requireAuth = (req, res, next) => {
-  if (!req.session || !req.session.userId) {
-    return res.status(401).json({ error: 'Not logged in' });
+  // Method 1: Check session cookie (primary)
+  if (req.session && req.session.userId) {
+    return next();
   }
-  next();
+  
+  // Method 2: Check if already authenticated by parent middleware (e.g., sessionLockCheck)
+  if (req.user && req.user.userId) {
+    return next();
+  }
+  
+  // No valid authentication found
+  return res.status(401).json({ 
+    error: 'Authentication required. Please log in.',
+    authRequired: true 
+  });
 };
 
 const formatNoteForFrontend = (note) => {

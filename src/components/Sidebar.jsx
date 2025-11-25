@@ -86,9 +86,12 @@ export default function Sidebar({ isOpen, onClose }) {
     const handleLogout = async () => {
         try {
             await axios.post(`${API_BASE}/api/auth/logout`, {}, { withCredentials: true });
-            // Clear any cached data
+            // Clear any cached data including JWT tokens
             sessionStorage.clear();
             localStorage.removeItem('lastVisited');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
             // Force navigate and replace history
             navigate("/login", { replace: true });
             // Reload to clear all state
@@ -97,6 +100,9 @@ export default function Sidebar({ isOpen, onClose }) {
             console.error("Logout error:", err);
             // Even if logout fails on server, clear client and redirect
             sessionStorage.clear();
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
             navigate("/login", { replace: true });
             window.location.reload();
         }

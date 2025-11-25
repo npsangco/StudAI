@@ -4,11 +4,47 @@ import { API_URL } from '../config/api.config';
 // Create axios instance with default config
 const api = axios.create({
   baseURL: `${API_URL}/api`,
-  withCredentials: true,
+  withCredentials: true, // Enable cookies for session-based auth
   headers: {
     'Content-Type': 'application/json',
   }
 });
+
+// Request interceptor to add JWT token if available (fallback for cookie-blocked browsers)
+api.interceptors.request.use(
+  (config) => {
+    // Check if JWT token exists in localStorage
+    const token = localStorage.getItem('authToken');
+    
+    if (token) {
+      // Add Authorization header with Bearer token
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to handle authentication errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear any stored token on authentication failure
+      localStorage.removeItem('authToken');
+      
+      // If we're not already on the login page, redirect there
+      if (!window.location.pathname.includes('/login') && 
+          !window.location.pathname.includes('/signup')) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Pet API
 export const petApi = {

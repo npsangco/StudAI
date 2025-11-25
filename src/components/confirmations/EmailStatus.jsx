@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { extractTokenFromURL } from "../../utils/authUtils";
 
 export default function EmailStatus() {
     const navigate = useNavigate();
@@ -7,22 +8,36 @@ export default function EmailStatus() {
 
     const queryParams = new URLSearchParams(location.search);
     const type = queryParams.get("type");
+    const token = queryParams.get("token");
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            navigate("/login");
-        }, 5000);
-        return () => clearTimeout(timer);
-    }, [navigate]);
+        // If token is present and email is verified, store it and redirect to dashboard
+        if (type === "verified" && token) {
+            localStorage.setItem("authToken", token);
+            // Auto-login the user by redirecting to dashboard
+            const timer = setTimeout(() => {
+                navigate("/dashboard");
+            }, 2000);
+            return () => clearTimeout(timer);
+        } else {
+            // Otherwise redirect to login after 5 seconds
+            const timer = setTimeout(() => {
+                navigate("/login");
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [navigate, type, token]);
 
     let title = "";
     let message = "";
-    let subMessage = "Redirecting to login...";
+    let subMessage = token && type === "verified" ? "Logging you in..." : "Redirecting to login...";
 
     switch (type) {
         case "verified":
             title = "Email Verified!";
-            message = "Your account has been activated. You can now log in.";
+            message = token 
+                ? "Your account has been activated. Logging you in automatically..." 
+                : "Your account has been activated. You can now log in.";
             break;
         case "already":
             title = "Email already verified.";
