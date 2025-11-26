@@ -21,6 +21,9 @@ const JitsiSessions = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [publishingDelay, setPublishingDelay] = useState(false);
+  const [hasConsented, setHasConsented] = useState(false);
+  const [showConsentForm, setShowConsentForm] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
   
   const [sessionForm, setSessionForm] = useState({
     topic: '',
@@ -33,16 +36,41 @@ const JitsiSessions = () => {
   const API_BASE_URL = `${API_URL}/api`;
 
   useEffect(() => {
-    const loadInitialData = async () => {
-      await Promise.all([
-        loadMySessions(),
-        loadPublicSessions()
-      ]);
+    // Check if user has already consented
+    const consent = localStorage.getItem('jitsiConsent');
+    if (consent === 'true') {
+      setHasConsented(true);
+      loadInitialData();
+    } else {
+      setShowConsentForm(true);
       setInitialLoading(false);
-    };
-
-    loadInitialData();
+    }
   }, []);
+
+  const loadInitialData = async () => {
+    await Promise.all([
+      loadMySessions(),
+      loadPublicSessions()
+    ]);
+    setInitialLoading(false);
+  };
+
+  const handleConsent = () => {
+    if (consentChecked) {
+      localStorage.setItem('jitsiConsent', 'true');
+      setHasConsented(true);
+      setShowConsentForm(false);
+      setInitialLoading(true);
+      loadInitialData();
+    } else {
+      toast.error('Please read and accept the terms to continue');
+    }
+  };
+
+  const handleDeclineConsent = () => {
+    toast.info('You must accept the terms to use Jitsi Sessions');
+    window.location.href = '/';
+  };
 
   const loadMySessions = async () => {
     try {
@@ -303,6 +331,196 @@ const JitsiSessions = () => {
     return <AppLoader />;
   }
 
+  // Show consent form if user hasn't consented
+  if (showConsentForm && !hasConsented) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-3xl w-full my-8">
+            {/* Header */}
+            <div className="bg-blue-600 text-white p-6 rounded-t-lg">
+              <div className="flex items-center gap-3">
+                <Video className="w-8 h-8" />
+                <div>
+                  <h2 className="text-2xl font-bold">Jitsi Meet - Terms of Use</h2>
+                  <p className="text-blue-100 text-sm mt-1">Please read carefully before proceeding</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+              {/* What is Jitsi Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-blue-600" />
+                  What is Jitsi Meet?
+                </h3>
+                <p className="text-gray-700 leading-relaxed">
+                  Jitsi Meet is a <strong>free, open-source video conferencing platform</strong> provided by 8x8, Inc. 
+                  StudAI uses Jitsi's public service to facilitate video study sessions between users. When you join a 
+                  session, you will be redirected to <code className="bg-gray-100 px-2 py-1 rounded">meet.jit.si</code>, 
+                  which is a third-party service not owned or controlled by StudAI.
+                </p>
+              </div>
+
+              {/* How It Works Section */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Video className="w-5 h-5 text-blue-600" />
+                  How It Works
+                </h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-1">1.</span>
+                    <span>You create or join a study session on this page</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-1">2.</span>
+                    <span>Your StudAI username and email are passed to Jitsi to identify you in the meeting</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-1">3.</span>
+                    <span>A new browser tab opens to the Jitsi Meet website</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-1">4.</span>
+                    <span>You'll need to allow camera/microphone access in your browser</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-1">5.</span>
+                    <span>The meeting is hosted entirely on Jitsi's servers, not on StudAI</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Data & Privacy Section */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-yellow-600" />
+                  Data Sharing & Privacy
+                </h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600">•</span>
+                    <span><strong>Information Shared:</strong> Your StudAI username and email address will be shared with Jitsi Meet</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600">•</span>
+                    <span><strong>Video/Audio:</strong> All video and audio is processed by Jitsi's servers</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600">•</span>
+                    <span><strong>Recording:</strong> Other participants may be able to record the session using Jitsi's features or third-party tools</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600">•</span>
+                    <span><strong>Jitsi Privacy:</strong> Please review <a href="https://jitsi.org/meet-jit-si-privacy/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Jitsi's Privacy Policy</a></span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Disclaimer Section */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  Important Disclaimer
+                </h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600">•</span>
+                    <span><strong>Third-Party Service:</strong> StudAI is NOT responsible for Jitsi Meet's availability, security, or data handling</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600">•</span>
+                    <span><strong>No Liability:</strong> We are not liable for any issues, data breaches, or problems that occur within Jitsi Meet</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600">•</span>
+                    <span><strong>User Conduct:</strong> You are responsible for your behavior and content shared in video sessions</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600">•</span>
+                    <span><strong>Session Recordings:</strong> Always assume sessions may be recorded by other participants</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Your Responsibilities Section */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Your Responsibilities</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>Ensure your browser allows camera and microphone access</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>Use a modern browser (Chrome, Firefox, Safari, or Edge recommended)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>Be respectful and follow community guidelines in video sessions</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>Do not share sensitive or confidential information in public sessions</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>Inform other participants if you are recording the session</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Consent Checkbox */}
+              <div className="bg-white border-2 border-blue-500 rounded-lg p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consentChecked}
+                    onChange={(e) => setConsentChecked(e.target.checked)}
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1 flex-shrink-0"
+                  />
+                  <span className="text-gray-900 font-medium">
+                    I understand and agree that:
+                    <ul className="mt-2 space-y-1 text-sm font-normal text-gray-700">
+                      <li>• I will be using a third-party service (Jitsi Meet) hosted by 8x8, Inc.</li>
+                      <li>• My username and email will be shared with Jitsi Meet</li>
+                      <li>• StudAI is not responsible for Jitsi Meet's service or data handling</li>
+                      <li>• I have read and understand the information above</li>
+                    </ul>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="border-t p-6 bg-gray-50 rounded-b-lg flex gap-3">
+              <button
+                onClick={handleDeclineConsent}
+                className="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-md hover:bg-gray-300 transition-colors font-medium"
+              >
+                Decline & Go Back
+              </button>
+              <button
+                onClick={handleConsent}
+                disabled={!consentChecked}
+                className={`flex-1 py-3 px-6 rounded-md transition-colors font-medium ${
+                  consentChecked
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                Accept & Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
@@ -322,11 +540,25 @@ const JitsiSessions = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Study Sessions</h1>
-          <p className="text-gray-600">Create and join video study sessions powered by Jitsi Meet</p>
-          <a href="/zoom-sessions" className="text-sm text-blue-600 hover:underline">
-            Looking for Zoom sessions? Click here
-          </a>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Study Sessions</h1>
+              <p className="text-gray-600">Create and join video study sessions powered by Jitsi Meet</p>
+              <a href="/zoom-sessions" className="text-sm text-blue-600 hover:underline">
+                Looking for Zoom sessions? Click here
+              </a>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.removeItem('jitsiConsent');
+                window.location.reload();
+              }}
+              className="text-sm text-gray-600 hover:text-gray-800 underline"
+              title="Review Jitsi Terms & Privacy"
+            >
+              Review Terms
+            </button>
+          </div>
         </div>
 
         {/* Create Session Form */}
@@ -494,7 +726,7 @@ const JitsiSessions = () => {
 
       {/* Password Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Enter Session Password</h3>
             <input

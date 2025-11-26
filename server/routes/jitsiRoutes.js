@@ -6,6 +6,28 @@ import { Op } from 'sequelize';
 
 const router = express.Router();
 
+// Helper function to generate Jitsi URL with user information
+const generateJitsiUrl = (roomId, user) => {
+  const baseUrl = `https://meet.jit.si/${roomId}`;
+  
+  if (!user) return baseUrl;
+  
+  // Add user information as URL parameters
+  const params = new URLSearchParams();
+  if (user.username) {
+    params.append('userInfo.displayName', user.username);
+  }
+  if (user.email) {
+    params.append('userInfo.email', user.email);
+  }
+  // Optional: Add avatar if you have profile pictures
+  // if (user.profile_picture) {
+  //   params.append('userInfo.avatarUrl', user.profile_picture);
+  // }
+  
+  return params.toString() ? `${baseUrl}#${params.toString()}` : baseUrl;
+};
+
 // Hybrid authentication middleware - supports both session cookies and JWT tokens
 const requireAuth = (req, res, next) => {
   // Method 1: Check session cookie (primary)
@@ -54,6 +76,11 @@ router.post('/sessions', requireAuth, async (req, res) => {
       status: 'scheduled'
     });
 
+    // Get user info for Jitsi URL
+    const user = await User.findByPk(userId, {
+      attributes: ['user_id', 'username', 'email']
+    });
+
     // Schedule publication after 1 minute
     setTimeout(async () => {
       try {
@@ -71,7 +98,7 @@ router.post('/sessions', requireAuth, async (req, res) => {
       message: 'Session created! It will be visible to others in 1 minute.',
       session: {
         ...session.toJSON(),
-        jitsi_url: `https://meet.jit.si/${roomId}`
+        jitsi_url: generateJitsiUrl(roomId, user)
       }
     });
   } catch (err) {
@@ -100,7 +127,7 @@ router.get('/sessions/my', requireAuth, async (req, res) => {
 
     const sessionsWithUrl = sessions.map(session => ({
       ...session.toJSON(),
-      jitsi_url: `https://meet.jit.si/${session.room_id}`,
+      jitsi_url: generateJitsiUrl(session.room_id, user),
       creator: user ? {
         user_id: user.user_id,
         username: user.username,
@@ -119,6 +146,7 @@ router.get('/sessions/my', requireAuth, async (req, res) => {
 router.get('/sessions/public', requireAuth, async (req, res) => {
   try {
     console.log('Fetching public sessions...');
+    const userId = req.session.userId;
     
     const sessions = await JitsiSession.findAll({
       where: {
@@ -133,6 +161,11 @@ router.get('/sessions/public', requireAuth, async (req, res) => {
 
     console.log(`Found ${sessions.length} public sessions`);
 
+    // Get current user info for Jitsi URL
+    const currentUser = await User.findByPk(userId, {
+      attributes: ['user_id', 'username', 'email']
+    });
+
     // Get creators separately
     const sessionsWithUrl = await Promise.all(sessions.map(async (session) => {
       const creator = await User.findByPk(session.user_id, {
@@ -141,7 +174,7 @@ router.get('/sessions/public', requireAuth, async (req, res) => {
 
       return {
         ...session.toJSON(),
-        jitsi_url: `https://meet.jit.si/${session.room_id}`,
+        jitsi_url: generateJitsiUrl(session.room_id, currentUser),
         session_password: session.session_password ? '••••••••' : null,
         creator: creator ? {
           user_id: creator.user_id,
@@ -163,6 +196,7 @@ router.post('/sessions/:id/verify', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { password } = req.body;
+    const userId = req.session.userId;
 
     const session = await JitsiSession.findByPk(id);
 
@@ -171,9 +205,14 @@ router.post('/sessions/:id/verify', requireAuth, async (req, res) => {
     }
 
     if (session.session_password === password) {
+      // Get user info for Jitsi URL
+      const user = await User.findByPk(userId, {
+        attributes: ['user_id', 'username', 'email']
+      });
+
       res.json({
         success: true,
-        jitsi_url: `https://meet.jit.si/${session.room_id}`
+        jitsi_url: generateJitsiUrl(session.room_id, user)
       });
     } else {
       res.status(401).json({ error: 'Incorrect password' });

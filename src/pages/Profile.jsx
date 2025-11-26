@@ -220,7 +220,7 @@ export default function Profile() {
                                         />
                                         
                                         {/* Hover Overlay */}
-                                        <div className={`absolute inset-0 bg-black bg-opacity-50 rounded-full flex flex-col items-center justify-center transition-all duration-300 ${
+                                        <div className={`absolute inset-0 bg-black/60 rounded-full flex flex-col items-center justify-center transition-all duration-300 ${
                                             isHovering ? 'opacity-100' : 'opacity-0'
                                         }`}>
                                             <Camera className="w-8 h-8 text-white mb-2" />

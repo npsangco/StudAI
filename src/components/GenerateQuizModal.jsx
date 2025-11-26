@@ -142,7 +142,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
 
   if (success) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl p-6 max-w-md w-full text-center">
           <div className="mb-4 flex justify-center">
             <CheckCircle className="w-16 h-16 text-green-500 animate-bounce" />

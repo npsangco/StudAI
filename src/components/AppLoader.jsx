@@ -2,21 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Loader2, BookOpen, Brain, Target, Sparkles } from 'lucide-react';
 
 const tips = [
-  "💡 Take regular breaks every 25 minutes to stay focused and productive!",
-  "📚 Create notes immediately after studying to retain information better.",
-  "🎯 Set daily goals in your planner to track your progress effectively.",
-  "✨ Use AI summaries to quickly review large documents and save time.",
-  "🏆 Complete daily quests to level up your pet buddy and earn rewards!",
-  "📝 Organize your notes with categories for easier retrieval later.",
-  "⚡ Quiz yourself regularly to reinforce learning and identify weak areas.",
-  "🤝 Join study sessions to learn with friends and stay motivated.",
-  "🎮 Challenge others to quiz battles and make learning competitive!",
-  "🌟 Maintain your study streak to unlock special achievements.",
-  "💪 Review your mistakes from quizzes to improve your understanding.",
-  "📊 Track your daily stats to monitor your study habits and progress.",
-  "🎨 Keep your pet happy by feeding, playing, and cleaning regularly!",
-  "🔥 Consistent daily activity is the key to long-term academic success.",
-  "📖 Break down large topics into smaller notes for better comprehension."
+  "Take regular breaks every 25 minutes to stay focused and productive!",
+  "Create notes immediately after studying to retain information better.",
+  "Set daily goals in your planner to track your progress effectively.",
+  "Use AI summaries to quickly review large documents and save time.",
+  "Organize your notes with categories for easier retrieval later.",
+  "Quiz yourself regularly to reinforce learning and identify weak areas.",
+  "Join study sessions to learn with friends and stay motivated.",
 ];
 
 const AppLoader = ({ message = "Loading..." }) => {
