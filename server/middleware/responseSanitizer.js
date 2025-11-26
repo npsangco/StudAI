@@ -252,7 +252,7 @@ function validateQuizSubmission(questions, submittedAnswers) {
   };
 }
 
-module.exports = {
+export {
   sanitizeData,
   sanitizeQuizQuestions,
   responseSanitizerMiddleware,
