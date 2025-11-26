@@ -122,23 +122,29 @@ function responseSanitizerMiddleware(options = {}) {
     const originalJson = res.json.bind(res);
 
     res.json = function(data) {
-      // Check if this is a quiz endpoint that needs special handling
-      const isQuizEndpoint = req.path.includes('/quiz') || req.path.includes('/question');
-      
-      if (isQuizEndpoint && data) {
-        // Special handling for quiz questions
-        if (data.questions) {
-          data.questions = sanitizeQuizQuestions(data.questions);
-        }
+      try {
+        // Check if this is a quiz endpoint that needs special handling
+        const isQuizEndpoint = req.path.includes('/quiz') || req.path.includes('/question');
         
-        // Also sanitize any other nested data
+        if (isQuizEndpoint && data) {
+          // Special handling for quiz questions
+          if (data.questions) {
+            data.questions = sanitizeQuizQuestions(data.questions);
+          }
+          
+          // Also sanitize any other nested data
+          const sanitized = sanitizeData(data, options.excludeFields);
+          return originalJson(sanitized);
+        }
+
+        // For all other endpoints, do general sanitization
         const sanitized = sanitizeData(data, options.excludeFields);
         return originalJson(sanitized);
+      } catch (error) {
+        // If sanitization fails, log error and send original data
+        console.error('Response sanitization error:', error);
+        return originalJson(data);
       }
-
-      // For all other endpoints, do general sanitization
-      const sanitized = sanitizeData(data, options.excludeFields);
-      return originalJson(sanitized);
     };
 
     next();

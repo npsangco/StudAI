@@ -320,9 +320,6 @@ app.use(cors({
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
-// 🔒 SECURITY: Response sanitizer - removes sensitive data from all API responses
-app.use("/api", responseSanitizerMiddleware());
-
 app.use("/api", auditMiddleware);
 
 // ============================================
@@ -520,7 +517,8 @@ passport.deserializeUser(async (id, done) => {
 app.use("/api/pet", sessionLockCheck, petRoutes);
 app.use("/api/notes", sessionLockCheck, noteRoutes);
 app.use("/api/plans", sessionLockCheck, planRoutes);
-app.use("/api/quizzes", sessionLockCheck, quizRoutes);
+// 🔒 SECURITY: Apply response sanitizer only to quiz routes to prevent answer exposure
+app.use("/api/quizzes", sessionLockCheck, responseSanitizerMiddleware(), quizRoutes);
 app.use("/api/question-bank", sessionLockCheck, questionBankRoutes);
 app.use("/api/sessions", sessionLockCheck, sessionRoutes);
 app.use("/api/jitsi", sessionLockCheck, jitsiRoutes);
