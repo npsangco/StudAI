@@ -96,6 +96,9 @@ import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
+// Security middleware
+import { responseSanitizerMiddleware } from "./middleware/responseSanitizer.js";
+
 // Import routes
 import petRoutes from "./routes/petRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
@@ -316,6 +319,9 @@ app.use(cors({
 // ----------------- EXPRESS MIDDLEWARE -----------------
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
+
+// 🔒 SECURITY: Response sanitizer - removes sensitive data from all API responses
+app.use("/api", responseSanitizerMiddleware());
 
 app.use("/api", auditMiddleware);
 

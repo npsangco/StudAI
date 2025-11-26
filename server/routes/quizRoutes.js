@@ -12,6 +12,7 @@ import { validateQuizRequest, validateTitle, validateNumericId } from '../middle
 import { ensureQuizAvailable, recordQuizUsage, DAILY_AI_LIMITS, getUsageSnapshot } from '../services/aiUsageService.js';
 import { ensureContentIsSafe, ModerationError } from '../services/moderationService.js';
 import { jsonrepair } from 'jsonrepair';
+import { sanitizeQuizQuestions, validateQuizSubmission } from '../middleware/responseSanitizer.js';
 
 const router = express.Router();
 
@@ -793,12 +794,14 @@ router.get('/:id', requireAuth, async (req, res) => {
         question: questionJson.question,
         question_order: questionJson.question_order,
         choices,
-        correctAnswer: questionJson.correct_answer,
-        answer: questionJson.answer,
         matchingPairs,
         difficulty: questionJson.difficulty || 'medium'
+        // SECURITY: correctAnswer, answer fields removed - never sent to client
       };
     });
+
+    // SECURITY: Sanitize questions to remove any remaining sensitive data
+    const sanitizedQuestions = sanitizeQuizQuestions(parsedQuestions);
 
     const totalQuestions = parsedQuestions.length;
     const hasVariedDifficulty = Object.values(difficultyDistribution).filter(count => count > 0).length >= 2;
@@ -813,7 +816,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       can_use_adaptive: hasVariedDifficulty // Adaptive mode only requires 2+ difficulty levels
     };
 
-    return res.json({ quiz: quizPayload, questions: parsedQuestions });
+    return res.json({ quiz: quizPayload, questions: sanitizedQuestions });
   } catch (err) {
     console.error('[Quiz] Fetch quiz error:', err);
     return res.status(500).json({ error: 'Failed to load quiz' });
@@ -1351,11 +1354,26 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
     const quizId = req.params.id;
-    const { score, total_questions, time_spent, answers, adaptiveJourney } = req.body;
+    const { answers: submittedAnswers, time_spent, adaptiveJourney } = req.body;
 
-    if (score === undefined || total_questions === undefined) {
-      return res.status(400).json({ error: 'Score and total_questions are required' });
+    if (!submittedAnswers || !Array.isArray(submittedAnswers)) {
+      return res.status(400).json({ error: 'Answers array is required' });
     }
+
+    // SECURITY: Fetch questions with correct answers (server-side only)
+    const questions = await Question.findAll({
+      where: { quiz_id: quizId },
+      order: [['question_order', 'ASC'], ['question_id', 'ASC']]
+    });
+
+    if (!questions || questions.length === 0) {
+      return res.status(404).json({ error: 'Quiz questions not found' });
+    }
+
+    // SECURITY: Validate answers server-side
+    const validation = validateQuizSubmission(questions, submittedAnswers);
+    const score = validation.score;
+    const total_questions = validation.total;
 
     // Get quiz to check for original_quiz_id (for shared quiz leaderboard tracking)
     const quiz = await Quiz.findOne({
@@ -1370,10 +1388,12 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
     const originalQuizId = quiz.original_quiz_id || null;
 
     // Prepare answers data with adaptive journey if provided
-    const answersData = answers ? {
-      answers: Array.isArray(answers) ? answers : [],
-      adaptiveJourney: adaptiveJourney || null
-    } : null;
+    // SECURITY: Store user's answers but never send correct answers back
+    const answersData = {
+      answers: submittedAnswers,
+      adaptiveJourney: adaptiveJourney || null,
+      validation: validation.details // Store which were correct/incorrect
+    };
 
     // Get or create daily stats
     const today = new Date().toISOString().split('T')[0];
