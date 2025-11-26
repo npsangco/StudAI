@@ -9,6 +9,7 @@ import TutorialOverlay from '../components/TutorialOverlay';
 import { useToast } from '../hooks/useToast';
 import { useTutorial } from '../hooks/useTutorial';
 import { dashboardTutorialSteps } from '../config/tutorialSteps';
+import TutorialButton from '../components/TutorialButton';
 import { API_URL } from '../config/api.config';
 import { aiUsageApi } from '../api/api';
 import { extractTokenFromURL } from '../utils/authUtils';
@@ -44,7 +45,7 @@ export default function Dashboard() {
   const [isUsageLoading, setIsUsageLoading] = useState(true);
   
   const { toasts, removeToast, toast } = useToast();
-  const { showTutorial, completeTutorial, skipTutorial } = useTutorial();
+  const { showTutorial, completeTutorial, skipTutorial, startTutorial } = useTutorial();
 
   const refreshAiUsage = useCallback(async () => {
     try {
@@ -1148,6 +1149,9 @@ Please format the summary in a clear, organized manner with proper headings and 
 
       {/* Loading Overlay */}
       {isGenerating && <AppLoader message="Generating AI Summary" />}
+
+      {/* Tutorial Button */}
+      <TutorialButton onClick={startTutorial} />
     </div>
   );
 }

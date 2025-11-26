@@ -9,11 +9,12 @@ import { API_URL } from '../config/api.config';
 import TutorialOverlay from '../components/TutorialOverlay';
 import { useTutorial } from '../hooks/useTutorial';
 import { sessionsTutorialSteps } from '../config/tutorialSteps';
+import TutorialButton from '../components/TutorialButton';
 
 const Sessions = () => {
   const { toasts, toast, removeToast } = useToast();
   const { confirmState, confirm, closeConfirm } = useConfirm();
-  const { showTutorial, completeTutorial, skipTutorial } = useTutorial('sessions');
+  const { showTutorial, completeTutorial, skipTutorial, startTutorial } = useTutorial('sessions');
   const [user, setUser] = useState(null);
   const [mySessions, setMySessions] = useState([]);
   const [publicSessions, setPublicSessions] = useState([]);
@@ -749,6 +750,9 @@ const Sessions = () => {
           </div>
         </div>
       )}
+
+      {/* Tutorial Button */}
+      <TutorialButton onClick={startTutorial} />
     </div>
   );
 };

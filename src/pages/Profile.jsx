@@ -8,6 +8,7 @@ import { useToast } from "../hooks/useToast";
 import TutorialOverlay from '../components/TutorialOverlay';
 import { useTutorial } from '../hooks/useTutorial';
 import { profileTutorialSteps } from '../config/tutorialSteps';
+import TutorialButton from '../components/TutorialButton';
 
 export default function Profile() {
     const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +26,7 @@ export default function Profile() {
     const [isHovering, setIsHovering] = useState(false);
     
     const { toasts, removeToast, toast } = useToast();
-    const { showTutorial, completeTutorial, skipTutorial } = useTutorial('profile');
+    const { showTutorial, completeTutorial, skipTutorial, startTutorial } = useTutorial('profile');
 
     const fileInputRef = useRef(null);
 
@@ -379,6 +380,9 @@ export default function Profile() {
                     </div>
                 </div>
             </div>
+
+            {/* Tutorial Button */}
+            <TutorialButton onClick={startTutorial} />
         </div>
     );
 }

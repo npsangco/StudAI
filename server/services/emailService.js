@@ -10,7 +10,7 @@ export const VerificationEmail = (username, verifyLink) => {
                     <a href="${verifyLink}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);">Verify Email</a>
                 </div>
                 
-                <p style="color: #999; font-size: 14px; margin-bottom: 0; text-align: center;">This link will expire in 30 minutes.</p>
+                <p style="color: #999; font-size: 14px; margin-bottom: 0; text-align: center;">This link will expire in 5 minutes.</p>
                 
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
                     <p style="color: #999; font-size: 14px; margin: 0;">If you didn't create an account with StudAI, you can safely ignore this email.</p>
@@ -103,21 +103,96 @@ export const AccountStatusEmail = (username, status, reason) => {
     `;
 };
 
+// Streak expiration warning email
+export const StreakExpirationEmail = (username, currentStreak, expiresIn) => {
+    return `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
+                        🔥 Streak Alert!
+                    </div>
+                </div>
+                
+                <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 16px; font-size: 24px;">Don't Break Your Streak, ${username}!</h2>
+                <p style="color: #666; margin-bottom: 24px; font-size: 16px; line-height: 1.5;">Your ${currentStreak}-day study streak is about to expire! You have ${expiresIn} to complete an activity and keep your streak alive.</p>
+                
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fee2e2 100%); border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #92400e; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Current Streak: ${currentStreak} days 🔥</p>
+                    <p style="margin: 0; color: #78350f; font-size: 14px;">Quick activities to maintain your streak: Take a quiz, create a note, or update your planner!</p>
+                </div>
+                
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="${process.env.CLIENT_URL || 'https://studai.dev'}/dashboard" style="display: inline-block; background-color: #f59e0b; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">Continue Learning</a>
+                </div>
+                
+                <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
+                    <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">Keep up the great work! Consistency is the key to success.</p>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+// Inactive user reminder email
+export const InactiveUserEmail = (username, daysSinceActivity) => {
+    return `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="display: inline-block; background-color: #818cf8; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
+                        👋 We Miss You!
+                    </div>
+                </div>
+                
+                <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 16px; font-size: 24px;">Come Back, ${username}!</h2>
+                <p style="color: #666; margin-bottom: 24px; font-size: 16px; line-height: 1.5;">It's been ${daysSinceActivity} days since your last visit to StudAI. Your learning journey is waiting for you!</p>
+                
+                <div style="background-color: #e0e7ff; border-left: 4px solid #818cf8; padding: 16px; margin: 24px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #3730a3; font-weight: 600; font-size: 14px; margin-bottom: 8px;">What you're missing:</p>
+                    <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #4338ca; font-size: 14px; line-height: 1.8;">
+                        <li>Your personalized study dashboard</li>
+                        <li>AI-powered notes and summaries</li>
+                        <li>Quiz challenges and battles</li>
+                        <li>Your pet companion needs you!</li>
+                    </ul>
+                </div>
+                
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="${process.env.CLIENT_URL || 'https://studai.dev'}/dashboard" style="display: inline-block; background-color: #818cf8; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(129, 140, 248, 0.3);">Resume Learning</a>
+                </div>
+                
+                <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
+                    <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">We're here whenever you're ready to continue your learning adventure!</p>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
 // Function to send account status email
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
 
+// Optimized transporter for faster email delivery
+const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 5,
+    socketTimeout: 30000,
+    connectionTimeout: 30000,
+});
+
 export const sendAccountStatusEmail = async (userEmail, username, status, reason) => {
     try {
-        const transporter = nodemailer.createTransport({
-            service: "Gmail",
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
-
         const mailOptions = {
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: userEmail,
@@ -125,10 +200,50 @@ export const sendAccountStatusEmail = async (userEmail, username, status, reason
             html: AccountStatusEmail(username, status, reason),
         };
 
-        await transporter.sendMail(mailOptions);
-        console.log(`✅ Account status email sent to ${userEmail}`);
+        transporter.sendMail(mailOptions).then(() => {
+            console.log(`✅ Account status email sent to ${userEmail}`);
+        }).catch(error => {
+            console.error("❌ Failed to send account status email:", error);
+        });
     } catch (error) {
-        console.error("❌ Failed to send account status email:", error);
-        throw error;
+        console.error("❌ Email service error:", error);
+    }
+};
+
+export const sendStreakExpirationEmail = async (userEmail, username, currentStreak, expiresIn) => {
+    try {
+        const mailOptions = {
+            from: `"StudAI" <${process.env.EMAIL_USER}>`,
+            to: userEmail,
+            subject: `🔥 Your ${currentStreak}-Day Streak is Expiring Soon!`,
+            html: StreakExpirationEmail(username, currentStreak, expiresIn),
+        };
+
+        transporter.sendMail(mailOptions).then(() => {
+            console.log(`✅ Streak expiration email sent to ${userEmail}`);
+        }).catch(error => {
+            console.error("❌ Failed to send streak expiration email:", error);
+        });
+    } catch (error) {
+        console.error("❌ Streak email service error:", error);
+    }
+};
+
+export const sendInactiveUserEmail = async (userEmail, username, daysSinceActivity) => {
+    try {
+        const mailOptions = {
+            from: `"StudAI" <${process.env.EMAIL_USER}>`,
+            to: userEmail,
+            subject: `👋 We Miss You at StudAI!`,
+            html: InactiveUserEmail(username, daysSinceActivity),
+        };
+
+        transporter.sendMail(mailOptions).then(() => {
+            console.log(`✅ Inactive user email sent to ${userEmail}`);
+        }).catch(error => {
+            console.error("❌ Failed to send inactive user email:", error);
+        });
+    } catch (error) {
+        console.error("❌ Inactive user email service error:", error);
     }
 };

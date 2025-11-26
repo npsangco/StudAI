@@ -15,6 +15,7 @@ import AppLoader from '../components/AppLoader';
 import { useToast } from '../hooks/useToast';
 import { useTutorial } from '../hooks/useTutorial';
 import { notesTutorialSteps } from '../config/tutorialSteps';
+import TutorialButton from '../components/TutorialButton';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useConfirm } from '../hooks/useConfirm';
 import GenerateQuizModal from '../components/GenerateQuizModal';
@@ -72,7 +73,7 @@ const Notes = () => {
   
   const { toasts, removeToast, toast } = useToast();
   const { confirmState, confirm, closeConfirm } = useConfirm();
-  const { showTutorial, completeTutorial, skipTutorial } = useTutorial('notes');
+  const { showTutorial, completeTutorial, skipTutorial, startTutorial } = useTutorial('notes');
   const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
@@ -1401,6 +1402,9 @@ const Notes = () => {
           toast={toast}
         />
       )}
+
+      {/* Tutorial Button */}
+      <TutorialButton onClick={startTutorial} />
     </div>
   );
 };

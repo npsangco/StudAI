@@ -9,6 +9,7 @@ import { useConfirm } from "../hooks/useConfirm";
 import TutorialOverlay from '../components/TutorialOverlay';
 import { useTutorial } from '../hooks/useTutorial';
 import { plannerTutorialSteps } from '../config/tutorialSteps';
+import TutorialButton from '../components/TutorialButton';
 
 export default function Planner() {
   const [currentYear] = useState(new Date().getFullYear());
@@ -25,7 +26,7 @@ export default function Planner() {
   
   const { toasts, removeToast, toast } = useToast();
   const { confirmState, confirm, closeConfirm } = useConfirm();
-  const { showTutorial, completeTutorial, skipTutorial } = useTutorial('planner');
+  const { showTutorial, completeTutorial, skipTutorial, startTutorial } = useTutorial('planner');
   const [dailyTaskStatus, setDailyTaskStatus] = useState({ used: 0, remaining: 3, max: 3 });
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState(null);
@@ -902,6 +903,9 @@ export default function Planner() {
       {selectedYear && selectedMonth === null && renderMonthSelection()}
       {selectedYear && selectedMonth !== null && selectedDate === null && renderDateSelection()}
       {selectedYear && selectedMonth !== null && selectedDate && renderPlanManagement()}
+
+      {/* Tutorial Button */}
+      <TutorialButton onClick={startTutorial} />
     </>
   );
 }

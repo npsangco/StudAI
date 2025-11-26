@@ -1005,12 +1005,13 @@ app.post("/api/auth/signup", validateSignupRequest, async (req, res) => {
 
         const verifyLink = `${SERVER_URL}/api/auth/verify-email?token=${token}`;
 
-        await transporter.sendMail({
+        // Send email asynchronously for instant response
+        transporter.sendMail({
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: "Verify Your Email",
             html: VerificationEmail(username, verifyLink),
-        });
+        }).catch(err => console.error('❌ Email send error:', err));
 
         res.status(201).json({
             message: "Verification email sent. Please verify your email within 5 minutes.",
@@ -1425,12 +1426,20 @@ app.post('/api/upload/profile', profileUpload.single('profilePic'), async (req, 
 app.use('/uploads/profile_pictures', express.static('uploads/profile_pictures'));
 
 // ----------------- PASSWORD UPDATE WITH EMAIL VERIFICATION -----------------
+// Optimized transporter with connection pooling for faster email delivery
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 5,
+    socketTimeout: 30000,
+    connectionTimeout: 30000,
 });
 
 app.post("/api/user/request-password-update", async (req, res) => {
@@ -1462,12 +1471,13 @@ app.post("/api/user/request-password-update", async (req, res) => {
 
         const confirmLink = `${SERVER_URL}/api/user/confirm-password-update?token=${token}`;
 
-        await transporter.sendMail({
+        // Send email asynchronously for instant response
+        transporter.sendMail({
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: user.email,
             subject: "Confirm Your Password Update",
             html:PasswordUpdateEmail(confirmLink),
-        });
+        }).catch(err => console.error('❌ Email send error:', err));
 
         res.json({ message: "Verification email sent. Please check your inbox." });
     } catch (err) {
@@ -1514,12 +1524,13 @@ app.post("/api/auth/reset-request", async (req, res) => {
 
         const resetLink = `${CLIENT_URL}/passwordrecovery?token=${token}`;
 
-        await transporter.sendMail({
+        // Send email asynchronously for instant response
+        transporter.sendMail({
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: "Password Reset Request",
             html:PasswordResetEmail(resetLink),
-        });
+        }).catch(err => console.error('❌ Email send error:', err));
 
         res.json({ message: "Password reset link sent" });
     } catch (err) {

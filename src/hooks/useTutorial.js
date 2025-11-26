@@ -80,11 +80,16 @@ export function useTutorial(pageName = 'dashboard') {
     }
   };
 
+  const startTutorial = () => {
+    setShowTutorial(true);
+  };
+
   return {
     showTutorial,
     completeTutorial,
     skipTutorial,
     resetTutorial,
     resetAllTutorials,
+    startTutorial,
   };
 }

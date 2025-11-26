@@ -3,15 +3,24 @@ import nodemailer from "nodemailer";
 import { Op } from "sequelize";
 import Plan from "../models/Plan.js";
 import User from "../models/User.js";
+import { sendStreakExpirationEmail, sendInactiveUserEmail } from "./emailService.js";
 
 Plan.belongsTo(User, { foreignKey: 'user_id' });
 
+// Optimized transporter for daily reminder emails
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 5,
+    socketTimeout: 30000,
+    connectionTimeout: 30000,
 });
 
 export function startEmailReminders() {
@@ -144,7 +153,7 @@ export function startEmailReminders() {
                     : "";
 
             if (upcomingHTML || overdueHTML) {
-                await transporter.sendMail({
+                transporter.sendMail({
                     from: process.env.EMAIL_USER,
                     to: email,
                     subject: "📋 Task Reminder: Upcoming and Overdue Tasks",
@@ -161,12 +170,97 @@ export function startEmailReminders() {
               </div>
             </div>
           `,
+                }).then(() => {
+                    console.log(`✅ Sent summary email to ${email}`);
+                }).catch(err => {
+                    console.error(`❌ Failed to send email to ${email}:`, err);
                 });
-
-                console.log(`✅ Sent summary email to ${email}`);
             }
         }
 
         console.log("✅ Daily email check completed.");
+    });
+
+    // Check for expiring streaks - runs every 6 hours
+    cron.schedule("0 */6 * * *", async () => {
+        console.log("🔥 Checking for expiring streaks...");
+
+        try {
+            const now = new Date();
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            yesterday.setHours(0, 0, 0, 0);
+
+            const endOfYesterday = new Date(yesterday);
+            endOfYesterday.setHours(23, 59, 59, 999);
+
+            // Find users whose last activity was yesterday and have a streak > 0
+            const usersWithExpiringStreaks = await User.findAll({
+                where: {
+                    study_streak: { [Op.gt]: 0 },
+                    last_activity_date: {
+                        [Op.between]: [yesterday, endOfYesterday]
+                    },
+                    email: { [Op.ne]: null }
+                }
+            });
+
+            for (const user of usersWithExpiringStreaks) {
+                const timeRemaining = "less than 24 hours";
+                await sendStreakExpirationEmail(
+                    user.email,
+                    user.username,
+                    user.study_streak,
+                    timeRemaining
+                );
+            }
+
+            console.log(`✅ Sent ${usersWithExpiringStreaks.length} streak expiration warnings`);
+        } catch (err) {
+            console.error("❌ Streak check error:", err);
+        }
+    });
+
+    // Check for inactive users - runs daily at 10am
+    cron.schedule("0 10 * * *", async () => {
+        console.log("👋 Checking for inactive users...");
+
+        try {
+            const now = new Date();
+            const threeDaysAgo = new Date(now);
+            threeDaysAgo.setDate(now.getDate() - 3);
+            threeDaysAgo.setHours(0, 0, 0, 0);
+
+            const fourDaysAgo = new Date(now);
+            fourDaysAgo.setDate(now.getDate() - 4);
+            fourDaysAgo.setHours(0, 0, 0, 0);
+
+            // Find users who were last active exactly 3 days ago (to avoid spamming)
+            const inactiveUsers = await User.findAll({
+                where: {
+                    last_activity_date: {
+                        [Op.between]: [fourDaysAgo, threeDaysAgo]
+                    },
+                    email: { [Op.ne]: null },
+                    status: 'active'
+                }
+            });
+
+            for (const user of inactiveUsers) {
+                const daysSinceActivity = Math.floor(
+                    (now - new Date(user.last_activity_date)) / (1000 * 60 * 60 * 24)
+                );
+                
+                await sendInactiveUserEmail(
+                    user.email,
+                    user.username,
+                    daysSinceActivity
+                );
+            }
+
+            console.log(`✅ Sent ${inactiveUsers.length} inactive user reminders`);
+        } catch (err) {
+            console.error("❌ Inactive user check error:", err);
+        }
     });
 }

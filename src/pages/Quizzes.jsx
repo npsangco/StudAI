@@ -24,7 +24,8 @@ import { checkForReconnectionOpportunity } from '../firebase/reconnectionTokens'
 import { rejoinBattle } from '../firebase/connectionManager';
 import TutorialOverlay from '../components/TutorialOverlay';
 import { useTutorial } from '../hooks/useTutorial';
-import { quizTutorialSteps } from '../config/tutorialSteps';
+import { quizzesTutorialSteps } from '../config/tutorialSteps';
+import TutorialButton from '../components/TutorialButton';
 
 const styles = `
   @keyframes slideIn {
@@ -154,7 +155,7 @@ function QuizzesPage() {
     quizDataHook.updateUiState({ currentView: targetView });
   });
 
-  const { showTutorial, completeTutorial, skipTutorial } = useTutorial('quizzes');
+  const { showTutorial, completeTutorial, skipTutorial, startTutorial } = useTutorial('quizzes');
 
   // RECONNECTION STATE
   const [reconnectionOpportunity, setReconnectionOpportunity] = useState(null);
@@ -698,6 +699,9 @@ function QuizzesPage() {
           </div>
         </div>
       )}
+
+      {/* Tutorial Button */}
+      <TutorialButton onClick={startTutorial} />
     </>
   );
 }
