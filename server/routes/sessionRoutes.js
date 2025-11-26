@@ -89,9 +89,7 @@ router.post('/create', async (req, res) => {
       return res.status(400).json({ error: 'Session title is required' });
     }
 
-    if (is_private && !session_password) {
-      return res.status(400).json({ error: 'Password required for private sessions' });
-    }
+    // Note: is_private means "don't show in public list", password is optional
 
     // Create Zoom meeting using user's tokens
     console.log('📞 Creating Zoom meeting via OAuth...');
