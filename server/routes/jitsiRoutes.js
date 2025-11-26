@@ -12,8 +12,7 @@ const generateJitsiUrl = (roomId, user) => {
   
   if (!user || !user.username) return baseUrl;
   
-  // Jitsi Meet accepts display name in the URL hash using the format:
-  // https://meet.jit.si/room#config.prejoinPageEnabled=false&userInfo.displayName=Name
+  // Auto-fill username and skip the name entry page
   const displayName = encodeURIComponent(user.username);
   return `${baseUrl}#config.prejoinPageEnabled=false&userInfo.displayName=${displayName}`;
 };

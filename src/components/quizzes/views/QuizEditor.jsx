@@ -1164,8 +1164,9 @@ export const QuizEditor = ({
 
       if (response.ok) {
         toast.success(`Inserted ${data.inserted} question${data.inserted !== 1 ? 's' : ''} successfully`);
-        // Trigger a refresh by calling onSave or reloading
-        window.location.reload();
+        setShowQuestionBank(false);
+        // Trigger save to refresh questions
+        await onSave();
       } else {
         toast.error(data.error || 'Failed to insert questions');
       }
