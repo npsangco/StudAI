@@ -484,6 +484,7 @@ if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
                 password: await bcrypt.hash(securePassword, 12),
                 role: "Student",
                 status: "active", // OAuth users are pre-verified by Google
+                auth_provider: "google", // Mark as OAuth user
                 profile_picture: "/uploads/profile_pictures/default-avatar.png" // Use local default
             });
             

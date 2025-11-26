@@ -189,7 +189,11 @@ const NoteEditor = ({
   };
 
   const handleDelete = () => {
-    if (!note.isArchived || !onDelete) {
+    if (!onDelete) {
+      return;
+    }
+    // Only allow delete if note is archived
+    if (!noteRef.current.isArchived) {
       return;
     }
     setShowDeleteConfirm(true);
