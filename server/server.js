@@ -78,6 +78,9 @@ import { VerificationEmail, PasswordUpdateEmail, PasswordResetEmail} from "./ser
 // Battle cleanup (no Firebase Admin needed)
 import { startBattleCleanup } from "./services/battleCleanupSimple.js";
 
+// Archived note auto-deletion
+import { startArchivedNoteCleanup } from "./services/archivedNoteCleanup.js";
+
 // Import Note model after creating it
 let Note;
 try {
@@ -2126,5 +2129,13 @@ app.listen(PORT, () => {
     } catch (error) {
         console.error('❌ Failed to start battle cleanup:', error.message);
         console.error('   Battle cleanup will be disabled');
+    }
+
+    // Start archived note cleanup service (deletes notes archived for 140+ days)
+    try {
+        startArchivedNoteCleanup();
+    } catch (error) {
+        console.error('❌ Failed to start archived note cleanup:', error.message);
+        console.error('   Archived note cleanup will be disabled');
     }
 });
