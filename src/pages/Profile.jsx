@@ -24,7 +24,6 @@ export default function Profile() {
     const [originalProfile, setOriginalProfile] = useState(null);
     const [showAchievementsModal, setShowAchievementsModal] = useState(false);
     const [isHovering, setIsHovering] = useState(false);
-    const [authProvider, setAuthProvider] = useState('local');
     const [hadBirthday, setHadBirthday] = useState(false);
     
     const { toasts, removeToast, toast } = useToast();
@@ -48,7 +47,6 @@ export default function Profile() {
                 setEmail(user.email || "");
                 setPhoto(user.profile_picture || null);
                 setSavedPhoto(user.profile_picture || null);
-                setAuthProvider(user.auth_provider || 'local');
 
                 let bMonth = "";
                 let bDay = "";
@@ -115,8 +113,8 @@ export default function Profile() {
                 { withCredentials: true }
             );
 
-            // If OAuth user set birthday for the first time, mark it as set
-            if (authProvider === 'google' && !hadBirthday && birthday) {
+            // If user set birthday for the first time, mark it as set
+            if (!hadBirthday && birthday) {
                 setHadBirthday(true);
             }
 
@@ -332,13 +330,10 @@ export default function Profile() {
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                                         Birthday
-                                        {authProvider === 'local' && (
+                                        {hadBirthday && (
                                             <span className="ml-2 text-xs text-gray-500">(Cannot be changed)</span>
                                         )}
-                                        {authProvider === 'google' && hadBirthday && (
-                                            <span className="ml-2 text-xs text-gray-500">(Already set)</span>
-                                        )}
-                                        {authProvider === 'google' && !hadBirthday && (
+                                        {!hadBirthday && (
                                             <span className="ml-2 text-xs text-blue-600">(Can be set once)</span>
                                         )}
                                     </label>
@@ -346,7 +341,7 @@ export default function Profile() {
                                         <select
                                             value={month}
                                             onChange={(e) => setMonth(e.target.value)}
-                                            disabled={authProvider === 'local' || hadBirthday}
+                                            disabled={hadBirthday}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                         >
                                             <option value="" className="text-gray-400">Month</option>
@@ -358,7 +353,7 @@ export default function Profile() {
                                         <select
                                             value={day}
                                             onChange={(e) => setDay(e.target.value)}
-                                            disabled={authProvider === 'local' || hadBirthday}
+                                            disabled={hadBirthday}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                         >
                                             <option value="" className="text-gray-400">Day</option>
@@ -368,7 +363,7 @@ export default function Profile() {
                                         <select
                                             value={year}
                                             onChange={(e) => setYear(e.target.value)}
-                                            disabled={authProvider === 'local' || hadBirthday}
+                                            disabled={hadBirthday}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                         >
                                             <option value="" className="text-gray-400">Year</option>

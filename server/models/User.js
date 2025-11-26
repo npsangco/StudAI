@@ -27,11 +27,6 @@ const User = sequelize.define('User', {
         type: DataTypes.DATEONLY,
         allowNull: true,
     },
-    auth_provider: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: 'local', // 'local' for email/password signup, 'google' for OAuth
-    },
     profile_picture: {
         type: DataTypes.STRING,
         allowNull: true,
