@@ -39,6 +39,7 @@ export function startEmailReminders() {
                 due_date: {
                     [Op.between]: [today, threeDaysLater],
                 },
+                completed: false, // Only include incomplete tasks
             },
             include: User,
         });
@@ -48,6 +49,7 @@ export function startEmailReminders() {
                 due_date: {
                     [Op.lt]: today,
                 },
+                completed: false, // Only include incomplete tasks
             },
             include: User,
         });

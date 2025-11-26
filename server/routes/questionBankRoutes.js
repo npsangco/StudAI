@@ -103,7 +103,10 @@ router.post('/insert', async (req, res) => {
 
     // Verify user owns the target quiz
     const quiz = await Quiz.findByPk(quizId);
-    if (!quiz || quiz.created_by !== userId) {
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+    if (parseInt(quiz.created_by) !== parseInt(userId)) {
       return res.status(403).json({ error: 'Unauthorized to modify this quiz' });
     }
 
