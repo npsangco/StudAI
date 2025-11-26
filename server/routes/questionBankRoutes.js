@@ -50,22 +50,6 @@ router.get('/', async (req, res) => {
     // Calculate pagination
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    // Exclude questions that are already in the current quiz (if sourceQuizId is provided)
-    if (sourceQuizId) {
-      // Get all question IDs from the source quiz
-      const quizQuestions = await Question.findAll({
-        where: { quiz_id: sourceQuizId },
-        attributes: ['question_id']
-      });
-      const excludeIds = quizQuestions.map(q => q.question_id);
-      
-      if (excludeIds.length > 0) {
-        questionWhere.question_id = {
-          [Op.notIn]: excludeIds
-        };
-      }
-    }
-
     // Fetch questions from user's quizzes
     const { count, rows: questions } = await Question.findAndCountAll({
       where: questionWhere,

@@ -6,7 +6,7 @@ import { API_URL } from '../../config/api.config';
 // QUESTION BANK BROWSER COMPONENT
 // ============================================
 
-export const QuestionBankBrowser = ({ currentQuizId, onSelectQuestions, onClose, toast }) => {
+export const QuestionBankBrowser = ({ onSelectQuestions, onClose, toast }) => {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -39,7 +39,6 @@ export const QuestionBankBrowser = ({ currentQuizId, onSelectQuestions, onClose,
       if (typeFilter) params.append('type', typeFilter);
       if (difficultyFilter) params.append('difficulty', difficultyFilter);
       if (sourceQuizFilter) params.append('sourceQuizId', sourceQuizFilter);
-      if (currentQuizId) params.append('sourceQuizId', currentQuizId); // Exclude questions from current quiz
       if (searchTerm) params.append('search', searchTerm);
 
       const response = await fetch(`${API_URL}/api/question-bank?${params}`, {

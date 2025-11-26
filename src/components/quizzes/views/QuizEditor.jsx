@@ -1163,10 +1163,8 @@ export const QuizEditor = ({
       const data = await response.json();
 
       if (response.ok) {
-        toast.success(`Inserted ${data.inserted} question${data.inserted !== 1 ? 's' : ''} successfully`);
+        toast.success(`Inserted ${data.inserted} question${data.inserted !== 1 ? 's' : ''} from question bank. Please save to see them.`);
         setShowQuestionBank(false);
-        // Reload the page to refresh questions without leaving the editor
-        window.location.reload();
       } else {
         toast.error(data.error || 'Failed to insert questions');
       }
@@ -1196,7 +1194,6 @@ export const QuizEditor = ({
       {/* Question Bank Browser Modal */}
       {showQuestionBank && (
         <QuestionBankBrowser
-          currentQuizId={quiz?.id}
           onSelectQuestions={handleInsertFromBank}
           onClose={() => setShowQuestionBank(false)}
           toast={toast}
