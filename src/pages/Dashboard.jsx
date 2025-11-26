@@ -1042,24 +1042,24 @@ Please format the summary in a clear, organized manner with proper headings and 
                             <Calendar className="w-4 h-4" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm mb-1 group-hover:text-indigo-600 transition-colors line-clamp-2">
-                              {plan.title}
-                            </p>
-                            {plan.description && (
-                              <p className="text-xs text-gray-600 line-clamp-1 mb-2">
-                                {plan.description}
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <p className="font-semibold text-gray-900 text-sm group-hover:text-indigo-600 transition-colors">
+                                {plan.title}
                               </p>
-                            )}
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badgeClass} shadow-sm`}>
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badgeClass} shadow-sm whitespace-nowrap`}>
                                 {label}
                               </span>
-                              {formattedDate && diffDays >= 0 && diffDays < 7 && (
-                                <span className="text-xs text-gray-500">
+                              {formattedDate && (
+                                <span className="text-xs text-gray-500 whitespace-nowrap">
                                   {formattedDate}
                                 </span>
                               )}
                             </div>
+                            {plan.description && (
+                              <p className="text-xs text-gray-600 line-clamp-1">
+                                {plan.description}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
