@@ -37,9 +37,7 @@ router.get('/', async (req, res) => {
       questionWhere.difficulty = difficulty;
     }
 
-    if (sourceQuizId) {
-      questionWhere.quiz_id = sourceQuizId;
-    }
+    // sourceQuizId is not used for filtering - question bank shows all user's questions
 
     if (search) {
       questionWhere.question = {
