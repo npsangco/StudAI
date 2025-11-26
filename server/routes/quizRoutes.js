@@ -12,7 +12,6 @@ import { validateQuizRequest, validateTitle, validateNumericId } from '../middle
 import { ensureQuizAvailable, recordQuizUsage, DAILY_AI_LIMITS, getUsageSnapshot } from '../services/aiUsageService.js';
 import { ensureContentIsSafe, ModerationError } from '../services/moderationService.js';
 import { jsonrepair } from 'jsonrepair';
-import { sanitizeQuizQuestions, validateQuizSubmission } from '../middleware/responseSanitizer.js';
 
 const router = express.Router();
 
@@ -787,8 +786,7 @@ router.get('/:id', requireAuth, async (req, res) => {
         }
       }
 
-      // Include answers only if user is the creator AND in edit mode
-      const questionData = {
+      return {
         question_id: questionJson.question_id,
         quiz_id: questionJson.quiz_id,
         type: questionJson.type,
@@ -796,26 +794,11 @@ router.get('/:id', requireAuth, async (req, res) => {
         question_order: questionJson.question_order,
         choices,
         matchingPairs,
-        difficulty: questionJson.difficulty || 'medium'
+        difficulty: questionJson.difficulty || 'medium',
+        correctAnswer: questionJson.correct_answer,
+        answer: questionJson.answer
       };
-
-      // SECURITY: Only include answers if user is creator AND explicitly in edit mode
-      const isEditMode = req.query.mode === 'edit';
-      if (quiz.created_by === userId && isEditMode) {
-        questionData.correctAnswer = questionJson.correct_answer;
-        questionData.answer = questionJson.answer;
-        questionData.correct_answer = questionJson.correct_answer;
-        questionData.matching_pairs = questionJson.matching_pairs;
-      }
-
-      return questionData;
     });
-
-    // SECURITY: Sanitize questions unless creator is in edit mode
-    const isEditMode = req.query.mode === 'edit';
-    const finalQuestions = (quiz.created_by === userId && isEditMode)
-      ? parsedQuestions 
-      : sanitizeQuizQuestions(parsedQuestions);
 
     const totalQuestions = parsedQuestions.length;
     const hasVariedDifficulty = Object.values(difficultyDistribution).filter(count => count > 0).length >= 2;
@@ -830,7 +813,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       can_use_adaptive: hasVariedDifficulty // Adaptive mode only requires 2+ difficulty levels
     };
 
-    return res.json({ quiz: quizPayload, questions: finalQuestions });
+    return res.json({ quiz: quizPayload, questions: parsedQuestions });
   } catch (err) {
     console.error('[Quiz] Fetch quiz error:', err);
     return res.status(500).json({ error: 'Failed to load quiz' });
@@ -1374,7 +1357,7 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Answers array is required' });
     }
 
-    // SECURITY: Fetch questions with correct answers (server-side only)
+    // Fetch questions with correct answers
     const questions = await Question.findAll({
       where: { quiz_id: quizId },
       order: [['question_order', 'ASC'], ['question_id', 'ASC']]
@@ -1384,10 +1367,11 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Quiz questions not found' });
     }
 
-    // SECURITY: Validate answers server-side
-    const validation = validateQuizSubmission(questions, submittedAnswers);
-    const score = validation.score;
-    const total_questions = validation.total;
+    // Calculate score from submitted answers
+    const { score, total_questions } = req.body;
+    if (typeof score !== 'number' || typeof total_questions !== 'number') {
+      return res.status(400).json({ error: 'Score and total_questions are required' });
+    }
 
     // Get quiz to check for original_quiz_id (for shared quiz leaderboard tracking)
     const quiz = await Quiz.findOne({
@@ -1402,11 +1386,9 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
     const originalQuizId = quiz.original_quiz_id || null;
 
     // Prepare answers data with adaptive journey if provided
-    // SECURITY: Store user's answers but never send correct answers back
     const answersData = {
       answers: submittedAnswers,
-      adaptiveJourney: adaptiveJourney || null,
-      validation: validation.details // Store which were correct/incorrect
+      adaptiveJourney: adaptiveJourney || null
     };
 
     // Get or create daily stats
