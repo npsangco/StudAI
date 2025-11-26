@@ -69,7 +69,7 @@ const JitsiSessions = () => {
 
   const handleDeclineConsent = () => {
     toast.info('You must accept the terms to use Jitsi Sessions');
-    window.location.href = '/';
+    window.location.href = '/dashboard';
   };
 
   const loadMySessions = async () => {

@@ -150,7 +150,6 @@ router.get('/sessions/public', requireAuth, async (req, res) => {
     
     const sessions = await JitsiSession.findAll({
       where: {
-        is_private: false,
         is_published: true,
         status: {
           [Op.in]: ['scheduled', 'active']
