@@ -10,22 +10,12 @@ const router = express.Router();
 const generateJitsiUrl = (roomId, user) => {
   const baseUrl = `https://meet.jit.si/${roomId}`;
   
-  if (!user) return baseUrl;
+  if (!user || !user.username) return baseUrl;
   
-  // Add user information as URL parameters
-  const params = new URLSearchParams();
-  if (user.username) {
-    params.append('userInfo.displayName', user.username);
-  }
-  if (user.email) {
-    params.append('userInfo.email', user.email);
-  }
-  // Optional: Add avatar if you have profile pictures
-  // if (user.profile_picture) {
-  //   params.append('userInfo.avatarUrl', user.profile_picture);
-  // }
-  
-  return params.toString() ? `${baseUrl}#${params.toString()}` : baseUrl;
+  // Jitsi Meet accepts display name in the URL hash using the format:
+  // https://meet.jit.si/room#config.prejoinPageEnabled=false&userInfo.displayName=Name
+  const displayName = encodeURIComponent(user.username);
+  return `${baseUrl}#config.prejoinPageEnabled=false&userInfo.displayName=${displayName}`;
 };
 
 // Hybrid authentication middleware - supports both session cookies and JWT tokens
