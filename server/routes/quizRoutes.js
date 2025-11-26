@@ -787,7 +787,8 @@ router.get('/:id', requireAuth, async (req, res) => {
         }
       }
 
-      return {
+      // Include answers only if user is the creator AND in edit mode
+      const questionData = {
         question_id: questionJson.question_id,
         quiz_id: questionJson.quiz_id,
         type: questionJson.type,
@@ -796,12 +797,25 @@ router.get('/:id', requireAuth, async (req, res) => {
         choices,
         matchingPairs,
         difficulty: questionJson.difficulty || 'medium'
-        // SECURITY: correctAnswer, answer fields removed - never sent to client
       };
+
+      // SECURITY: Only include answers if user is creator AND explicitly in edit mode
+      const isEditMode = req.query.mode === 'edit';
+      if (quiz.created_by === userId && isEditMode) {
+        questionData.correctAnswer = questionJson.correct_answer;
+        questionData.answer = questionJson.answer;
+        questionData.correct_answer = questionJson.correct_answer;
+        questionData.matching_pairs = questionJson.matching_pairs;
+      }
+
+      return questionData;
     });
 
-    // SECURITY: Sanitize questions to remove any remaining sensitive data
-    const sanitizedQuestions = sanitizeQuizQuestions(parsedQuestions);
+    // SECURITY: Sanitize questions unless creator is in edit mode
+    const isEditMode = req.query.mode === 'edit';
+    const finalQuestions = (quiz.created_by === userId && isEditMode)
+      ? parsedQuestions 
+      : sanitizeQuizQuestions(parsedQuestions);
 
     const totalQuestions = parsedQuestions.length;
     const hasVariedDifficulty = Object.values(difficultyDistribution).filter(count => count > 0).length >= 2;
@@ -816,7 +830,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       can_use_adaptive: hasVariedDifficulty // Adaptive mode only requires 2+ difficulty levels
     };
 
-    return res.json({ quiz: quizPayload, questions: sanitizedQuestions });
+    return res.json({ quiz: quizPayload, questions: finalQuestions });
   } catch (err) {
     console.error('[Quiz] Fetch quiz error:', err);
     return res.status(500).json({ error: 'Failed to load quiz' });

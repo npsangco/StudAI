@@ -63,11 +63,11 @@ export function useQuizAPI(quizDataHook, toast) {
   /**
    * Load a single quiz with its questions
    */
-  const loadQuizWithQuestions = async (quizId) => {
+  const loadQuizWithQuestions = async (quizId, options = {}) => {
     try {
       setLoading(true);
       
-      const response = await quizApi.getById(quizId);
+      const response = await quizApi.getById(quizId, options);
       const quizData = response.data;
       
       const formattedQuestions = quizData.questions.map(q => {

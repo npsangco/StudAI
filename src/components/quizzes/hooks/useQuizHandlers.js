@@ -312,7 +312,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   // ============================================
 
   const handleEditQuiz = async (quiz) => {
-    const data = await quizAPI.loadQuizWithQuestions(quiz.id);
+    const data = await quizAPI.loadQuizWithQuestions(quiz.id, { editMode: true });
     if (data) {
       // Use the fresh quiz data from API which includes timer_per_question
       const editingQuiz = {

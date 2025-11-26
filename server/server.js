@@ -520,17 +520,7 @@ passport.deserializeUser(async (id, done) => {
 app.use("/api/pet", sessionLockCheck, petRoutes);
 app.use("/api/notes", sessionLockCheck, noteRoutes);
 app.use("/api/plans", sessionLockCheck, planRoutes);
-// 🔒 SECURITY: Apply response sanitizer only when TAKING quizzes (not when editing)
-app.use("/api/quizzes", sessionLockCheck, (req, res, next) => {
-  // Only sanitize when taking a quiz (GET quiz for taking), not when editing
-  const isTakingQuiz = req.method === 'GET' && req.path.match(/^\/\d+$/) && !req.query.edit;
-  
-  if (isTakingQuiz) {
-    responseSanitizerMiddleware()(req, res, next);
-  } else {
-    next();
-  }
-}, quizRoutes);
+app.use("/api/quizzes", sessionLockCheck, quizRoutes);
 app.use("/api/question-bank", sessionLockCheck, questionBankRoutes);
 app.use("/api/sessions", sessionLockCheck, sessionRoutes);
 app.use("/api/jitsi", sessionLockCheck, jitsiRoutes);
