@@ -157,10 +157,7 @@ export const quizApi = {
   getAll: () => api.get('/quizzes'),
   
   // Get single quiz with questions
-  getById: (id, options = {}) => {
-    const params = options.editMode ? '?mode=edit' : '';
-    return api.get(`/quizzes/${id}${params}`);
-  },
+  getById: (id) => api.get(`/quizzes/${id}`),
   
   // Create new quiz
   create: (quizData) => api.post('/quizzes', quizData),

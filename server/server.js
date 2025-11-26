@@ -99,9 +99,6 @@ import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-// Security middleware
-import { responseSanitizerMiddleware } from "./middleware/responseSanitizer.js";
-
 // Import routes
 import petRoutes from "./routes/petRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";

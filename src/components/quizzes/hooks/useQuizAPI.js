@@ -63,11 +63,11 @@ export function useQuizAPI(quizDataHook, toast) {
   /**
    * Load a single quiz with its questions
    */
-  const loadQuizWithQuestions = async (quizId, options = {}) => {
+  const loadQuizWithQuestions = async (quizId) => {
     try {
       setLoading(true);
       
-      const response = await quizApi.getById(quizId, options);
+      const response = await quizApi.getById(quizId);
       const quizData = response.data;
       
       const formattedQuestions = quizData.questions.map(q => {
@@ -348,11 +348,7 @@ export function useQuizAPI(quizDataHook, toast) {
 
       const response = await quizApi.submitAttempt(quizId, requestData);
 
-      // Return full response including validation details from server
-      return {
-        ...response.data,
-        validation: response.data.validation // Ensure validation is included
-      };
+      return response.data;
     } catch (err) {
 
       return null;

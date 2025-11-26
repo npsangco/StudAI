@@ -312,7 +312,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   // ============================================
 
   const handleEditQuiz = async (quiz) => {
-    const data = await quizAPI.loadQuizWithQuestions(quiz.id, { editMode: true });
+    const data = await quizAPI.loadQuizWithQuestions(quiz.id);
     if (data) {
       // Use the fresh quiz data from API which includes timer_per_question
       const editingQuiz = {
@@ -596,24 +596,9 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       const pointsEarned = attemptData.points_earned || 0;
       const expEarned = attemptData.exp_earned || 0;
 
-      // Merge server validation results with client answers
-      let updatedAnswers = results.answers || [];
-      if (attemptData.validation?.details && Array.isArray(attemptData.validation.details)) {
-        updatedAnswers = updatedAnswers.map(answer => {
-          const validationDetail = attemptData.validation.details.find(
-            v => v.question_id === answer.question_id
-          );
-          return {
-            ...answer,
-            isCorrect: validationDetail ? validationDetail.isCorrect : false
-          };
-        });
-      }
-
       updateGameState({
         results: {
           ...results,
-          answers: updatedAnswers, // Use answers with server-validated isCorrect
           points_earned: pointsEarned,
           exp_earned: expEarned,
           petLevelUp: attemptData.petLevelUp
