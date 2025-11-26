@@ -86,7 +86,13 @@ function sanitizeQuizQuestions(questions) {
 
     // Include choices for Multiple Choice (but not the correct answer)
     if (question.type === 'Multiple Choice' && question.choices) {
-      sanitized.choices = question.choices;
+      try {
+        sanitized.choices = Array.isArray(question.choices) 
+          ? question.choices 
+          : JSON.parse(question.choices);
+      } catch (e) {
+        sanitized.choices = question.choices;
+      }
     }
 
     // For True/False, include the choices but not the answer
@@ -96,14 +102,23 @@ function sanitizeQuizQuestions(questions) {
 
     // For Matching, include left and right items but not the correct pairs
     if (question.type === 'Matching' && question.matchingPairs) {
-      const pairs = question.matchingPairs;
-      
-      // Extract unique left and right items, shuffle the right items
-      const leftItems = pairs.map(p => p.left);
-      const rightItems = [...pairs.map(p => p.right)].sort(() => Math.random() - 0.5);
-      
-      sanitized.leftItems = leftItems;
-      sanitized.rightItems = rightItems;
+      try {
+        const pairs = Array.isArray(question.matchingPairs) 
+          ? question.matchingPairs 
+          : JSON.parse(question.matchingPairs);
+        
+        if (Array.isArray(pairs) && pairs.length > 0) {
+          // Extract unique left and right items, shuffle the right items
+          const leftItems = pairs.map(p => p.left);
+          const rightItems = [...pairs.map(p => p.right)].sort(() => Math.random() - 0.5);
+          
+          sanitized.leftItems = leftItems;
+          sanitized.rightItems = rightItems;
+        }
+      } catch (e) {
+        // If parsing fails, just skip matching pairs
+        console.error('Error parsing matching pairs:', e);
+      }
     }
 
     // For Fill in the blanks, just include the question text (with blanks)
