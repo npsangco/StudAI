@@ -348,7 +348,11 @@ export function useQuizAPI(quizDataHook, toast) {
 
       const response = await quizApi.submitAttempt(quizId, requestData);
 
-      return response.data;
+      // Return full response including validation details from server
+      return {
+        ...response.data,
+        validation: response.data.validation // Ensure validation is included
+      };
     } catch (err) {
 
       return null;
