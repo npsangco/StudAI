@@ -1267,7 +1267,7 @@ app.get("/api/user/profile", sessionLockCheck, async (req, res) => {
 
     try {
         const user = await User.findByPk(req.session.userId, {
-            attributes: ["user_id", "email", "username", "birthday", "role", "points", "profile_picture", "study_streak", "longest_streak", "last_activity_date"],
+            attributes: ["user_id", "email", "username", "birthday", "role", "points", "profile_picture", "study_streak", "longest_streak", "last_activity_date", "createdAt"],
         });
 
         if (!user) return res.status(404).json({ error: "User not found" });

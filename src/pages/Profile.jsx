@@ -25,6 +25,8 @@ export default function Profile() {
     const [showAchievementsModal, setShowAchievementsModal] = useState(false);
     const [isHovering, setIsHovering] = useState(false);
     const [hadBirthday, setHadBirthday] = useState(false);
+    const [memberSince, setMemberSince] = useState("");
+    const [lastUpdated, setLastUpdated] = useState("");
     
     const { toasts, removeToast, toast } = useToast();
     const { showTutorial, completeTutorial, skipTutorial, startTutorial } = useTutorial('profile');
@@ -47,6 +49,15 @@ export default function Profile() {
                 setEmail(user.email || "");
                 setPhoto(user.profile_picture || null);
                 setSavedPhoto(user.profile_picture || null);
+                
+                // Set member since date
+                if (user.createdAt) {
+                    const createdDate = new Date(user.createdAt);
+                    setMemberSince(createdDate.getFullYear());
+                }
+                
+                // Set last updated to current date
+                setLastUpdated("Recently");
 
                 let bMonth = "";
                 let bDay = "";
@@ -121,7 +132,8 @@ export default function Profile() {
             setSavedPhoto(photo);
             setOriginalProfile({ username, email, photo, month, day, year });
             setPassword(""); 
-            setPasswordMessage(""); 
+            setPasswordMessage("");
+            setLastUpdated("Just now"); 
 
             toast.success("Profile updated.");
             window.dispatchEvent(new CustomEvent("profileUpdated"));
@@ -253,11 +265,11 @@ export default function Profile() {
                                         <div className="space-y-3 text-sm text-gray-600">
                                             <div className="flex justify-between">
                                                 <span>Member since</span>
-                                                <span className="font-medium">2024</span>
+                                                <span className="font-medium">{memberSince || "2024"}</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>Last updated</span>
-                                                <span className="font-medium">Recently</span>
+                                                <span className="font-medium">{lastUpdated}</span>
                                             </div>
                                         </div>
                                     </div>
