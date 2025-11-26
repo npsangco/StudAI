@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Save, Share2, Trash2, MessageCircle, Wifi, WifiOff, Cloud, CloudOff, FileDown, Brain, Archive, ArchiveRestore } from 'lucide-react';
 import { notesService } from '../utils/syncService';
+import ConfirmDialog from './ConfirmDialog';
 
 const NoteEditor = ({ 
   note, 
@@ -22,6 +23,7 @@ const NoteEditor = ({
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const autoSaveTimeoutRef = useRef(null);
   const noteRef = useRef(note);
   const saveNoteRef = useRef();
@@ -186,10 +188,15 @@ const NoteEditor = ({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!note.isArchived || !onDelete) {
       return;
     }
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    setShowDeleteConfirm(false);
     const deleted = await onDelete(note.id);
     if (deleted) {
       onBack();
@@ -476,6 +483,18 @@ const NoteEditor = ({
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Note Permanently"
+        message="Are you sure you want to delete this note? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 };

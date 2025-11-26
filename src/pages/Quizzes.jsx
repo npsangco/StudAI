@@ -24,7 +24,7 @@ import { checkForReconnectionOpportunity } from '../firebase/reconnectionTokens'
 import { rejoinBattle } from '../firebase/connectionManager';
 import TutorialOverlay from '../components/TutorialOverlay';
 import { useTutorial } from '../hooks/useTutorial';
-import { quizzesTutorialSteps } from '../config/tutorialSteps';
+import { quizTutorialSteps } from '../config/tutorialSteps';
 import TutorialButton from '../components/TutorialButton';
 
 const styles = `
