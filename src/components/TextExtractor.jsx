@@ -25,11 +25,11 @@
           await extractFromPDF(file);
         } else if (
           fileType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
-          fileName.endsWith('.pptx')
+          fileType === 'application/vnd.ms-powerpoint' ||
+          fileName.endsWith('.pptx') ||
+          fileName.endsWith('.ppt')
         ) {
           await extractFromPPTX(file);
-        } else if (fileName.endsWith('.ppt')) {
-          setError('Legacy PPT format requires conversion to PPTX');
         } else {
           setError('Unsupported file type');
         }
@@ -75,7 +75,8 @@
 
     const extractFromPPTX = async (file) => {
       try {
-        setProgress('Sending PPTX to server for extraction...');
+        const fileExt = file.name.toLowerCase().endsWith('.ppt') ? 'PPT' : 'PPTX';
+        setProgress(`Sending ${fileExt} to server for extraction...`);
         
         const formData = new FormData();
         formData.append('file', file);
@@ -93,13 +94,14 @@
         const data = await response.json();
         
         if (data.text && data.text.trim()) {
-          setProgress('Text extracted from PowerPoint');
+          const fileExt = file.name.toLowerCase().endsWith('.ppt') ? 'PPT' : 'PPTX';
+          setProgress(`Text extracted from PowerPoint (${fileExt})`);
           
           if (onTextExtracted) {
             onTextExtracted({
               title: file.name.replace(/\.[^/.]+$/, ''),
               content: data.text.trim(),
-              source: 'PPTX',
+              source: file.name.toLowerCase().endsWith('.ppt') ? 'PPT' : 'PPTX',
               wordCount: data.text.trim().split(/\s+/).length,
               slideCount: data.slideCount || 0
             });

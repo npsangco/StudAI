@@ -1709,11 +1709,12 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
     }
 });
 
-// ----------------- PPTX EXTRACTION ENDPOINT -----------------
+// ----------------- PPTX/PPT EXTRACTION ENDPOINT -----------------
 app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
     try {
         const filePath = req.file.path;
-        console.log("📊 Processing PPTX:", filePath);
+        const fileExt = filePath.toLowerCase().endsWith('.ppt') ? 'PPT' : 'PPTX';
+        console.log(`📊 Processing ${fileExt}:`, filePath);
 
         const parser = new pptxParser(filePath);
         const parsedContent = await parser.parse();
