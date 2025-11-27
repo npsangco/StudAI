@@ -122,6 +122,7 @@ import {
     getUsageSnapshot
 } from "./services/aiUsageService.js";
 import { ensureContentIsSafe, ModerationError } from "./services/moderationService.js";
+import { uploadFile, getDownloadUrl } from "./services/r2Service.js";
 
 // Import validation middleware
 import {
@@ -1274,6 +1275,16 @@ app.get("/api/user/profile", sessionLockCheck, async (req, res) => {
 
         if (!user.profile_picture) {
             user.profile_picture = "/uploads/profile_pictures/default-avatar.png";
+        } else {
+            // If profile_picture is stored as an R2 key (not a full URL and not a local path), generate a signed URL
+            try {
+                const pic = user.profile_picture;
+                if (pic && !pic.startsWith('http') && !pic.startsWith('/uploads')) {
+                    user.profile_picture = await getDownloadUrl(pic, 24 * 3600);
+                }
+            } catch (err) {
+                console.error('R2 signed URL generation error for profile:', err);
+            }
         }
 
         res.json(user);
@@ -1398,8 +1409,6 @@ app.get("/api/user/daily-stats", async (req, res) => {
     }
 });
 
-
-import { uploadFile, getDownloadUrl } from "./services/r2Service.js";
 
 const profileUpload = multer({ storage: multer.memoryStorage() });
 

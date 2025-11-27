@@ -20,6 +20,7 @@ export default function Profile() {
     const [year, setYear] = useState("");
     const [photo, setPhoto] = useState(null);
     const [savedPhoto, setSavedPhoto] = useState(null);
+    const [profileKey, setProfileKey] = useState(null);
     const [passwordMessage, setPasswordMessage] = useState("");
     const [originalProfile, setOriginalProfile] = useState(null);
     const [showAchievementsModal, setShowAchievementsModal] = useState(false);
@@ -118,9 +119,12 @@ export default function Profile() {
                 }
             }
 
+            const payload = { username, birthday };
+            if (profileKey) payload.profile_picture = profileKey;
+
             await axios.put(
                 `${API_BASE}/api/user/profile`,
-                { username, birthday, profile_picture: photo },
+                payload,
                 { withCredentials: true }
             );
 
@@ -161,7 +165,9 @@ export default function Profile() {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
+            // Keep signed URL for immediate preview, but store the R2 key to save in DB
             setPhoto(res.data.photoUrl);
+            setProfileKey(res.data.r2Key || res.data.key || null);
         } catch (err) {
             console.error("Upload error:", err);
             toast.error("Failed to upload photo");
