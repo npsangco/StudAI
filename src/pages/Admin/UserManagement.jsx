@@ -288,11 +288,11 @@ export default function UserManagement() {
                                     placeholder="Enter the reason for locking this account (will be sent to the user via email)..."
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
                                     rows="4"
-                                    maxLength={100}
+                                    maxLength={150}
                                     required
                                 />
                                 <p className="text-xs text-gray-500 mt-2">
-                                    This reason will be included in the email notification sent to {selectedUser.email} ({reason.length}/100 characters)
+                                    This reason will be included in the email notification sent to {selectedUser.email} ({reason.length}/150 characters)
                                 </p>
                             </div>
 
