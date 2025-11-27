@@ -323,8 +323,14 @@ export const validateProfileUpdate = (req, res, next) => {
     }
     // Basic validation: should start with / or http
     const trimmed = profile_picture.trim();
-    if (!trimmed.startsWith('/') && !trimmed.startsWith('http')) {
-      return res.status(400).json({ error: 'Invalid profile picture URL' });
+    // Accept local paths (/uploads/...), full URLs (http/https...), or R2 object keys (e.g. "profile_pictures/file.jpg")
+    const r2KeyPattern = /^[a-zA-Z0-9_\/\.\-]+$/;
+    if (!trimmed.startsWith('/') && !trimmed.startsWith('http') && !r2KeyPattern.test(trimmed)) {
+      return res.status(400).json({ error: 'Invalid profile picture URL or key' });
+    }
+    // Limit length to avoid overly long values
+    if (trimmed.length > 1024) {
+      return res.status(400).json({ error: 'Profile picture value too long' });
     }
     req.validatedData = { ...req.validatedData, profile_picture: trimmed };
   }
