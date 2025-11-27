@@ -472,9 +472,18 @@ if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
         const email = profile.emails && profile.emails[0].value;
         if (!email) return done(new Error("No email from Google"), null);
 
+        const domain = String(email).split('@')[1]?.toLowerCase();
+
         let user = await User.findOne({ where: { email } });
 
         if (!user) {
+            // Restrict creating new accounts to @ust.edu.ph domain only
+            if (domain !== 'ust.edu.ph') {
+                console.log(`🚫 Google signup blocked for non-UST domain: ${email}`);
+                // Inform passport that authentication failed due to domain restriction
+                return done(null, false, { message: 'domain_restricted' });
+            }
+
             // Generate secure random password for OAuth users
             const crypto = await import('crypto');
             const securePassword = crypto.randomBytes(32).toString('hex');
@@ -485,7 +494,7 @@ if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
                 password: await bcrypt.hash(securePassword, 12),
                 role: "Student",
                 status: "active", // OAuth users are pre-verified by Google
-                profile_picture: "/uploads/profile_pictures/default-avatar.png" // Use local default
+                profile_picture: "/default-avatar.png" // Use public default
             });
             
             console.log(`✅ New user created via Google OAuth: ${email}`);
@@ -913,70 +922,75 @@ app.get("/auth/google", (req, res, next) => {
     passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
 });
 
-app.get(
-    "/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: `${CLIENT_URL}/?error=google_auth_failed` }),
-    async (req, res) => {
+app.get('/auth/google/callback', (req, res, next) => {
+    // Use custom callback to handle domain restriction feedback from strategy
+    passport.authenticate('google', async (err, user, info) => {
         try {
-            const user = req.user;
-            
+            if (err) {
+                console.error('❌ Google authentication error:', err);
+                return res.redirect(`${CLIENT_URL}/?error=google_auth_failed`);
+            }
+
+            // If strategy provided info about domain restriction, redirect with specific message
+            if (info && info.message === 'domain_restricted') {
+                return res.redirect(`${CLIENT_URL}/?error=google_domain_restricted`);
+            }
+
+            if (!user) {
+                return res.redirect(`${CLIENT_URL}/?error=google_auth_failed`);
+            }
+
             // Check if account is locked
-            if (user.status === "locked" || user.status === "Locked") {
+            if (user.status === 'locked' || user.status === 'Locked') {
                 console.log(`🚫 Locked user attempted Google login: ${user.email}`);
                 return res.redirect(`${CLIENT_URL}/?error=account_locked`);
             }
 
             // Check if account is not active
-            if (user.status !== "active" && user.status !== "Active") {
+            if (user.status !== 'active' && user.status !== 'Active') {
                 console.log(`🚫 Inactive user attempted Google login: ${user.email}`);
                 return res.redirect(`${CLIENT_URL}/?error=account_inactive`);
             }
-            
-            if (!req.user) {
-                console.error("❌ No user object from passport");
-                return res.redirect(`${CLIENT_URL}/?error=auth_failed`);
-            }
 
-            req.session.userId = req.user.user_id;
-            req.session.email = req.user.email;
-            req.session.username = req.user.username;
-            req.session.role = req.user.role;
+            // Attach session info
+            req.session.userId = user.user_id;
+            req.session.email = user.email;
+            req.session.username = user.username;
+            req.session.role = user.role;
 
             // Generate JWT token as fallback
             const token = jwt.sign(
                 {
-                    userId: req.user.user_id,
-                    email: req.user.email,
-                    username: req.user.username,
-                    role: req.user.role,
+                    userId: user.user_id,
+                    email: user.email,
+                    username: user.username,
+                    role: user.role,
                 },
-                process.env.JWT_SECRET || "fallback-secret",
-                { expiresIn: "7d" }
+                process.env.JWT_SECRET || 'fallback-secret',
+                { expiresIn: '7d' }
             );
 
             // Force session save before redirect
-            req.session.save((err) => {
-                if (err) {
-                    console.error("❌ Session save error:", err);
-                    // If session fails, redirect with token in URL for fallback
+            req.session.save((saveErr) => {
+                if (saveErr) {
+                    console.error('❌ Session save error:', saveErr);
                     return res.redirect(`${CLIENT_URL}/?token=${token}&authMethod=token`);
                 }
-                
-                console.log("✅ Google login session saved:", {
+
+                console.log('✅ Google login session saved:', {
                     userId: req.session.userId,
                     email: req.session.email,
                     username: req.session.username
                 });
-                
-                // Redirect with token as backup (frontend can use it if session cookie fails)
-                res.redirect(`${CLIENT_URL}/dashboard?token=${token}`);
+
+                return res.redirect(`${CLIENT_URL}/dashboard?token=${token}`);
             });
-        } catch (err) {
-            console.error("❌ Google login error:", err);
-            res.redirect(`${CLIENT_URL}/?error=server_error`);
+        } catch (catchErr) {
+            console.error('❌ Google login error:', catchErr);
+            return res.redirect(`${CLIENT_URL}/?error=server_error`);
         }
-    }
-);
+    })(req, res, next);
+});
 
 app.get("/api/ping", (req, res) => {
     res.json({ message: "Server running fine ✅" });

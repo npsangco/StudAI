@@ -206,6 +206,16 @@ export const validateSignupRequest = (req, res, next) => {
     password: password,
     birthday: birthdayValidation.sanitized
   };
+
+  // Enforce institutional email domain for new signups
+  try {
+    const domain = String(emailValidation.sanitized).split('@')[1]?.toLowerCase();
+    if (domain !== 'ust.edu.ph') {
+      return res.status(403).json({ error: 'Signups are restricted to @ust.edu.ph email addresses' });
+    }
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid email domain' });
+  }
   
   next();
 };
