@@ -197,7 +197,7 @@ const CompactShopItem = ({ item, userPoints, purchasing, quantity, onQuantityCha
   const canAfford = userPoints >= totalCost;
 
   return (
-    <div className="border-2 border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-all">
+    <div className="border-2 border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-all cursor-pointer">
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-sm text-gray-800 truncate">{item.item_name}</h3>

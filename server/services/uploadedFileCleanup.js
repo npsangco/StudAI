@@ -3,7 +3,7 @@ import File from '../models/File.js';
 import { Op } from 'sequelize';
 import { deleteFile } from './r2Service.js';
 
-const FILE_EXPIRATION_DAYS = 30; // default: delete uploaded files older than 30 days
+const FILE_EXPIRATION_DAYS = 7; // days
 
 async function cleanupOldUploadedFiles() {
   try {
@@ -23,14 +23,17 @@ async function cleanupOldUploadedFiles() {
     for (const f of oldFiles) {
       try {
         const key = f.file_path;
-        if (key && !key.startsWith('/') && !key.startsWith('http')) {
-          // assume R2 key
+
+        // Only delete objects in the `uploads/` prefix to avoid removing other data
+        if (key && !key.startsWith('/') && !key.startsWith('http') && key.startsWith('uploads/')) {
           try {
             await deleteFile(key);
             console.log(`🗑️ [File Cleanup] Deleted object from R2: ${key}`);
           } catch (err) {
             console.warn(`⚠️ [File Cleanup] Failed to delete R2 object ${key}:`, err.message || err);
           }
+        } else {
+          console.log(`🔒 [File Cleanup] Skipping non-upload or external key: ${key}`);
         }
 
         await File.destroy({ where: { file_id: f.file_id } });

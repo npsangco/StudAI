@@ -87,10 +87,10 @@ export default function PetInventory({ onClose, onUseItem }) {
   }, {});
 
   const effectTypeLabels = {
-    hunger: '🍖 Food',
-    happiness: '🎾 Toys',
-    cleanliness: '🧼 Clean',
-    energy: '⚡ Energy'
+    hunger: 'Food',
+    happiness: 'Toys',
+    cleanliness: 'Clean',
+    energy: 'Energy'
   };
 
   if (loading) {
@@ -221,7 +221,7 @@ export default function PetInventory({ onClose, onUseItem }) {
 
 // Compact Inventory Item Component
 const CompactInventoryItem = ({ item, usingItem, onToggleEquip, onUseItem }) => (
-  <div className={`border-2 rounded-lg p-3 transition-all ${
+  <div className={`border-2 rounded-lg p-3 transition-all cursor-pointer ${
     item.is_equipped 
       ? "border-indigo-400 bg-indigo-50" 
       : "border-gray-200 hover:border-green-300"

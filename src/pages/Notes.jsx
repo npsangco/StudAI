@@ -160,7 +160,7 @@ const Notes = () => {
       day: 'numeric',
       year: 'numeric'
     });
-    return `Archived on ${formatted}`;
+    return `${formatted}`;
   };
 
   const addNote = async () => {
