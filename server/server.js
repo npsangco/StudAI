@@ -122,6 +122,7 @@ import {
     getUsageSnapshot
 } from "./services/aiUsageService.js";
 import { ensureContentIsSafe, ModerationError } from "./services/moderationService.js";
+import { convertOrExtractPPT, cleanupTempFiles } from './services/pptConverter.js';
 
 // Import validation middleware
 import {
@@ -512,6 +513,15 @@ passport.deserializeUser(async (id, done) => {
         done(err, null);
     }
 });
+
+console.log('🔍 Checking PPT conversion methods:');
+if (process.env.CLOUDCONVERT_API_KEY) {
+    console.log('✅ CloudConvert API enabled');
+} else {
+    console.log('⚠️ No conversion API configured. Will use direct text extraction (limited accuracy).');
+    console.log('   For better results, sign up for CloudConvert: https://cloudconvert.com/');
+    console.log('   Add CLOUDCONVERT_API_KEY to your .env file');
+}
 
 // ----------------- ROUTE REGISTRATION -----------------
 app.use("/api/pet", sessionLockCheck, petRoutes);
@@ -1711,12 +1721,57 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
 
 // ----------------- PPTX/PPT EXTRACTION ENDPOINT -----------------
 app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
+    let convertedFilePath = null;
+    
     try {
-        const filePath = req.file.path;
-        const fileExt = filePath.toLowerCase().endsWith('.ppt') ? 'PPT' : 'PPTX';
-        console.log(`📊 Processing ${fileExt}:`, filePath);
+        const originalFilePath = req.file.path;
+        const fileExt = originalFilePath.toLowerCase().endsWith('.ppt') ? 'PPT' : 'PPTX';
+        let processingFilePath = originalFilePath;
 
-        const parser = new pptxParser(filePath);
+        console.log(`📊 Processing ${fileExt}:`, originalFilePath);
+
+        // If it's a PPT file, try to convert or extract directly
+        if (fileExt === 'PPT') {
+            console.log('🔄 Processing PPT file...');
+            
+            try {
+                const result = await convertOrExtractPPT(originalFilePath);
+                
+                // Check if we got direct text extraction
+                if (result && typeof result === 'object' && result.isDirectExtraction) {
+                    console.log('✅ Direct text extraction successful');
+                    
+                    const wordCount = result.text.trim().split(/\s+/).filter(w => w.length > 0).length;
+                    
+                    // Clean up original file
+                    cleanupTempFiles(originalFilePath);
+                    
+                    return res.json({
+                        text: result.text,
+                        slideCount: 0,
+                        wordCount,
+                        wasConverted: false,
+                        extractionMethod: 'direct'
+                    });
+                }
+                
+                // Otherwise, we got a converted PPTX file path
+                convertedFilePath = result;
+                processingFilePath = convertedFilePath;
+                console.log('✅ Conversion successful, processing PPTX...');
+                
+            } catch (conversionError) {
+                console.error('❌ PPT processing failed:', conversionError.message);
+                cleanupTempFiles(originalFilePath);
+                return res.status(500).json({ 
+                    error: "Failed to process PPT file",
+                    details: conversionError.message
+                });
+            }
+        }
+
+        // Parse the PPTX file (original PPTX or converted from PPT)
+        const parser = new pptxParser(processingFilePath);
         const parsedContent = await parser.parse();
 
         let extractedText = "";
@@ -1748,12 +1803,8 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
 
         function cleanPPTXText(text) {
             if (!text) return '';
-
-            // Remove XML namespaces and schemas
             text = text.replace(/http:\/\/schemas\.[^\s]+/g, '');
             text = text.replace(/urn:schemas-[^\s]+/g, '');
-
-            // Remove common PPTX metadata patterns
             text = text.replace(/\brId\d+\b/g, '');
             text = text.replace(/\bShape\s+\d+\b/g, '');
             text = text.replace(/\bGoogle\s+Shape;[^\s]+/g, '');
@@ -1761,57 +1812,32 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
             text = text.replace(/\b(title|body|ctr|ctrTitle)\b/g, '');
             text = text.replace(/\b(solid|flat|sng|none|noStrike|square|arabicPeriod)\b/g, '');
             text = text.replace(/\b(dk1|lt1|sm)\b/g, '');
-
-            // Remove font names
             text = text.replace(/\b(Arial|Proxima Nova|Twentieth Century|Corsiva|Times New Roman|Architects Daughter)\b/g, '');
-
-            // Remove language codes
             text = text.replace(/\ben-US\b/g, '');
-
-            // Remove hex color codes (6 digit)
             text = text.replace(/\b[0-9A-Fa-f]{6}\b/g, '');
-
-            // Remove large numbers (coordinates, dimensions)
             text = text.replace(/\b\d{4,}\b/g, '');
-
-            // Remove small isolated numbers and formatting codes
             text = text.replace(/\bl\s+\d+\b/g, '');
             text = text.replace(/\bt\s+\d+\b/g, '');
             text = text.replace(/\b\d+\s+l\b/g, '');
             text = text.replace(/\b\d+\s+t\b/g, '');
-
-            // Remove image references
             text = text.replace(/\b(Related image|Image result for[^\n]*)\b/gi, '');
             text = text.replace(/\b[\w-]+\.(jpg|jpeg|png|gif|JPG|PNG)\b/g, '');
-
-            // Remove standalone single letters and numbers
             text = text.replace(/\b[a-z]\s+\d+\b/gi, '');
             text = text.replace(/\b\d+\s+[a-z]\b/gi, '');
-
-            // Remove excessive whitespace
             text = text.replace(/\s+/g, ' ');
 
-            // Split by common delimiters
             const sentences = text.split(/[•\-–—\n]/);
-
             const cleanedSentences = sentences
                 .map(s => s.trim())
                 .filter(s => {
                     if (s.length < 10) return false;
-
-                    // Must not be mostly numbers
                     const letterCount = (s.match(/[a-zA-Z]/g) || []).length;
                     const digitCount = (s.match(/\d/g) || []).length;
                     if (digitCount > letterCount) return false;
-
-                    // Must have at least 3 words
                     const words = s.split(/\s+/).filter(w => w.length > 0);
                     if (words.length < 3) return false;
-
-                    // Check if it's mostly real words (alphabetic content)
                     const alphaRatio = letterCount / s.replace(/\s/g, '').length;
                     if (alphaRatio < 0.6) return false;
-
                     return true;
                 });
 
@@ -1819,49 +1845,53 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
         }
 
         function extractTextFromObject(obj) {
-            if (typeof obj === 'string') {
-                return obj;
-            }
-
+            if (typeof obj === 'string') return obj;
             if (Array.isArray(obj)) {
                 return obj.map(item => extractTextFromObject(item)).join(' ');
             }
-
             if (typeof obj === 'object' && obj !== null) {
                 if (obj.text) return extractTextFromObject(obj.text);
                 if (obj.content) return extractTextFromObject(obj.content);
                 if (obj.value) return extractTextFromObject(obj.value);
-
                 return Object.values(obj)
                     .map(value => extractTextFromObject(value))
                     .filter(text => text && text.trim().length > 0)
                     .join(' ');
             }
-
             return '';
         }
 
-        fs.unlinkSync(filePath);
+        // Clean up files
+        cleanupTempFiles(originalFilePath);
+        if (convertedFilePath) {
+            cleanupTempFiles(convertedFilePath);
+        }
 
         console.log(`✅ Extracted ${extractedText.length} characters from ${slideCount} slides`);
 
         res.json({
             text: extractedText,
             slideCount,
-            wordCount: extractedText.trim().split(/\s+/).filter(w => w.length > 0).length
+            wordCount: extractedText.trim().split(/\s+/).filter(w => w.length > 0).length,
+            wasConverted: fileExt === 'PPT',
+            extractionMethod: fileExt === 'PPT' ? (convertedFilePath ? 'cloudconvert' : 'direct') : 'pptx-parser'
         });
+
     } catch (err) {
         console.error("❌ PPTX extraction error:", err);
 
-        if (req.file && req.file.path) {
-            try {
-                fs.unlinkSync(req.file.path);
-            } catch (e) {
-                console.error("Failed to clean up file:", e);
-            }
+        // Clean up files on error
+        if (req.file?.path) {
+            cleanupTempFiles(req.file.path);
+        }
+        if (convertedFilePath) {
+            cleanupTempFiles(convertedFilePath);
         }
 
-        res.status(500).json({ error: "Failed to extract text from PPTX" });
+        res.status(500).json({ 
+            error: "Failed to extract text from PowerPoint file",
+            details: err.message
+        });
     }
 });
 
