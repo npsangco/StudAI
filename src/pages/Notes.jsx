@@ -517,7 +517,7 @@ const Notes = () => {
     setSelectedNotes(new Set());
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (selectedNotes.size === 0) {
       toast.warning('Please select at least one note to export');
       return;
@@ -526,7 +526,7 @@ const Notes = () => {
     const notesToExport = notes.filter(note => selectedNotes.has(note.id));
 
     if (notesToExport.length === 1) {
-      const result = exportNoteToPDF(notesToExport[0]);
+      const result = await exportNoteToPDF(notesToExport[0]);
       if (result.success) {
         toast.success(`PDF exported successfully!\n\nFile: ${result.fileName}`);
         cancelExportMode();
@@ -534,7 +534,7 @@ const Notes = () => {
         toast.error(`Export failed: ${result.error}`);
       }
     } else {
-      const result = exportMultipleNotesToPDF(notesToExport);
+      const result = await exportMultipleNotesToPDF(notesToExport);
       if (result.success) {
         toast.success(`${result.count} notes exported successfully!\n\nFile: ${result.fileName}`);
         cancelExportMode();
@@ -982,12 +982,12 @@ const Notes = () => {
           onArchive={archiveSingleNote}
           onRestore={restoreSingleNote}
           categories={categories}
-          onExport={(note) => {
-            const result = exportNoteToPDF(note);
+          onExport={async (note) => {
+            const result = await exportNoteToPDF(note);
             if (result.success) {
-            toast.success(`PDF exported successfully!\n\nFile: ${result.fileName}`);
+              toast.success(`PDF exported successfully!\n\nFile: ${result.fileName}`);
             } else {
-            toast.error(`Export failed: ${result.error}`);
+              toast.error(`Export failed: ${result.error}`);
             }
           }}
         />

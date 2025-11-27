@@ -1,3 +1,6 @@
+/* Import Roboto from Google Fonts (variable weights for good coverage) */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+
 @import "tailwindcss";
 
 /* Remove default scrollbar appearance globally */
@@ -21,6 +24,21 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
 }
+
+/* Apply Roboto as the global font for the entire app */
+html, body, #root {
+  font-family: 'Roboto', Inter, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optional utility classes for explicit Roboto weights */
+.roboto-100 { font-family: 'Roboto', sans-serif; font-weight: 100; }
+.roboto-300 { font-family: 'Roboto', sans-serif; font-weight: 300; }
+.roboto-400 { font-family: 'Roboto', sans-serif; font-weight: 400; }
+.roboto-500 { font-family: 'Roboto', sans-serif; font-weight: 500; }
+.roboto-700 { font-family: 'Roboto', sans-serif; font-weight: 700; }
+.roboto-900 { font-family: 'Roboto', sans-serif; font-weight: 900; }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
 ::-webkit-scrollbar {
@@ -108,3 +126,29 @@ body {
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
+
+/* Export PDF prose fallback styles (used when Tailwind typography plugin isn't available) */
+.export-prose {
+  font-family: Inter, 'Helvetica Neue', Arial, sans-serif;
+  color: #0f172a;
+  line-height: 1.7;
+  font-size: 16px;
+}
+.export-prose h1 { font-size: 28px; margin: 0 0 8px 0; font-weight: 700; }
+.export-prose h2 { font-size: 22px; margin: 12px 0 8px 0; font-weight: 700; }
+.export-prose h3 { font-size: 18px; margin: 10px 0 6px 0; font-weight: 600; }
+.export-prose p { margin: 0 0 12px 0; color: #0f172a; }
+.export-prose ul, .export-prose ol { margin: 0 0 12px 20px; }
+.export-prose li { margin: 6px 0; }
+.export-prose a { color: #0369a1; text-decoration: underline; }
+.export-prose pre, .export-prose code {
+  background: #0f172a10;
+  padding: 8px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;
+}
+.export-prose blockquote { border-left: 4px solid #e2e8f0; padding-left: 12px; margin: 0 0 12px 0; color: #475569; }
+.export-prose table { width: 100%; border-collapse: collapse; margin: 0 0 12px 0; }
+.export-prose th, .export-prose td { border: 1px solid #e6edf3; padding: 8px; text-align: left; }
+.export-prose img { max-width: 100%; height: auto; display: block; margin: 8px 0; }
+
