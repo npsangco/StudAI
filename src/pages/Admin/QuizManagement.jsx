@@ -59,10 +59,11 @@ export default function QuizManagement() {
         }
     };
 
-    const handleDeleteQuestion = async (questionId) => {
+    const handleDeleteQuestion = async (questionId, reason) => {
         try {
             await axios.delete(`${API_URL}/api/admin/questions/${questionId}`, {
                 withCredentials: true,
+                data: { reason: reason }
             });
 
             setQuestionsModalState(prev => ({
@@ -116,6 +117,7 @@ export default function QuizManagement() {
             setDeleteModalState(prev => ({ ...prev, isSubmitting: true }));
             await axios.delete(`${API_URL}/api/admin/quizzes/${deleteModalState.quiz.quiz_id}`, {
                 withCredentials: true,
+                data: { reason: deleteModalState.reason }
             });
             setQuizzes((prev) => prev.filter((q) => q.quiz_id !== deleteModalState.quiz.quiz_id));
             toast.success("Quiz deleted successfully!");

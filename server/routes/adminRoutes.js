@@ -194,17 +194,45 @@ router.get("/quizzes", async (req, res) => {
 router.delete("/quizzes/:quizId", async (req, res) => {
     try {
         const { quizId } = req.params;
+        const { reason } = req.body;
 
-        // Check if quiz exists
-        const quiz = await Quiz.findByPk(quizId);
+        // Check if quiz exists and get creator details
+        const quiz = await Quiz.findByPk(quizId, {
+            include: [{
+                model: User,
+                as: 'creator',
+                attributes: ['email', 'username']
+            }]
+        });
+        
         if (!quiz) {
             return res.status(404).json({ error: "Quiz not found" });
         }
+
+        const quizTitle = quiz.title;
+        const creatorEmail = quiz.creator?.email;
+        const creatorUsername = quiz.creator?.username;
 
         // Delete the quiz (cascade should handle related records if configured)
         await Quiz.destroy({
             where: { quiz_id: quizId }
         });
+
+        // Send email notification to quiz creator
+        if (creatorEmail && creatorUsername) {
+            try {
+                const { sendQuizDeletionEmail } = await import('../services/emailService.js');
+                await sendQuizDeletionEmail(
+                    creatorEmail, 
+                    creatorUsername, 
+                    quizTitle, 
+                    reason || "No reason provided"
+                );
+            } catch (emailError) {
+                console.error("Failed to send quiz deletion email:", emailError);
+                // Continue even if email fails
+            }
+        }
 
         res.json({ message: "Quiz deleted successfully" });
     } catch (error) {
@@ -234,19 +262,52 @@ router.get("/quizzes/:quizId/questions", async (req, res) => {
 router.delete("/questions/:questionId", async (req, res) => {
     try {
         const { questionId } = req.params;
+        const { reason } = req.body;
 
-        const question = await Question.findByPk(questionId);
+        const question = await Question.findByPk(questionId, {
+            include: [{
+                model: Quiz,
+                as: 'quiz',
+                attributes: ['title', 'user_id'],
+                include: [{
+                    model: User,
+                    as: 'creator',
+                    attributes: ['email', 'username']
+                }]
+            }]
+        });
 
         if (!question) {
             return res.status(404).json({ error: "Question not found" });
         }
 
         const quizId = question.quiz_id;
+        const questionText = question.question;
+        const quizTitle = question.quiz?.title || "Unknown Quiz";
+        const creatorEmail = question.quiz?.creator?.email;
+        const creatorUsername = question.quiz?.creator?.username;
 
         // Delete the question
         await Question.destroy({
             where: { question_id: questionId }
         });
+
+        // Send email notification to quiz creator
+        if (creatorEmail && creatorUsername) {
+            try {
+                const { sendQuestionDeletionEmail } = await import('../services/emailService.js');
+                await sendQuestionDeletionEmail(
+                    creatorEmail,
+                    creatorUsername,
+                    quizTitle,
+                    questionText,
+                    reason || "No reason provided"
+                );
+            } catch (emailError) {
+                console.error("Failed to send question deletion email:", emailError);
+                // Continue even if email fails
+            }
+        }
 
         // Update the quiz's total_questions count
         await Quiz.decrement('total_questions', {

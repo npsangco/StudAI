@@ -42,7 +42,7 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
         try {
             setDeleteModalState(prev => ({ ...prev, isSubmitting: true }));
             setDeletingQuestionId(deleteModalState.question.question_id);
-            await onDeleteQuestion(deleteModalState.question.question_id);
+            await onDeleteQuestion(deleteModalState.question.question_id, deleteModalState.reason);
             setDeletingQuestionId(null);
             closeDeleteModal();
         } catch (error) {
