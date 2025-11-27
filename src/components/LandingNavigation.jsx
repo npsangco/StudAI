@@ -10,7 +10,7 @@ export default function LandingNavigation() {
           <div className="absolute inset-y-0 left-0 flex items-center sm:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="relative inline-flex items-center justify-center rounded-md p-2 text-black hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-black"
+              className="relative inline-flex items-center justify-center rounded-md p-2 text-black hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-black cursor-pointer"
             >
               <span className="absolute -inset-0.5" />
               <span className="sr-only">Open main menu</span>
@@ -66,13 +66,13 @@ export default function LandingNavigation() {
           <div className="hidden sm:flex items-center space-x-3 ml-4">
             <button
               onClick={() => window.location.href = '/login'}
-              className="bg-white/80 backdrop-blur-sm text-gray-900 hover:bg-white px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:shadow-md border border-gray-200"
+              className="bg-white/80 backdrop-blur-sm text-gray-900 hover:bg-white px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:shadow-md border border-gray-200 cursor-pointer"
             >
               Log In
             </button>
             <button
               onClick={() => window.location.href = '/signup'}
-              className="bg-gray-900 text-white hover:bg-gray-800 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:shadow-lg"
+              className="bg-gray-900 text-white hover:bg-gray-800 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:shadow-lg cursor-pointer"
             >
               Sign Up
             </button>
@@ -85,13 +85,13 @@ export default function LandingNavigation() {
           <div className="space-y-2 px-4 pt-3 pb-4 bg-yellow-300 border-t border-black/10">
             <button
               onClick={() => window.location.href = '/login'}
-              className="bg-white/80 text-gray-900 hover:bg-white block rounded-lg px-4 py-2.5 text-base font-semibold w-full text-center transition-all border border-gray-200"
+              className="bg-white/80 text-gray-900 hover:bg-white block rounded-lg px-4 py-2.5 text-base font-semibold w-full text-center transition-all border border-gray-200 cursor-pointer"
             >
               Log In
             </button>
             <button
               onClick={() => window.location.href = '/signup'}
-              className="bg-gray-900 text-white hover:bg-gray-800 block rounded-lg px-4 py-2.5 text-base font-semibold w-full text-center transition-all"
+              className="bg-gray-900 text-white hover:bg-gray-800 block rounded-lg px-4 py-2.5 text-base font-semibold w-full text-center transition-all cursor-pointer"
             >
               Sign Up
             </button>

@@ -5,7 +5,7 @@ const TutorialButton = ({ onClick, className = '' }) => {
   return (
     <button
       onClick={onClick}
-      className={`fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-110 z-40 group ${className}`}
+      className={`fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-110 z-40 group cursor-pointer ${className}`}
       title="Show Tutorial"
       aria-label="Show Tutorial"
     >

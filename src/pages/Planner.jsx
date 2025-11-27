@@ -335,7 +335,7 @@ export default function Planner() {
               <button
                 key={year}
                 onClick={() => handleYearSelect(year)}
-                className={`group relative p-6 sm:p-8 md:p-10 rounded-2xl border-2 text-xl sm:text-2xl md:text-3xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl ${
+                className={`group relative p-6 sm:p-8 md:p-10 rounded-2xl border-2 text-xl sm:text-2xl md:text-3xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl cursor-pointer ${
                   isCurrent
                     ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-blue-600 shadow-xl'
                     : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300 shadow-lg'
@@ -361,7 +361,7 @@ export default function Planner() {
         <div className="flex items-center justify-between mb-8 sm:mb-12">
           <button
             onClick={handleYearChange}
-            className="flex items-center gap-2 px-3 sm:px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl font-semibold text-gray-700"
+            className="flex items-center gap-2 px-3 sm:px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl font-semibold text-gray-700 cursor-pointer"
             aria-label="Back to year selection"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -383,7 +383,7 @@ export default function Planner() {
               <button
                 key={month}
                 onClick={() => setSelectedMonth(idx)}
-                className={`group relative p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl ${
+                className={`group relative p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl cursor-pointer ${
                   isCurrentMonth
                     ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-blue-600 shadow-xl'
                     : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300 shadow-lg'
@@ -444,7 +444,7 @@ export default function Planner() {
         <button
           key={day}
           onClick={() => setSelectedDate(day)}
-          className={`group relative p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl min-h-[80px] sm:min-h-[100px] md:min-h-[120px] flex flex-col items-center justify-center ${
+          className={`group relative p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl min-h-[80px] sm:min-h-[100px] md:min-h-[120px] flex flex-col items-center justify-center cursor-pointer ${
             isToday 
               ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-blue-600 shadow-xl' 
               : hasPlan
@@ -482,7 +482,7 @@ export default function Planner() {
           <div className="flex items-center justify-between mb-8 sm:mb-12 gap-2">
             <button
               onClick={() => setSelectedMonth(null)}
-              className="flex items-center gap-2 px-3 sm:px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl font-semibold text-gray-700"
+              className="flex items-center gap-2 px-3 sm:px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl font-semibold text-gray-700 cursor-pointer"
               aria-label="Back to month selection"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -496,7 +496,7 @@ export default function Planner() {
             <div className="relative">
               <button
                 onClick={() => setShowIndicatorsInfo(!showIndicatorsInfo)}
-                className="p-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl"
+                className="p-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl cursor-pointer"
                 aria-label="Show indicator legend"
               >
                 <Info className="w-5 h-5 text-gray-700" />
@@ -511,7 +511,7 @@ export default function Planner() {
                     </h3>
                     <button
                       onClick={() => setShowIndicatorsInfo(false)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                      className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                       aria-label="Close"
                     >
                       <X className="w-5 h-5" />
@@ -555,7 +555,7 @@ export default function Planner() {
     return (
       <div className="min-h-screen p-4 sm:p-6 md:p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-6 sm:mb-8 gap-2">
+          <div className="flex items-center justify-between mb-6 sm:mb-8 gap-2 cursor-pointer">
             <button
               onClick={() => setSelectedDate(null)}
               className="flex items-center gap-2 px-3 sm:px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl font-semibold text-gray-700"
@@ -644,7 +644,7 @@ export default function Planner() {
                           <button
                             onClick={savePlanEdits}
                             disabled={!editTitle.trim() || isSavingEdit}
-                            className={`flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-semibold transition-all shadow-lg ${
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-semibold transition-all shadow-lg cursor-pointer ${
                               editTitle.trim() && !isSavingEdit
                                 ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-xl'
                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -655,7 +655,7 @@ export default function Planner() {
                           <button
                             onClick={cancelEditing}
                             disabled={isSavingEdit}
-                            className={`px-4 sm:px-6 py-2.5 sm:py-3 border-2 rounded-xl text-sm sm:text-base font-semibold transition-all ${
+                            className={`px-4 sm:px-6 py-2.5 sm:py-3 border-2 rounded-xl text-sm sm:text-base font-semibold transition-all cursor-pointer ${
                               isSavingEdit
                                 ? 'border-gray-200 text-gray-400 cursor-not-allowed'
                                 : 'border-gray-300 hover:bg-gray-50'
@@ -738,7 +738,7 @@ export default function Planner() {
                           {!plan.completed ? (
                             <button
                               onClick={() => markAsDone(planId)}
-                              className="flex items-center justify-center gap-2 bg-green-500 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-green-600 font-semibold transition-all shadow-md hover:shadow-lg w-full sm:w-auto text-sm sm:text-base"
+                              className="flex items-center justify-center gap-2 bg-green-500 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-green-600 font-semibold transition-all shadow-md hover:shadow-lg w-full sm:w-auto text-sm sm:text-base cursor-pointer"
                               data-tutorial="complete-task"
                             >
                               <Check className="w-4 h-4" />
@@ -753,7 +753,7 @@ export default function Planner() {
                           <button
                             onClick={() => startEditingPlan(plan)}
                             disabled={editDisabled}
-                            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-semibold border-2 transition-all w-full sm:w-auto text-sm sm:text-base ${
+                            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-semibold border-2 transition-all w-full sm:w-auto text-sm sm:text-base cursor-pointer ${
                               editDisabled
                                 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                                 : 'bg-white border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-gray-700 shadow-md'
@@ -812,7 +812,7 @@ export default function Planner() {
                 <button
                   onClick={addPlan}
                   disabled={!title.trim()}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-semibold transition-all shadow-lg ${
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-semibold transition-all shadow-lg cursor-pointer ${
                     title.trim()
                       ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 hover:shadow-xl"
                       : "bg-gray-200 text-gray-400 cursor-not-allowed"
@@ -828,7 +828,7 @@ export default function Planner() {
                     setDesc("");
                     setDueDate("");
                   }}
-                  className="px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 text-sm sm:text-base font-semibold transition-all"
+                  className="px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 text-sm sm:text-base font-semibold transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -838,7 +838,7 @@ export default function Planner() {
             <button
               onClick={() => setShowForm(true)}
               disabled={dailyTaskStatus.remaining <= 0}
-              className={`w-full flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl text-base sm:text-lg font-semibold transition-all shadow-lg hover:shadow-xl ${
+              className={`w-full flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl text-base sm:text-lg font-semibold transition-all shadow-lg hover:shadow-xl cursor-pointer ${
                 dailyTaskStatus.remaining > 0
                   ? "bg-white border-2 border-dashed border-indigo-300 hover:bg-indigo-50 hover:border-indigo-400 text-gray-700"
                   : "bg-gray-100 border-2 border-gray-300 text-gray-400 cursor-not-allowed"
@@ -864,7 +864,7 @@ export default function Planner() {
                 </p>
                 <button
                   onClick={() => setShowLimitModal(false)}
-                  className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+                  className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors cursor-pointer"
                 >
                   Got it
                 </button>

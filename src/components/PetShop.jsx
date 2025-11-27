@@ -197,7 +197,7 @@ const CompactShopItem = ({ item, userPoints, purchasing, quantity, onQuantityCha
   const canAfford = userPoints >= totalCost;
 
   return (
-    <div className="border-2 border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-all cursor-pointer">
+    <div className="border-2 border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-all">
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-sm text-gray-800 truncate">{item.item_name}</h3>
@@ -253,7 +253,7 @@ const CompactShopItem = ({ item, userPoints, purchasing, quantity, onQuantityCha
       <button
         onClick={() => onPurchase(item.item_id)}
         disabled={!canAfford || purchasing === item.item_id}
-        className={`w-full py-1.5 rounded-lg text-xs font-semibold transition-all ${
+        className={`w-full py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
           !canAfford
             ? "bg-gray-300 text-gray-500 cursor-not-allowed"
             : purchasing === item.item_id

@@ -119,7 +119,7 @@ export default function PetInventory({ onClose, onUseItem }) {
           <p className="text-red-600 font-semibold">{error}</p>
           <button
             onClick={loadInventory}
-            className="mt-3 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition"
+            className="mt-3 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition cursor-pointer"
           >
             Retry
           </button>
@@ -251,7 +251,7 @@ const CompactInventoryItem = ({ item, usingItem, onToggleEquip, onUseItem }) => 
       <button
         onClick={() => onUseItem(item.inventory_id, item.item_id)}
         disabled={usingItem === item.inventory_id}
-        className={`py-1.5 rounded-lg text-xs font-semibold transition-all ${
+        className={`py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
           usingItem === item.inventory_id
             ? "bg-green-400 text-white cursor-wait"
             : "bg-green-500 text-white hover:bg-green-600"
@@ -262,7 +262,7 @@ const CompactInventoryItem = ({ item, usingItem, onToggleEquip, onUseItem }) => 
 
       <button
         onClick={() => onToggleEquip(item.inventory_id, item.is_equipped)}
-        className={`py-1.5 rounded-lg text-xs font-semibold transition-all ${
+        className={`py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
           item.is_equipped
             ? "bg-indigo-600 text-white hover:bg-indigo-700"
             : "bg-gray-400 text-white hover:bg-gray-500"

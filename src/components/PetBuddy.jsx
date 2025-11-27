@@ -680,7 +680,7 @@ const CompactPetActions = ({ onAction, actionLoading }) => (
     <button
       onClick={() => onAction("feed")}
       disabled={actionLoading !== null}
-      className={`bg-green-500 text-white py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
+      className={`bg-green-500 text-white py-2 rounded-lg transition-all text-xs sm:text-sm font-medium cursor-pointer ${
         actionLoading === "feed" 
           ? "opacity-50 cursor-wait" 
           : actionLoading 
@@ -693,7 +693,7 @@ const CompactPetActions = ({ onAction, actionLoading }) => (
     <button
       onClick={() => onAction("play")}
       disabled={actionLoading !== null}
-      className={`bg-yellow-500 text-white py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
+      className={`bg-yellow-500 text-white py-2 rounded-lg transition-all text-xs sm:text-sm font-medium cursor-pointer ${
         actionLoading === "play" 
           ? "opacity-50 cursor-wait" 
           : actionLoading 
@@ -706,7 +706,7 @@ const CompactPetActions = ({ onAction, actionLoading }) => (
     <button
       onClick={() => onAction("clean")}
       disabled={actionLoading !== null}
-      className={`bg-blue-500 text-white py-2 rounded-lg transition-all text-xs sm:text-sm font-medium ${
+      className={`bg-blue-500 text-white py-2 rounded-lg transition-all text-xs sm:text-sm font-medium cursor-pointer ${
         actionLoading === "clean" 
           ? "opacity-50 cursor-wait" 
           : actionLoading 

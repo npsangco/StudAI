@@ -236,7 +236,7 @@ export default function Navigation() {
     {!isChatbotActive && (
       <button
         onClick={() => setShowQuests(true)}
-        className={`fixed bottom-24 right-6 z-50 p-4 rounded-full bg-black transition-all shadow-lg hover:shadow-2xl group ${questsRef.current?.isAllComplete() ? '' : 'animate-bounce'}`}
+        className={`fixed bottom-24 right-6 z-50 p-4 rounded-full bg-black transition-all shadow-lg hover:shadow-2xl group cursor-pointer ${questsRef.current?.isAllComplete() ? '' : 'animate-bounce'}`}
         title="Daily Quests"
       >
         <Target className="w-6 h-6 text-white" />
