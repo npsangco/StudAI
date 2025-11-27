@@ -2980,7 +2980,8 @@ router.post('/import', requireAuth, async (req, res) => {
         correct_answer: originalQuestion.correct_answer,
         answer: originalQuestion.answer,
         matching_pairs: originalQuestion.matching_pairs,
-        points: originalQuestion.points
+        points: originalQuestion.points,
+        difficulty: originalQuestion.difficulty
       }, { transaction });
     }
 
