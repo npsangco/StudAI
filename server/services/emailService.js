@@ -35,7 +35,7 @@ export const PasswordUpdateEmail = (confirmLink) => {
                 <p style="color: #999; font-size: 14px; margin-bottom: 0; text-align: center;">This link will expire in 10 minutes.</p>
                 
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
-                    <p style="color: #999; font-size: 14px; margin: 0;">If you didn't request this password update, please contact our support team immediately to secure your account.</p>
+                    <p style="color: #999; font-size: 14px; margin: 0;">If you didn't request this password update, please contact our support team (studai.service@gmail.com) immediately to secure your account.</p>
                 </div>
             </div>
         </div>
@@ -91,7 +91,7 @@ export const AccountStatusEmail = (username, status, reason) => {
                 </div>
                 
                 ${isLocked 
-                    ? `<p style="color: #666; font-size: 16px; line-height: 1.5;">If you believe this is a mistake or would like to discuss this action, please contact our support team.</p>`
+                    ? `<p style="color: #666; font-size: 16px; line-height: 1.5;">If you believe this is a mistake or would like to discuss this action, please contact our support team - studai.service@gmail.com.</p>`
                     : `<p style="color: #666; font-size: 16px; line-height: 1.5;">You can now log in and access all StudAI features. Thank you for your patience.</p>`
                 }
                 
