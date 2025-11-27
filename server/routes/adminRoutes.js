@@ -264,18 +264,7 @@ router.delete("/questions/:questionId", async (req, res) => {
         const { questionId } = req.params;
         const { reason } = req.body;
 
-        const question = await Question.findByPk(questionId, {
-            include: [{
-                model: Quiz,
-                as: 'quiz',
-                attributes: ['title', 'user_id'],
-                include: [{
-                    model: User,
-                    as: 'creator',
-                    attributes: ['email', 'username']
-                }]
-            }]
-        });
+        const question = await Question.findByPk(questionId);
 
         if (!question) {
             return res.status(404).json({ error: "Question not found" });
@@ -283,9 +272,31 @@ router.delete("/questions/:questionId", async (req, res) => {
 
         const quizId = question.quiz_id;
         const questionText = question.question;
-        const quizTitle = question.quiz?.title || "Unknown Quiz";
-        const creatorEmail = question.quiz?.creator?.email;
-        const creatorUsername = question.quiz?.creator?.username;
+
+        // Get quiz and creator info separately
+        let quizTitle = "Unknown Quiz";
+        let creatorEmail = null;
+        let creatorUsername = null;
+
+        if (quizId) {
+            const quiz = await Quiz.findByPk(quizId, {
+                attributes: ['title', 'created_by']
+            });
+
+            if (quiz) {
+                quizTitle = quiz.title;
+                
+                // Get creator info
+                const creator = await User.findByPk(quiz.created_by, {
+                    attributes: ['email', 'username']
+                });
+
+                if (creator) {
+                    creatorEmail = creator.email;
+                    creatorUsername = creator.username;
+                }
+            }
+        }
 
         // Delete the question
         await Question.destroy({
@@ -310,9 +321,11 @@ router.delete("/questions/:questionId", async (req, res) => {
         }
 
         // Update the quiz's total_questions count
-        await Quiz.decrement('total_questions', {
-            where: { quiz_id: quizId }
-        });
+        if (quizId) {
+            await Quiz.decrement('total_questions', {
+                where: { quiz_id: quizId }
+            });
+        }
 
         res.json({ success: true, message: "Question deleted successfully" });
     } catch (error) {
