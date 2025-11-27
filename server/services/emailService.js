@@ -10,7 +10,7 @@ export const VerificationEmail = (username, verifyLink) => {
                     <a href="${verifyLink}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);">Verify Email</a>
                 </div>
                 
-                <p style="color: #999; font-size: 14px; margin-bottom: 0; text-align: center;">This link will expire in 5 minutes.</p>
+                <p style="color: #999; font-size: 14px; margin-bottom: 0; text-align: center;">This link will expire in 30 minutes.</p>
                 
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
                     <p style="color: #999; font-size: 14px; margin: 0;">If you didn't create an account with StudAI, you can safely ignore this email.</p>

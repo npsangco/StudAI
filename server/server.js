@@ -988,11 +988,11 @@ app.post("/api/auth/signup", validateSignupRequest, async (req, res) => {
 
         // Create token for verification
         const token = jwt.sign({ email, username }, process.env.JWT_SECRET, {
-            expiresIn: "5m", // 5 minutes to verify
+            expiresIn: "30m", // 30 minutes to verify
         });
 
         // Store in pending_users table
-        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
         
         await PendingUser.create({
             email,
@@ -1518,7 +1518,7 @@ app.post("/api/auth/reset-request", async (req, res) => {
         const user = await User.findOne({ where: { email } });
         if (!user) return res.status(404).json({ error: "No user with that email" });
 
-        const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, { expiresIn: "10m" });
+        const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
                 await user.save();
 
