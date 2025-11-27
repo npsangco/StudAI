@@ -1247,16 +1247,14 @@ const Notes = () => {
                 onClick={() => setShowAddNote(true)}
                 disabled={exportMode}
                 data-tutorial="create-note"
-                className={`w-full mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 shadow-lg text-sm sm:text-base group ${
+                className={`mb-4 sm:mb-6 px-4 py-2.5 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md text-sm font-medium group ${
                   exportMode
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                    : 'bg-black text-white hover:bg-slate-800 hover:shadow-xl transform hover:-translate-y-0.5'
+                    : 'bg-black text-white hover:bg-slate-800 hover:shadow-lg'
                 }`}
               >
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 transition-colors">
-                  <Plus className="w-5 h-5" />
-                </div>
-                <span className="font-medium">Add Note</span>
+                <Plus className="w-4 h-4" />
+                <span>Add Note</span>
               </button>
             )}
 
@@ -1318,8 +1316,11 @@ const Notes = () => {
                 />
                 <button
                   onClick={handleShareLinkSubmit}
-                  className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-medium shadow-lg hover:shadow-xl text-sm sm:text-base"
+                  className="px-4 sm:px-6 py-2 sm:py-3 bg-black text-white rounded-lg hover:bg-slate-800 transition-all font-medium shadow-md hover:shadow-lg text-sm sm:text-base flex items-center gap-2"
                 >
+                  <div className="flex items-center justify-center w-5 h-5 rounded-full bg-white/20">
+                    <Share2 className="w-3 h-3" />
+                  </div>
                   Retrieve
                 </button>
               </div>

@@ -227,18 +227,9 @@ export default function PetBuddy() {
     </div>
   );
 
-  if (activeView === "shop") {
-    return <PetShop onClose={() => setActiveView("pet")} />;
-  }
-
-  if (activeView === "inventory") {
-    return (
-      <PetInventory 
-        onClose={() => setActiveView("pet")}
-        onUseItem={handleItemUse}
-      />
-    );
-  }
+  // Show shop/inventory as overlay instead of replacing the pet view
+  const showShop = activeView === "shop";
+  const showInventory = activeView === "inventory";
 
   // Compact Main Pet View
   // Determine container style based on pet stats
@@ -258,30 +249,41 @@ export default function PetBuddy() {
   }
 
   return (
-    <div className={`rounded-lg p-4 transition-all duration-300 ${containerClass}`}>
-      <ToastContainer toasts={toasts} onDismiss={removeToast} />
-      
-      <CompactPetHeader 
-        pet={pet} 
-        onUpdateName={updatePetName}
-        onShop={() => setActiveView("shop")}
-        onInventory={() => setActiveView("inventory")}
-      />
-      
-      {/* Fixed height container to prevent layout shift */}
-      <div className="min-h-[60px] flex items-end justify-center mb-2">
-        <PetBubbleDialog pet={pet} />
-      </div>
-      
-      <CompactPetImage pet={pet} />
+    <>
+      <div className={`rounded-lg p-4 transition-all duration-300 ${containerClass}`}>
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
+        
+        <CompactPetHeader 
+          pet={pet} 
+          onUpdateName={updatePetName}
+          onShop={() => setActiveView("shop")}
+          onInventory={() => setActiveView("inventory")}
+        />
+        
+        {/* Fixed height container to prevent layout shift */}
+        <div className="min-h-[60px] flex items-end justify-center mb-2">
+          <PetBubbleDialog pet={pet} />
+        </div>
+        
+        <CompactPetImage pet={pet} />
 
-      <CompactPetStats pet={pet} />
-      
-      <CompactPetActions 
-        onAction={handleAction}
-        actionLoading={actionLoading}
-      />
-    </div>
+        <CompactPetStats pet={pet} />
+        
+        <CompactPetActions 
+          onAction={handleAction}
+          actionLoading={actionLoading}
+        />
+      </div>
+
+      {/* Render shop and inventory as overlays */}
+      {showShop && <PetShop onClose={() => setActiveView("pet")} />}
+      {showInventory && (
+        <PetInventory 
+          onClose={() => setActiveView("pet")}
+          onUseItem={handleItemUse}
+        />
+      )}
+    </>
   );
 }
 
