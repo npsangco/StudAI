@@ -1,7 +1,6 @@
 // NoteEditor.jsx - Fixed auto-save and reload issues
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { renderMarkdownToHtml } from '../utils/markdown';
-import { ArrowLeft, Save, Share2, Trash2, MessageCircle, Wifi, WifiOff, Cloud, CloudOff, FileDown, Brain, Archive, ArchiveRestore, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Save, Share2, Trash2, MessageCircle, Wifi, WifiOff, Cloud, CloudOff, FileDown, Brain, Archive, ArchiveRestore } from 'lucide-react';
 import { notesService } from '../utils/syncService';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -22,7 +21,6 @@ const NoteEditor = ({
   const [editContent, setEditContent] = useState(note.content);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -201,10 +199,6 @@ const NoteEditor = ({
     setShowDeleteConfirm(true);
   };
 
-  const togglePreview = () => {
-    setPreviewMode(!previewMode);
-  };
-
   const confirmDelete = async () => {
     setShowDeleteConfirm(false);
     const deleted = await onDelete(note.id);
@@ -371,15 +365,6 @@ const NoteEditor = ({
                 <span className="hidden sm:inline text-sm">Ask AI</span>
               </button>
               <button
-                onClick={togglePreview}
-                className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all flex items-center gap-2"
-                title={previewMode ? 'Close preview' : 'Preview note'}
-              >
-                {previewMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                <span className="hidden sm:inline text-sm">{previewMode ? 'Close' : 'Preview'}</span>
-              </button>
-
-              <button
                 onClick={handleManualSave}
                 disabled={!hasUnsavedChanges || isSaving}
                 className={`p-2 sm:px-4 sm:py-2 rounded-lg transition-all shadow-sm hover:shadow-md flex items-center gap-2 text-sm ${
@@ -424,21 +409,13 @@ const NoteEditor = ({
 
           {/* Content Editor */}
           <div className="p-4 sm:p-6">
-            {previewMode ? (
-              <div
-                className="w-full min-h-[400px] sm:min-h-[500px] md:min-h-[600px] text-slate-700 placeholder-slate-400 border-none resize-none text-base sm:text-lg leading-relaxed bg-white prose max-w-none p-4 overflow-auto rounded-md"
-                // sanitized HTML from markdown util
-                dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(editContent) || '<p class="text-slate-400">No content</p>' }}
-              />
-            ) : (
-              <textarea
-                value={editContent}
-                onChange={handleContentChange}
-                className="w-full min-h-[400px] sm:min-h-[500px] md:min-h-[600px] text-slate-700 placeholder-slate-400 border-none outline-none resize-none text-base sm:text-lg leading-relaxed bg-transparent"
-                placeholder="Start writing your note here..."
-                style={{ fontFamily: 'inherit' }}
-              />
-            )}
+            <textarea
+              value={editContent}
+              onChange={handleContentChange}
+              className="w-full min-h-[400px] sm:min-h-[500px] md:min-h-[600px] text-slate-700 placeholder-slate-400 border-none outline-none resize-none text-base sm:text-lg leading-relaxed bg-transparent"
+              placeholder="Start writing your note here..."
+              style={{ fontFamily: 'inherit' }}
+            />
           </div>
 
           {/* Status Bar */}

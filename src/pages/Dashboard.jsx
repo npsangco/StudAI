@@ -377,19 +377,6 @@ Please format the summary in a clear, organized manner with proper headings and 
 
       const summaryRes = await api.post('/generate-summary', payload);
 
-      // Prefer rawSummary (Markdown) if available from backend
-      const serverSummary = summaryRes.data?.rawSummary || summaryRes.data?.summary;
-
-      // Update the created note record with the raw markdown summary when available
-      try {
-        const createdNote = summaryRes.data?.note;
-        if (createdNote && createdNote.note_id && serverSummary) {
-          await api.put(`/notes/${createdNote.note_id}`, { content: serverSummary });
-        }
-      } catch (e) {
-        console.warn('Could not update note content with rawSummary:', e.message || e);
-      }
-
       toast.success("Summary generated and saved successfully!");
       refreshAiUsage();
       

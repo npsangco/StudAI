@@ -126,7 +126,7 @@ export default function PetShop({ onClose, onItemPurchase }) {
         <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
           {/* Compact Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Pet Shop 🛒</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Pet Shop</h2>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="flex items-center gap-2 bg-yellow-100 px-3 py-1.5 rounded-full flex-1 sm:flex-initial justify-center">
                 <span className="text-xs sm:text-sm text-yellow-800 font-semibold">Points:</span>

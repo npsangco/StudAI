@@ -145,7 +145,7 @@ export default function PetInventory({ onClose, onUseItem }) {
         <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
           {/* Compact Header */}
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Inventory 🎒</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Inventory</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl font-bold">
               ✕
             </button>
@@ -154,7 +154,7 @@ export default function PetInventory({ onClose, onUseItem }) {
           {/* Compact Help Section */}
           <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
             <p className="text-xs sm:text-sm text-blue-800">
-              💡 <strong>Tip:</strong> Equip items to auto-use when clicking Feed/Play/Clean. Multiple items can be equipped!
+              <strong>Tip:</strong> Equip items to auto-use when clicking Feed/Play/Clean. Multiple items can be equipped!
             </p>
           </div>
 

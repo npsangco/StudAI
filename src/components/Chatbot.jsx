@@ -112,7 +112,15 @@ const Chatbot = ({ currentNote, onBack }) => {
       try {
         const res = await axios.get(`${API_URL}/api/user/profile`, { withCredentials: true });
         const pic = res.data?.profile_picture || null;
-        setUserPhoto(pic);
+        if (pic) {
+          if (pic.startsWith('http') || pic.startsWith('/')) {
+            setUserPhoto(pic);
+          } else {
+            setUserPhoto(`${API_URL}${pic}`);
+          }
+        } else {
+          setUserPhoto(null);
+        }
       } catch (err) {
         console.warn('Failed to fetch user profile for chatbot avatar:', err);
       }
@@ -440,7 +448,7 @@ IMPORTANT RULES:
             
             {message.type === 'user' && (
               <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden order-3 shadow-md">
-                <img src={userPhoto || '/uploads/profile_pictures/default-avatar.png'} alt="You" className="w-full h-full object-cover" />
+                <img src={userPhoto || '/default-avatar.png'} alt="You" className="w-full h-full object-cover" />
               </div>
             )}
           </div>

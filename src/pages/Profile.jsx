@@ -48,8 +48,20 @@ export default function Profile() {
                 const user = res.data;
                 setUsername(user.username || "");
                 setEmail(user.email || "");
-                setPhoto(user.profile_picture || null);
-                setSavedPhoto(user.profile_picture || null);
+                // If the server returned a full URL or an absolute client path, use it directly
+                const pic = user.profile_picture || null;
+                if (pic) {
+                    if (pic.startsWith('http') || pic.startsWith('/')) {
+                        setPhoto(pic);
+                        setSavedPhoto(pic);
+                    } else {
+                        setPhoto(`${API_BASE}${pic}`);
+                        setSavedPhoto(`${API_BASE}${pic}`);
+                    }
+                } else {
+                    setPhoto(null);
+                    setSavedPhoto(null);
+                }
                 
                 // Set member since date
                 if (user.createdAt) {
@@ -234,7 +246,7 @@ export default function Profile() {
                                 >
                                     <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 bg-gray-200 rounded-full overflow-hidden border-4 border-white shadow-lg relative">
                                         <img
-                                            src={photo || "/uploads/profile_pictures/default-avatar.png"}
+                                            src={photo || "/default-avatar.png"}
                                             alt="Profile"
                                             className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-50"
                                         />

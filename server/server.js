@@ -1309,12 +1309,14 @@ app.get("/api/user/profile", sessionLockCheck, async (req, res) => {
         if (!user) return res.status(404).json({ error: "User not found" });
 
         if (!user.profile_picture) {
-            user.profile_picture = "/uploads/profile_pictures/default-avatar.png";
+            // Use frontend public asset as default avatar
+            user.profile_picture = "/default-avatar.png";
         } else {
-            // If profile_picture is stored as an R2 key (not a full URL and not a local path), generate a signed URL
+            // If profile_picture is stored as an R2 key (not a full URL and not an absolute path), generate a signed URL
             try {
                 const pic = user.profile_picture;
-                if (pic && !pic.startsWith('http') && !pic.startsWith('/uploads')) {
+                // Only create signed URL for relative keys (no leading slash, not a full URL)
+                if (pic && !pic.startsWith('http') && !pic.startsWith('/')) {
                     user.profile_picture = await getDownloadUrl(pic, 24 * 3600);
                 }
             } catch (err) {
