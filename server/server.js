@@ -1400,7 +1400,6 @@ app.get("/api/user/daily-stats", async (req, res) => {
 
 
 import { uploadFile, getDownloadUrl } from "./services/r2Service.js";
-import multer from "multer";
 
 const profileUpload = multer({ storage: multer.memoryStorage() });
 
