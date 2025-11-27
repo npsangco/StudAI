@@ -76,7 +76,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
 
           {/* Question Count Selector */}
           {totalQuestions > 5 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
               <label className="block text-xs font-medium text-gray-700 mb-2">
                 How many questions do you want?
               </label>

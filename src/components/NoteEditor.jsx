@@ -453,7 +453,7 @@ const NoteEditor = ({
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
             <button
               onClick={handleShare}
-              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition-all hover:shadow-md text-sm sm:text-base"
+              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-blue-600 hover:bg-yellow-50 border border-yellow-200 rounded-lg transition-all hover:shadow-md text-sm sm:text-base"
             >
               <Share2 className="w-4 h-4" />
               Share Note

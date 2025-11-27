@@ -278,7 +278,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
         )}
 
         {/* Info Message */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
           <p className="text-xs text-blue-800">
             <strong>ℹ️ Note:</strong> AI-generated questions are based on your note content. Review and edit them as needed after generation.
           </p>

@@ -116,7 +116,7 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
         disabled={!canAddMore}
         className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
           canAddMore
-            ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 cursor-pointer shadow-sm hover:shadow'
+            ? 'text-blue-600 bg-yellow-50 hover:bg-blue-100 border border-yellow-200 hover:border-blue-300 cursor-pointer shadow-sm hover:shadow'
             : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
         }`}
         type="button"
@@ -233,7 +233,7 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
         disabled={!canAddMore}
         className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
           canAddMore
-            ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 cursor-pointer shadow-sm hover:shadow'
+            ? 'text-blue-600 bg-yellow-50 hover:bg-blue-100 border border-yellow-200 hover:border-blue-300 cursor-pointer shadow-sm hover:shadow'
             : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
         }`}
         type="button"

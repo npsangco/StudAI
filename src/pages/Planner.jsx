@@ -530,8 +530,8 @@ export default function Planner() {
                       <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-red-500 shadow-md flex-shrink-0"></div>
                       <span className="text-xs sm:text-sm text-gray-700"><strong>Overdue</strong> plans</span>
                     </div>
-                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-blue-50 rounded-lg border-t-2 border-blue-200">
-                      <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-blue-500 shadow-md flex-shrink-0"></div>
+                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-yellow-50 rounded-lg border-t-2 border-yellow-200">
+                      <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-yellow-500 shadow-md flex-shrink-0"></div>
                       <span className="text-xs sm:text-sm text-gray-700"><strong>Today's date</strong></span>
                     </div>
                   </div>

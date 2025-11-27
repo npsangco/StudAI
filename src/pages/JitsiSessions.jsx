@@ -365,7 +365,7 @@ const JitsiSessions = () => {
               </div>
 
               {/* How It Works Section */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                   <Video className="w-5 h-5 text-blue-600" />
                   How It Works

@@ -568,7 +568,7 @@ const Notes = () => {
       className={`group p-3 sm:p-4 border rounded-lg sm:rounded-xl hover:shadow-md transition-all duration-200 ${
         exportMode 
           ? selectedNotes.has(note.id)
-            ? 'border-blue-500 bg-blue-50'
+            ? 'border-blue-500 bg-yellow-50'
             : 'border-slate-200 bg-white'
           : note.isArchived
             ? 'border-slate-200 bg-slate-50 hover:border-slate-300 opacity-90'
@@ -771,7 +771,7 @@ const Notes = () => {
                   e.stopPropagation();
                   restoreSingleNote(note.id);
                 }}
-                className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-blue-600 hover:bg-yellow-50 rounded-lg transition-colors"
                 title="Restore"
               >
                 <ArchiveRestore className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -903,7 +903,7 @@ const Notes = () => {
               e.stopPropagation();
               shareNote(note.id);
             }}
-            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="p-1.5 text-blue-600 hover:bg-yellow-50 rounded-lg transition-colors"
             title="Share"
           >
             <Share2 className="w-4 h-4" />
@@ -937,7 +937,7 @@ const Notes = () => {
               e.stopPropagation();
               restoreSingleNote(note.id);
             }}
-            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="p-1.5 text-blue-600 hover:bg-yellow-50 rounded-lg transition-colors"
             title="Restore"
           >
             <ArchiveRestore className="w-4 h-4" />
@@ -1060,7 +1060,7 @@ const Notes = () => {
                   disabled={selectedNotes.size === 0}
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
                     selectedNotes.size > 0
-                      ? 'bg-white text-blue-600 hover:bg-blue-50'
+                      ? 'bg-white text-blue-600 hover:bg-yellow-50'
                       : 'bg-blue-400 text-blue-200 cursor-not-allowed'
                   }`}
                 >
@@ -1068,7 +1068,7 @@ const Notes = () => {
                 </button>
                 <button
                   onClick={cancelExportMode}
-                  className="p-2 hover:bg-blue-500 rounded-lg transition-colors"
+                  className="p-2 hover:bg-yellow-500 rounded-lg transition-colors"
                   title="Cancel"
                 >
                   <X className="w-5 h-5" />
@@ -1099,7 +1099,7 @@ const Notes = () => {
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 data-tutorial="categories"
-                className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
+                className="px-3 py-2 border-2 border-slate-300 bg-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
               >
                 <option value="all">All Categories</option>
                 {categories.map(category => (
@@ -1110,10 +1110,9 @@ const Notes = () => {
               </select>
               <button 
                 onClick={() => setShowCategoryModal(true)}
-                className="flex items-center justify-center gap-2 px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-white rounded-lg transition-all text-sm sm:text-base border border-slate-200"
+                className="flex items-center justify-center gap-2 px-3 py-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all text-sm sm:text-base border-2 border-slate-300 bg-slate-50 font-medium"
               >
-                <Filter className="w-4 h-4" />
-                <FolderPlus className="w-4 h-4" />
+                <span>Add Category</span>
               </button>
             </div>
           </div>
@@ -1247,7 +1246,7 @@ const Notes = () => {
                 onClick={() => setShowAddNote(true)}
                 disabled={exportMode}
                 data-tutorial="create-note"
-                className={`mb-4 sm:mb-6 px-4 py-2.5 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md text-sm font-medium group ${
+                className={`mb-4 sm:mb-6 px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md text-sm font-medium group ${
                   exportMode
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     : 'bg-black text-white hover:bg-slate-800 hover:shadow-lg'
@@ -1327,7 +1326,7 @@ const Notes = () => {
               <p className="text-xs text-slate-500 mt-2">Enter a 6-character code to retrieve shared notes</p>
             </div>
 
-            <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
               <p className="text-xs text-slate-600">
                 Your shared notes. Click the copy icon to share the code with others.
               </p>

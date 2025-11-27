@@ -152,7 +152,7 @@ export default function PetInventory({ onClose, onUseItem }) {
           </div>
 
           {/* Compact Help Section */}
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
             <p className="text-xs sm:text-sm text-blue-800">
               💡 <strong>Tip:</strong> Equip items to auto-use when clicking Feed/Play/Clean. Multiple items can be equipped!
             </p>

@@ -1218,8 +1218,8 @@ export const QuizEditor = ({
               </div>
 
               {/* Row 2: Quiz Modes */}
-              <div className="bg-blue-50 rounded-xl p-6 text-left border border-blue-200 shadow-sm">
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-4">
+              <div className="bg-yellow-50 rounded-xl p-6 text-left border border-yellow-200 shadow-sm">
+                <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center mb-4">
                   <Target className="w-6 h-6 text-white" />
                 </div>
                 <h4 className="font-bold text-gray-900 text-lg mb-2">Quiz Modes</h4>

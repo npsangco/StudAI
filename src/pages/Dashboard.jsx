@@ -606,7 +606,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                 <div className="bg-blue-100 p-3 rounded-xl group-hover:bg-blue-600 transition-colors">
                   <FileText className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
                 </div>
-                <div className="bg-blue-50 px-3 py-1 rounded-full">
+                <div className="bg-yellow-50 px-3 py-1 rounded-full">
                   <span className="text-xs font-semibold text-blue-700">Total</span>
                 </div>
               </div>
@@ -820,7 +820,7 @@ Please format the summary in a clear, organized manner with proper headings and 
               <div className="bg-white rounded-lg border border-gray-200 p-5">{/* Recent Notes */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <div className="bg-blue-50 p-2 rounded-lg">
+                    <div className="bg-yellow-50 p-2 rounded-lg">
                       <BookOpen className="w-4 h-4 text-blue-600" />
                     </div>
                     <h3 className="font-semibold text-gray-900 text-sm">Recent Notes</h3>
@@ -833,7 +833,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                       <a
                         key={note.note_id}
                         href="/notes"
-                        className="block p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all"
+                        className="block p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-yellow-50 transition-all"
                       >
                         <p className="font-medium text-sm text-gray-900 truncate mb-1">{note.title}</p>
                         <div className="flex items-center justify-between">
@@ -899,7 +899,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                 <div className="grid grid-cols-3 gap-3 mb-5">
                   <a
                     href="/notes"
-                    className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all group"
+                    className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-yellow-50 transition-all group"
                   >
                     <div className="bg-blue-100 p-3 rounded-lg mb-2 group-hover:bg-blue-200 transition-colors">
                       <FileText className="w-5 h-5 text-blue-600" />
@@ -933,7 +933,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                     Your Progress
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-yellow-200">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-blue-900">Completion</span>
                         <BookOpen className="w-3.5 h-3.5 text-blue-600" />
@@ -1021,7 +1021,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                         iconColor = "text-yellow-500";
                       } else if (diffDays < 7) {
                         label = `${diffDays} days`;
-                        colorClass = "bg-blue-50 border-blue-200";
+                        colorClass = "bg-yellow-50 border-yellow-200";
                         badgeClass = "bg-blue-400 text-white";
                         iconColor = "text-blue-500";
                       } else {
