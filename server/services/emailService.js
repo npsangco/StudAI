@@ -92,7 +92,7 @@ export const AccountStatusEmail = (username, status, reason) => {
                 
                 ${isLocked 
                     ? `<p style="color: #666; font-size: 16px; line-height: 1.5;">If you believe this is a mistake or would like to discuss this action, please contact our support team - studai.service@gmail.com.</p>`
-                    : `<p style="color: #666; font-size: 16px; line-height: 1.5;">You can now log in and access all StudAI features. Thank you for your patience.</p>`
+                    : `<p style="color: #666; font-size: 16px; line-height: 1.5;">You can now log in to the website. Thank you for your patience.</p>`
                 }
                 
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">

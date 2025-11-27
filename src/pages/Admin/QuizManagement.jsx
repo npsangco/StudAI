@@ -17,7 +17,7 @@ export default function QuizManagement() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("All");
-    const quizzesPerPage = 13;
+    const quizzesPerPage = 10;
     const [questionsModalState, setQuestionsModalState] = useState({
         isOpen: false,
         quiz: null,

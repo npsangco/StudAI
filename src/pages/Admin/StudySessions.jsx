@@ -18,18 +18,26 @@ export default function StudySessions() {
     const [filterStatus, setFilterStatus] = useState("All");
     const sessionsPerPage = 13;
 
+    const fetchSessions = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/api/admin/sessions`, {
+                withCredentials: true,
+            });
+            setSessions(res.data || []);
+        } catch (err) {
+            console.error("Failed to fetch study sessions:", err);
+        }
+    };
+
     useEffect(() => {
-        const fetchSessions = async () => {
-            try {
-                const res = await axios.get(`${API_URL}/api/admin/sessions`, {
-                    withCredentials: true,
-                });
-                setSessions(res.data || []);
-            } catch (err) {
-                console.error("Failed to fetch study sessions:", err);
-            }
-        };
         fetchSessions();
+        
+        // Poll for updates every 30 seconds to catch status changes
+        const interval = setInterval(() => {
+            fetchSessions();
+        }, 30000);
+        
+        return () => clearInterval(interval);
     }, []);
 
     const handleEndSession = async (sessionId) => {
@@ -46,11 +54,8 @@ export default function StudySessions() {
                         {},
                         { withCredentials: true }
                     );
-                    setSessions((prev) =>
-                        prev.map((s) =>
-                            s.session_id === sessionId ? { ...s, status: "Completed" } : s
-                        )
-                    );
+                    // Refresh sessions to get updated status from server
+                    await fetchSessions();
                     toast.success("Session ended successfully!");
                 } catch (err) {
                     console.error("Failed to end session:", err);
@@ -66,7 +71,7 @@ export default function StudySessions() {
             session.host?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             session.topic?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             session.session_id?.toString().includes(searchTerm);
-        const matchesFilter = filterStatus === "All" || session.status === filterStatus;
+        const matchesFilter = filterStatus === "All" || session.status?.toLowerCase() === filterStatus.toLowerCase();
         return matchesSearch && matchesFilter;
     });
 
@@ -192,11 +197,11 @@ export default function StudySessions() {
                                                 <td className="py-2 px-2 sm:px-3 truncate">{session.duration}</td>
                                                 <td className="py-2 px-2 sm:px-3">
                                                     <span
-                                                        className={`px-2 py-1 rounded-full text-xs font-medium ${session.status === "Active"
+                                                        className={`px-2 py-1 rounded-full text-xs font-medium ${session.status?.toLowerCase() === "active"
                                                                 ? "bg-green-100 text-green-800"
-                                                                : session.status === "Scheduled"
+                                                                : session.status?.toLowerCase() === "scheduled"
                                                                     ? "bg-blue-100 text-blue-800"
-                                                                    : session.status === "Completed"
+                                                                    : session.status?.toLowerCase() === "completed"
                                                                         ? "bg-gray-200 text-gray-700"
                                                                         : "bg-red-100 text-red-800"
                                                             }`}
@@ -205,7 +210,7 @@ export default function StudySessions() {
                                                     </span>
                                                 </td>
                                                 <td className="py-2 px-2 sm:px-3">
-                                                    {session.status === "Active" || session.status === "Scheduled" ? (
+                                                    {session.status?.toLowerCase() === "active" || session.status?.toLowerCase() === "scheduled" ? (
                                                         <button
                                                             onClick={() => handleEndSession(session.session_id)}
                                                             className="bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
