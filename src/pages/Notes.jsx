@@ -649,7 +649,7 @@ const Notes = () => {
                   e.stopPropagation();
                   handleChatbot(note.id);
                 }}
-                className="p-1.5 sm:p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                 title="Ask AI Assistant"
               >
                 <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -659,7 +659,7 @@ const Notes = () => {
                   e.stopPropagation();
                   setShowCategoryPicker(showCategoryPicker === note.id ? null : note.id);
                 }}
-                className="p-1.5 sm:p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                 title="Change category"
               >
                 <Tag className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -692,7 +692,7 @@ const Notes = () => {
                   e.stopPropagation();
                   shareNote(note.id);
                 }}
-                className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                 title="Share"
               >
                 <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -702,7 +702,7 @@ const Notes = () => {
                   e.stopPropagation();
                   archiveSingleNote(note.id);
                 }}
-                className="p-1.5 sm:p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                 title="Archive"
               >
                 <Archive className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -712,7 +712,7 @@ const Notes = () => {
                   e.stopPropagation();
                   startExportMode(note.id);
                 }}
-                className="p-1.5 sm:p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                 title="Export to PDF"
               >
                 <FileDown className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -722,7 +722,7 @@ const Notes = () => {
                   e.stopPropagation();
                   handleGenerateQuiz(note);
                 }}
-                className="p-1.5 sm:p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                 title="Generate Quiz with AI"
               >
                 <Brain className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1247,14 +1247,16 @@ const Notes = () => {
                 onClick={() => setShowAddNote(true)}
                 disabled={exportMode}
                 data-tutorial="create-note"
-                className={`w-full mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg text-sm sm:text-base ${
+                className={`w-full mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 shadow-lg text-sm sm:text-base group ${
                   exportMode
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     : 'bg-black text-white hover:bg-slate-800 hover:shadow-xl transform hover:-translate-y-0.5'
                 }`}
               >
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                Add a note
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 transition-colors">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <span className="font-medium">Add Note</span>
               </button>
             )}
 

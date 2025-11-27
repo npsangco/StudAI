@@ -221,6 +221,7 @@ router.get('/public', async (req, res) => {
     const sessions = await Session.findAll({
       where: {
         status: 'active', // Only show active sessions
+        is_private: false, // Only show public sessions
         scheduled_end: {
           [Op.gt]: now // Only show sessions that haven't ended
         }
