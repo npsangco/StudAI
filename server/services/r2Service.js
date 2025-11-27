@@ -1,5 +1,5 @@
 // Cloudflare R2 service using AWS SDK v3
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
@@ -32,4 +32,12 @@ export async function getDownloadUrl(key, expiresIn = 3600) {
     Key: key,
   });
   return getSignedUrl(s3, command, { expiresIn });
+}
+
+export async function deleteFile(key) {
+  const command = new DeleteObjectCommand({
+    Bucket: R2_BUCKET,
+    Key: key,
+  });
+  return s3.send(command);
 }

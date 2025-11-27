@@ -1684,14 +1684,48 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
             return res.status(409).json({ error: "File with this name already exists for this user" });
         }
 
+        // Upload to R2
+        const ext = path.extname(file.originalname) || '';
+        const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const key = `uploads/${userId}/${Date.now()}-${safeName}`;
+
+        // If multer used disk storage, read from disk; otherwise use buffer if present
+        let bodyStreamOrBuffer;
+        if (file.buffer) {
+            bodyStreamOrBuffer = file.buffer;
+        } else if (file.path) {
+            const fs = await import('fs');
+            bodyStreamOrBuffer = fs.createReadStream(file.path);
+        }
+
+        await uploadFile(key, bodyStreamOrBuffer, file.mimetype || 'application/octet-stream');
+
+        // Remove local file if exists
+        if (file.path) {
+            try {
+                const fs = await import('fs');
+                fs.unlinkSync(file.path);
+            } catch (e) {
+                console.warn('Failed to delete local temp file:', e);
+            }
+        }
+
         const newFile = await File.create({
             user_id: userId,
             filename: file.filename,
-            file_path: file.path,
+            file_path: key, // store R2 key, not local path
             upload_date: new Date(),
         });
 
         console.log("✅ [Server] File saved to DB with ID:", newFile.file_id);
+
+        // Generate a signed URL for immediate access
+        let signedUrl = null;
+        try {
+            signedUrl = await getDownloadUrl(key, 24 * 3600);
+        } catch (err) {
+            console.warn('Failed to generate signed URL for uploaded file:', err);
+        }
 
         // Check for file upload achievements
         try {
@@ -1709,7 +1743,8 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
         res.json({
             file_id: newFile.file_id,
             filename: file.filename,
-            url: `/uploads/${file.filename}`
+            url: signedUrl || null,
+            r2Key: key
         });
     } catch (err) {
         console.error("❌ [Server] Upload DB error:", err);
@@ -2154,5 +2189,17 @@ app.listen(PORT, () => {
     } catch (error) {
         console.error('❌ Failed to start archived note cleanup:', error.message);
         console.error('   Archived note cleanup will be disabled');
+    }
+
+    // Start uploaded file cleanup (delete old summarizer/upload files from DB and R2)
+    try {
+        import('./services/uploadedFileCleanup.js')
+            .then(mod => mod.startUploadedFileCleanup())
+            .catch(err => {
+                console.error('❌ Failed to start uploaded file cleanup (dynamic import):', err.message || err);
+            });
+    } catch (error) {
+        console.error('❌ Failed to start uploaded file cleanup:', error.message);
+        console.error('   Uploaded file cleanup will be disabled');
     }
 });
