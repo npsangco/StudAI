@@ -933,7 +933,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                     Your Progress
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-yellow-200">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-blue-900">Completion</span>
                         <BookOpen className="w-3.5 h-3.5 text-blue-600" />
