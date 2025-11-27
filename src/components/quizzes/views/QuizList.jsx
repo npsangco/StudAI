@@ -110,7 +110,7 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false, toast }) => {
             maxLength={6}
             value={shareCode}
             onChange={(e) => handleChange(e.target.value)}
-            className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-center text-base sm:text-lg font-mono tracking-widest border-2 border-yellow-300 rounded-lg sm:rounded-xl focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all bg-white"
+            className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-center text-base sm:text-lg font-mono tracking-widest border-2 border-slate-300 rounded-lg sm:rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white cursor-text"
             disabled={loading}
           />
           <button
@@ -118,7 +118,7 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false, toast }) => {
             disabled={shareCode.length !== 6 || loading}
             className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all whitespace-nowrap ${
               shareCode.length === 6 && !loading
-                ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-sm hover:shadow-md'
+                ? 'bg-black text-white hover:bg-slate-800 shadow-md hover:shadow-lg cursor-pointer'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
@@ -145,7 +145,7 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false, toast }) => {
           maxLength={6}
           value={shareCode}
           onChange={(e) => handleChange(e.target.value)}
-          className="flex-1 px-3 py-2 text-sm font-mono border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+          className="flex-1 px-3 py-2 text-sm font-mono border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all cursor-text"
           disabled={loading}
         />
         <button
@@ -153,7 +153,7 @@ const ShareCodeInput = ({ onImportQuiz, asTopCard = false, toast }) => {
           disabled={shareCode.length !== 6 || loading}
           className={`px-4 py-2 text-sm rounded-lg font-semibold transition-all ${
             shareCode.length === 6 && !loading
-              ? 'bg-blue-500 text-white hover:bg-blue-600'
+              ? 'bg-black text-white hover:bg-slate-800 cursor-pointer'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
@@ -340,7 +340,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
                 isEmpty
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-yellow-500 text-white hover:bg-yellow-600 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95'
+                  : 'bg-black text-white hover:bg-slate-800 shadow-md hover:shadow-lg cursor-pointer'
               }`}
             >
               <Play className="w-4 h-4" />
@@ -353,7 +353,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
                 e.stopPropagation();
                 onEdit(quiz);
               }}
-              className="px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all"
+              className="px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all cursor-pointer"
               title="Edit Quiz"
             >
               <Edit className="w-4 h-4" />
@@ -366,7 +366,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
                   e.stopPropagation();
                   setShowMoreMenu(!showMoreMenu);
                 }}
-                className="px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all"
+                className="px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all cursor-pointer"
                 title="More options"
               >
                 <MoreVertical className="w-4 h-4" />
@@ -679,7 +679,7 @@ export const QuizList = ({
         <button
           onClick={onCreateQuiz}
           data-tutorial="create-quiz"
-          className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 px-4 rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-md hover:shadow-lg active:scale-95"
+          className="w-full bg-black text-white py-3 px-4 rounded-xl font-semibold hover:bg-slate-800 transition-all shadow-md hover:shadow-lg cursor-pointer"
         >
           + Create New Quiz
         </button>

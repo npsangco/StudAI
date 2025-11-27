@@ -1313,7 +1313,7 @@ const Notes = () => {
                   onChange={(e) => setShareLink(e.target.value.toUpperCase())}
                   onKeyPress={(e) => e.key === 'Enter' && handleShareLinkSubmit()}
                   maxLength={6}
-                  className="flex-1 p-2 sm:p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-sm sm:text-base uppercase tracking-wider font-mono"
+                  className="flex-1 px-4 sm:px-6 py-2 sm:py-3 border-2 border-slate-300 bg-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm sm:text-base uppercase tracking-wider font-mono transition-colors"
                 />
                 <button
                   onClick={handleShareLinkSubmit}

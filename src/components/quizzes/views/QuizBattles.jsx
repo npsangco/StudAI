@@ -99,7 +99,7 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
               maxLength={6}
               value={gamePin}
               onChange={(e) => handlePinChange(e.target.value)}
-              className="w-full px-4 py-3 text-2xl font-mono text-center tracking-widest border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all bg-white"
+              className="w-full px-4 py-3 text-2xl font-mono text-center tracking-widest border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white cursor-text"
               disabled={loading}
             />
             {error && (
@@ -114,7 +114,7 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
               disabled={gamePin.length !== 6 || loading}
               className={`w-full mt-4 py-3 rounded-xl font-semibold text-base text-white transition-all flex items-center justify-center gap-2 ${
                 gamePin.length === 6 && !loading
-                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95'
+                  ? 'bg-black hover:bg-slate-800 shadow-md hover:shadow-lg cursor-pointer'
                   : 'bg-gray-300 cursor-not-allowed'
               }`}
             >

@@ -567,7 +567,7 @@ function QuizzesPage() {
           <p className="text-sm sm:text-base text-gray-600 mb-6">{quizDataHook.error}</p>
           <button
             onClick={quizAPI.loadQuizzesFromAPI}
-            className="px-5 sm:px-6 py-2 sm:py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium shadow-sm text-sm sm:text-base"
+            className="px-5 sm:px-6 py-2 sm:py-2.5 bg-black text-white rounded-lg hover:bg-slate-800 transition-colors font-medium shadow-md hover:shadow-lg text-sm sm:text-base cursor-pointer"
           >
             Try Again
           </button>
@@ -691,7 +691,7 @@ function QuizzesPage() {
               </p>
               <button
                 onClick={() => quizDataHook.setError(null)}
-                className="w-full bg-yellow-500 text-white py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-colors shadow-sm text-sm sm:text-base"
+                className="w-full bg-black text-white py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-slate-800 transition-colors shadow-md hover:shadow-lg text-sm sm:text-base cursor-pointer"
               >
                 Got it
               </button>
