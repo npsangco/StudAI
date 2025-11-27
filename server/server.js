@@ -598,7 +598,8 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
             return res.status(500).json({ error: "OpenAI API key not configured" });
         }
 
-        const defaultSystemPrompt = "You are a helpful assistant that creates concise, well-structured summaries of educational content. Focus on key concepts, main ideas, and important details.";
+        const defaultSystemPrompt = `You are a helpful assistant that creates concise, well-structured summaries of educational content. Focus on key concepts, main ideas, and important details.
+    Do NOT use Markdown formatting. Return plain text only — no headings, no bold/italic, no bullet or numbered lists, no code blocks, and no YAML/front-matter. Use simple sentences and short paragraphs.`;
 
         const APIBody = {
             model: "gpt-3.5-turbo",
@@ -641,14 +642,47 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         }
 
         const data = await response.json();
-        const summary = data.choices[0]?.message?.content?.trim();
+                const summary = data.choices[0]?.message?.content?.trim();
 
-        if (!summary) {
+                // Helper: strip common Markdown artifacts as a fallback
+                function stripMarkdown(md) {
+                    if (!md || typeof md !== 'string') return md;
+                    let out = md;
+                    // Remove code fences
+                    out = out.replace(/```[\s\S]*?```/g, '');
+                    // Remove inline code
+                    out = out.replace(/`([^`]+)`/g, '$1');
+                    // Remove ATX headings (#, ##, ...)
+                    out = out.replace(/^#{1,6}\s*/gm, '');
+                    // Remove Setext headings (underlines)
+                    out = out.replace(/(^.+)\n[-=]{2,}\s*$/gm, '$1');
+                    // Bold/italic
+                    out = out.replace(/\*\*(.*?)\*\*/g, '$1');
+                    out = out.replace(/\*(.*?)\*/g, '$1');
+                    out = out.replace(/__(.*?)__/g, '$1');
+                    out = out.replace(/_(.*?)_/g, '$1');
+                    // Lists
+                    out = out.replace(/^\s*[-*+]\s+/gm, '');
+                    out = out.replace(/^\s*\d+\.\s+/gm, '');
+                    // Links and images
+                    out = out.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1');
+                    out = out.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
+                    // Remove excessive newlines
+                    out = out.replace(/\n{3,}/g, '\n\n');
+                    return out.trim();
+                }
+
+                if (!summary) {
             console.error('❌ [Server] No summary generated from OpenAI response');
             return res.status(500).json({ error: "Failed to generate summary" });
         }
+                // Clean markdown artifacts (fallback) and trim
+                const cleanedSummary = stripMarkdown(summary);
 
-        console.log('✅ [Server] Summary generated successfully, length:', summary.length);
+                console.log('✅ [Server] Summary generated successfully, length:', summary.length);
+                if (cleanedSummary !== summary) {
+                    console.log('ℹ️ [Server] Summary contained markdown — returning cleaned plain-text version');
+                }
         const recordResult = await recordSummaryUsage(userId);
 
         if (!recordResult.allowed) {
@@ -662,8 +696,9 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         const snapshot = await getUsageSnapshot(userId);
 
         res.json({
-            summary,
-            usage: snapshot
+            summary: cleanedSummary,
+            usage: snapshot,
+            rawSummary: summary
         });
     } catch (err) {
         if (err instanceof ModerationError) {
