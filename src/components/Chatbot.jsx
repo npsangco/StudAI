@@ -34,6 +34,7 @@ const Chatbot = ({ currentNote, onBack }) => {
   const [tokenUsage, setTokenUsage] = useState({ limit: 5000, remaining: 5000, used: 0 });
   const [isTokenUsageLoading, setIsTokenUsageLoading] = useState(true);
   const [deepThinkingMode, setDeepThinkingMode] = useState(false);
+  const [userPhoto, setUserPhoto] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   
@@ -106,6 +107,16 @@ const Chatbot = ({ currentNote, onBack }) => {
 
   useEffect(() => {
     loadChatHistory();
+    // load user profile picture for avatar
+    (async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/user/profile`, { withCredentials: true });
+        const pic = res.data?.profile_picture || null;
+        setUserPhoto(pic);
+      } catch (err) {
+        console.warn('Failed to fetch user profile for chatbot avatar:', err);
+      }
+    })();
   }, [loadChatHistory]);
 
   const fetchTokenUsage = useCallback(async () => {
@@ -313,7 +324,7 @@ IMPORTANT RULES:
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col overflow-hidden">
       {/* Chat Header */}
-      <div className="bg-white border-b border-slate-200 p-3 sm:p-4 shadow-md flex-shrink-0 relative z-10">
+      <div className="bg-black border-b border-slate-800 p-3 sm:p-4 shadow-md flex-shrink-0 relative z-10">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <button
@@ -325,12 +336,12 @@ IMPORTANT RULES:
               <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
             
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-black">
+              <img src="/StudAI_Logo-white.svg" alt="StudAI" className="w-6 h-6 sm:w-7 sm:h-7 object-contain" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-slate-800 text-sm sm:text-base truncate">AI Assistant</h3>
-              <p className="text-xs sm:text-sm text-slate-500 truncate">
+              <h3 className="font-semibold text-white text-sm sm:text-base truncate">StudAI Bot</h3>
+              <p className="text-xs sm:text-sm text-slate-300 truncate">
                 {currentNote?.title || 'Untitled Note'}
               </p>
             </div>
@@ -386,8 +397,8 @@ IMPORTANT RULES:
             className={`flex gap-2 sm:gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
           >
             {message.type === 'bot' && (
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
-                <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-black">
+                <img src="/StudAI_Logo-white.svg" alt="StudAI" className="w-3 h-3 sm:w-4 sm:h-4 object-contain" />
               </div>
             )}
             
@@ -428,8 +439,8 @@ IMPORTANT RULES:
             </div>
             
             {message.type === 'user' && (
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-slate-400 to-slate-600 rounded-full flex items-center justify-center flex-shrink-0 order-3 shadow-md">
-                <User className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden order-3 shadow-md">
+                <img src={userPhoto || '/uploads/profile_pictures/default-avatar.png'} alt="You" className="w-full h-full object-cover" />
               </div>
             )}
           </div>
@@ -438,8 +449,8 @@ IMPORTANT RULES:
         {/* Typing Indicator */}
         {isTyping && (
           <div className="flex gap-2 sm:gap-3 justify-start animate-fadeIn">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
-              <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-black">
+              <img src="/StudAI_Logo-white.svg" alt="StudAI" className="w-3 h-3 sm:w-4 sm:h-4 object-contain" />
             </div>
             <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md">
               <div className="flex space-x-1">
