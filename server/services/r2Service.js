@@ -1,8 +1,7 @@
 // Cloudflare R2 service using AWS SDK v3
-const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-// Load from environment variables or config
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const R2_ENDPOINT = process.env.R2_ENDPOINT; // e.g. https://<accountid>.r2.cloudflarestorage.com
@@ -17,7 +16,7 @@ const s3 = new S3Client({
   },
 });
 
-async function uploadFile(key, body, contentType) {
+export async function uploadFile(key, body, contentType) {
   const command = new PutObjectCommand({
     Bucket: R2_BUCKET,
     Key: key,
@@ -27,15 +26,10 @@ async function uploadFile(key, body, contentType) {
   return s3.send(command);
 }
 
-async function getDownloadUrl(key, expiresIn = 3600) {
+export async function getDownloadUrl(key, expiresIn = 3600) {
   const command = new GetObjectCommand({
     Bucket: R2_BUCKET,
     Key: key,
   });
   return getSignedUrl(s3, command, { expiresIn });
 }
-
-module.exports = {
-  uploadFile,
-  getDownloadUrl,
-};
