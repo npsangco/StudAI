@@ -6,7 +6,7 @@ export default function LandingNavigation() {
   return (
     <nav className="bg-yellow-300">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="relative flex h-16 items-center justify-between">
+        <div className="relative flex h-16 items-center">
           <div className="absolute inset-y-0 left-0 flex items-center sm:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -45,8 +45,8 @@ export default function LandingNavigation() {
             </button>
           </div>
 
-          <div className="flex items-center">
-            <div className="flex shrink-0 items-center ml-4 sm:ml-0">
+          <div className="flex-1 flex items-center justify-center sm:justify-start">
+            <div className="flex shrink-0 items-center sm:ml-0">
               <button
                 onClick={() => window.location.href = '/'}
                 className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
@@ -63,7 +63,7 @@ export default function LandingNavigation() {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 ml-4">
+          <div className="hidden sm:flex items-center space-x-3 ml-4">
             <button
               onClick={() => window.location.href = '/login'}
               className="bg-white/80 backdrop-blur-sm text-gray-900 hover:bg-white px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:shadow-md border border-gray-200"
