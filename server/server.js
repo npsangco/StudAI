@@ -1398,32 +1398,33 @@ app.get("/api/user/daily-stats", async (req, res) => {
     }
 });
 
-const profileStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/profile_pictures');
-    },
-    filename: function (req, file, cb) {
-        const ext = path.extname(file.originalname);
-        cb(null, Date.now() + '-' + file.fieldname + ext);
-    }
-});
 
-const profileUpload = multer({ storage: profileStorage });
+import { uploadFile, getDownloadUrl } from "./services/r2Service.js";
+import multer from "multer";
+
+const profileUpload = multer({ storage: multer.memoryStorage() });
 
 app.post('/api/upload/profile', profileUpload.single('profilePic'), async (req, res) => {
     try {
         const file = req.file;
         if (!file) return res.status(400).json({ error: "No file uploaded" });
 
-        const photoUrl = `/uploads/profile_pictures/${file.filename}`;
-        res.json({ message: "Profile picture uploaded", photoUrl });
+        // Generate a unique key for R2
+        const ext = path.extname(file.originalname);
+        const key = `profile_pictures/${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+        // Upload to R2
+        await uploadFile(key, file.buffer, file.mimetype);
+
+        // Optionally, generate a signed URL for access
+        const photoUrl = await getDownloadUrl(key, 24 * 3600); // 24 hours
+
+        res.json({ message: "Profile picture uploaded", photoUrl, r2Key: key });
     } catch (err) {
         console.error("❌ Profile upload error:", err);
         res.status(500).json({ error: "Failed to upload profile picture" });
     }
 });
-
-app.use('/uploads/profile_pictures', express.static('uploads/profile_pictures'));
 
 // ----------------- PASSWORD UPDATE WITH EMAIL VERIFICATION -----------------
 // Optimized transporter with connection pooling for faster email delivery

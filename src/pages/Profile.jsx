@@ -228,13 +228,7 @@ export default function Profile() {
                                 >
                                     <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 bg-gray-200 rounded-full overflow-hidden border-4 border-white shadow-lg relative">
                                         <img
-                                            src={
-                                                photo
-                                                    ? photo.startsWith("http")
-                                                        ? photo
-                                                        : `${API_BASE}${photo}`
-                                                    : "/uploads/profile_pictures/default-avatar.png"
-                                            }
+                                            src={photo || "/uploads/profile_pictures/default-avatar.png"}
                                             alt="Profile"
                                             className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-50"
                                         />
