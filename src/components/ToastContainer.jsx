@@ -2,12 +2,27 @@
 import Toast from "./Toast";
 
 const ToastContainer = ({ toasts, onDismiss }) => {
-  if (toasts.length === 0) return null;
+  if (!toasts || toasts.length === 0) return null;
+
+  // Deduplicate toasts by type+message (keep the latest of each unique message)
+  const uniqueMap = new Map();
+  for (let i = toasts.length - 1; i >= 0; i--) {
+    const t = toasts[i];
+    const key = `${t.type}::${t.message}`;
+    if (!uniqueMap.has(key)) uniqueMap.set(key, t);
+  }
+
+  // Restore order (oldest first)
+  const uniqueToasts = Array.from(uniqueMap.values()).reverse();
+
+  // Limit visible toasts to avoid UI overload
+  const MAX_VISIBLE = 3;
+  const visibleToasts = uniqueToasts.slice(-MAX_VISIBLE);
 
   return (
     <>
       <div className="fixed top-4 right-4 z-[60] flex flex-col gap-2">
-        {toasts.map((toast) => (
+        {visibleToasts.map((toast) => (
           <Toast
             key={toast.id}
             id={toast.id}
@@ -18,7 +33,7 @@ const ToastContainer = ({ toasts, onDismiss }) => {
           />
         ))}
       </div>
-      
+
       <style>{`
         @keyframes slide-in {
           from {

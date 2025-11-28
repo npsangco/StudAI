@@ -3,7 +3,12 @@ import { useState } from 'react';
 
 const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) => {
     const [deletingQuestionId, setDeletingQuestionId] = useState(null);
-    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [deleteModalState, setDeleteModalState] = useState({
+        isOpen: false,
+        question: null,
+        reason: "",
+        isSubmitting: false
+    });
 
     if (!isOpen) return null;
 
@@ -13,15 +18,38 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
         }
     };
 
-    const handleDelete = async (questionId) => {
-        setDeletingQuestionId(questionId);
-        await onDeleteQuestion(questionId);
-        setDeletingQuestionId(null);
-        setConfirmDeleteId(null);
+    const openDeleteModal = (question) => {
+        setDeleteModalState({
+            isOpen: true,
+            question: question,
+            reason: "",
+            isSubmitting: false
+        });
     };
 
-    const handleCancelDelete = () => {
-        setConfirmDeleteId(null);
+    const closeDeleteModal = () => {
+        setDeleteModalState({
+            isOpen: false,
+            question: null,
+            reason: "",
+            isSubmitting: false
+        });
+    };
+
+    const handleDelete = async () => {
+        if (!deleteModalState.reason.trim()) return;
+        
+        try {
+            setDeleteModalState(prev => ({ ...prev, isSubmitting: true }));
+            setDeletingQuestionId(deleteModalState.question.question_id);
+            await onDeleteQuestion(deleteModalState.question.question_id, deleteModalState.reason);
+            setDeletingQuestionId(null);
+            closeDeleteModal();
+        } catch (error) {
+            console.error("Failed to delete question:", error);
+            setDeleteModalState(prev => ({ ...prev, isSubmitting: false }));
+            setDeletingQuestionId(null);
+        }
     };
 
     const renderQuestionContent = (question) => {
@@ -265,32 +293,12 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                                         </div>
 
                                         {/* Delete Button */}
-                                        {confirmDeleteId === question.question_id ? (
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <button
-                                                    onClick={() => handleDelete(question.question_id)}
-                                                    disabled={deletingQuestionId === question.question_id}
-                                                    className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    Delete
-                                                </button>
-                                                <button
-                                                    onClick={handleCancelDelete}
-                                                    disabled={deletingQuestionId === question.question_id}
-                                                    className="px-3 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button
-                                                onClick={() => setConfirmDeleteId(question.question_id)}
-                                                className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium shrink-0"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={() => openDeleteModal(question)}
+                                            className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium shrink-0"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -313,6 +321,68 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                     </button>
                 </div>
             </div>
+
+            {/* Delete Reason Modal */}
+            {deleteModalState.isOpen && deleteModalState.question && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    onClick={closeDeleteModal}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg transform transition-all"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-6 sm:p-8">
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                                Delete Question
+                            </h2>
+                            <p className="text-gray-600 mb-4">
+                                You are about to delete this question from "{quiz?.title}". This action cannot be undone.
+                            </p>
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-6">
+                                <p className="text-sm font-medium text-gray-800 line-clamp-2">
+                                    {deleteModalState.question.question}
+                                </p>
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Reason <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={deleteModalState.reason}
+                                    onChange={(e) => setDeleteModalState(prev => ({ ...prev, reason: e.target.value }))}
+                                    placeholder="Enter the reason for deleting this question..."
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
+                                    rows="4"
+                                    maxLength={150}
+                                    required
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                    This reason will be included in the email notification sent to {quiz?.creator} ({deleteModalState.reason.length}/150 characters)
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={closeDeleteModal}
+                                    disabled={deleteModalState.isSubmitting}
+                                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    disabled={!deleteModalState.reason.trim() || deleteModalState.isSubmitting}
+                                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {deleteModalState.isSubmitting ? "Deleting..." : "Delete Question"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
         @keyframes fadeIn {

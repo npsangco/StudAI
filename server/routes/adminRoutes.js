@@ -194,17 +194,45 @@ router.get("/quizzes", async (req, res) => {
 router.delete("/quizzes/:quizId", async (req, res) => {
     try {
         const { quizId } = req.params;
+        const { reason } = req.body;
 
-        // Check if quiz exists
-        const quiz = await Quiz.findByPk(quizId);
+        // Check if quiz exists and get creator details
+        const quiz = await Quiz.findByPk(quizId, {
+            include: [{
+                model: User,
+                as: 'creator',
+                attributes: ['email', 'username']
+            }]
+        });
+        
         if (!quiz) {
             return res.status(404).json({ error: "Quiz not found" });
         }
+
+        const quizTitle = quiz.title;
+        const creatorEmail = quiz.creator?.email;
+        const creatorUsername = quiz.creator?.username;
 
         // Delete the quiz (cascade should handle related records if configured)
         await Quiz.destroy({
             where: { quiz_id: quizId }
         });
+
+        // Send email notification to quiz creator
+        if (creatorEmail && creatorUsername) {
+            try {
+                const { sendQuizDeletionEmail } = await import('../services/emailService.js');
+                await sendQuizDeletionEmail(
+                    creatorEmail, 
+                    creatorUsername, 
+                    quizTitle, 
+                    reason || "No reason provided"
+                );
+            } catch (emailError) {
+                console.error("Failed to send quiz deletion email:", emailError);
+                // Continue even if email fails
+            }
+        }
 
         res.json({ message: "Quiz deleted successfully" });
     } catch (error) {
@@ -234,6 +262,7 @@ router.get("/quizzes/:quizId/questions", async (req, res) => {
 router.delete("/questions/:questionId", async (req, res) => {
     try {
         const { questionId } = req.params;
+        const { reason } = req.body;
 
         const question = await Question.findByPk(questionId);
 
@@ -242,16 +271,61 @@ router.delete("/questions/:questionId", async (req, res) => {
         }
 
         const quizId = question.quiz_id;
+        const questionText = question.question;
+
+        // Get quiz and creator info separately
+        let quizTitle = "Unknown Quiz";
+        let creatorEmail = null;
+        let creatorUsername = null;
+
+        if (quizId) {
+            const quiz = await Quiz.findByPk(quizId, {
+                attributes: ['title', 'created_by']
+            });
+
+            if (quiz) {
+                quizTitle = quiz.title;
+                
+                // Get creator info
+                const creator = await User.findByPk(quiz.created_by, {
+                    attributes: ['email', 'username']
+                });
+
+                if (creator) {
+                    creatorEmail = creator.email;
+                    creatorUsername = creator.username;
+                }
+            }
+        }
 
         // Delete the question
         await Question.destroy({
             where: { question_id: questionId }
         });
 
+        // Send email notification to quiz creator
+        if (creatorEmail && creatorUsername) {
+            try {
+                const { sendQuestionDeletionEmail } = await import('../services/emailService.js');
+                await sendQuestionDeletionEmail(
+                    creatorEmail,
+                    creatorUsername,
+                    quizTitle,
+                    questionText,
+                    reason || "No reason provided"
+                );
+            } catch (emailError) {
+                console.error("Failed to send question deletion email:", emailError);
+                // Continue even if email fails
+            }
+        }
+
         // Update the quiz's total_questions count
-        await Quiz.decrement('total_questions', {
-            where: { quiz_id: quizId }
-        });
+        if (quizId) {
+            await Quiz.decrement('total_questions', {
+                where: { quiz_id: quizId }
+            });
+        }
 
         res.json({ success: true, message: "Question deleted successfully" });
     } catch (error) {
@@ -322,18 +396,62 @@ router.get("/sessions", async (req, res) => {
 router.put("/sessions/:sessionId/end", async (req, res) => {
     try {
         const { sessionId } = req.params;
+        const { reason } = req.body;
 
-        const session = await JitsiSession.findByPk(sessionId);
+        const session = await JitsiSession.findByPk(sessionId, {
+            include: [{
+                model: User,
+                as: 'creator',
+                attributes: ['username', 'email'],
+                foreignKey: 'user_id'
+            }]
+        });
+        
         if (!session) {
             return res.status(404).json({ error: "Session not found" });
         }
 
-        await JitsiSession.update(
-            { status: "completed" },
-            { where: { session_id: sessionId } }
-        );
+        const sessionTopic = session.topic;
+        const creatorEmail = session.creator?.email;
+        const creatorUsername = session.creator?.username;
 
-        res.json({ message: "Session ended successfully" });
+        // Send email notification to session creator
+        if (creatorEmail && creatorUsername) {
+            try {
+                const { sendSessionEndedEmail } = await import('../services/emailService.js');
+                await sendSessionEndedEmail(
+                    creatorEmail,
+                    creatorUsername,
+                    sessionTopic,
+                    reason || "No reason provided"
+                );
+            } catch (emailError) {
+                console.error("Failed to send session ended email:", emailError);
+                // Continue even if email fails
+            }
+        }
+
+        // Log the session ending in audit logs (optional - for record keeping)
+        try {
+            await AuditLog.create({
+                user_id: req.user?.user_id || null, // Admin who ended the session
+                action: 'Admin End Session',
+                target: 'JitsiSession',
+                target_id: sessionId,
+                details: `Session "${session.topic}" ended by admin. Reason: ${reason || 'No reason provided'}`,
+                ip_address: req.ip || 'unknown'
+            });
+        } catch (auditError) {
+            console.error("Failed to log session end:", auditError);
+            // Continue even if audit logging fails
+        }
+
+        // Delete the session from the database (removes it from both admin table and user sessions)
+        await JitsiSession.destroy({
+            where: { session_id: sessionId }
+        });
+
+        res.json({ message: "Session ended and removed successfully" });
     } catch (error) {
         console.error("Error ending session:", error);
         res.status(500).json({ error: "Failed to end session" });

@@ -274,7 +274,7 @@ const JitsiSessions = () => {
         {isMine && (
           <button
             onClick={() => deleteSession(session.session_id)}
-            className="text-red-500 hover:text-red-700 transition-colors"
+            className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
           >
             <Trash2 className="w-5 h-5" />
           </button>
@@ -302,7 +302,7 @@ const JitsiSessions = () => {
         <button
           onClick={() => joinSession(session)}
           disabled={isExpired}
-          className={`flex-1 px-4 py-2 rounded-md transition-colors flex items-center justify-center gap-2 ${
+          className={`flex-1 px-4 py-2 rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer ${
             isExpired 
               ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
               : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -314,7 +314,7 @@ const JitsiSessions = () => {
         </button>
         <button
           onClick={() => copyToClipboard(session.jitsi_url, session.session_id)}
-          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors"
+          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors cursor-pointer"
         >
           {copiedUrl === session.session_id ? (
             <Check className="w-5 h-5 text-green-600" />
@@ -660,7 +660,7 @@ const JitsiSessions = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-black text-white hover:bg-slate-800 transition-all py-3 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
+              className="w-full bg-black text-white hover:bg-slate-800 transition-all py-3 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium cursor-pointer"
             >
               <Video className="w-5 h-5" />
               {loading ? 'Creating...' : 'Create Session'}

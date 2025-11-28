@@ -968,7 +968,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                   </div>
                   <h2 className="text-sm font-semibold text-gray-900">Upcoming Deadlines</h2>
                 </div>
-                <a href="/planner" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">View all →</a>
+                <a href="/planner" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium cursor-pointer">View all →</a>
               </div>
               <div className="space-y-3">
                 {upcomingPlans.length > 0 ? (

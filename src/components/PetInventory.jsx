@@ -87,10 +87,10 @@ export default function PetInventory({ onClose, onUseItem }) {
   }, {});
 
   const effectTypeLabels = {
-    hunger: '🍖 Food',
-    happiness: '🎾 Toys',
-    cleanliness: '🧼 Clean',
-    energy: '⚡ Energy'
+    hunger: 'Food',
+    happiness: 'Toys',
+    cleanliness: 'Clean',
+    energy: 'Energy'
   };
 
   if (loading) {
@@ -119,7 +119,7 @@ export default function PetInventory({ onClose, onUseItem }) {
           <p className="text-red-600 font-semibold">{error}</p>
           <button
             onClick={loadInventory}
-            className="mt-3 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition"
+            className="mt-3 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition cursor-pointer"
           >
             Retry
           </button>
@@ -145,7 +145,7 @@ export default function PetInventory({ onClose, onUseItem }) {
         <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
           {/* Compact Header */}
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Inventory 🎒</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Inventory</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl font-bold">
               ✕
             </button>
@@ -154,7 +154,7 @@ export default function PetInventory({ onClose, onUseItem }) {
           {/* Compact Help Section */}
           <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
             <p className="text-xs sm:text-sm text-blue-800">
-              💡 <strong>Tip:</strong> Equip items to auto-use when clicking Feed/Play/Clean. Multiple items can be equipped!
+              <strong>Tip:</strong> Equip items to auto-use when clicking Feed/Play/Clean. Multiple items can be equipped!
             </p>
           </div>
 
@@ -221,7 +221,7 @@ export default function PetInventory({ onClose, onUseItem }) {
 
 // Compact Inventory Item Component
 const CompactInventoryItem = ({ item, usingItem, onToggleEquip, onUseItem }) => (
-  <div className={`border-2 rounded-lg p-3 transition-all ${
+  <div className={`border-2 rounded-lg p-3 transition-all cursor-pointer ${
     item.is_equipped 
       ? "border-indigo-400 bg-indigo-50" 
       : "border-gray-200 hover:border-green-300"
@@ -251,7 +251,7 @@ const CompactInventoryItem = ({ item, usingItem, onToggleEquip, onUseItem }) => 
       <button
         onClick={() => onUseItem(item.inventory_id, item.item_id)}
         disabled={usingItem === item.inventory_id}
-        className={`py-1.5 rounded-lg text-xs font-semibold transition-all ${
+        className={`py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
           usingItem === item.inventory_id
             ? "bg-green-400 text-white cursor-wait"
             : "bg-green-500 text-white hover:bg-green-600"
@@ -262,7 +262,7 @@ const CompactInventoryItem = ({ item, usingItem, onToggleEquip, onUseItem }) => 
 
       <button
         onClick={() => onToggleEquip(item.inventory_id, item.is_equipped)}
-        className={`py-1.5 rounded-lg text-xs font-semibold transition-all ${
+        className={`py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
           item.is_equipped
             ? "bg-indigo-600 text-white hover:bg-indigo-700"
             : "bg-gray-400 text-white hover:bg-gray-500"

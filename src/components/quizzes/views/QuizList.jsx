@@ -374,7 +374,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
 
               {showMoreMenu && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)}></div>
+                  <div className="fixed inset-0 z-10 cursor-pointer" onClick={() => setShowMoreMenu(false)}></div>
                   <div className="absolute right-0 top-auto bottom-full mb-2 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] z-[100]">
                     <button
                       onClick={(e) => {
@@ -416,7 +416,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
               {/* Share Code Modal */}
               {showShareCode && (
                 <>
-                  <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowShareCode(false)}>
+                  <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 cursor-pointer" onClick={() => setShowShareCode(false)}>
                     <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
                       <div className="text-center mb-4">
                         <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">

@@ -36,7 +36,7 @@ export default function UserManagement() {
             setIsSubmitting(true);
             await axios.post(
                 `${API_URL}/api/admin/users/${userId}/${action}`,
-                { reason },
+                { reason: reason || "Account unlocked by administrator" },
                 { withCredentials: true }
             );
             setUsers((prev) =>
@@ -188,8 +188,8 @@ export default function UserManagement() {
                                                 <td className="py-2 px-2 sm:px-3">
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-medium ${user.status === "Active"
-                                                                ? "bg-green-100 text-green-800"
-                                                                : "bg-red-100 text-red-800"
+                                                            ? "bg-green-100 text-green-800"
+                                                            : "bg-red-100 text-red-800"
                                                             }`}
                                                     >
                                                         {user.status}
@@ -209,7 +209,7 @@ export default function UserManagement() {
                                                         </button>
                                                     ) : (
                                                         <button
-                                                            onClick={() => openActionModal(user, "unlock")}
+                                                            onClick={() => handleUserAction(user.user_id, "unlock")}
                                                             className="flex items-center bg-green-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-green-600"
                                                         >
                                                             <Unlock className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
@@ -260,66 +260,86 @@ export default function UserManagement() {
                 </div>
             </div>
 
-            {/* Action Modal */}
-            {showModal && selectedUser && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl p-6 sm:p-8 w-full max-w-lg shadow-xl">
-                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-                            {actionType === "lock" ? "Lock User Account" : "Unlock User Account"}
-                        </h2>
-                        <p className="text-gray-600 mb-6">
-                            {actionType === "lock" 
-                                ? `You are about to lock the account for ${selectedUser.username}.`
-                                : `You are about to unlock the account for ${selectedUser.username}.`
-                            }
-                        </p>
-
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Reason <span className="text-red-500">*</span>
-                            </label>
-                            <textarea
-                                value={reason}
-                                onChange={(e) => setReason(e.target.value)}
-                                placeholder={actionType === "lock" 
-                                    ? "Enter the reason for locking this account (will be sent to the user via email)..."
-                                    : "Enter the reason for unlocking this account (will be sent to the user via email)..."
-                                }
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
-                                rows="4"
-                                required
-                            />
-                            <p className="text-xs text-gray-500 mt-2">
-                                This reason will be included in the email notification sent to {selectedUser.email}
+            {/* Action Modal - Lock Account */}
+            {showModal && selectedUser && actionType === "lock" && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn"
+                    onClick={closeModal}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg transform transition-all animate-scaleIn"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-6 sm:p-8">
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                                Lock User Account
+                            </h2>
+                            <p className="text-gray-600 mb-6">
+                                You are about to lock the account for {selectedUser.username}.
                             </p>
-                        </div>
 
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <button
-                                onClick={closeModal}
-                                disabled={isSubmitting}
-                                className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => handleUserAction(selectedUser.user_id, actionType)}
-                                disabled={!reason.trim() || isSubmitting}
-                                className={`flex-1 ${
-                                    actionType === "lock" 
-                                        ? "bg-red-500 hover:bg-red-600" 
-                                        : "bg-green-500 hover:bg-green-600"
-                                } text-white py-3 px-4 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-                            >
-                                {isSubmitting 
-                                    ? "Processing..." 
-                                    : actionType === "lock" 
-                                        ? "Lock Account" 
-                                        : "Unlock Account"
-                                }
-                            </button>
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Reason <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={reason}
+                                    onChange={(e) => setReason(e.target.value)}
+                                    placeholder="Enter the reason for locking this account..."
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
+                                    rows="4"
+                                    maxLength={150}
+                                    required
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                    This reason will be included in the email notification sent to {selectedUser.email} ({reason.length}/150 characters)
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={closeModal}
+                                    disabled={isSubmitting}
+                                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => handleUserAction(selectedUser.user_id, actionType)}
+                                    disabled={!reason.trim() || isSubmitting}
+                                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? "Processing..." : "Lock Account"}
+                                </button>
+                            </div>
                         </div>
                     </div>
+
+                    <style>{`
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        
+                        @keyframes scaleIn {
+                            from {
+                                opacity: 0;
+                                transform: scale(0.95);
+                            }
+                            to {
+                                opacity: 1;
+                                transform: scale(1);
+                            }
+                        }
+
+                        .animate-fadeIn {
+                            animation: fadeIn 0.2s ease-out;
+                        }
+
+                        .animate-scaleIn {
+                            animation: scaleIn 0.2s ease-out;
+                        }
+                    `}</style>
                 </div>
             )}
         </div>

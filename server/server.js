@@ -122,7 +122,6 @@ import {
     getUsageSnapshot
 } from "./services/aiUsageService.js";
 import { ensureContentIsSafe, ModerationError } from "./services/moderationService.js";
-import { convertOrExtractPPT, cleanupTempFiles } from './services/pptConverter.js';
 
 // Import validation middleware
 import {
@@ -472,9 +471,18 @@ if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
         const email = profile.emails && profile.emails[0].value;
         if (!email) return done(new Error("No email from Google"), null);
 
+        const domain = String(email).split('@')[1]?.toLowerCase();
+
         let user = await User.findOne({ where: { email } });
 
         if (!user) {
+            // Restrict creating new accounts to @ust.edu.ph domain only
+            if (domain !== 'ust.edu.ph') {
+                console.log(`🚫 Google signup blocked for non-UST domain: ${email}`);
+                // Inform passport that authentication failed due to domain restriction
+                return done(null, false, { message: 'domain_restricted' });
+            }
+
             // Generate secure random password for OAuth users
             const crypto = await import('crypto');
             const securePassword = crypto.randomBytes(32).toString('hex');
@@ -485,7 +493,7 @@ if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
                 password: await bcrypt.hash(securePassword, 12),
                 role: "Student",
                 status: "active", // OAuth users are pre-verified by Google
-                profile_picture: "/uploads/profile_pictures/default-avatar.png" // Use local default
+                profile_picture: "/default-avatar.png" // Use public default
             });
             
             console.log(`✅ New user created via Google OAuth: ${email}`);
@@ -607,7 +615,8 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
             return res.status(500).json({ error: "OpenAI API key not configured" });
         }
 
-        const defaultSystemPrompt = "You are a helpful assistant that creates concise, well-structured summaries of educational content. Focus on key concepts, main ideas, and important details.";
+        const defaultSystemPrompt = `You are a helpful assistant that creates concise, well-structured summaries of educational content. Focus on key concepts, main ideas, and important details.
+    Do NOT use Markdown formatting. Return plain text only — no headings, no bold/italic, no bullet or numbered lists, no code blocks, and no YAML/front-matter. Use simple sentences and short paragraphs.`;
 
         const APIBody = {
             model: "gpt-3.5-turbo",
@@ -650,14 +659,47 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         }
 
         const data = await response.json();
-        const summary = data.choices[0]?.message?.content?.trim();
+                const summary = data.choices[0]?.message?.content?.trim();
 
-        if (!summary) {
+                // Helper: strip common Markdown artifacts as a fallback
+                function stripMarkdown(md) {
+                    if (!md || typeof md !== 'string') return md;
+                    let out = md;
+                    // Remove code fences
+                    out = out.replace(/```[\s\S]*?```/g, '');
+                    // Remove inline code
+                    out = out.replace(/`([^`]+)`/g, '$1');
+                    // Remove ATX headings (#, ##, ...)
+                    out = out.replace(/^#{1,6}\s*/gm, '');
+                    // Remove Setext headings (underlines)
+                    out = out.replace(/(^.+)\n[-=]{2,}\s*$/gm, '$1');
+                    // Bold/italic
+                    out = out.replace(/\*\*(.*?)\*\*/g, '$1');
+                    out = out.replace(/\*(.*?)\*/g, '$1');
+                    out = out.replace(/__(.*?)__/g, '$1');
+                    out = out.replace(/_(.*?)_/g, '$1');
+                    // Lists
+                    out = out.replace(/^\s*[-*+]\s+/gm, '');
+                    out = out.replace(/^\s*\d+\.\s+/gm, '');
+                    // Links and images
+                    out = out.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1');
+                    out = out.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
+                    // Remove excessive newlines
+                    out = out.replace(/\n{3,}/g, '\n\n');
+                    return out.trim();
+                }
+
+                if (!summary) {
             console.error('❌ [Server] No summary generated from OpenAI response');
             return res.status(500).json({ error: "Failed to generate summary" });
         }
+                // Clean markdown artifacts (fallback) and trim
+                const cleanedSummary = stripMarkdown(summary);
 
-        console.log('✅ [Server] Summary generated successfully, length:', summary.length);
+                console.log('✅ [Server] Summary generated successfully, length:', summary.length);
+                if (cleanedSummary !== summary) {
+                    console.log('ℹ️ [Server] Summary contained markdown — returning cleaned plain-text version');
+                }
         const recordResult = await recordSummaryUsage(userId);
 
         if (!recordResult.allowed) {
@@ -671,8 +713,9 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         const snapshot = await getUsageSnapshot(userId);
 
         res.json({
-            summary,
-            usage: snapshot
+            summary: cleanedSummary,
+            usage: snapshot,
+            rawSummary: summary
         });
     } catch (err) {
         if (err instanceof ModerationError) {
@@ -887,70 +930,75 @@ app.get("/auth/google", (req, res, next) => {
     passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
 });
 
-app.get(
-    "/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: `${CLIENT_URL}/?error=google_auth_failed` }),
-    async (req, res) => {
+app.get('/auth/google/callback', (req, res, next) => {
+    // Use custom callback to handle domain restriction feedback from strategy
+    passport.authenticate('google', async (err, user, info) => {
         try {
-            const user = req.user;
-            
+            if (err) {
+                console.error('❌ Google authentication error:', err);
+                return res.redirect(`${CLIENT_URL}/?error=google_auth_failed`);
+            }
+
+            // If strategy provided info about domain restriction, redirect with specific message
+            if (info && info.message === 'domain_restricted') {
+                return res.redirect(`${CLIENT_URL}/?error=google_domain_restricted`);
+            }
+
+            if (!user) {
+                return res.redirect(`${CLIENT_URL}/?error=google_auth_failed`);
+            }
+
             // Check if account is locked
-            if (user.status === "locked" || user.status === "Locked") {
+            if (user.status === 'locked' || user.status === 'Locked') {
                 console.log(`🚫 Locked user attempted Google login: ${user.email}`);
                 return res.redirect(`${CLIENT_URL}/?error=account_locked`);
             }
 
             // Check if account is not active
-            if (user.status !== "active" && user.status !== "Active") {
+            if (user.status !== 'active' && user.status !== 'Active') {
                 console.log(`🚫 Inactive user attempted Google login: ${user.email}`);
                 return res.redirect(`${CLIENT_URL}/?error=account_inactive`);
             }
-            
-            if (!req.user) {
-                console.error("❌ No user object from passport");
-                return res.redirect(`${CLIENT_URL}/?error=auth_failed`);
-            }
 
-            req.session.userId = req.user.user_id;
-            req.session.email = req.user.email;
-            req.session.username = req.user.username;
-            req.session.role = req.user.role;
+            // Attach session info
+            req.session.userId = user.user_id;
+            req.session.email = user.email;
+            req.session.username = user.username;
+            req.session.role = user.role;
 
             // Generate JWT token as fallback
             const token = jwt.sign(
                 {
-                    userId: req.user.user_id,
-                    email: req.user.email,
-                    username: req.user.username,
-                    role: req.user.role,
+                    userId: user.user_id,
+                    email: user.email,
+                    username: user.username,
+                    role: user.role,
                 },
-                process.env.JWT_SECRET || "fallback-secret",
-                { expiresIn: "7d" }
+                process.env.JWT_SECRET || 'fallback-secret',
+                { expiresIn: '7d' }
             );
 
             // Force session save before redirect
-            req.session.save((err) => {
-                if (err) {
-                    console.error("❌ Session save error:", err);
-                    // If session fails, redirect with token in URL for fallback
+            req.session.save((saveErr) => {
+                if (saveErr) {
+                    console.error('❌ Session save error:', saveErr);
                     return res.redirect(`${CLIENT_URL}/?token=${token}&authMethod=token`);
                 }
-                
-                console.log("✅ Google login session saved:", {
+
+                console.log('✅ Google login session saved:', {
                     userId: req.session.userId,
                     email: req.session.email,
                     username: req.session.username
                 });
-                
-                // Redirect with token as backup (frontend can use it if session cookie fails)
-                res.redirect(`${CLIENT_URL}/dashboard?token=${token}`);
+
+                return res.redirect(`${CLIENT_URL}/dashboard?token=${token}`);
             });
-        } catch (err) {
-            console.error("❌ Google login error:", err);
-            res.redirect(`${CLIENT_URL}/?error=server_error`);
+        } catch (catchErr) {
+            console.error('❌ Google login error:', catchErr);
+            return res.redirect(`${CLIENT_URL}/?error=server_error`);
         }
-    }
-);
+    })(req, res, next);
+});
 
 app.get("/api/ping", (req, res) => {
     res.json({ message: "Server running fine ✅" });
@@ -1283,7 +1331,19 @@ app.get("/api/user/profile", sessionLockCheck, async (req, res) => {
         if (!user) return res.status(404).json({ error: "User not found" });
 
         if (!user.profile_picture) {
-            user.profile_picture = "/uploads/profile_pictures/default-avatar.png";
+            // Use frontend public asset as default avatar
+            user.profile_picture = "/default-avatar.png";
+        } else {
+            // If profile_picture is stored as an R2 key (not a full URL and not an absolute path), generate a signed URL
+            try {
+                const pic = user.profile_picture;
+                // Only create signed URL for relative keys (no leading slash, not a full URL)
+                if (pic && !pic.startsWith('http') && !pic.startsWith('/')) {
+                    user.profile_picture = await getDownloadUrl(pic, 24 * 3600);
+                }
+            } catch (err) {
+                console.error('R2 signed URL generation error for profile:', err);
+            }
         }
 
         res.json(user);
@@ -1408,32 +1468,30 @@ app.get("/api/user/daily-stats", async (req, res) => {
     }
 });
 
-const profileStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/profile_pictures');
-    },
-    filename: function (req, file, cb) {
-        const ext = path.extname(file.originalname);
-        cb(null, Date.now() + '-' + file.fieldname + ext);
-    }
-});
 
-const profileUpload = multer({ storage: profileStorage });
+const profileUpload = multer({ storage: multer.memoryStorage() });
 
 app.post('/api/upload/profile', profileUpload.single('profilePic'), async (req, res) => {
     try {
         const file = req.file;
         if (!file) return res.status(400).json({ error: "No file uploaded" });
 
-        const photoUrl = `/uploads/profile_pictures/${file.filename}`;
-        res.json({ message: "Profile picture uploaded", photoUrl });
+        // Generate a unique key for R2
+        const ext = path.extname(file.originalname);
+        const key = `profile_pictures/${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+        // Upload to R2
+        await uploadFile(key, file.buffer, file.mimetype);
+
+        // Optionally, generate a signed URL for access
+        const photoUrl = await getDownloadUrl(key, 24 * 3600); // 24 hours
+
+        res.json({ message: "Profile picture uploaded", photoUrl, r2Key: key });
     } catch (err) {
         console.error("❌ Profile upload error:", err);
         res.status(500).json({ error: "Failed to upload profile picture" });
     }
 });
-
-app.use('/uploads/profile_pictures', express.static('uploads/profile_pictures'));
 
 // ----------------- PASSWORD UPDATE WITH EMAIL VERIFICATION -----------------
 // Optimized transporter with connection pooling for faster email delivery
@@ -1685,14 +1743,48 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
             return res.status(409).json({ error: "File with this name already exists for this user" });
         }
 
+        // Upload to R2
+        const ext = path.extname(file.originalname) || '';
+        const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const key = `uploads/${userId}/${Date.now()}-${safeName}`;
+
+        // If multer used disk storage, read from disk; otherwise use buffer if present
+        let bodyStreamOrBuffer;
+        if (file.buffer) {
+            bodyStreamOrBuffer = file.buffer;
+        } else if (file.path) {
+            const fs = await import('fs');
+            bodyStreamOrBuffer = fs.createReadStream(file.path);
+        }
+
+        await uploadFile(key, bodyStreamOrBuffer, file.mimetype || 'application/octet-stream');
+
+        // Remove local file if exists
+        if (file.path) {
+            try {
+                const fs = await import('fs');
+                fs.unlinkSync(file.path);
+            } catch (e) {
+                console.warn('Failed to delete local temp file:', e);
+            }
+        }
+
         const newFile = await File.create({
             user_id: userId,
             filename: file.filename,
-            file_path: file.path,
+            file_path: key, // store R2 key, not local path
             upload_date: new Date(),
         });
 
         console.log("✅ [Server] File saved to DB with ID:", newFile.file_id);
+
+        // Generate a signed URL for immediate access
+        let signedUrl = null;
+        try {
+            signedUrl = await getDownloadUrl(key, 24 * 3600);
+        } catch (err) {
+            console.warn('Failed to generate signed URL for uploaded file:', err);
+        }
 
         // Check for file upload achievements
         try {
@@ -1710,7 +1802,8 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
         res.json({
             file_id: newFile.file_id,
             filename: file.filename,
-            url: `/uploads/${file.filename}`
+            url: signedUrl || null,
+            r2Key: key
         });
     } catch (err) {
         console.error("❌ [Server] Upload DB error:", err);
@@ -2175,5 +2268,17 @@ app.listen(PORT, () => {
     } catch (error) {
         console.error('❌ Failed to start archived note cleanup:', error.message);
         console.error('   Archived note cleanup will be disabled');
+    }
+
+    // Start uploaded file cleanup (delete old summarizer/upload files from DB and R2)
+    try {
+        import('./services/uploadedFileCleanup.js')
+            .then(mod => mod.startUploadedFileCleanup())
+            .catch(err => {
+                console.error('❌ Failed to start uploaded file cleanup (dynamic import):', err.message || err);
+            });
+    } catch (error) {
+        console.error('❌ Failed to start uploaded file cleanup:', error.message);
+        console.error('   Uploaded file cleanup will be disabled');
     }
 });

@@ -143,7 +143,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         // Convert relative profile picture path to full URL
         let profilePictureUrl = null;
         if (currentUser.profile_picture) {
-          profilePictureUrl = currentUser.profile_picture.startsWith('http')
+          profilePictureUrl = currentUser.profile_picture.startsWith('http') || currentUser.profile_picture.startsWith('/')
             ? currentUser.profile_picture
             : `${API_URL}${currentUser.profile_picture}`;
         }

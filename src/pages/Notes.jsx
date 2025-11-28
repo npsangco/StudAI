@@ -160,7 +160,7 @@ const Notes = () => {
       day: 'numeric',
       year: 'numeric'
     });
-    return `Archived on ${formatted}`;
+    return `${formatted}`;
   };
 
   const addNote = async () => {
@@ -649,7 +649,7 @@ const Notes = () => {
                   e.stopPropagation();
                   handleChatbot(note.id);
                 }}
-                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                 title="Ask AI Assistant"
               >
                 <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -659,7 +659,7 @@ const Notes = () => {
                   e.stopPropagation();
                   setShowCategoryPicker(showCategoryPicker === note.id ? null : note.id);
                 }}
-                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                 title="Change category"
               >
                 <Tag className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -670,7 +670,7 @@ const Notes = () => {
                     e.stopPropagation();
                     unpinNote(note.id);
                   }}
-                  className="p-1.5 sm:p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                  className="p-1.5 sm:p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors cursor-pointer"
                   title="Unpin note"
                 >
                   <PinOff className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -681,7 +681,7 @@ const Notes = () => {
                     e.stopPropagation();
                     pinNote(note.id);
                   }}
-                  className="p-1.5 sm:p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                  className="p-1.5 sm:p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                   title="Pin note"
                 >
                   <Pin className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -692,7 +692,7 @@ const Notes = () => {
                   e.stopPropagation();
                   shareNote(note.id);
                 }}
-                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                 title="Share"
               >
                 <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -702,7 +702,7 @@ const Notes = () => {
                   e.stopPropagation();
                   archiveSingleNote(note.id);
                 }}
-                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                 title="Archive"
               >
                 <Archive className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -712,7 +712,7 @@ const Notes = () => {
                   e.stopPropagation();
                   startExportMode(note.id);
                 }}
-                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                 title="Export to PDF"
               >
                 <FileDown className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -722,7 +722,7 @@ const Notes = () => {
                   e.stopPropagation();
                   handleGenerateQuiz(note);
                 }}
-                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                 title="Generate Quiz with AI"
               >
                 <Brain className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1099,7 +1099,7 @@ const Notes = () => {
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 data-tutorial="categories"
-                className="px-3 py-2 border-2 border-slate-300 bg-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
+                className="px-3 py-2 border-2 border-slate-300 bg-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base cursor-pointer"
               >
                 <option value="all">All Categories</option>
                 {categories.map(category => (
@@ -1110,7 +1110,7 @@ const Notes = () => {
               </select>
               <button 
                 onClick={() => setShowCategoryModal(true)}
-                className="flex items-center justify-center gap-2 px-3 py-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all text-sm sm:text-base border-2 border-slate-300 bg-slate-50 font-medium"
+                className="flex items-center justify-center gap-2 px-3 py-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all text-sm sm:text-base border-2 border-slate-300 bg-slate-50 font-medium cursor-pointer"
               >
                 <span>Add Category</span>
               </button>
@@ -1119,25 +1119,25 @@ const Notes = () => {
           <div className="flex flex-wrap gap-2 mt-3">
             <button
               onClick={() => setNotesView('active')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm sm:text-base transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm sm:text-base transition-colors cursor-pointer ${
                 notesView === 'active'
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
               }`}
             >
               <Inbox className="w-4 h-4" />
-              Active ({activeNotes.length})
+              Active
             </button>
             <button
               onClick={() => setNotesView('archived')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm sm:text-base transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm sm:text-base transition-colors cursor-pointer ${
                 notesView === 'archived'
                   ? 'bg-amber-500 text-white border-amber-500'
                   : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
               }`}
             >
               <Archive className="w-4 h-4" />
-              Archived ({archivedNotes.length})
+              Archived
             </button>
           </div>
         </div>
@@ -1246,7 +1246,7 @@ const Notes = () => {
                 onClick={() => setShowAddNote(true)}
                 disabled={exportMode}
                 data-tutorial="create-note"
-                className={`mb-4 sm:mb-6 px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all font-medium shadow-md hover:shadow-lg text-sm sm:text-base flex items-center gap-2 ${
+                className={`mb-4 sm:mb-6 px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all font-medium shadow-md hover:shadow-lg text-sm sm:text-base flex items-center gap-2 cursor-pointer ${
                   exportMode
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     : 'bg-black text-white hover:bg-slate-800'
@@ -1317,7 +1317,7 @@ const Notes = () => {
                 />
                 <button
                   onClick={handleShareLinkSubmit}
-                  className="px-4 sm:px-6 py-2 sm:py-3 bg-black text-white rounded-lg hover:bg-slate-800 transition-all font-medium shadow-md hover:shadow-lg text-sm sm:text-base flex items-center gap-2"
+                  className="px-4 sm:px-6 py-2 sm:py-3 bg-black text-white rounded-lg hover:bg-slate-800 transition-all font-medium shadow-md hover:shadow-lg text-sm sm:text-base flex items-center gap-2 cursor-pointer"
                 >
                   <div className="flex items-center justify-center w-5 h-5 rounded-full bg-white/20">
                     <Share2 className="w-3 h-3" />
@@ -1355,7 +1355,7 @@ const Notes = () => {
                         </span>
                         <button
                           onClick={() => copyShareCode(share.share_code)}
-                          className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                          className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors cursor-pointer"
                           title="Copy share code"
                         >
                           <Copy className="w-3 h-3" />

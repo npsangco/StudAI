@@ -35,7 +35,7 @@ export const PasswordUpdateEmail = (confirmLink) => {
                 <p style="color: #999; font-size: 14px; margin-bottom: 0; text-align: center;">This link will expire in 10 minutes.</p>
                 
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
-                    <p style="color: #999; font-size: 14px; margin: 0;">If you didn't request this password update, please contact our support team immediately to secure your account.</p>
+                    <p style="color: #999; font-size: 14px; margin: 0;">If you didn't request this password update, please contact our support team at studai.service@gmail.com immediately to secure your account.</p>
                 </div>
             </div>
         </div>
@@ -91,8 +91,8 @@ export const AccountStatusEmail = (username, status, reason) => {
                 </div>
                 
                 ${isLocked 
-                    ? `<p style="color: #666; font-size: 16px; line-height: 1.5;">If you believe this is a mistake or would like to discuss this action, please contact our support team.</p>`
-                    : `<p style="color: #666; font-size: 16px; line-height: 1.5;">You can now log in and access all StudAI features. Thank you for your patience.</p>`
+                    ? `<p style="color: #666; font-size: 16px; line-height: 1.5;">If you believe this is a mistake or would like to discuss this action, please contact our support team at studai.service@gmail.com.</p>`
+                    : `<p style="color: #666; font-size: 16px; line-height: 1.5;">You can now log in to the website. Thank you for your patience.</p>`
                 }
                 
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
@@ -210,6 +210,108 @@ export const sendAccountStatusEmail = async (userEmail, username, status, reason
     }
 };
 
+// Quiz deletion email
+export const QuizDeletionEmail = (username, quizTitle, reason) => {
+    return `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
+                        Quiz Deleted
+                    </div>
+                </div>
+                
+                <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 16px; font-size: 24px;">Hello ${username},</h2>
+                <p style="color: #666; margin-bottom: 24px; font-size: 16px; line-height: 1.5;">Your quiz has been deleted by an administrator.</p>
+                
+                <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 24px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #374151; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Quiz Title:</p>
+                    <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">${quizTitle}</p>
+                    <p style="margin: 0; color: #374151; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Reason:</p>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">${reason}</p>
+                </div>
+                
+                <p style="color: #666; font-size: 16px; line-height: 1.5;">If you have questions about this action, please contact our support team at studai.service@gmail.com.</p>
+                
+                <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
+                    <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">This is an automated notification from StudAI. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+export const sendQuizDeletionEmail = async (userEmail, username, quizTitle, reason) => {
+    try {
+        const mailOptions = {
+            from: `"StudAI" <${process.env.EMAIL_USER}>`,
+            to: userEmail,
+            subject: `Your Quiz "${quizTitle}" Has Been Deleted`,
+            html: QuizDeletionEmail(username, quizTitle, reason),
+        };
+
+        transporter.sendMail(mailOptions).then(() => {
+            console.log(`✅ Quiz deletion email sent to ${userEmail}`);
+        }).catch(error => {
+            console.error("❌ Failed to send quiz deletion email:", error);
+        });
+    } catch (error) {
+        console.error("❌ Email service error:", error);
+    }
+};
+
+// Question deletion email
+export const QuestionDeletionEmail = (username, quizTitle, questionText, reason) => {
+    return `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
+                        Question Deleted
+                    </div>
+                </div>
+                
+                <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 16px; font-size: 24px;">Hello ${username},</h2>
+                <p style="color: #666; margin-bottom: 24px; font-size: 16px; line-height: 1.5;">A question from your quiz has been deleted by an administrator.</p>
+                
+                <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 24px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #374151; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Quiz:</p>
+                    <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">${quizTitle}</p>
+                    <p style="margin: 0; color: #374151; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Question:</p>
+                    <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">${questionText}</p>
+                    <p style="margin: 0; color: #374151; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Reason:</p>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">${reason}</p>
+                </div>
+                
+                <p style="color: #666; font-size: 16px; line-height: 1.5;">If you have questions about this action, please contact our support team at studai.service@gmail.com.</p>
+                
+                <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
+                    <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">This is an automated notification from StudAI. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+export const sendQuestionDeletionEmail = async (userEmail, username, quizTitle, questionText, reason) => {
+    try {
+        const mailOptions = {
+            from: `"StudAI" <${process.env.EMAIL_USER}>`,
+            to: userEmail,
+            subject: `A Question Was Deleted from "${quizTitle}"`,
+            html: QuestionDeletionEmail(username, quizTitle, questionText, reason),
+        };
+
+        transporter.sendMail(mailOptions).then(() => {
+            console.log(`✅ Question deletion email sent to ${userEmail}`);
+        }).catch(error => {
+            console.error("❌ Failed to send question deletion email:", error);
+        });
+    } catch (error) {
+        console.error("❌ Email service error:", error);
+    }
+};
+
 export const sendStreakExpirationEmail = async (userEmail, username, currentStreak, expiresIn) => {
     try {
         const mailOptions = {
@@ -245,5 +347,59 @@ export const sendInactiveUserEmail = async (userEmail, username, daysSinceActivi
         });
     } catch (error) {
         console.error("❌ Inactive user email service error:", error);
+    }
+};
+
+// Session ended email
+export const SessionEndedEmail = (username, sessionTopic, reason) => {
+    return `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
+                        Session Ended
+                    </div>
+                </div>
+                
+                <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 16px; font-size: 24px;">Hello ${username},</h2>
+                <p style="color: #666; margin-bottom: 24px; font-size: 16px; line-height: 1.5;">Your study session has been ended by an administrator.</p>
+                
+                <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 24px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #374151; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Session Topic:</p>
+                    <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">${sessionTopic}</p>
+                    <p style="margin: 0; color: #374151; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Reason:</p>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">${reason}</p>
+                </div>
+                
+                <p style="color: #666; font-size: 16px; line-height: 1.5;">You can create a new session anytime from your dashboard. If you have questions about this action, please contact our support team at studai.service@gmail.com.</p>
+                
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="${process.env.CLIENT_URL || 'https://studai.dev'}/jitsi-sessions" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);">Create New Session</a>
+                </div>
+                
+                <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
+                    <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">This is an automated notification from StudAI. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+export const sendSessionEndedEmail = async (userEmail, username, sessionTopic, reason) => {
+    try {
+        const mailOptions = {
+            from: `"StudAI" <${process.env.EMAIL_USER}>`,
+            to: userEmail,
+            subject: `Your Study Session "${sessionTopic}" Was Ended`,
+            html: SessionEndedEmail(username, sessionTopic, reason),
+        };
+
+        transporter.sendMail(mailOptions).then(() => {
+            console.log(`✅ Session ended email sent to ${userEmail}`);
+        }).catch(error => {
+            console.error("❌ Failed to send session ended email:", error);
+        });
+    } catch (error) {
+        console.error("❌ Session ended email service error:", error);
     }
 };

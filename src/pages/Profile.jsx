@@ -20,6 +20,7 @@ export default function Profile() {
     const [year, setYear] = useState("");
     const [photo, setPhoto] = useState(null);
     const [savedPhoto, setSavedPhoto] = useState(null);
+    const [profileKey, setProfileKey] = useState(null);
     const [passwordMessage, setPasswordMessage] = useState("");
     const [originalProfile, setOriginalProfile] = useState(null);
     const [showAchievementsModal, setShowAchievementsModal] = useState(false);
@@ -47,8 +48,20 @@ export default function Profile() {
                 const user = res.data;
                 setUsername(user.username || "");
                 setEmail(user.email || "");
-                setPhoto(user.profile_picture || null);
-                setSavedPhoto(user.profile_picture || null);
+                // If the server returned a full URL or an absolute client path, use it directly
+                const pic = user.profile_picture || null;
+                if (pic) {
+                    if (pic.startsWith('http') || pic.startsWith('/')) {
+                        setPhoto(pic);
+                        setSavedPhoto(pic);
+                    } else {
+                        setPhoto(`${API_BASE}${pic}`);
+                        setSavedPhoto(`${API_BASE}${pic}`);
+                    }
+                } else {
+                    setPhoto(null);
+                    setSavedPhoto(null);
+                }
                 
                 // Set member since date
                 if (user.createdAt) {
@@ -118,9 +131,12 @@ export default function Profile() {
                 }
             }
 
+            const payload = { username, birthday };
+            if (profileKey) payload.profile_picture = profileKey;
+
             await axios.put(
                 `${API_BASE}/api/user/profile`,
-                { username, birthday, profile_picture: photo },
+                payload,
                 { withCredentials: true }
             );
 
@@ -161,7 +177,9 @@ export default function Profile() {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
+            // Keep signed URL for immediate preview, but store the R2 key to save in DB
             setPhoto(res.data.photoUrl);
+            setProfileKey(res.data.r2Key || res.data.key || null);
         } catch (err) {
             console.error("Upload error:", err);
             toast.error("Failed to upload photo");
@@ -228,13 +246,7 @@ export default function Profile() {
                                 >
                                     <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 bg-gray-200 rounded-full overflow-hidden border-4 border-white shadow-lg relative">
                                         <img
-                                            src={
-                                                photo
-                                                    ? photo.startsWith("http")
-                                                        ? photo
-                                                        : `${API_BASE}${photo}`
-                                                    : "/uploads/profile_pictures/default-avatar.png"
-                                            }
+                                            src={photo || "/default-avatar.png"}
                                             alt="Profile"
                                             className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-50"
                                         />

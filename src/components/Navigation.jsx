@@ -36,7 +36,12 @@ export default function Navigation() {
         const res = await axios.get(`${API_BASE}/api/user/profile`, { withCredentials: true });
         if (res.data?.profile_picture) {
           const pic = res.data.profile_picture;
-          setUserPhoto(pic.startsWith("http") ? pic : `${API_BASE}${pic}`);
+          // If the server returns a full URL or an absolute client path, use it directly.
+          if (pic.startsWith('http') || pic.startsWith('/')) {
+            setUserPhoto(pic);
+          } else {
+            setUserPhoto(`${API_BASE}${pic}`);
+          }
         } else {
           setUserPhoto(null);
         }
@@ -175,7 +180,7 @@ export default function Navigation() {
                 <span className="sr-only">Open user menu</span>
                 <img
                   alt=""
-                  src={userPhoto || `${API_BASE}/uploads/profile_pictures/default-avatar.png`}
+                  src={userPhoto || '/default-avatar.png'}
                   className="size-10 rounded-full bg-gray-800 object-cover border-2 border-white"
                 />
 
@@ -236,7 +241,7 @@ export default function Navigation() {
     {!isChatbotActive && (
       <button
         onClick={() => setShowQuests(true)}
-        className={`fixed bottom-24 right-6 z-50 p-4 rounded-full bg-black transition-all shadow-lg hover:shadow-2xl group ${questsRef.current?.isAllComplete() ? '' : 'animate-bounce'}`}
+        className={`fixed bottom-24 right-6 z-50 p-4 rounded-full bg-black transition-all shadow-lg hover:shadow-2xl group cursor-pointer ${questsRef.current?.isAllComplete() ? '' : 'animate-bounce'}`}
         title="Daily Quests"
       >
         <Target className="w-6 h-6 text-white" />

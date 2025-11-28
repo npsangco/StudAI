@@ -17,11 +17,17 @@ export default function QuizManagement() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("All");
-    const quizzesPerPage = 13;
+    const quizzesPerPage = 10;
     const [questionsModalState, setQuestionsModalState] = useState({
         isOpen: false,
         quiz: null,
         questions: []
+    });
+    const [deleteModalState, setDeleteModalState] = useState({
+        isOpen: false,
+        quiz: null,
+        reason: "",
+        isSubmitting: false
     });
 
     useEffect(() => {
@@ -53,10 +59,11 @@ export default function QuizManagement() {
         }
     };
 
-    const handleDeleteQuestion = async (questionId) => {
+    const handleDeleteQuestion = async (questionId, reason) => {
         try {
             await axios.delete(`${API_URL}/api/admin/questions/${questionId}`, {
                 withCredentials: true,
+                data: { reason: reason }
             });
 
             setQuestionsModalState(prev => ({
@@ -85,26 +92,41 @@ export default function QuizManagement() {
         });
     };
 
-    const handleDeleteQuiz = async (quizId) => {
-        await confirm({
-            title: 'Delete Quiz',
-            message: 'Are you sure you want to delete this quiz? This action cannot be undone.',
-            confirmText: 'Delete',
-            cancelText: 'Cancel',
-            variant: 'danger',
-            onConfirm: async () => {
-                try {
-                    await axios.delete(`${API_URL}/api/admin/quizzes/${quizId}`, {
-                        withCredentials: true,
-                    });
-                    setQuizzes((prev) => prev.filter((q) => q.quiz_id !== quizId));
-                    toast.success("Quiz deleted successfully!");
-                } catch (err) {
-                    console.error("Failed to delete quiz:", err);
-                    toast.error("Failed to delete quiz. Please try again.");
-                }
-            }
+    const openDeleteModal = (quiz) => {
+        setDeleteModalState({
+            isOpen: true,
+            quiz: quiz,
+            reason: "",
+            isSubmitting: false
         });
+    };
+
+    const closeDeleteModal = () => {
+        setDeleteModalState({
+            isOpen: false,
+            quiz: null,
+            reason: "",
+            isSubmitting: false
+        });
+    };
+
+    const handleDeleteQuiz = async () => {
+        if (!deleteModalState.reason.trim()) return;
+        
+        try {
+            setDeleteModalState(prev => ({ ...prev, isSubmitting: true }));
+            await axios.delete(`${API_URL}/api/admin/quizzes/${deleteModalState.quiz.quiz_id}`, {
+                withCredentials: true,
+                data: { reason: deleteModalState.reason }
+            });
+            setQuizzes((prev) => prev.filter((q) => q.quiz_id !== deleteModalState.quiz.quiz_id));
+            toast.success("Quiz deleted successfully!");
+            closeDeleteModal();
+        } catch (err) {
+            console.error("Failed to delete quiz:", err);
+            toast.error("Failed to delete quiz. Please try again.");
+            setDeleteModalState(prev => ({ ...prev, isSubmitting: false }));
+        }
     };
 
     // Filter and search 
@@ -272,7 +294,7 @@ export default function QuizManagement() {
                                                         <span className="hidden sm:inline">View</span>
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDeleteQuiz(quiz.quiz_id)}
+                                                        onClick={() => openDeleteModal(quiz)}
                                                         className="flex items-center bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
                                                     >
                                                         <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
@@ -318,6 +340,89 @@ export default function QuizManagement() {
                     )}
                 </div>
             </div>
+
+            {/* Delete Reason Modal */}
+            {deleteModalState.isOpen && deleteModalState.quiz && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn"
+                    onClick={closeDeleteModal}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg transform transition-all animate-scaleIn"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-6 sm:p-8">
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                                Delete Quiz
+                            </h2>
+                            <p className="text-gray-600 mb-6">
+                                You are about to delete the quiz "{deleteModalState.quiz.title}". This action cannot be undone.
+                            </p>
+
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Reason <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={deleteModalState.reason}
+                                    onChange={(e) => setDeleteModalState(prev => ({ ...prev, reason: e.target.value }))}
+                                    placeholder="Enter the reason for deleting this quiz..."
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
+                                    rows="4"
+                                    maxLength={150}
+                                    required
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                    This reason will be included in the email notification sent to {deleteModalState.quiz.creator} ({deleteModalState.reason.length}/150 characters)
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={closeDeleteModal}
+                                    disabled={deleteModalState.isSubmitting}
+                                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteQuiz}
+                                    disabled={!deleteModalState.reason.trim() || deleteModalState.isSubmitting}
+                                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {deleteModalState.isSubmitting ? "Deleting..." : "Delete Quiz"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <style>{`
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        
+                        @keyframes scaleIn {
+                            from {
+                                opacity: 0;
+                                transform: scale(0.95);
+                            }
+                            to {
+                                opacity: 1;
+                                transform: scale(1);
+                            }
+                        }
+
+                        .animate-fadeIn {
+                            animation: fadeIn 0.2s ease-out;
+                        }
+
+                        .animate-scaleIn {
+                            animation: scaleIn 0.2s ease-out;
+                        }
+                    `}</style>
+                </div>
+            )}
         </div>
     );
 }

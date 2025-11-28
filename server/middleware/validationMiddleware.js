@@ -206,6 +206,16 @@ export const validateSignupRequest = (req, res, next) => {
     password: password,
     birthday: birthdayValidation.sanitized
   };
+
+  // Enforce institutional email domain for new signups
+  try {
+    const domain = String(emailValidation.sanitized).split('@')[1]?.toLowerCase();
+    if (domain !== 'ust.edu.ph') {
+      return res.status(403).json({ error: 'Signups are restricted to @ust.edu.ph email addresses' });
+    }
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid email domain' });
+  }
   
   next();
 };
@@ -321,11 +331,25 @@ export const validateProfileUpdate = (req, res, next) => {
     if (typeof profile_picture !== 'string' || profile_picture.trim().length === 0) {
       return res.status(400).json({ error: 'Invalid profile picture' });
     }
-    // Basic validation: should start with / or http
     const trimmed = profile_picture.trim();
-    if (!trimmed.startsWith('/') && !trimmed.startsWith('http')) {
-      return res.status(400).json({ error: 'Invalid profile picture URL' });
+    
+    // Accept: local paths (/uploads/...), full URLs (http/https...), or R2 object keys
+    // R2 keys can contain: letters, numbers, /, -, _, .
+    const r2KeyPattern = /^[a-zA-Z0-9_\/\.\-]+$/;
+    const isLocalPath = trimmed.startsWith('/');
+    const isUrl = trimmed.startsWith('http');
+    const isR2Key = r2KeyPattern.test(trimmed);
+    
+    if (!isLocalPath && !isUrl && !isR2Key) {
+      console.error('Profile picture validation failed:', trimmed);
+      return res.status(400).json({ error: 'Invalid profile picture URL or key' });
     }
+    
+    // Limit length (signed URLs can be very long)
+    if (trimmed.length > 2048) {
+      return res.status(400).json({ error: 'Profile picture value too long' });
+    }
+    
     req.validatedData = { ...req.validatedData, profile_picture: trimmed };
   }
 

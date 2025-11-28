@@ -16,57 +16,92 @@ export default function StudySessions() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("All");
+    const [showEndModal, setShowEndModal] = useState(false);
+    const [selectedSession, setSelectedSession] = useState(null);
+    const [endReason, setEndReason] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const sessionsPerPage = 13;
 
+    const fetchSessions = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/api/admin/sessions`, {
+                withCredentials: true,
+            });
+            setSessions(res.data || []);
+        } catch (err) {
+            console.error("Failed to fetch study sessions:", err);
+        }
+    };
+
     useEffect(() => {
-        const fetchSessions = async () => {
-            try {
-                const res = await axios.get(`${API_URL}/api/admin/sessions`, {
-                    withCredentials: true,
-                });
-                setSessions(res.data || []);
-            } catch (err) {
-                console.error("Failed to fetch study sessions:", err);
-            }
-        };
         fetchSessions();
+        
+        // Poll for updates every 30 seconds to catch status changes
+        const interval = setInterval(() => {
+            fetchSessions();
+        }, 30000);
+        
+        return () => clearInterval(interval);
     }, []);
 
-    const handleEndSession = async (sessionId) => {
-        await confirm({
-            title: 'End Session',
-            message: 'Are you sure you want to end this study session?',
-            confirmText: 'End Session',
-            cancelText: 'Cancel',
-            variant: 'warning',
-            onConfirm: async () => {
-                try {
-                    await axios.put(
-                        `${API_URL}/api/admin/sessions/${sessionId}/end`,
-                        {},
-                        { withCredentials: true }
-                    );
-                    setSessions((prev) =>
-                        prev.map((s) =>
-                            s.session_id === sessionId ? { ...s, status: "Completed" } : s
-                        )
-                    );
-                    toast.success("Session ended successfully!");
-                } catch (err) {
-                    console.error("Failed to end session:", err);
-                    toast.error("Failed to end session. Please try again.");
-                }
-            }
-        });
+    const openEndSessionModal = (session) => {
+        setSelectedSession(session);
+        setShowEndModal(true);
+    };
+
+    const closeEndModal = () => {
+        setShowEndModal(false);
+        setEndReason("");
+        setSelectedSession(null);
+    };
+
+    const handleEndSession = async () => {
+        try {
+            setIsSubmitting(true);
+            await axios.put(
+                `${API_URL}/api/admin/sessions/${selectedSession.session_id}/end`,
+                { reason: endReason || "Session ended by administrator" },
+                { withCredentials: true }
+            );
+            
+            // Remove session from local state immediately for better UX
+            setSessions(prev => prev.filter(s => s.session_id !== selectedSession.session_id));
+            
+            closeEndModal();
+            toast.success("Session ended successfully!");
+        } catch (err) {
+            console.error("Failed to end session:", err);
+            toast.error("Failed to end session. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Helper function to check if session has expired
+    const isSessionExpired = (session) => {
+        if (!session.start_time || !session.duration) return false;
+        const startTime = new Date(session.start_time);
+        const endTime = new Date(startTime.getTime() + session.duration * 60000);
+        return new Date() > endTime;
+    };
+
+    // Helper function to get actual session status
+    const getActualStatus = (session) => {
+        const isExpired = isSessionExpired(session);
+        if (isExpired && (session.status?.toLowerCase() === "active" || session.status?.toLowerCase() === "scheduled")) {
+            return "Completed";
+        }
+        return session.status;
     };
 
     // Filter and search
     const filteredSessions = sessions.filter((session) => {
+        const actualStatus = getActualStatus(session);
         const matchesSearch =
             session.host?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             session.topic?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             session.session_id?.toString().includes(searchTerm);
-        const matchesFilter = filterStatus === "All" || session.status === filterStatus;
+        const matchesFilter = filterStatus === "All" || actualStatus?.toLowerCase() === filterStatus.toLowerCase();
         return matchesSearch && matchesFilter;
     });
 
@@ -140,7 +175,7 @@ export default function StudySessions() {
                     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                             <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                                Active & Past Sessions
+                                Active Study Sessions
                             </h2>
 
                             {/* Search and Filter */}
@@ -182,7 +217,11 @@ export default function StudySessions() {
                                 </thead>
                                 <tbody>
                                     {currentSessions.length > 0 ? (
-                                        currentSessions.map((session) => (
+                                        currentSessions.map((session) => {
+                                            const actualStatus = getActualStatus(session);
+                                            const isExpired = isSessionExpired(session);
+                                            
+                                            return (
                                             <tr key={session.session_id} className="border-b border-gray-100">
                                                 <td className="py-2 px-2 sm:px-3 truncate">{session.session_id}</td>
                                                 <td className="py-2 px-2 sm:px-3 font-medium truncate">{session.host}</td>
@@ -192,22 +231,23 @@ export default function StudySessions() {
                                                 <td className="py-2 px-2 sm:px-3 truncate">{session.duration}</td>
                                                 <td className="py-2 px-2 sm:px-3">
                                                     <span
-                                                        className={`px-2 py-1 rounded-full text-xs font-medium ${session.status === "Active"
+                                                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                            actualStatus?.toLowerCase() === "active"
                                                                 ? "bg-green-100 text-green-800"
-                                                                : session.status === "Scheduled"
+                                                                : actualStatus?.toLowerCase() === "scheduled"
                                                                     ? "bg-blue-100 text-blue-800"
-                                                                    : session.status === "Completed"
+                                                                    : actualStatus?.toLowerCase() === "completed"
                                                                         ? "bg-gray-200 text-gray-700"
                                                                         : "bg-red-100 text-red-800"
-                                                            }`}
+                                                        }`}
                                                     >
-                                                        {session.status}
+                                                        {actualStatus}
                                                     </span>
                                                 </td>
                                                 <td className="py-2 px-2 sm:px-3">
-                                                    {session.status === "Active" || session.status === "Scheduled" ? (
+                                                    {!isExpired && (actualStatus?.toLowerCase() === "active" || actualStatus?.toLowerCase() === "scheduled") ? (
                                                         <button
-                                                            onClick={() => handleEndSession(session.session_id)}
+                                                            onClick={() => openEndSessionModal(session)}
                                                             className="bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
                                                         >
                                                             End
@@ -216,13 +256,15 @@ export default function StudySessions() {
                                                         <button
                                                             disabled
                                                             className="bg-gray-300 text-gray-600 px-2 sm:px-3 py-1.5 rounded-lg text-xs cursor-not-allowed"
+                                                            title={isExpired ? "Session has ended" : "Session completed"}
                                                         >
-                                                            Ended
+                                                            {isExpired ? "Ended" : "Ended"}
                                                         </button>
                                                     )}
                                                 </td>
                                             </tr>
-                                        ))
+                                            );
+                                        })
                                     ) : (
                                         <tr>
                                             <td colSpan="6" className="text-center py-4 text-gray-500">
@@ -260,6 +302,89 @@ export default function StudySessions() {
                     )}
                 </div>
             </div>
+
+            {/* End Session Modal */}
+            {showEndModal && selectedSession && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn"
+                    onClick={closeEndModal}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg transform transition-all animate-scaleIn"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-6 sm:p-8">
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                                End Study Session
+                            </h2>
+                            <p className="text-gray-600 mb-6">
+                                You are about to end the session "{selectedSession.topic}" hosted by {selectedSession.host}.
+                            </p>
+
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Reason <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={endReason}
+                                    onChange={(e) => setEndReason(e.target.value)}
+                                    placeholder="Enter the reason for ending this session..."
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
+                                    rows="4"
+                                    maxLength={150}
+                                    required
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                    This reason will be included in the email notification sent to {selectedSession.host} ({endReason.length}/150 characters)
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={closeEndModal}
+                                    disabled={isSubmitting}
+                                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleEndSession}
+                                    disabled={!endReason.trim() || isSubmitting}
+                                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? "Ending Session..." : "End Session"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <style>{`
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        
+                        @keyframes scaleIn {
+                            from {
+                                opacity: 0;
+                                transform: scale(0.95);
+                            }
+                            to {
+                                opacity: 1;
+                                transform: scale(1);
+                            }
+                        }
+
+                        .animate-fadeIn {
+                            animation: fadeIn 0.2s ease-out;
+                        }
+
+                        .animate-scaleIn {
+                            animation: scaleIn 0.2s ease-out;
+                        }
+                    `}</style>
+                </div>
+            )}
         </div>
     );
 }
