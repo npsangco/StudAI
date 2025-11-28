@@ -352,14 +352,14 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                                 <textarea
                                     value={deleteModalState.reason}
                                     onChange={(e) => setDeleteModalState(prev => ({ ...prev, reason: e.target.value }))}
-                                    placeholder="Enter the reason for deleting this question (will be sent to the quiz creator via email)..."
+                                    placeholder="Enter the reason for deleting this question..."
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
                                     rows="4"
                                     maxLength={150}
                                     required
                                 />
                                 <p className="text-xs text-gray-500 mt-2">
-                                    This reason will be included in the email notification sent to the quiz creator ({deleteModalState.reason.length}/150 characters)
+                                    This reason will be included in the email notification sent to {quiz?.creator} ({deleteModalState.reason.length}/150 characters)
                                 </p>
                             </div>
 

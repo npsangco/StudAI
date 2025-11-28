@@ -328,14 +328,14 @@ export default function StudySessions() {
                                 <textarea
                                     value={endReason}
                                     onChange={(e) => setEndReason(e.target.value)}
-                                    placeholder="Enter the reason for ending this session (will be logged for record keeping)..."
+                                    placeholder="Enter the reason for ending this session (will be sent to the user via email)..."
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
                                     rows="4"
-                                    maxLength={200}
+                                    maxLength={150}
                                     required
                                 />
                                 <p className="text-xs text-gray-500 mt-2">
-                                    This reason will be logged in the system for audit purposes ({endReason.length}/200 characters)
+                                    This reason will be included in the email notification sent to {selectedSession.host} ({endReason.length}/150 characters)
                                 </p>
                             </div>
 

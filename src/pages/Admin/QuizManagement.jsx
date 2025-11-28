@@ -366,14 +366,14 @@ export default function QuizManagement() {
                                 <textarea
                                     value={deleteModalState.reason}
                                     onChange={(e) => setDeleteModalState(prev => ({ ...prev, reason: e.target.value }))}
-                                    placeholder="Enter the reason for deleting this quiz (will be sent to the quiz creator via email)..."
+                                    placeholder="Enter the reason for deleting this quiz..."
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
                                     rows="4"
                                     maxLength={150}
                                     required
                                 />
                                 <p className="text-xs text-gray-500 mt-2">
-                                    This reason will be included in the email notification sent to the quiz creator ({deleteModalState.reason.length}/150 characters)
+                                    This reason will be included in the email notification sent to {deleteModalState.quiz.creator} ({deleteModalState.reason.length}/150 characters)
                                 </p>
                             </div>
 
