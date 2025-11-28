@@ -285,7 +285,7 @@ export default function UserManagement() {
                                 <textarea
                                     value={reason}
                                     onChange={(e) => setReason(e.target.value)}
-                                    placeholder="Enter the reason for locking this account (will be sent to the user via email)..."
+                                    placeholder="Enter the reason for locking this account..."
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
                                     rows="4"
                                     maxLength={150}
