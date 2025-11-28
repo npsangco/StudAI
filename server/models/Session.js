@@ -1,6 +1,7 @@
 // models/Session.js
 import { DataTypes } from "sequelize";
 import sequelize from "../db.js";
+import { encryptField, decryptField } from "../utils/fieldEncryption.js";
 
 const Session = sequelize.define("Session", {
     session_id: {
@@ -23,14 +24,38 @@ const Session = sequelize.define("Session", {
     zoom_join_url: {
         type: DataTypes.TEXT,
         allowNull: true,
+        get() {
+            const raw = this.getDataValue('zoom_join_url');
+            if (!raw) return raw;
+            return decryptField(raw);
+        },
+        set(val) {
+            this.setDataValue('zoom_join_url', encryptField(val));
+        }
     },
     zoom_start_url: {
         type: DataTypes.TEXT,
         allowNull: true,
+        get() {
+            const raw = this.getDataValue('zoom_start_url');
+            if (!raw) return raw;
+            return decryptField(raw);
+        },
+        set(val) {
+            this.setDataValue('zoom_start_url', encryptField(val));
+        }
     },
     zoom_password: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: true,
+        get() {
+            const raw = this.getDataValue('zoom_password');
+            if (!raw) return raw;
+            return decryptField(raw);
+        },
+        set(val) {
+            this.setDataValue('zoom_password', encryptField(val));
+        }
     },
     duration: {
         type: DataTypes.INTEGER,
@@ -63,8 +88,16 @@ const Session = sequelize.define("Session", {
         defaultValue: false,
     },
     session_password: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: true,
+        get() {
+            const raw = this.getDataValue('session_password');
+            if (!raw) return raw;
+            return decryptField(raw);
+        },
+        set(val) {
+            this.setDataValue('session_password', encryptField(val));
+        }
     },
     host_name: {
         type: DataTypes.STRING,

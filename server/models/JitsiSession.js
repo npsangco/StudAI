@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../db.js";
+import { encryptField, decryptField } from "../utils/fieldEncryption.js";
 
 const JitsiSession = sequelize.define(
   "JitsiSession",
@@ -39,8 +40,16 @@ const JitsiSession = sequelize.define(
       defaultValue: false,
     },
     session_password: {
-      type: DataTypes.STRING(255),
+      type: DataTypes.TEXT,
       allowNull: true,
+      get() {
+        const raw = this.getDataValue('session_password');
+        if (!raw) return raw;
+        return decryptField(raw);
+      },
+      set(val) {
+        this.setDataValue('session_password', encryptField(val));
+      }
     },
     is_published: {
       type: DataTypes.BOOLEAN,

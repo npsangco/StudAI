@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../db.js';
+import { encryptField, decryptField } from '../utils/fieldEncryption.js';
 
 const ChatMessage = sequelize.define('ChatMessage', {
   chat_id: {
@@ -17,11 +18,27 @@ const ChatMessage = sequelize.define('ChatMessage', {
   },
   message: {
     type: DataTypes.TEXT('long'),
-    allowNull: false
+    allowNull: false,
+    get() {
+      const raw = this.getDataValue('message');
+      if (!raw) return raw;
+      return decryptField(raw);
+    },
+    set(val) {
+      this.setDataValue('message', encryptField(val));
+    }
   },
   response: {
     type: DataTypes.TEXT('long'),
-    allowNull: false
+    allowNull: false,
+    get() {
+      const raw = this.getDataValue('response');
+      if (!raw) return raw;
+      return decryptField(raw);
+    },
+    set(val) {
+      this.setDataValue('response', encryptField(val));
+    }
   },
   timestamp: {
     type: DataTypes.DATE,

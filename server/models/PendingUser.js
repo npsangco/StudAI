@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../db.js";
+import { encryptField, decryptField } from "../utils/fieldEncryption.js";
 
 const PendingUser = sequelize.define(
   "PendingUser",
@@ -27,8 +28,16 @@ const PendingUser = sequelize.define(
       allowNull: false,
     },
     verification_token: {
-      type: DataTypes.STRING(500),
+      type: DataTypes.TEXT,
       allowNull: false,
+      get() {
+        const raw = this.getDataValue('verification_token');
+        if (!raw) return raw;
+        return decryptField(raw);
+      },
+      set(val) {
+        this.setDataValue('verification_token', encryptField(val));
+      }
     },
     expires_at: {
       type: DataTypes.DATE,
