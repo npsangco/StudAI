@@ -321,6 +321,23 @@ app.use(cors({
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
+// Custom CSP header to allow R2 images
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://studai.7e5b49d04478066f6d14ef1f949f22bd.r2.cloudflarestorage.com; " +
+    "connect-src 'self' https://studai.dev https://www.studai.dev https://walrus-app-umg67.ondigitalocean.app; " +
+    "font-src 'self' data:; " +
+    "object-src 'none'; " +
+    "base-uri 'self'; " +
+    "form-action 'self';"
+  );
+  next();
+});
+
 app.use("/api", auditMiddleware);
 
 // ============================================
