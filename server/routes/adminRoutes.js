@@ -396,18 +396,62 @@ router.get("/sessions", async (req, res) => {
 router.put("/sessions/:sessionId/end", async (req, res) => {
     try {
         const { sessionId } = req.params;
+        const { reason } = req.body;
 
-        const session = await JitsiSession.findByPk(sessionId);
+        const session = await JitsiSession.findByPk(sessionId, {
+            include: [{
+                model: User,
+                as: 'creator',
+                attributes: ['username', 'email'],
+                foreignKey: 'user_id'
+            }]
+        });
+        
         if (!session) {
             return res.status(404).json({ error: "Session not found" });
         }
 
-        await JitsiSession.update(
-            { status: "completed" },
-            { where: { session_id: sessionId } }
-        );
+        const sessionTopic = session.topic;
+        const creatorEmail = session.creator?.email;
+        const creatorUsername = session.creator?.username;
 
-        res.json({ message: "Session ended successfully" });
+        // Send email notification to session creator
+        if (creatorEmail && creatorUsername) {
+            try {
+                const { sendSessionEndedEmail } = await import('../services/emailService.js');
+                await sendSessionEndedEmail(
+                    creatorEmail,
+                    creatorUsername,
+                    sessionTopic,
+                    reason || "No reason provided"
+                );
+            } catch (emailError) {
+                console.error("Failed to send session ended email:", emailError);
+                // Continue even if email fails
+            }
+        }
+
+        // Log the session ending in audit logs (optional - for record keeping)
+        try {
+            await AuditLog.create({
+                user_id: req.user?.user_id || null, // Admin who ended the session
+                action: 'Admin End Session',
+                target: 'JitsiSession',
+                target_id: sessionId,
+                details: `Session "${session.topic}" ended by admin. Reason: ${reason || 'No reason provided'}`,
+                ip_address: req.ip || 'unknown'
+            });
+        } catch (auditError) {
+            console.error("Failed to log session end:", auditError);
+            // Continue even if audit logging fails
+        }
+
+        // Delete the session from the database (removes it from both admin table and user sessions)
+        await JitsiSession.destroy({
+            where: { session_id: sessionId }
+        });
+
+        res.json({ message: "Session ended and removed successfully" });
     } catch (error) {
         console.error("Error ending session:", error);
         res.status(500).json({ error: "Failed to end session" });

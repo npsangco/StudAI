@@ -16,6 +16,10 @@ export default function StudySessions() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("All");
+    const [showEndModal, setShowEndModal] = useState(false);
+    const [selectedSession, setSelectedSession] = useState(null);
+    const [endReason, setEndReason] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const sessionsPerPage = 13;
 
     const fetchSessions = async () => {
@@ -40,29 +44,37 @@ export default function StudySessions() {
         return () => clearInterval(interval);
     }, []);
 
-    const handleEndSession = async (sessionId) => {
-        await confirm({
-            title: 'End Session',
-            message: 'Are you sure you want to end this study session?',
-            confirmText: 'End Session',
-            cancelText: 'Cancel',
-            variant: 'warning',
-            onConfirm: async () => {
-                try {
-                    await axios.put(
-                        `${API_URL}/api/admin/sessions/${sessionId}/end`,
-                        {},
-                        { withCredentials: true }
-                    );
-                    // Refresh sessions to get updated status from server
-                    await fetchSessions();
-                    toast.success("Session ended successfully!");
-                } catch (err) {
-                    console.error("Failed to end session:", err);
-                    toast.error("Failed to end session. Please try again.");
-                }
-            }
-        });
+    const openEndSessionModal = (session) => {
+        setSelectedSession(session);
+        setShowEndModal(true);
+    };
+
+    const closeEndModal = () => {
+        setShowEndModal(false);
+        setEndReason("");
+        setSelectedSession(null);
+    };
+
+    const handleEndSession = async () => {
+        try {
+            setIsSubmitting(true);
+            await axios.put(
+                `${API_URL}/api/admin/sessions/${selectedSession.session_id}/end`,
+                { reason: endReason || "Session ended by administrator" },
+                { withCredentials: true }
+            );
+            
+            // Remove session from local state immediately for better UX
+            setSessions(prev => prev.filter(s => s.session_id !== selectedSession.session_id));
+            
+            closeEndModal();
+            toast.success("Session ended successfully!");
+        } catch (err) {
+            console.error("Failed to end session:", err);
+            toast.error("Failed to end session. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Helper function to check if session has expired
@@ -152,7 +164,7 @@ export default function StudySessions() {
                                 <Menu className="w-6 h-6 text-gray-800" />
                             </button>
                             <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
-                                Study Sessions
+                                Active Study Sessions
                             </h1>
                         </div>
                     </div>
@@ -235,7 +247,7 @@ export default function StudySessions() {
                                                 <td className="py-2 px-2 sm:px-3">
                                                     {!isExpired && (actualStatus?.toLowerCase() === "active" || actualStatus?.toLowerCase() === "scheduled") ? (
                                                         <button
-                                                            onClick={() => handleEndSession(session.session_id)}
+                                                            onClick={() => openEndSessionModal(session)}
                                                             className="bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
                                                         >
                                                             End
@@ -290,6 +302,89 @@ export default function StudySessions() {
                     )}
                 </div>
             </div>
+
+            {/* End Session Modal */}
+            {showEndModal && selectedSession && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn"
+                    onClick={closeEndModal}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg transform transition-all animate-scaleIn"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-6 sm:p-8">
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                                End Study Session
+                            </h2>
+                            <p className="text-gray-600 mb-6">
+                                You are about to end the session "{selectedSession.topic}" hosted by {selectedSession.host}.
+                            </p>
+
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Reason <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={endReason}
+                                    onChange={(e) => setEndReason(e.target.value)}
+                                    placeholder="Enter the reason for ending this session (will be logged for record keeping)..."
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
+                                    rows="4"
+                                    maxLength={200}
+                                    required
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                    This reason will be logged in the system for audit purposes ({endReason.length}/200 characters)
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={closeEndModal}
+                                    disabled={isSubmitting}
+                                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleEndSession}
+                                    disabled={!endReason.trim() || isSubmitting}
+                                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? "Ending Session..." : "End Session"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <style>{`
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        
+                        @keyframes scaleIn {
+                            from {
+                                opacity: 0;
+                                transform: scale(0.95);
+                            }
+                            to {
+                                opacity: 1;
+                                transform: scale(1);
+                            }
+                        }
+
+                        .animate-fadeIn {
+                            animation: fadeIn 0.2s ease-out;
+                        }
+
+                        .animate-scaleIn {
+                            animation: scaleIn 0.2s ease-out;
+                        }
+                    `}</style>
+                </div>
+            )}
         </div>
     );
 }

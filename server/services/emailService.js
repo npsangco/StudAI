@@ -349,3 +349,57 @@ export const sendInactiveUserEmail = async (userEmail, username, daysSinceActivi
         console.error("❌ Inactive user email service error:", error);
     }
 };
+
+// Session ended email
+export const SessionEndedEmail = (username, sessionTopic, reason) => {
+    return `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
+                        Session Ended
+                    </div>
+                </div>
+                
+                <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 16px; font-size: 24px;">Hello ${username},</h2>
+                <p style="color: #666; margin-bottom: 24px; font-size: 16px; line-height: 1.5;">Your study session has been ended by an administrator.</p>
+                
+                <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 24px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #374151; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Session Topic:</p>
+                    <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">${sessionTopic}</p>
+                    <p style="margin: 0; color: #374151; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Reason:</p>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">${reason}</p>
+                </div>
+                
+                <p style="color: #666; font-size: 16px; line-height: 1.5;">You can create a new session anytime from your dashboard. If you have questions about this action, please contact our support team at studai.service@gmail.com.</p>
+                
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="${process.env.CLIENT_URL || 'https://studai.dev'}/jitsi-sessions" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);">Create New Session</a>
+                </div>
+                
+                <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
+                    <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">This is an automated notification from StudAI. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+export const sendSessionEndedEmail = async (userEmail, username, sessionTopic, reason) => {
+    try {
+        const mailOptions = {
+            from: `"StudAI" <${process.env.EMAIL_USER}>`,
+            to: userEmail,
+            subject: `Your Study Session "${sessionTopic}" Was Ended`,
+            html: SessionEndedEmail(username, sessionTopic, reason),
+        };
+
+        transporter.sendMail(mailOptions).then(() => {
+            console.log(`✅ Session ended email sent to ${userEmail}`);
+        }).catch(error => {
+            console.error("❌ Failed to send session ended email:", error);
+        });
+    } catch (error) {
+        console.error("❌ Session ended email service error:", error);
+    }
+};
