@@ -164,7 +164,7 @@ export default function StudySessions() {
                                 <Menu className="w-6 h-6 text-gray-800" />
                             </button>
                             <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
-                                Active Study Sessions
+                                Study Sessions
                             </h1>
                         </div>
                     </div>
@@ -175,7 +175,7 @@ export default function StudySessions() {
                     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                             <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                                Study Sessions
+                                Active Study Sessions
                             </h2>
 
                             {/* Search and Filter */}
