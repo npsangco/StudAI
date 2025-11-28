@@ -1599,9 +1599,7 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
     try {
         const filePath = req.file.path;
         
-        // Check if file is .ppt (old format)
         if (filePath.toLowerCase().endsWith('.ppt')) {
-            // Clean up the file
             fs.unlinkSync(filePath);
             return res.status(400).json({ 
                 error: "PPT files are not supported. Please convert your file to PPTX format first." 
