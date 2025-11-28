@@ -1,4 +1,4 @@
-// Environment setup
+// Imports
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import fs from "fs";
@@ -9,21 +9,15 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-if (!process.env.ZOOM_CLIENT_ID || !process.env.ZOOM_CLIENT_SECRET) {
-    console.error('CRITICAL: Zoom OAuth environment variables are missing!');
-}
-
 const CLIENT_URL = process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
 const SERVER_URL = process.env.SERVER_URL || 'http://localhost:4000';
 const PORT = process.env.PORT || 4000;
 
-// Framework
 import express from "express";
 import session from "express-session";
 import multer from "multer";
 import cors from "cors";
 
-// Database models
 import sequelize from "./db.js";
 import { setupAssociations } from "./models/associations.js";
 import User from "./models/User.js";
@@ -47,12 +41,9 @@ import JitsiSession from "./models/JitsiSession.js";
 import { Op, DataTypes } from "sequelize";
 import ChatMessage from "./models/ChatMessage.js";
 
-// Middleware
 import { auditMiddleware } from "./middleware/auditMiddleware.js";
 import { sessionLockCheck } from "./middleware/sessionLockCheck.js";
 import { requireAdmin } from "./middleware/adminAuthMiddleware.js";
-
-// Services
 import { startEmailReminders } from "./services/emailScheduler.js";
 import { VerificationEmail, PasswordUpdateEmail, PasswordResetEmail} from "./services/emailService.js";
 import { startBattleCleanup } from "./services/battleCleanupSimple.js";
@@ -63,7 +54,7 @@ try {
     const noteModule = await import("./models/Note.js");
     Note = noteModule.default;
 } catch (error) {
-    console.warn("Note model not found - notes features will be disabled");
+    console.warn("Note model unavailable");
 }
 
 import pptxParser from "node-pptx-parser";
@@ -73,7 +64,6 @@ import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-// Routes
 import petRoutes from "./routes/petRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
 import quizRoutes from "./routes/quizRoutes.js";
@@ -104,10 +94,9 @@ import {
 } from "./middleware/validationMiddleware.js";
 
 const app = express();
-
 app.set('trust proxy', 1);
 
-// Achievement initialization
+// Achievements
 async function initializeDefaultAchievements() {
   try {
     const existingCount = await Achievement.count();
@@ -166,16 +155,11 @@ async function initializeDefaultAchievements() {
       
       await Achievement.bulkCreate(defaultAchievements);
     }
-  } catch (error) {
-    console.error('Error initializing achievements:', error);
-  }
+  } catch (error) {}
 }
 
 async function ensureNoteArchiveColumns() {
-    if (!Note) {
-        console.warn('Skipping archive column check - Note model unavailable');
-        return;
-    }
+    if (!Note) return;
 
     const queryInterface = sequelize.getQueryInterface();
 
@@ -196,19 +180,13 @@ async function ensureNoteArchiveColumns() {
                 allowNull: true
             });
         }
-    } catch (err) {
-        console.warn('Unable to ensure note archive columns:', err.message);
-    }
+    } catch (err) {}
 }
 
 async function ensureChatbotForeignKey() {
     try {
         const dbName = sequelize.config?.database || process.env.DB_NAME;
-
-        if (!dbName) {
-            console.warn('Skipping chatbot FK validation because DB name is undefined');
-            return;
-        }
+        if (!dbName) return;
 
         const [constraints] = await sequelize.query(
             `SELECT CONSTRAINT_NAME, REFERENCED_TABLE_NAME
@@ -270,9 +248,8 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-// Security headers
+// security headers
 app.use((req, res, next) => {
-  // CSP - allow R2 for images
   res.setHeader(
     'Content-Security-Policy',
     "default-src 'self'; " +
@@ -287,13 +264,8 @@ app.use((req, res, next) => {
     "frame-ancestors 'self';"
   );
   
-  // Prevent MIME sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  
-  // XFO - prevent clickjacking
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  
-  // Referrer policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   
   next();
@@ -304,14 +276,13 @@ app.use("/uploads", express.static("uploads"));
 app.use("/api", auditMiddleware);
 
 // Streak tracking
-
 async function updateUserStreak(userId) {
     try {
         const user = await User.findByPk(userId);
         if (!user) return;
 
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Reset to midnight for date comparison
+        today.setHours(0, 0, 0, 0); // reset
 
         const lastActivity = user.last_activity_date
             ? new Date(user.last_activity_date)
@@ -324,26 +295,22 @@ async function updateUserStreak(userId) {
             const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
             if (diffDays === 0) {
-                // Same day - no update needed
-                console.log(`User ${userId}: Same day activity, streak unchanged`);
                 return user.study_streak;
             } else if (diffDays === 1) {
-                // Consecutive day - increment streak
                 user.study_streak += 1;
                 user.last_activity_date = today;
 
-                // Update longest streak if current is higher
                 if (user.study_streak > user.longest_streak) {
                     user.longest_streak = user.study_streak;
                 }
 
-                console.log(`✅ User ${userId}: Streak continued! Now at ${user.study_streak} days`);
+                console.log(`User ${userId}: Streak continued! Now at ${user.study_streak} days`);
 
                 // Check for milestone rewards
                 await checkStreakMilestones(userId, user.study_streak);
             } else {
                 // Streak broken - reset to 0 (not 1)
-                console.log(`⚠️ User ${userId}: Streak broken after ${user.study_streak} days. Reset to 0 days`);
+                console.log(`User ${userId}: Streak broken after ${user.study_streak} days. Reset to 0 days`);
                 user.study_streak = 0; // CHANGED FROM 1 TO 0
                 user.last_activity_date = today;
             }
@@ -358,7 +325,7 @@ async function updateUserStreak(userId) {
         await user.save();
         return user.study_streak;
     } catch (err) {
-        console.error('❌ Error updating user streak:', err);
+        console.error('Error updating user streak:', err);
         return null;
     }
 }
@@ -427,7 +394,7 @@ console.log('   GOOGLE_SECRET:', process.env.GOOGLE_SECRET ? '✓ Set' : '✗ Mi
 console.log('   GOOGLE_CALLBACK_URL:', process.env.GOOGLE_CALLBACK_URL || 'Not set');
 
 if (!process.env.GOOGLE_ID || !process.env.GOOGLE_SECRET) {
-    console.warn('⚠️  Google OAuth not configured - OAuth login will not be available');
+    console.warn(' Google OAuth not configured - OAuth login will not be available');
 }
 
 if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
@@ -445,10 +412,7 @@ if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
         let user = await User.findOne({ where: { email } });
 
         if (!user) {
-            // Restrict creating new accounts to @ust.edu.ph domain only
             if (domain !== 'ust.edu.ph') {
-                console.log(`🚫 Google signup blocked for non-UST domain: ${email}`);
-                // Inform passport that authentication failed due to domain restriction
                 return done(null, false, { message: 'domain_restricted' });
             }
 
@@ -461,14 +425,9 @@ if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
                 username: profile.displayName || email.split('@')[0],
                 password: await bcrypt.hash(securePassword, 12),
                 role: "Student",
-                status: "active", // OAuth users are pre-verified by Google
-                profile_picture: "/default-avatar.png" // Use public default
+                status: "active",
+                profile_picture: "/default-avatar.png"
             });
-            
-            console.log(`✅ New user created via Google OAuth: ${email}`);
-        } else {
-            // User exists, just update last login
-            console.log(`✅ Existing user logged in via Google OAuth: ${email}`);
         }
 
         return done(null, user);
@@ -535,11 +494,9 @@ app.get("/api/ai-usage/today", sessionLockCheck, async (req, res) => {
     }
 });
 
-// ----------------- OPENAI API ROUTES -----------------
-// AI Summarization endpoint
+// open ai routes
 app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
     try {
-        console.log('🤖 [Server] AI Summarization request received');
         const { text, systemPrompt } = req.body;
         const userId = req.session?.userId;
 
@@ -557,7 +514,6 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         }
 
         if (!text) {
-            console.error('❌ [Server] No text provided in request');
             return res.status(400).json({ error: "Text content is required" });
         }
 
@@ -571,7 +527,7 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         const openAiApiKey = process.env.OPENAI_API_KEY;
         console.log('🔑 [Server] OpenAI API Key status:', openAiApiKey ? 'Present ✓' : 'Missing ✗');
         if (!openAiApiKey) {
-            console.error('❌ [Server] OpenAI API key not configured in environment variables');
+            console.error('[Server] OpenAI API key not configured in environment variables');
             return res.status(500).json({ error: "OpenAI API key not configured" });
         }
 
@@ -597,7 +553,6 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
             presence_penalty: 0.3
         };
 
-        console.log('📡 [Server] Calling OpenAI API...');
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -607,11 +562,9 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
             body: JSON.stringify(APIBody)
         });
 
-        console.log('📡 [Server] OpenAI API response status:', response.status);
-
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error("❌ [Server] OpenAI API error:", response.status, errorData);
+            console.error("[Server] OpenAI API error:", response.status, errorData);
             return res.status(response.status).json({ 
                 error: `OpenAI API error: ${response.status}`,
                 details: errorData
@@ -621,45 +574,29 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         const data = await response.json();
                 const summary = data.choices[0]?.message?.content?.trim();
 
-                // Helper: strip common Markdown artifacts as a fallback
                 function stripMarkdown(md) {
                     if (!md || typeof md !== 'string') return md;
                     let out = md;
-                    // Remove code fences
                     out = out.replace(/```[\s\S]*?```/g, '');
-                    // Remove inline code
                     out = out.replace(/`([^`]+)`/g, '$1');
-                    // Remove ATX headings (#, ##, ...)
                     out = out.replace(/^#{1,6}\s*/gm, '');
-                    // Remove Setext headings (underlines)
                     out = out.replace(/(^.+)\n[-=]{2,}\s*$/gm, '$1');
-                    // Bold/italic
                     out = out.replace(/\*\*(.*?)\*\*/g, '$1');
                     out = out.replace(/\*(.*?)\*/g, '$1');
                     out = out.replace(/__(.*?)__/g, '$1');
                     out = out.replace(/_(.*?)_/g, '$1');
-                    // Lists
                     out = out.replace(/^\s*[-*+]\s+/gm, '');
                     out = out.replace(/^\s*\d+\.\s+/gm, '');
-                    // Links and images
                     out = out.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1');
                     out = out.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
-                    // Remove excessive newlines
                     out = out.replace(/\n{3,}/g, '\n\n');
                     return out.trim();
                 }
 
                 if (!summary) {
-            console.error('❌ [Server] No summary generated from OpenAI response');
             return res.status(500).json({ error: "Failed to generate summary" });
         }
-                // Clean markdown artifacts (fallback) and trim
                 const cleanedSummary = stripMarkdown(summary);
-
-                console.log('✅ [Server] Summary generated successfully, length:', summary.length);
-                if (cleanedSummary !== summary) {
-                    console.log('ℹ️ [Server] Summary contained markdown — returning cleaned plain-text version');
-                }
         const recordResult = await recordSummaryUsage(userId);
 
         if (!recordResult.allowed) {
@@ -692,7 +629,6 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
 // AI Chatbot endpoint
 app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
     try {
-        console.log('🤖 [Server] AI Chat request received');
         const { messages, noteId, fileId, userMessage } = req.body;
         const userId = req.session?.userId;
 
@@ -701,7 +637,6 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
         }
 
         if (!messages || !Array.isArray(messages)) {
-            console.error('❌ [Server] Invalid messages format in request');
             return res.status(400).json({ error: "Messages array is required" });
         }
 
@@ -721,7 +656,6 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             }
 
             if (!Note) {
-                console.error('❌ [Server] Note model unavailable while resolving fileId');
                 return res.status(500).json({ error: "Note model unavailable" });
             }
 
@@ -740,7 +674,6 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
         }
 
         if (normalizedNoteId === null) {
-            console.error('❌ [Server] noteId missing in chat request');
             return res.status(400).json({ error: "noteId is required" });
         }
 
@@ -764,9 +697,7 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
         });
 
         const openAiApiKey = process.env.OPENAI_API_KEY;
-        console.log('🔑 [Server] OpenAI API Key status:', openAiApiKey ? 'Present ✓' : 'Missing ✗');
         if (!openAiApiKey) {
-            console.error('❌ [Server] OpenAI API key not configured in environment variables');
             return res.status(500).json({ error: "OpenAI API key not configured" });
         }
 
@@ -790,7 +721,6 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             presence_penalty: 0.3
         };
 
-        console.log('📡 [Server] Calling OpenAI API for chat...');
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -800,11 +730,9 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
             body: JSON.stringify(APIBody)
         });
 
-        console.log('📡 [Server] OpenAI API response status:', response.status);
-
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error("❌ [Server] OpenAI API error:", response.status, errorData);
+            console.error("[Server] OpenAI API error:", response.status, errorData);
             return res.status(response.status).json({ 
                 error: `OpenAI API error: ${response.status}`,
                 details: errorData
@@ -815,7 +743,6 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
         const reply = data.choices[0]?.message?.content?.trim();
 
         if (!reply) {
-            console.error('❌ [Server] No reply generated from OpenAI response');
             return res.status(500).json({ error: "Failed to generate response" });
         }
 
@@ -827,11 +754,9 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
                 message: latestUserMessage,
                 response: reply
             });
-            console.log('📝 [Server] Chat interaction stored with ID:', chatRecord.chat_id);
         } catch (storeErr) {
             const missingTable = storeErr?.original?.code === 'ER_NO_SUCH_TABLE';
             if (missingTable) {
-                console.warn('⚠️ [Server] chatbot table missing. Attempting to recreate via sync...');
                 try {
                     await ChatMessage.sync();
                     chatRecord = await ChatMessage.create({
@@ -840,12 +765,7 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
                         message: latestUserMessage,
                         response: reply
                     });
-                    console.log('📝 [Server] Chat interaction stored after table sync. ID:', chatRecord.chat_id);
-                } catch (retryErr) {
-                    console.error('❌ [Server] Retry storing chat history failed:', retryErr);
-                }
-            } else {
-                console.error('❌ [Server] Failed to store chat history:', storeErr);
+                } catch (retryErr) {}
             }
         }
 
@@ -862,7 +782,6 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
 
         const snapshot = await getUsageSnapshot(userId);
 
-        console.log('✅ [Server] Chat response generated successfully, length:', reply.length);
         res.json({
             reply,
             chat: chatRecord,
@@ -877,7 +796,6 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
                 details: err.details
             });
         }
-        console.error("❌ [Server] Error in AI chat:", err);
         res.status(500).json({ error: "Failed to generate response" });
     }
 });
@@ -895,7 +813,6 @@ app.get('/auth/google/callback', (req, res, next) => {
     passport.authenticate('google', async (err, user, info) => {
         try {
             if (err) {
-                console.error('❌ Google authentication error:', err);
                 return res.redirect(`${CLIENT_URL}/?error=google_auth_failed`);
             }
 
@@ -910,13 +827,10 @@ app.get('/auth/google/callback', (req, res, next) => {
 
             // Check if account is locked
             if (user.status === 'locked' || user.status === 'Locked') {
-                console.log(`🚫 Locked user attempted Google login: ${user.email}`);
                 return res.redirect(`${CLIENT_URL}/?error=account_locked`);
             }
 
-            // Check if account is not active
             if (user.status !== 'active' && user.status !== 'Active') {
-                console.log(`🚫 Inactive user attempted Google login: ${user.email}`);
                 return res.redirect(`${CLIENT_URL}/?error=account_inactive`);
             }
 
@@ -941,27 +855,19 @@ app.get('/auth/google/callback', (req, res, next) => {
             // Force session save before redirect
             req.session.save((saveErr) => {
                 if (saveErr) {
-                    console.error('❌ Session save error:', saveErr);
                     return res.redirect(`${CLIENT_URL}/?token=${token}&authMethod=token`);
                 }
-
-                console.log('✅ Google login session saved:', {
-                    userId: req.session.userId,
-                    email: req.session.email,
-                    username: req.session.username
-                });
 
                 return res.redirect(`${CLIENT_URL}/dashboard?token=${token}`);
             });
         } catch (catchErr) {
-            console.error('❌ Google login error:', catchErr);
             return res.redirect(`${CLIENT_URL}/?error=server_error`);
         }
     })(req, res, next);
 });
 
 app.get("/api/ping", (req, res) => {
-    res.json({ message: "Server running fine ✅" });
+    res.json({ message: "Server running fine" });
 });
 
 app.get("/api/health", (req, res) => {
@@ -998,7 +904,6 @@ app.post("/api/auth/signup", validateSignupRequest, async (req, res) => {
         // Check if email is already pending verification
         const existingPending = await PendingUser.findOne({ where: { email } });
         if (existingPending) {
-            // Delete old pending entry and create new one
             await existingPending.destroy();
         }
 
@@ -1006,11 +911,10 @@ app.post("/api/auth/signup", validateSignupRequest, async (req, res) => {
 
         // Create token for verification
         const token = jwt.sign({ email, username }, process.env.JWT_SECRET, {
-            expiresIn: "30m", // 30 minutes to verify
+            expiresIn: "30m",
         });
 
-        // Store in pending_users table
-        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
         
         await PendingUser.create({
             email,
@@ -1029,19 +933,18 @@ app.post("/api/auth/signup", validateSignupRequest, async (req, res) => {
             to: email,
             subject: "Verify Your Email",
             html: VerificationEmail(username, verifyLink),
-        }).catch(err => console.error('❌ Email send error:', err));
+        }).catch(err => console.error('Email send error:', err));
 
         res.status(201).json({
             message: "Verification email sent. Please verify your email within 5 minutes.",
         });
     } catch (err) {
-        console.error("Signup error:", err.message);
         res.status(500).json({ error: "Internal server error" });
     }
 });
 
 
-// ----------------- AUTO-DELETE EXPIRED PENDING USERS -----------------
+// delete expired pending users
 setInterval(async () => {
     try {
         const now = new Date();
@@ -1057,9 +960,9 @@ setInterval(async () => {
             console.log(`🧹 Removed ${ids.length} expired pending user(s)`);
         }
     } catch (err) {
-        console.error("❌ Auto-delete expired pending users failed:", err);
+        console.error("Auto-delete expired pending users failed:", err);
     }
-}, 1 * 60 * 1000); // Check every minute
+}, 1 * 60 * 1000);
 
 
 app.get("/api/auth/verify-email", async (req, res) => {
@@ -1087,14 +990,13 @@ app.get("/api/auth/verify-email", async (req, res) => {
             return res.redirect(`${CLIENT_URL}/verify-status?type=expired`);
         }
 
-        // Check if user already exists (shouldn't happen, but safety check)
         const existingUser = await User.findOne({ where: { email: decoded.email } });
         if (existingUser) {
             await pendingUser.destroy();
             return res.redirect(`${CLIENT_URL}/verify-status?type=already`);
         }
 
-        // Create actual user account
+        // Create user account
         const newUser = await User.create({
             email: pendingUser.email,
             username: pendingUser.username,
@@ -1103,7 +1005,6 @@ app.get("/api/auth/verify-email", async (req, res) => {
             status: "active",
         });
 
-        // Generate JWT token for auto-login fallback
         const authToken = jwt.sign(
             {
                 userId: newUser.user_id,
@@ -1115,13 +1016,10 @@ app.get("/api/auth/verify-email", async (req, res) => {
             { expiresIn: "7d" }
         );
 
-        // Delete pending user
         await pendingUser.destroy();
 
-        // Redirect with token for browsers that may not support session cookies
         res.redirect(`${CLIENT_URL}/verify-status?type=verified&token=${authToken}`);
     } catch (err) {
-        console.error("Verification error:", err.message);
         res.redirect(`${CLIENT_URL}/verify-status?type=error`);
     }
 });
@@ -1135,25 +1033,20 @@ app.get("/api/auth/check-verification", async (req, res) => {
     }
 
     try {
-        // Check if user has been created (verified)
         const user = await User.findOne({ where: { email, status: "active" } });
         
         if (user) {
             return res.json({ verified: true });
         }
 
-        // Check if still pending
         const pending = await PendingUser.findOne({ where: { email } });
         
         if (!pending) {
-            // Neither pending nor verified - expired or doesn't exist
             return res.json({ verified: false, expired: true });
         }
 
-        // Still pending
         return res.json({ verified: false, expired: false });
     } catch (err) {
-        console.error("Check verification error:", err.message);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -1169,7 +1062,6 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
-        // Check if account is locked 
         if (user.status === "locked" || user.status === "Locked") {
             return res.status(403).json({ 
                 error: "Your account has been locked by an administrator. Please contact support.",
@@ -1177,7 +1069,6 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
             });
         }
 
-        // Check if account is verified
         if (user.status === "pending") {
             return res.status(403).json({ 
                 error: "Please verify your email before logging in.",
@@ -1185,7 +1076,6 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
             });
         }
 
-        // Check if account is active
         if (user.status !== "active" && user.status !== "Active") {
             return res.status(403).json({ 
                 error: "Your account is not active. Please contact support.",
@@ -1193,19 +1083,16 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
             });
         }
 
-        // Verify password
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
-        // Set session (primary method for most users)
         req.session.userId = user.user_id;
         req.session.email = user.email;
         req.session.username = user.username;
         req.session.role = user.role;
 
-        // Generate JWT token (fallback for browsers that don't support cookies)
         const token = jwt.sign(
             {
                 userId: user.user_id,
@@ -1214,7 +1101,7 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
                 role: user.role,
             },
             process.env.JWT_SECRET || "fallback-secret",
-            { expiresIn: "7d" } // 7 days
+            { expiresIn: "7d" }
         );
 
         // await updateUserStreak(user.user_id);
@@ -1223,7 +1110,7 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
 
         res.status(200).json({
             message: "Login successful",
-            token, // JWT token for fallback authentication
+            token, 
             user: {
                 id: updatedUser.user_id,
                 email: updatedUser.email,
@@ -1236,7 +1123,6 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
             },
         });
     } catch (err) {
-        console.error("Login error:", err.message);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -1246,7 +1132,6 @@ app.post("/api/auth/login", validateLoginRequest, async (req, res) => {
 app.post("/api/auth/logout", async (req, res) => {
     const userId = req.session?.user?.user_id;
 
-    // ⬅️ Inserted: create audit log BEFORE destroying session
     if (userId) {
         await AuditLog.create({
             user_id: userId,
@@ -1259,8 +1144,7 @@ app.post("/api/auth/logout", async (req, res) => {
     if (req.session) {
         req.session.destroy((err) => {
             if (err) return res.status(500).json({ error: "Logout failed" });
-            
-            // Clear cookie with same options as set (environment-aware)
+
             const isProduction = process.env.NODE_ENV === 'production';
             res.clearCookie("studai_session", {
                 httpOnly: true,
@@ -1277,7 +1161,7 @@ app.post("/api/auth/logout", async (req, res) => {
     }
 });
 
-// ----------------- PROFILE ROUTES -----------------
+// profile routes
 app.get("/api/user/profile", sessionLockCheck, async (req, res) => {
     if (!req.session || !req.session.userId) {
         return res.status(401).json({ error: "Not logged in" });
@@ -1291,13 +1175,10 @@ app.get("/api/user/profile", sessionLockCheck, async (req, res) => {
         if (!user) return res.status(404).json({ error: "User not found" });
 
         if (!user.profile_picture) {
-            // Use frontend public asset as default avatar
             user.profile_picture = "/default-avatar.png";
         } else {
-            // If profile_picture is stored as an R2 key (not a full URL and not an absolute path), generate a signed URL
             try {
                 const pic = user.profile_picture;
-                // Only create signed URL for relative keys (no leading slash, not a full URL)
                 if (pic && !pic.startsWith('http') && !pic.startsWith('/')) {
                     user.profile_picture = await getDownloadUrl(pic, 24 * 3600);
                 }
@@ -1308,7 +1189,6 @@ app.get("/api/user/profile", sessionLockCheck, async (req, res) => {
 
         res.json(user);
     } catch (err) {
-        console.error("Profile fetch error:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -1320,9 +1200,6 @@ app.put("/api/user/profile", sessionLockCheck, validateProfileUpdate, async (req
 
     try {
         const { username, password, birthday, profile_picture } = req.validatedData || req.body;
-        
-        console.log('Profile update request:', { username, birthday, profile_picture: profile_picture?.substring(0, 50) });
-        
         const updates = {};
 
         if (username) updates.username = username;
@@ -1354,14 +1231,11 @@ app.put("/api/user/profile", sessionLockCheck, validateProfileUpdate, async (req
             attributes: ["user_id", "email", "username", "birthday", "role", "points", "profile_picture", "study_streak", "longest_streak"]
         });
 
-        console.log(`✅ Profile updated successfully. New profile_picture: ${updatedUser.profile_picture}`);
-
         res.json({
             message: "Profile updated successfully",
             user: updatedUser
         });
     } catch (err) {
-        console.error("Profile update error:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -1385,7 +1259,6 @@ app.get("/api/user/streak", sessionLockCheck, async (req, res) => {
             last_activity: user.last_activity_date
         });
     } catch (err) {
-        console.error("Streak fetch error:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -1399,7 +1272,6 @@ app.get("/api/user/daily-stats", async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
         
-        // Use findOrCreate to ensure we only have one record per user per day
         const [dailyStats, created] = await UserDailyStat.findOrCreate({
             where: { 
                 user_id: req.session.userId,
@@ -1424,7 +1296,6 @@ app.get("/api/user/daily-stats", async (req, res) => {
             exp_earned_today: dailyStats.exp_earned_today || 0
         });
     } catch (err) {
-        console.error("Daily stats fetch error:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -1437,25 +1308,20 @@ app.post('/api/upload/profile', profileUpload.single('profilePic'), async (req, 
         const file = req.file;
         if (!file) return res.status(400).json({ error: "No file uploaded" });
 
-        // Generate a unique key for R2
         const ext = path.extname(file.originalname);
         const key = `profile_pictures/${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-        // Upload to R2
         await uploadFile(key, file.buffer, file.mimetype);
 
-        // Optionally, generate a signed URL for access
-        const photoUrl = await getDownloadUrl(key, 24 * 3600); // 24 hours
+        const photoUrl = await getDownloadUrl(key, 24 * 3600);
 
         res.json({ message: "Profile picture uploaded", photoUrl, r2Key: key });
     } catch (err) {
-        console.error("❌ Profile upload error:", err);
         res.status(500).json({ error: "Failed to upload profile picture" });
     }
 });
 
-// ----------------- PASSWORD UPDATE WITH EMAIL VERIFICATION -----------------
-// Optimized transporter with connection pooling for faster email delivery
+// Password update with email verification
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -1500,17 +1366,15 @@ app.post("/api/user/request-password-update", async (req, res) => {
 
         const confirmLink = `${SERVER_URL}/api/user/confirm-password-update?token=${token}`;
 
-        // Send email asynchronously for instant response
         transporter.sendMail({
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: user.email,
             subject: "Confirm Your Password Update",
             html:PasswordUpdateEmail(confirmLink),
-        }).catch(err => console.error('❌ Email send error:', err));
+        }).catch(err => console.error('Email send error:', err));
 
         res.json({ message: "Verification email sent. Please check your inbox." });
     } catch (err) {
-        console.error("Password update request error:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -1529,7 +1393,6 @@ app.get("/api/user/confirm-password-update", async (req, res) => {
 
         res.redirect(`${CLIENT_URL}/password-updated`);
     } catch (err) {
-        console.error("Password confirm error:", err);
         res.redirect(`${CLIENT_URL}/password-link-expired`);
     }
 });
@@ -1559,11 +1422,10 @@ app.post("/api/auth/reset-request", async (req, res) => {
             to: email,
             subject: "Password Reset Request",
             html:PasswordResetEmail(resetLink),
-        }).catch(err => console.error('❌ Email send error:', err));
+        }).catch(err => console.error('Email send error:', err));
 
         res.json({ message: "Password reset link sent" });
     } catch (err) {
-        console.error("Reset request error:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -1598,74 +1460,51 @@ app.post("/api/auth/reset-password", async (req, res) => {
     }
 });
 
-//----------------- FILE UPLOAD -----------------
-// Ensure uploads directories exist
+// File upload
 const uploadsDir = path.join(__dirname, 'uploads');
 const profilePicturesDir = path.join(__dirname, 'uploads', 'profile_pictures');
-console.log('📁 [Server] Uploads directory path:', uploadsDir);
-console.log('📁 [Server] Profile pictures directory path:', profilePicturesDir);
 
 try {
-    // Create main uploads directory
     if (!fs.existsSync(uploadsDir)) {
-        console.log('📁 [Server] Creating uploads directory...');
         fs.mkdirSync(uploadsDir, { recursive: true });
-        console.log('✅ [Server] Uploads directory created successfully');
-    } else {
-        console.log('✅ [Server] Uploads directory already exists');
     }
     
-    // Create profile_pictures subdirectory
     if (!fs.existsSync(profilePicturesDir)) {
-        console.log('📁 [Server] Creating profile_pictures directory...');
         fs.mkdirSync(profilePicturesDir, { recursive: true });
-        console.log('✅ [Server] Profile pictures directory created successfully');
-    } else {
-        console.log('✅ [Server] Profile pictures directory already exists');
     }
     
-    // Test write permissions
     const testFile = path.join(uploadsDir, '.test');
     fs.writeFileSync(testFile, 'test');
     fs.unlinkSync(testFile);
-    console.log('✅ [Server] Uploads directory is writable');
 } catch (err) {
-    console.error('❌ [Server] Failed to create/write to uploads directory:', err);
+    console.error('Failed to setup uploads directory:', err);
 }
 
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        console.log('📁 [Server] Multer destination check for:', uploadsDir);
         cb(null, uploadsDir)
     },
     filename: function (req, file, cb) {
         const timestamp = Date.now();
         const safeFilename = `${timestamp}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        console.log('📁 [Server] Multer filename:', file.originalname, '→', safeFilename);
         cb(null, safeFilename)
     }
 });
 
 var upload = multer({ 
     storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
-    fileFilter: (req, file, cb) => {
-        console.log('📁 [Server] Multer file filter, mimetype:', file.mimetype);
-        cb(null, true);
-    }
+    limits: { fileSize: 50 * 1024 * 1024 }
 });
 
-// Multer error handler
+// Multer errors
 app.use((err, req, res, next) => {
     const isUploadRoute = req.originalUrl?.startsWith('/api/upload');
 
     if (err instanceof multer.MulterError && isUploadRoute) {
-        console.error('❌ [Server] Multer error:', err);
         return res.status(400).json({ error: `Upload error: ${err.message}` });
     }
 
     if (err && isUploadRoute) {
-        console.error('❌ [Server] Unknown upload error:', err);
         return res.status(500).json({ error: 'File upload failed' });
     }
 
@@ -1674,23 +1513,16 @@ app.use((err, req, res, next) => {
 
 app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
     try {
-        console.log("📤 [Server] Incoming file upload...");
-
         const file = req.file;
         if (!file) {
-            console.log("❌ [Server] No file uploaded");
             return res.status(400).json({ error: "Please upload a file" });
         }
 
         const userId = req.session.userId;
-        console.log("📤 [Server] User ID:", userId);
         
         if (!userId) {
-            console.log("❌ [Server] No session / not logged in");
             return res.status(401).json({ error: "Not logged in" });
         }
-
-        console.log("✅ [Server] File received:", file.filename, "Size:", file.size);
 
         const existingFile = await File.findOne({
             where: {
@@ -1700,7 +1532,6 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
         });
 
         if (existingFile) {
-            console.log("Duplicate file:", file.filename);
             return res.status(409).json({ error: "File with this name already exists for this user" });
         }
 
@@ -1733,13 +1564,11 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
         const newFile = await File.create({
             user_id: userId,
             filename: file.filename,
-            file_path: key, // store R2 key, not local path
+            file_path: key,
             upload_date: new Date(),
         });
 
-        console.log("✅ [Server] File saved to DB with ID:", newFile.file_id);
-
-        // Generate a signed URL for immediate access
+        // Generate signed URL
         let signedUrl = null;
         try {
             signedUrl = await getDownloadUrl(key, 24 * 3600);
@@ -1747,19 +1576,13 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
             console.warn('Failed to generate signed URL for uploaded file:', err);
         }
 
-        // Check for file upload achievements
         try {
             const { checkAndUnlockAchievements } = await import('./services/achievementServices.js');
-            const unlockedAchievements = await checkAndUnlockAchievements(userId);
-            if (unlockedAchievements && unlockedAchievements.length > 0) {
-                console.log(`🏆 [Server] User ${userId} unlocked ${unlockedAchievements.length} achievement(s):`, 
-                    unlockedAchievements.map(a => a.title).join(', '));
-            }
+            await checkAndUnlockAchievements(userId);
         } catch (err) {
-            console.error('❌ [Server] Achievement check error:', err);
+            // Silent fail
         }
 
-        console.log("✅ [Server] File upload completed successfully");
         res.json({
             file_id: newFile.file_id,
             filename: file.filename,
@@ -1767,18 +1590,15 @@ app.post('/api/upload', upload.single('myFile'), async (req, res, next) => {
             r2Key: key
         });
     } catch (err) {
-        console.error("❌ [Server] Upload DB error:", err);
-        console.error("❌ [Server] Error stack:", err.stack);
         res.status(500).json({ error: err.message || "Failed to save file to database" });
     }
 });
 
-// ----------------- PPTX/PPT EXTRACTION ENDPOINT -----------------
+// PPTX extraction
 app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
     try {
         const filePath = req.file.path;
         const fileExt = filePath.toLowerCase().endsWith('.ppt') ? 'PPT' : 'PPTX';
-        console.log(`📊 Processing ${fileExt}:`, filePath);
 
         const parser = new pptxParser(filePath);
         const parsedContent = await parser.parse();
@@ -1907,51 +1727,39 @@ app.post("/api/extract-pptx", upload.single("file"), async (req, res) => {
 
         fs.unlinkSync(filePath);
 
-        console.log(`✅ Extracted ${extractedText.length} characters from ${slideCount} slides`);
-
         res.json({
             text: extractedText,
             slideCount,
             wordCount: extractedText.trim().split(/\s+/).filter(w => w.length > 0).length
         });
     } catch (err) {
-        console.error("❌ PPTX extraction error:", err);
-
         if (req.file && req.file.path) {
             try {
                 fs.unlinkSync(req.file.path);
-            } catch (e) {
-                console.error("Failed to clean up file:", e);
-            }
+            } catch (e) {}
         }
 
         res.status(500).json({ error: "Failed to extract text from PPTX" });
     }
 });
 
-// ----------------- SUMMARY GENERATION -----------------
+// Summary generation
 app.post("/api/generate-summary", async (req, res) => {
     try {
-        console.log('📝 [Server] Generate summary request received');
-        
         const userId = req.session.userId;
-        console.log('📝 [Server] User ID:', userId);
         
         if (!userId) {
-            console.error('❌ [Server] User not logged in');
             return res.status(401).json({ error: "Not logged in" });
         }
 
         if (!Note) {
-            console.error('❌ [Server] Note model not available');
             return res.status(503).json({ error: "Notes feature not available" });
         }
 
         const { content, title, restrictions, metadata, file_id, fileId } = req.body;
-        console.log('📝 [Server] Request data:', { title, contentLength: content?.length, restrictions, metadata, file_id: file_id ?? fileId });
 
         if (!content || !title) {
-            console.error('❌ [Server] Missing required fields');
+            console.error('[Server] Missing required fields');
             return res.status(400).json({ error: "Missing required fields" });
         }
 
@@ -1977,16 +1785,14 @@ app.post("/api/generate-summary", async (req, res) => {
             attachedFileId = parsedFileId;
         }
 
-        console.log('📝 [Server] Creating note in database...');
         const newNote = await Note.create({
             user_id: userId,
             file_id: attachedFileId,
             title: title,
             content: content
         });
-        console.log('✅ [Server] Note created successfully, ID:', newNote.note_id);
 
-        // Award 25 EXP for AI-generated summaries (no points, this doesn't count toward daily cap)
+        // Award EXP
         const AI_SUMMARY_EXP = 25;
         let petLevelUp = null;
 
@@ -2043,11 +1849,9 @@ app.post("/api/generate-summary", async (req, res) => {
                 }
             }
         } catch (petError) {
-            console.error('Error awarding pet EXP:', petError);
-            // Don't fail the request if pet EXP fails
+            // Silent fail
         }
 
-        console.log('✅ [Server] Summary generation completed successfully');
         res.json({
             message: "Summary generated successfully",
             note: newNote,
@@ -2056,8 +1860,6 @@ app.post("/api/generate-summary", async (req, res) => {
         });
 
     } catch (err) {
-        console.error("❌ [Server] Summary generation error:", err);
-        console.error("❌ [Server] Error stack:", err.stack);
         res.status(500).json({ error: "Failed to generate summary", details: err.message });
     }
 });
@@ -2071,31 +1873,26 @@ app.get('/api/quiz-attempts/count', async (req, res) => {
             return res.status(401).json({ error: 'Not authenticated' });
         }
 
-        // Count total quiz attempts (all completions)
         const totalAttempts = await QuizAttempt.count({
             where: { user_id: userId }
         });
 
-        // Count DISTINCT quizzes attempted (for quiz rate calculation)
         const distinctQuizzes = await QuizAttempt.count({
             where: { user_id: userId },
             distinct: true,
             col: 'quiz_id'
         });
 
-        console.log(`User ${userId} has ${totalAttempts} total attempts and completed ${distinctQuizzes} distinct quizzes`);
-
         res.json({ 
-            totalAttempts,      // Total number of quiz completions
-            distinctQuizzes     // Number of unique quizzes completed
+            totalAttempts,
+            distinctQuizzes
         });
     } catch (err) {
-        console.error('Error fetching quiz attempts count:', err);
         res.status(500).json({ error: 'Failed to fetch quiz attempts count' });
     }
 });
 
-// ----------------- ADMIN CHECK ENDPOINT -----------------
+//admin check
 app.get("/api/auth/check-admin", sessionLockCheck, async (req, res) => {
     if (!req.session || !req.session.userId) {
         return res.status(401).json({ 
@@ -2133,8 +1930,7 @@ app.get("/api/auth/check-admin", sessionLockCheck, async (req, res) => {
     }
 });
 
-// ----------------- HEALTH CHECK ENDPOINT -----------------
-// Health check endpoint for App Platform
+//health check
 app.get('/api/health', async (req, res) => {
     const health = {
         uptime: process.uptime(),
@@ -2157,26 +1953,17 @@ app.get('/api/health', async (req, res) => {
     res.status(statusCode).json(health);
 });
 
-// ----------------- SERVE FRONTEND -----------------
-// Serve the built Vite app so the SPA + API share the same origin
+// serve frontend
 const frontendDistPath = path.join(__dirname, '..', 'dist');
 const frontendIndexHtml = path.join(frontendDistPath, 'index.html');
 
 app.use(express.static(frontendDistPath));
 
-// Only intercept GET requests that are not meant for backend routes
-// Regex skips /api, /auth, /uploads prefixes so backend routes keep control
 app.get(/^\/(?!api|auth|uploads).*$/, (req, res) => {
     res.sendFile(frontendIndexHtml);
 });
 
-// ----------------- GLOBAL ERROR HANDLER -----------------
-// This catches any errors that weren't handled by route-specific error handlers
 app.use((err, req, res, next) => {
-    console.error('❌ [Server] Unhandled error:', err);
-    console.error('❌ [Server] Error stack:', err.stack);
-    
-    // Don't send error details in production
     const errorDetails = process.env.NODE_ENV === 'production' 
         ? 'Internal server error' 
         : err.message;
@@ -2188,38 +1975,30 @@ app.use((err, req, res, next) => {
     });
 });
 
-// ----------------- SETUP ASSOCIATIONS -----------------
+// Setup
 setupAssociations();
 
-// ----------------- START SERVER -----------------
+// Start server
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on ${SERVER_URL}`);
+    console.log(`Server running on ${SERVER_URL}`);
     
-    // Start battle cleanup service (MySQL only - client handles Firebase)
     try {
         startBattleCleanup();
     } catch (error) {
-        console.error('❌ Failed to start battle cleanup:', error.message);
-        console.error('   Battle cleanup will be disabled');
+        console.error('Battle cleanup disabled:', error.message);
     }
 
-    // Start archived note cleanup service (deletes notes archived for 140+ days)
     try {
         startArchivedNoteCleanup();
     } catch (error) {
-        console.error('❌ Failed to start archived note cleanup:', error.message);
-        console.error('   Archived note cleanup will be disabled');
+        console.error('Archived note cleanup disabled:', error.message);
     }
 
-    // Start uploaded file cleanup (delete old summarizer/upload files from DB and R2)
     try {
         import('./services/uploadedFileCleanup.js')
             .then(mod => mod.startUploadedFileCleanup())
-            .catch(err => {
-                console.error('❌ Failed to start uploaded file cleanup (dynamic import):', err.message || err);
-            });
+            .catch(err => console.error('File cleanup disabled:', err.message));
     } catch (error) {
-        console.error('❌ Failed to start uploaded file cleanup:', error.message);
-        console.error('   Uploaded file cleanup will be disabled');
+        console.error('File cleanup disabled:', error.message);
     }
 });
