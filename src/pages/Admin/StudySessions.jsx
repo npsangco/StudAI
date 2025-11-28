@@ -65,13 +65,31 @@ export default function StudySessions() {
         });
     };
 
+    // Helper function to check if session has expired
+    const isSessionExpired = (session) => {
+        if (!session.start_time || !session.duration) return false;
+        const startTime = new Date(session.start_time);
+        const endTime = new Date(startTime.getTime() + session.duration * 60000);
+        return new Date() > endTime;
+    };
+
+    // Helper function to get actual session status
+    const getActualStatus = (session) => {
+        const isExpired = isSessionExpired(session);
+        if (isExpired && (session.status?.toLowerCase() === "active" || session.status?.toLowerCase() === "scheduled")) {
+            return "Completed";
+        }
+        return session.status;
+    };
+
     // Filter and search
     const filteredSessions = sessions.filter((session) => {
+        const actualStatus = getActualStatus(session);
         const matchesSearch =
             session.host?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             session.topic?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             session.session_id?.toString().includes(searchTerm);
-        const matchesFilter = filterStatus === "All" || session.status?.toLowerCase() === filterStatus.toLowerCase();
+        const matchesFilter = filterStatus === "All" || actualStatus?.toLowerCase() === filterStatus.toLowerCase();
         return matchesSearch && matchesFilter;
     });
 
@@ -145,7 +163,7 @@ export default function StudySessions() {
                     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                             <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                                Active & Past Sessions
+                                Study Sessions
                             </h2>
 
                             {/* Search and Filter */}
@@ -187,7 +205,11 @@ export default function StudySessions() {
                                 </thead>
                                 <tbody>
                                     {currentSessions.length > 0 ? (
-                                        currentSessions.map((session) => (
+                                        currentSessions.map((session) => {
+                                            const actualStatus = getActualStatus(session);
+                                            const isExpired = isSessionExpired(session);
+                                            
+                                            return (
                                             <tr key={session.session_id} className="border-b border-gray-100">
                                                 <td className="py-2 px-2 sm:px-3 truncate">{session.session_id}</td>
                                                 <td className="py-2 px-2 sm:px-3 font-medium truncate">{session.host}</td>
@@ -197,20 +219,21 @@ export default function StudySessions() {
                                                 <td className="py-2 px-2 sm:px-3 truncate">{session.duration}</td>
                                                 <td className="py-2 px-2 sm:px-3">
                                                     <span
-                                                        className={`px-2 py-1 rounded-full text-xs font-medium ${session.status?.toLowerCase() === "active"
+                                                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                            actualStatus?.toLowerCase() === "active"
                                                                 ? "bg-green-100 text-green-800"
-                                                                : session.status?.toLowerCase() === "scheduled"
+                                                                : actualStatus?.toLowerCase() === "scheduled"
                                                                     ? "bg-blue-100 text-blue-800"
-                                                                    : session.status?.toLowerCase() === "completed"
+                                                                    : actualStatus?.toLowerCase() === "completed"
                                                                         ? "bg-gray-200 text-gray-700"
                                                                         : "bg-red-100 text-red-800"
-                                                            }`}
+                                                        }`}
                                                     >
-                                                        {session.status}
+                                                        {actualStatus}
                                                     </span>
                                                 </td>
                                                 <td className="py-2 px-2 sm:px-3">
-                                                    {session.status?.toLowerCase() === "active" || session.status?.toLowerCase() === "scheduled" ? (
+                                                    {!isExpired && (actualStatus?.toLowerCase() === "active" || actualStatus?.toLowerCase() === "scheduled") ? (
                                                         <button
                                                             onClick={() => handleEndSession(session.session_id)}
                                                             className="bg-red-500 text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-colors"
@@ -221,13 +244,15 @@ export default function StudySessions() {
                                                         <button
                                                             disabled
                                                             className="bg-gray-300 text-gray-600 px-2 sm:px-3 py-1.5 rounded-lg text-xs cursor-not-allowed"
+                                                            title={isExpired ? "Session has ended" : "Session completed"}
                                                         >
-                                                            Ended
+                                                            {isExpired ? "Ended" : "Ended"}
                                                         </button>
                                                     )}
                                                 </td>
                                             </tr>
-                                        ))
+                                            );
+                                        })
                                     ) : (
                                         <tr>
                                             <td colSpan="6" className="text-center py-4 text-gray-500">
