@@ -270,6 +270,35 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
+// Security headers
+app.use((req, res, next) => {
+  // CSP - allow R2 for images
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com; " +
+    "connect-src 'self' https://studai.dev https://www.studai.dev https://walrus-app-umg67.ondigitalocean.app; " +
+    "font-src 'self' data:; " +
+    "object-src 'none'; " +
+    "base-uri 'self'; " +
+    "form-action 'self'; " +
+    "frame-ancestors 'self';"
+  );
+  
+  // Prevent MIME sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
+  // XFO - prevent clickjacking
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  
+  // Referrer policy
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  next();
+});
+
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 app.use("/api", auditMiddleware);
