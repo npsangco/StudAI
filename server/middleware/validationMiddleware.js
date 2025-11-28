@@ -331,17 +331,25 @@ export const validateProfileUpdate = (req, res, next) => {
     if (typeof profile_picture !== 'string' || profile_picture.trim().length === 0) {
       return res.status(400).json({ error: 'Invalid profile picture' });
     }
-    // Basic validation: should start with / or http
     const trimmed = profile_picture.trim();
-    // Accept local paths (/uploads/...), full URLs (http/https...), or R2 object keys (e.g. "profile_pictures/file.jpg")
+    
+    // Accept: local paths (/uploads/...), full URLs (http/https...), or R2 object keys
+    // R2 keys can contain: letters, numbers, /, -, _, .
     const r2KeyPattern = /^[a-zA-Z0-9_\/\.\-]+$/;
-    if (!trimmed.startsWith('/') && !trimmed.startsWith('http') && !r2KeyPattern.test(trimmed)) {
+    const isLocalPath = trimmed.startsWith('/');
+    const isUrl = trimmed.startsWith('http');
+    const isR2Key = r2KeyPattern.test(trimmed);
+    
+    if (!isLocalPath && !isUrl && !isR2Key) {
+      console.error('Profile picture validation failed:', trimmed);
       return res.status(400).json({ error: 'Invalid profile picture URL or key' });
     }
-    // Limit length to avoid overly long values
-    if (trimmed.length > 1024) {
+    
+    // Limit length (signed URLs can be very long)
+    if (trimmed.length > 2048) {
       return res.status(400).json({ error: 'Profile picture value too long' });
     }
+    
     req.validatedData = { ...req.validatedData, profile_picture: trimmed };
   }
 
