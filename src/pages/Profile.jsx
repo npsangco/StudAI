@@ -155,7 +155,8 @@ export default function Profile() {
             window.dispatchEvent(new CustomEvent("profileUpdated"));
         } catch (err) {
             console.error("Profile update error:", err);
-            toast.error("Update failed");
+            const errorMessage = err.response?.data?.error || "Update failed";
+            toast.error(errorMessage);
         }
     };
 

@@ -38,8 +38,8 @@ export const validateUsername = (username) => {
     return { isValid: false, error: 'Username must be between 3 and 30 characters' };
   }
   
-  if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
-    return { isValid: false, error: 'Username can only contain letters, numbers, hyphens and underscores' };
+  if (!/^[a-zA-Z0-9_\- ]+$/.test(trimmed)) {
+    return { isValid: false, error: 'Username can only contain letters, numbers, spaces, hyphens and underscores' };
   }
   
   return { isValid: true, sanitized: trimmed };
