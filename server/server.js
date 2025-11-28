@@ -1,48 +1,29 @@
-// 🌐 Environment variables
+// Environment setup
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
+import fs from "fs";
+import path from "path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load .env from root directory explicitly
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-// DEBUG: Check if Zoom environment variables are loaded
-console.log('🔍 Environment Variables Check:');
-console.log('📁 Current directory:', __dirname);
-console.log('📁 Looking for .env in:', path.join(__dirname, '.env'));
-console.log('ZOOM_CLIENT_ID:', process.env.ZOOM_CLIENT_ID ? '✓ Loaded' : '✗ Missing');
-console.log('ZOOM_CLIENT_SECRET:', process.env.ZOOM_CLIENT_SECRET ? '✓ Loaded' : '✗ Missing');
-console.log('ZOOM_REDIRECT_URL:', process.env.ZOOM_REDIRECT_URL ? '✓ Loaded' : '✗ Missing');
-
 if (!process.env.ZOOM_CLIENT_ID || !process.env.ZOOM_CLIENT_SECRET) {
-    console.error('❌ CRITICAL: Zoom OAuth environment variables are missing!');
-    console.error('   Using direct credentials as fallback...');
+    console.error('CRITICAL: Zoom OAuth environment variables are missing!');
 }
 
-// 🌐 Environment variable constants
 const CLIENT_URL = process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
 const SERVER_URL = process.env.SERVER_URL || 'http://localhost:4000';
 const PORT = process.env.PORT || 4000;
 
-// Log important URLs for debugging
-console.log('🌐 URLs Configuration:');
-console.log('   CLIENT_URL:', CLIENT_URL);
-console.log('   SERVER_URL:', SERVER_URL);
-console.log('   PORT:', PORT);
-
-// 📦 Core modules
-import fs from "fs";
-import path from "path";
-
-// 🚀 Framework
+// Framework
 import express from "express";
 import session from "express-session";
 import multer from "multer";
 import cors from "cors";
 
-// 🗄️ Database + Models
+// Database models
 import sequelize from "./db.js";
 import { setupAssociations } from "./models/associations.js";
 import User from "./models/User.js";
@@ -57,8 +38,8 @@ import QuizBattle from "./models/QuizBattle.js";
 import BattleParticipant from "./models/BattleParticipant.js";
 import Session from "./models/Session.js";
 import ZoomToken from "./models/ZoomToken.js";
-import Achievement from "./models/Achievement.js"; // ← ADD THIS
-import UserAchievement from "./models/UserAchievement.js"; // ← ADD THIS
+import Achievement from "./models/Achievement.js";
+import UserAchievement from "./models/UserAchievement.js";
 import UserDailyStat from "./models/UserDailyStat.js";
 import AuditLog from "./models/AuditLog.js";
 import AIUsageStat from "./models/AIUsageStat.js";
@@ -71,35 +52,28 @@ import { auditMiddleware } from "./middleware/auditMiddleware.js";
 import { sessionLockCheck } from "./middleware/sessionLockCheck.js";
 import { requireAdmin } from "./middleware/adminAuthMiddleware.js";
 
-// Emails
+// Services
 import { startEmailReminders } from "./services/emailScheduler.js";
 import { VerificationEmail, PasswordUpdateEmail, PasswordResetEmail} from "./services/emailService.js";
-
-// Battle cleanup (no Firebase Admin needed)
 import { startBattleCleanup } from "./services/battleCleanupSimple.js";
-
-// Archived note auto-deletion
 import { startArchivedNoteCleanup } from "./services/archivedNoteCleanup.js";
 
-// Import Note model after creating it
 let Note;
 try {
     const noteModule = await import("./models/Note.js");
     Note = noteModule.default;
 } catch (error) {
-    console.warn("⚠️ Note model not found - notes features will be disabled");
+    console.warn("Note model not found - notes features will be disabled");
 }
 
-// 🖼️ PPTX Parser (for text extraction)
 import pptxParser from "node-pptx-parser";
-
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import nodemailer from "nodemailer";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-// Import routes
+// Routes
 import petRoutes from "./routes/petRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
 import quizRoutes from "./routes/quizRoutes.js";
@@ -122,6 +96,7 @@ import {
     getUsageSnapshot
 } from "./services/aiUsageService.js";
 import { ensureContentIsSafe, ModerationError } from "./services/moderationService.js";
+import { uploadFile, getDownloadUrl } from "./services/r2Service.js";
 
 // Import validation middleware
 import {
@@ -132,21 +107,14 @@ import {
 
 const app = express();
 
-// Trust proxy - required for Digital Ocean App Platform
 app.set('trust proxy', 1);
 
-
-// ============================================
-// ACHIEVEMENT INITIALIZATION
-// ============================================
-
+// Achievement initialization
 async function initializeDefaultAchievements() {
   try {
     const existingCount = await Achievement.count();
     
     if (existingCount === 0) {
-      console.log("🏆 Initializing default achievements...");
-      
       const defaultAchievements = [
         {
           title: 'Note Taker',
@@ -199,9 +167,6 @@ async function initializeDefaultAchievements() {
       ];
       
       await Achievement.bulkCreate(defaultAchievements);
-      console.log(`✅ Created ${defaultAchievements.length} default achievements`);
-    } else {
-      console.log(`📊 Found ${existingCount} existing achievements`);
     }
   } catch (error) {
     console.error('Error initializing achievements:', error);
@@ -210,7 +175,7 @@ async function initializeDefaultAchievements() {
 
 async function ensureNoteArchiveColumns() {
     if (!Note) {
-        console.warn('⚠️ Skipping archive column check - Note model unavailable');
+        console.warn('Skipping archive column check - Note model unavailable');
         return;
     }
 
@@ -225,7 +190,6 @@ async function ensureNoteArchiveColumns() {
                 allowNull: false,
                 defaultValue: false
             });
-            console.log('🗂️ Added note.is_archived column');
         }
 
         if (!('archived_at' in definition)) {
@@ -233,10 +197,9 @@ async function ensureNoteArchiveColumns() {
                 type: DataTypes.DATE,
                 allowNull: true
             });
-            console.log('🗂️ Added note.archived_at column');
         }
     } catch (err) {
-        console.warn('⚠️ Unable to ensure note archive columns:', err.message);
+        console.warn('Unable to ensure note archive columns:', err.message);
     }
 }
 
@@ -245,7 +208,7 @@ async function ensureChatbotForeignKey() {
         const dbName = sequelize.config?.database || process.env.DB_NAME;
 
         if (!dbName) {
-            console.warn('⚠️ Skipping chatbot FK validation because DB name is undefined');
+            console.warn('Skipping chatbot FK validation because DB name is undefined');
             return;
         }
 
@@ -268,7 +231,6 @@ async function ensureChatbotForeignKey() {
             }
 
             await sequelize.getQueryInterface().removeConstraint('chatbot', constraint.CONSTRAINT_NAME);
-            console.log(`🧹 Removed invalid chatbot FK constraint ${constraint.CONSTRAINT_NAME}`);
         }
 
         if (!hasCorrectConstraint) {
@@ -283,31 +245,25 @@ async function ensureChatbotForeignKey() {
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE',
             });
-            console.log('✅ Added chatbot.note_id -> note.note_id foreign key');
         }
     } catch (err) {
-        console.error('❌ Failed to enforce chatbot.note_id foreign key:', err);
+        console.error('Failed to enforce chatbot.note_id foreign key:', err);
     }
 }
 
-// ============================================
-// CORS
-// ============================================
-
-// ----------- CORS -----------------
+// CORS configuration
 const allowedOrigins = process.env.NODE_ENV === 'production'
   ? ['https://studai.dev', 'https://www.studai.dev', 'https://walrus-app-umg67.ondigitalocean.app']
   : ['http://localhost:5173', 'http://localhost:3000'];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.warn(`⚠️  CORS blocked origin: ${origin}`);
+      console.warn(`CORS blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -316,15 +272,11 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-// ----------------- EXPRESS MIDDLEWARE -----------------
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
-
 app.use("/api", auditMiddleware);
 
-// ============================================
-// STREAK TRACKING SYSTEM
-// ============================================
+// Streak tracking
 
 async function updateUserStreak(userId) {
     try {
@@ -397,31 +349,21 @@ async function checkStreakMilestones(userId, streak) {
             by: milestones[streak].points,
             where: { user_id: userId }
         });
-
-        console.log(`🎉 User ${userId} reached ${streak} day streak! Awarded ${milestones[streak].points} points`);
     }
 }
 
-// ----------------- DB Connection -----------------
+// Database connection
 sequelize.authenticate()
     .then(async () => {
-        console.log("✅ Database connected");
-        console.log("✅ Using existing database schema");
-        
-        // Initialize default achievements if they don't exist
         await initializeDefaultAchievements();
         await ensureNoteArchiveColumns();
         await ChatMessage.sync();
-        console.log("✅ Chatbot table ensured");
         await AIUsageStat.sync();
-        console.log("✅ AI usage table ensured");
         await ensureChatbotForeignKey();
-        
         startEmailReminders();
-        // console.log("📅 Email reminder scheduler started!"); for email testing
     })
     .catch((err) => {
-        console.error("❌ Database error:", err);
+        console.error("Database error:", err);
         process.exit(1);
     });
 
@@ -1360,13 +1302,15 @@ app.put("/api/user/profile", sessionLockCheck, validateProfileUpdate, async (req
 
     try {
         const { username, password, birthday, profile_picture } = req.validatedData || req.body;
+        
+        console.log('Profile update request:', { username, birthday, profile_picture: profile_picture?.substring(0, 50) });
+        
         const updates = {};
 
         if (username) updates.username = username;
         if (birthday) updates.birthday = birthday;
         if (profile_picture) {
             updates.profile_picture = profile_picture;
-            console.log(`📸 Updating profile picture for user ${req.session.userId}: ${profile_picture}`);
         }
 
         if (password) {
@@ -1385,7 +1329,6 @@ app.put("/api/user/profile", sessionLockCheck, validateProfileUpdate, async (req
             updates.password = await bcrypt.hash(password, 10);
         }
 
-        console.log(`🔄 Profile update for user ${req.session.userId}:`, Object.keys(updates));
         await User.update(updates, { where: { user_id: req.session.userId } });
 
         // Fetch and return updated profile data
