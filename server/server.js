@@ -253,10 +253,10 @@ app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.firebasedatabase.app; " +
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com; " +
-    "connect-src 'self' blob: https://studai.dev https://www.studai.dev https://walrus-app-umg67.ondigitalocean.app; " +
+    "connect-src 'self' blob: wss://*.firebasedatabase.app https://*.firebasedatabase.app https://studai.dev https://www.studai.dev https://walrus-app-umg67.ondigitalocean.app; " +
     "font-src 'self' data:; " +
     "worker-src 'self' blob:; " +
     "object-src 'none'; " +
