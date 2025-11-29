@@ -74,7 +74,7 @@ function App() {
       {!shouldHideNav && !hideNavbar && isLandingPage && <LandingNavigation />}
       {!shouldHideNav && !hideNavbar && requiresAuth && <Navigation />}
 
-      <div className={`flex-1 ${(!shouldHideNav && !hideNavbar) ? "pt-16" : ""} ${requiresAuth ? "bg-gray-100" : ""}`}>
+      <div className={`flex-1 ${(!shouldHideNav && !hideNavbar && (isLandingPage || requiresAuth)) ? "pt-16" : ""} ${requiresAuth ? "bg-gray-100" : ""}`}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
