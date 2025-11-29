@@ -253,11 +253,12 @@ app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; " +
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com; " +
     "connect-src 'self' https://studai.dev https://www.studai.dev https://walrus-app-umg67.ondigitalocean.app; " +
     "font-src 'self' data:; " +
+    "worker-src 'self' blob:; " +
     "object-src 'none'; " +
     "base-uri 'self'; " +
     "form-action 'self'; " +
