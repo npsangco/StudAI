@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, X, Check, Info, Link } from 'lucide-react';
 
 // Multiple Choice Question Component
@@ -641,6 +641,20 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                     onTouchMove={(e) => handleTouchMove(e, item, 'left')}
                     onTouchEnd={(e) => handleTouchEnd(e, item, 'left')}
                     onClick={() => matched && handleUnmatch(item, 'left')}
+                    style={matched ? {
+                      backgroundColor: match.color.bg,
+                      borderColor: match.color.border,
+                      color: match.color.text,
+                      overflowWrap: 'break-word',
+                      wordWrap: 'break-word',
+                      hyphens: 'auto',
+                      touchAction: 'none'
+                    } : {
+                      overflowWrap: 'break-word',
+                      wordWrap: 'break-word',
+                      hyphens: 'auto',
+                      touchAction: 'none'
+                    }}
                     className={`
                       bg-white/30 backdrop-blur-md border-2 rounded-xl sm:rounded-2xl
                       p-3 sm:p-4 lg:p-5 min-h-[56px] sm:min-h-[64px] max-h-[120px]
@@ -655,18 +669,6 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                       ${matched ? 'shadow-lg' : 'shadow-md'}
                       ${!matched ? 'text-black' : ''}
                     `}
-                    style={matched ? {
-                      backgroundColor: match.color.bg,
-                      borderColor: match.color.border,
-                      color: match.color.text,
-                      overflowWrap: 'break-word',
-                      wordWrap: 'break-word',
-                      hyphens: 'auto'
-                    } : {
-                      overflowWrap: 'break-word',
-                      wordWrap: 'break-word',
-                      hyphens: 'auto'
-                    }}
                   >
                     {item}
                   </div>
@@ -700,6 +702,20 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                     onTouchMove={(e) => handleTouchMove(e, item, 'right')}
                     onTouchEnd={(e) => handleTouchEnd(e, item, 'right')}
                     onClick={() => matched && handleUnmatch(item, 'right')}
+                    style={matched ? {
+                      backgroundColor: match.color.bg,
+                      borderColor: match.color.border,
+                      color: match.color.text,
+                      overflowWrap: 'break-word',
+                      wordWrap: 'break-word',
+                      hyphens: 'auto',
+                      touchAction: 'none'
+                    } : {
+                      overflowWrap: 'break-word',
+                      wordWrap: 'break-word',
+                      hyphens: 'auto',
+                      touchAction: 'none'
+                    }}
                     className={`
                       bg-white/30 backdrop-blur-md border-2 rounded-xl sm:rounded-2xl
                       p-3 sm:p-4 lg:p-5 min-h-[56px] sm:min-h-[64px] max-h-[120px]
@@ -714,18 +730,6 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
                       ${matched ? 'shadow-lg' : 'shadow-md'}
                       ${!matched ? 'text-black' : ''}
                     `}
-                    style={matched ? {
-                      backgroundColor: match.color.bg,
-                      borderColor: match.color.border,
-                      color: match.color.text,
-                      overflowWrap: 'break-word',
-                      wordWrap: 'break-word',
-                      hyphens: 'auto'
-                    } : {
-                      overflowWrap: 'break-word',
-                      wordWrap: 'break-word',
-                      hyphens: 'auto'
-                    }}
                   >
                     {item}
                   </div>

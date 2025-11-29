@@ -259,6 +259,7 @@ app.use((req, res, next) => {
     "connect-src 'self' blob: wss://*.firebasedatabase.app https://*.firebasedatabase.app https://studai.dev https://www.studai.dev https://walrus-app-umg67.ondigitalocean.app; " +
     "font-src 'self' data:; " +
     "worker-src 'self' blob:; " +
+    "frame-src https://*.firebasedatabase.app; " +
     "object-src 'none'; " +
     "base-uri 'self'; " +
     "form-action 'self'; " +
