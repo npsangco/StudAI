@@ -57,7 +57,7 @@ function App() {
   const shouldHideNav = noNavRoutes.includes(location.pathname);
 
   // Routes that should have landing navigation
-  const landingRoutes = ['/', '/create', '/login', '/signup'];
+  const landingRoutes = ['/', '/create'];
   const isLandingPage = landingRoutes.includes(location.pathname);
 
   // Routes that should have authenticated navigation
@@ -65,7 +65,7 @@ function App() {
   const requiresAuth = authenticatedRoutes.includes(location.pathname);
 
   // Routes that should have NO footer
-  const noFooterRoutes = ['/admin/dashboard', '/admin/users', '/admin/quizzes', '/admin/sessions', '/admin/logs'];
+  const noFooterRoutes = ['/login', '/signup', '/admin/dashboard', '/admin/users', '/admin/quizzes', '/admin/sessions', '/admin/logs'];
   const shouldHideFooter = noFooterRoutes.includes(location.pathname);
 
   return (
