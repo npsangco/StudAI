@@ -195,6 +195,26 @@ function QuizzesPage() {
   // Pass currentUser and toast to handlers
   const handlers = useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, toast);
 
+  // Reload quiz questions after adding from question bank
+  const handleReloadQuiz = async (quizId) => {
+    try {
+      const result = await quizAPI.loadQuizWithQuestions(quizId);
+      if (result) {
+        quizDataHook.setQuestions(result.questions);
+        // Update the editing quiz metadata if needed
+        quizDataHook.updateQuizData({
+          editing: {
+            ...quizDataHook.quizData.editing,
+            ...result.quiz
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error reloading quiz:', error);
+      toast.error('Failed to reload quiz questions');
+    }
+  };
+
   const lobby = useLobby(
     quizDataHook.uiState.currentView === VIEWS.LOBBY,
     quizDataHook.gameState.gamePin,
@@ -538,6 +558,7 @@ function QuizzesPage() {
           onAddMatchingPair={handlers.handleAddMatchingPair}
           onUpdateMatchingPair={handlers.handleUpdateMatchingPair}
           onRemoveMatchingPair={handlers.handleRemoveMatchingPair}
+          onReloadQuiz={handleReloadQuiz}
           onShowValidationErrors={() => quizDataHook.setShowValidationModal(true)}
           toast={toast}
         />

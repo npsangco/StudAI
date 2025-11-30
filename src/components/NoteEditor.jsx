@@ -412,9 +412,13 @@ const NoteEditor = ({
             <textarea
               value={editContent}
               onChange={handleContentChange}
-              className="w-full min-h-[400px] sm:min-h-[500px] md:min-h-[600px] text-slate-700 placeholder-slate-400 border-none outline-none resize-none text-base sm:text-lg leading-relaxed bg-transparent"
+              className="w-full min-h-[400px] sm:min-h-[500px] md:min-h-[600px] text-slate-700 placeholder-slate-400 border-none outline-none resize-none text-base sm:text-lg leading-loose bg-transparent whitespace-pre-wrap"
               placeholder="Start writing your note here..."
-              style={{ fontFamily: 'inherit' }}
+              style={{ 
+                fontFamily: 'inherit',
+                lineHeight: '1.8',
+                letterSpacing: '0.01em'
+              }}
             />
           </div>
 

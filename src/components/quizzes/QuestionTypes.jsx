@@ -401,8 +401,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   const handleTouchMove = (e, item, side) => {
     if (isPaused || isSubmitted || !draggedItem || !isDraggingTouch) return;
     
-    e.preventDefault(); // Prevent scrolling while dragging
-    
+    // touchAction: 'none' in CSS handles preventing scroll, no need for preventDefault
     const touch = e.touches[0];
     const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
     

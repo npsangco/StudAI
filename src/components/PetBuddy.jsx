@@ -167,9 +167,9 @@ export default function PetBuddy() {
       
       // Show success message based on action type
       const actionMessages = {
-        feed: "Fed your pet! 🍖",
-        play: "Played with your pet! 🎾",
-        clean: "Cleaned your pet! 🧼"
+        feed: "Fed your pet!",
+        play: "Played with your pet!",
+        clean: "Cleaned your pet!"
       };
       toast.success(actionMessages[type]);
       

@@ -534,7 +534,15 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         }
 
         const defaultSystemPrompt = `You are a helpful assistant that creates concise, well-structured summaries of educational content. Focus on key concepts, main ideas, and important details.
-    Do NOT use Markdown formatting. Return plain text only — no headings, no bold/italic, no bullet or numbered lists, no code blocks, and no YAML/front-matter. Use simple sentences and short paragraphs.`;
+
+Format your response with clear structure:
+- Use line breaks between paragraphs for readability
+- Start new topics on new lines
+- Use simple indentation (2-4 spaces) for sub-points
+- Keep sentences concise and clear
+- Separate major sections with a blank line
+
+Do NOT use Markdown syntax (no *, **, #, etc.). Use plain text with natural line breaks and spacing only.`;
 
         const APIBody = {
             model: "gpt-3.5-turbo",
@@ -574,31 +582,37 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         }
 
         const data = await response.json();
-                const summary = data.choices[0]?.message?.content?.trim();
+        const summary = data.choices[0]?.message?.content?.trim();
 
-                function stripMarkdown(md) {
-                    if (!md || typeof md !== 'string') return md;
-                    let out = md;
-                    out = out.replace(/```[\s\S]*?```/g, '');
-                    out = out.replace(/`([^`]+)`/g, '$1');
-                    out = out.replace(/^#{1,6}\s*/gm, '');
-                    out = out.replace(/(^.+)\n[-=]{2,}\s*$/gm, '$1');
-                    out = out.replace(/\*\*(.*?)\*\*/g, '$1');
-                    out = out.replace(/\*(.*?)\*/g, '$1');
-                    out = out.replace(/__(.*?)__/g, '$1');
-                    out = out.replace(/_(.*?)_/g, '$1');
-                    out = out.replace(/^\s*[-*+]\s+/gm, '');
-                    out = out.replace(/^\s*\d+\.\s+/gm, '');
-                    out = out.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1');
-                    out = out.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
-                    out = out.replace(/\n{3,}/g, '\n\n');
-                    return out.trim();
-                }
+        function stripMarkdown(md) {
+            if (!md || typeof md !== 'string') return md;
+            let out = md;
+            // Remove code blocks
+            out = out.replace(/```[\s\S]*?```/g, '');
+            out = out.replace(/`([^`]+)`/g, '$1');
+            // Convert headers to plain text with line breaks
+            out = out.replace(/^#{1,6}\s+(.*)$/gm, '$1\n');
+            out = out.replace(/(^.+)\n[-=]{2,}\s*$/gm, '$1\n');
+            // Remove bold/italic but keep text
+            out = out.replace(/\*\*(.*?)\*\*/g, '$1');
+            out = out.replace(/\*(.*?)\*/g, '$1');
+            out = out.replace(/__(.*?)__/g, '$1');
+            out = out.replace(/_(.*?)_/g, '$1');
+            // Convert lists to indented text
+            out = out.replace(/^\s*[-*+]\s+(.+)$/gm, '  $1');
+            out = out.replace(/^\s*\d+\.\s+(.+)$/gm, '  $1');
+            // Remove images/links but keep alt text
+            out = out.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1');
+            out = out.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
+            // Normalize line breaks (max 2 consecutive)
+            out = out.replace(/\n{3,}/g, '\n\n');
+            return out.trim();
+        }
 
-                if (!summary) {
+        if (!summary) {
             return res.status(500).json({ error: "Failed to generate summary" });
         }
-                const cleanedSummary = stripMarkdown(summary);
+        const cleanedSummary = stripMarkdown(summary);
         const recordResult = await recordSummaryUsage(userId);
 
         if (!recordResult.allowed) {
