@@ -24,8 +24,8 @@ const transporter = nodemailer.createTransport({
 });
 
 export function startEmailReminders() {
-    // Runs every 8am
-    cron.schedule("0 8 * * *", async () => {
+    // Runs every 2 days at 8am (Monday, Wednesday, Friday, Sunday)
+    cron.schedule("0 8 * * 1,3,5,0", async () => {
         console.log("📬 Checking for upcoming and overdue tasks...");
 
         const today = new Date();
@@ -183,8 +183,8 @@ export function startEmailReminders() {
         console.log("✅ Daily email check completed.");
     });
 
-    // Check for expiring streaks - runs every 6 hours
-    cron.schedule("0 */6 * * *", async () => {
+    // Check for expiring streaks - runs once daily at 9pm (3 hours before midnight)
+    cron.schedule("0 21 * * *", async () => {
         console.log("🔥 Checking for expiring streaks...");
 
         try {
@@ -208,7 +208,7 @@ export function startEmailReminders() {
             });
 
             for (const user of usersWithExpiringStreaks) {
-                const timeRemaining = "less than 24 hours";
+                const timeRemaining = "3 hours";
                 await sendStreakExpirationEmail(
                     user.email,
                     user.username,
@@ -223,25 +223,25 @@ export function startEmailReminders() {
         }
     });
 
-    // Check for inactive users - runs daily at 10am
-    cron.schedule("0 10 * * *", async () => {
+    // Check for inactive users - runs weekly on Mondays at 10am
+    cron.schedule("0 10 * * 1", async () => {
         console.log("👋 Checking for inactive users...");
 
         try {
             const now = new Date();
-            const threeDaysAgo = new Date(now);
-            threeDaysAgo.setDate(now.getDate() - 3);
-            threeDaysAgo.setHours(0, 0, 0, 0);
+            const sevenDaysAgo = new Date(now);
+            sevenDaysAgo.setDate(now.getDate() - 7);
+            sevenDaysAgo.setHours(0, 0, 0, 0);
 
-            const fourDaysAgo = new Date(now);
-            fourDaysAgo.setDate(now.getDate() - 4);
-            fourDaysAgo.setHours(0, 0, 0, 0);
+            const eightDaysAgo = new Date(now);
+            eightDaysAgo.setDate(now.getDate() - 8);
+            eightDaysAgo.setHours(0, 0, 0, 0);
 
-            // Find users who were last active exactly 3 days ago (to avoid spamming)
+            // Find users who were last active 7 days ago (send only once per week)
             const inactiveUsers = await User.findAll({
                 where: {
                     last_activity_date: {
-                        [Op.between]: [fourDaysAgo, threeDaysAgo]
+                        [Op.between]: [eightDaysAgo, sevenDaysAgo]
                     },
                     email: { [Op.ne]: null },
                     status: 'active'
