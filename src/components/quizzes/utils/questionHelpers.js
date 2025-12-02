@@ -12,17 +12,40 @@ export function getPointsForDifficulty(difficulty) {
 
 // Check if answer is correct (with partial credit support for matching)
 export function checkAnswer(question, answer) {
+  // Validate inputs
+  if (!question || !question.type) {
+    console.error('Invalid question object:', question);
+    return false;
+  }
+
+  if (answer == null || answer === '') {
+    return false;
+  }
+
   switch (question.type) {
     case QUESTION_TYPES.MULTIPLE_CHOICE:
     case QUESTION_TYPES.TRUE_FALSE:
-      return answer === question.correctAnswer;
-    
+      if (!question.correctAnswer) {
+        console.error('Missing correctAnswer for question:', question);
+        return false;
+      }
+      return String(answer).trim() === String(question.correctAnswer).trim();
+
     case QUESTION_TYPES.FILL_IN_BLANKS:
-      return answer.toLowerCase().trim() === question.answer.toLowerCase().trim();
-    
+      if (!question.answer) {
+        console.error('Missing answer for fill-in-the-blanks question:', question);
+        return false;
+      }
+      return String(answer).toLowerCase().trim() === String(question.answer).toLowerCase().trim();
+
     case QUESTION_TYPES.MATCHING:
       if (!Array.isArray(answer) || answer.length === 0) return false;
-      
+
+      if (!question.matchingPairs || !Array.isArray(question.matchingPairs) || question.matchingPairs.length === 0) {
+        console.error('Missing or invalid matchingPairs for matching question:', question);
+        return false;
+      }
+
       const totalPairs = question.matchingPairs.length;
       const correctPairs = answer.filter(match =>
         question.matchingPairs.some(pair =>

@@ -180,9 +180,9 @@ export const QuizQuestion = ({
       {/* Answer Options Section - Increased gap with responsive spacing */}
       <div className="mt-6 sm:mt-8 lg:mt-10">
         {/* Multiple Choice - Frosted Glass Panes */}
-        {currentQ.type === 'Multiple Choice' && currentQ.choices && (
+        {currentQ.type === 'Multiple Choice' && currentQ.choices && Array.isArray(currentQ.choices) && currentQ.choices.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 lg:gap-5">
-            {currentQ.choices.map((choice, index) => {
+            {currentQ.choices.filter(choice => choice != null && choice !== '').map((choice, index) => {
               const isSelected = selectedAnswer === choice;
               const isCorrect = choice === currentQ.correctAnswer;
               const isWrong = selectedAnswer && choice === selectedAnswer && !isCorrect;

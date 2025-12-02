@@ -23,8 +23,12 @@ export function useQuizGame(questions, timeLimit = 30) {
   };
 
   const nextQuestion = () => {
-    if (!isLastQuestion) {
-      setCurrentQuestionIndex(prev => prev + 1);
+    if (!isLastQuestion && currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => {
+        const nextIndex = prev + 1;
+        // Ensure we don't go past the last question
+        return Math.min(nextIndex, questions.length - 1);
+      });
       setSelectedAnswer('');
       setUserAnswer('');
       setUserMatches([]);

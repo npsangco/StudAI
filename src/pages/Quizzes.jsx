@@ -26,6 +26,7 @@ import TutorialOverlay from '../components/TutorialOverlay';
 import { useTutorial } from '../hooks/useTutorial';
 import { quizTutorialSteps } from '../config/tutorialSteps';
 import TutorialButton from '../components/TutorialButton';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 const styles = `
   @keyframes slideIn {
@@ -456,13 +457,15 @@ function QuizzesPage() {
     return (
       <>
         <style>{styles}</style>
-        <QuizGame
-          key={`solo-${quizDataHook.gameState.quizKey}`}
-          quiz={{ ...quizDataHook.quizData.selected, questions: quizDataHook.questions }}
-          mode="solo"
-          onBack={handlers.handleBackToList}
-          onComplete={handlers.handleShowSoloResults}
-        />
+        <ErrorBoundary>
+          <QuizGame
+            key={`solo-${quizDataHook.gameState.quizKey}`}
+            quiz={{ ...quizDataHook.quizData.selected, questions: quizDataHook.questions }}
+            mode="solo"
+            onBack={handlers.handleBackToList}
+            onComplete={handlers.handleShowSoloResults}
+          />
+        </ErrorBoundary>
         <QuizResults
           isOpen={quizDataHook.uiState.showResults}
           onClose={handlers.handleCloseSoloResults}
@@ -485,19 +488,21 @@ function QuizzesPage() {
           onReconnect={handleBannerReconnect}
           onDismiss={handleDismissBanner}
         />
-        <QuizGame
-          key={`battle-${quizDataHook.gameState.quizKey}`}
-          quiz={{ 
-            ...quizDataHook.quizData.selected, 
-            questions: quizDataHook.questions,
-            gamePin: quizDataHook.gameState.gamePin,
-            currentUserId: currentUser?.id,
-            isHost: quizDataHook.gameState.isHost,
-          }}
-          mode="battle"
-          onBack={handlers.handleBackToList}
-          onComplete={handlers.handleShowLeaderboard}
-        />
+        <ErrorBoundary>
+          <QuizGame
+            key={`battle-${quizDataHook.gameState.quizKey}`}
+            quiz={{
+              ...quizDataHook.quizData.selected,
+              questions: quizDataHook.questions,
+              gamePin: quizDataHook.gameState.gamePin,
+              currentUserId: currentUser?.id,
+              isHost: quizDataHook.gameState.isHost,
+            }}
+            mode="battle"
+            onBack={handlers.handleBackToList}
+            onComplete={handlers.handleShowLeaderboard}
+          />
+        </ErrorBoundary>
         <QuizLeaderboard
           isOpen={quizDataHook.uiState.showLeaderboard}
           onClose={handlers.handleCloseLeaderboard}

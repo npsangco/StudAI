@@ -68,14 +68,30 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     // Load questions before starting
     const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
 
-    if (!data || !data.questions || data.questions.length === 0) {
+    if (!data || !data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
       setError('This quiz has no questions yet. Please add questions before starting.');
       updateUiState({ showModal: false });
+      toast?.error('Cannot start quiz: No questions available');
       return;
     }
 
     // Shuffle and limit questions based on user selection
     let questionsToUse = [...data.questions];
+
+    // 🔒 SAFETY: Filter out any invalid questions
+    questionsToUse = questionsToUse.filter(q =>
+      q &&
+      q.question &&
+      q.type &&
+      q.question.trim() !== ''
+    );
+
+    if (questionsToUse.length === 0) {
+      setError('This quiz has no valid questions. Please check your questions.');
+      updateUiState({ showModal: false });
+      toast?.error('Cannot start quiz: No valid questions found');
+      return;
+    }
     if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
       // Shuffle questions randomly
       questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
@@ -99,14 +115,30 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     // Load questions
     const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
 
-    if (!data || !data.questions || data.questions.length === 0) {
+    if (!data || !data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
       setError('This quiz has no questions yet. Please add questions before starting a battle.');
       updateUiState({ showModal: false });
+      toast?.error('Cannot start battle: No questions available');
       return;
     }
 
     // Shuffle and limit questions based on user selection
     let questionsToUse = [...data.questions];
+
+    // 🔒 SAFETY: Filter out any invalid questions
+    questionsToUse = questionsToUse.filter(q =>
+      q &&
+      q.question &&
+      q.type &&
+      q.question.trim() !== ''
+    );
+
+    if (questionsToUse.length === 0) {
+      setError('This quiz has no valid questions. Please check your questions.');
+      updateUiState({ showModal: false });
+      toast?.error('Cannot start battle: No valid questions found');
+      return;
+    }
     if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
       // Shuffle questions randomly
       questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);

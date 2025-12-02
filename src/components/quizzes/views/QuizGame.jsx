@@ -41,40 +41,50 @@ const QuizGame = ({
   
   const rawQuestions = quiz?.questions || [];
 
+  // 🔒 SAFETY CHECK: Ensure questions is always an array
+  const safeRawQuestions = Array.isArray(rawQuestions) ? rawQuestions : [];
+
   // ADAPTIVE DIFFICULTY: Check if adaptive mode can be used
-  const adaptiveCheck = mode === 'solo' ? canUseAdaptiveMode(rawQuestions) : { enabled: false };
+  const adaptiveCheck = mode === 'solo' ? canUseAdaptiveMode(safeRawQuestions) : { enabled: false };
   const useAdaptiveMode = adaptiveCheck.enabled;
 
   // 🔥 Question Bank: Use questions already shuffled and limited by handleSoloQuiz/handleQuizBattle
   const [questions, setQuestions] = useState(() => {
     // Battle: Use ALL questions passed (already shuffled and limited by host)
     if (mode === 'battle') {
-      return rawQuestions;
+      return safeRawQuestions;
     }
 
     // Solo modes: Use questions already shuffled and sliced by handleSoloQuiz
     // (handleSoloQuiz already did the random selection based on user's choice)
-    const selectedQuestions = rawQuestions;
+    const selectedQuestions = safeRawQuestions;
+
+    // 🔒 SAFETY: Ensure we have questions
+    if (!selectedQuestions || selectedQuestions.length === 0) {
+      console.error('No questions available for solo mode');
+      return [];
+    }
 
     // Apply mode-specific ordering/logic
     if (useAdaptiveMode) {
       // Solo Adaptive: Initialize adaptive queue with selected questions
       const { orderedQuestions, startingDifficulty} = initializeAdaptiveQueue(selectedQuestions);
 
-      return orderedQuestions;
+      return orderedQuestions || selectedQuestions; // Fallback to selectedQuestions if initialization fails
     }
 
     // Solo Classic: Sort selected questions by difficulty
     const sorted = sortQuestionsByDifficulty(selectedQuestions);
 
-    return sorted;
+    return sorted || selectedQuestions; // Fallback to selectedQuestions if sorting fails
   });
 
   // Adaptive state tracking
   const [adaptiveState, setAdaptiveState] = useState(() => {
-    if (mode === 'solo' && useAdaptiveMode) {
+    if (mode === 'solo' && useAdaptiveMode && safeRawQuestions.length > 0) {
       // 🔥 OPTION 1: Get starting difficulty from initialization
-      const { startingDifficulty } = initializeAdaptiveQueue(rawQuestions);
+      const initResult = initializeAdaptiveQueue(safeRawQuestions);
+      const startingDifficulty = initResult?.startingDifficulty || 'medium';
 
       return {
         currentDifficulty: startingDifficulty,
@@ -295,6 +305,18 @@ const QuizGame = ({
   const allPlayers = mode === 'battle' ? realPlayers : [];
 
   const currentQ = game.currentQuestion;
+
+  // 🔒 SAFETY: Ensure currentQuestion exists and is valid
+  useEffect(() => {
+    if (!currentQ && questions.length > 0 && game.currentQuestionIndex >= questions.length) {
+      console.error('Current question index out of bounds:', {
+        currentIndex: game.currentQuestionIndex,
+        totalQuestions: questions.length
+      });
+      // Reset to last valid question
+      game.setCurrentQuestionIndex(Math.max(0, questions.length - 1));
+    }
+  }, [currentQ, questions.length, game.currentQuestionIndex]);
 
   // Pause timer only when game is paused (disconnection)
   const shouldPauseTimer = game.isPaused;
@@ -706,6 +728,18 @@ const QuizGame = ({
 
   const handleAnswerSelect = (answer) => {
     if (game.selectedAnswer || game.isPaused || isProcessing) return;
+
+    // 🔒 SAFETY: Validate answer exists
+    if (!answer || answer === '') {
+      console.error('Invalid answer selected');
+      return;
+    }
+
+    // 🔒 SAFETY: Validate current question
+    if (!currentQ || !currentQ.type) {
+      console.error('Cannot select answer: Current question is invalid');
+      return;
+    }
 
     // Acquire submission lock to prevent race condition
     if (!acquireSubmissionLock()) {
@@ -1258,6 +1292,24 @@ const QuizGame = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
+  // 🔒 CRITICAL SAFETY CHECK: Validate game state before rendering
+  if (!questions || questions.length === 0) {
+    return (
+      <div className="min-h-screen bg-amber-50 flex items-center justify-center px-4">
+        <div className="text-center bg-white/20 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-white/40 max-w-md">
+          <div className="text-4xl sm:text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl sm:text-2xl font-bold text-black drop-shadow-sm mb-4">No Questions Available</h2>
+          <p className="text-sm sm:text-base text-black/70 mb-6">
+            This quiz has no questions. Please add questions before starting.
+          </p>
+          <button onClick={onBack} className="btn-branded-yellow text-black font-bold px-6 py-3 rounded-xl transition-all shadow-lg hover:shadow-xl border-2 border-white/40">
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!currentQ) {
     // Check if adaptive mode is enabled for tips
     const adaptiveCheck = canUseAdaptiveMode(questions);

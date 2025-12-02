@@ -88,6 +88,17 @@ export const initializeAdaptiveQueue = (rawQuestions) => {
     ...pools.hard
   ];
 
+  // 🔧 EDGE CASE FIX: Ensure we have at least some questions
+  if (orderedQuestions.length === 0) {
+    console.error('No valid questions found for adaptive mode');
+    return {
+      orderedQuestions: rawQuestions, // Fallback to raw questions
+      questionPools: pools,
+      startingDifficulty: 'medium',
+      error: 'Could not categorize questions by difficulty'
+    };
+  }
+
   return {
     orderedQuestions,
     questionPools: pools,
@@ -108,7 +119,10 @@ export const initializeAdaptiveQueue = (rawQuestions) => {
  * @returns {Array} Reordered questions array
  */
 export const reorderRemainingQuestions = (remainingQuestions, targetDifficulty) => {
-  if (remainingQuestions.length === 0) return [];
+  // 🔧 EDGE CASE FIX: Validate input
+  if (!remainingQuestions || !Array.isArray(remainingQuestions) || remainingQuestions.length === 0) {
+    return [];
+  }
 
   // Separate remaining questions by difficulty
   const remaining = {
@@ -118,6 +132,11 @@ export const reorderRemainingQuestions = (remainingQuestions, targetDifficulty) 
   };
 
   remainingQuestions.forEach(q => {
+    // Skip invalid questions
+    if (!q || !q.question) {
+      return;
+    }
+
     const diff = (q.difficulty || 'medium').toLowerCase();
     if (remaining[diff]) {
       remaining[diff].push(q);
