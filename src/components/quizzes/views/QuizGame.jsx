@@ -1476,18 +1476,6 @@ const QuizGame = ({
                   isAnswerCorrect={game.isAnswerCorrect}
                   isWaiting={false}
                 />
-
-                {/* Manual next button for matching type */}
-                {currentQ.type === 'Matching' && game.isMatchingSubmitted && (
-                  <div className="text-center mt-6">
-                    <button
-                      onClick={handleManualNext}
-                      className="px-8 py-3 btn-branded-yellow text-black rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
-                    >
-                      {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
-                    </button>
-                  </div>
-                )}
               </div>
               
               <div className="w-80 xl:w-96 h-[calc(100vh-6rem)] sticky top-24 flex flex-col gap-3 overflow-hidden">
@@ -1534,18 +1522,6 @@ const QuizGame = ({
                 isWaiting={false}
               />
 
-              {/* Manual next button for matching type */}
-              {currentQ.type === 'Matching' && game.isMatchingSubmitted && (
-                <div className="text-center mt-6 mb-32">
-                  <button
-                    onClick={handleManualNext}
-                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600 hover:from-yellow-500 hover:via-amber-600 hover:to-orange-600 text-white rounded-2xl font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-600/40 transition-all transform hover:scale-105 border-2 border-white/40"
-                  >
-                    {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
-                  </button>
-                </div>
-              )}
-
               <div className="fixed bottom-0 left-0 right-0 z-30">
                 <LiveLeaderboard
                   players={allPlayers}
@@ -1577,18 +1553,6 @@ const QuizGame = ({
                 isAnswerCorrect={game.isAnswerCorrect}
                 isWaiting={false}
               />
-
-              {/* Manual next button for matching type */}
-              {currentQ.type === 'Matching' && game.isMatchingSubmitted && (
-                <div className="text-center mt-6 mb-32">
-                  <button
-                    onClick={handleManualNext}
-                    className="px-8 py-3 bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600 hover:from-yellow-500 hover:via-amber-600 hover:to-orange-600 text-white rounded-2xl font-bold shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-600/40 transition-all transform hover:scale-105 border-2 border-white/40"
-                  >
-                    {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
-                  </button>
-                </div>
-              )}
 
               <LiveLeaderboard
                 players={allPlayers}
@@ -1622,18 +1586,6 @@ const QuizGame = ({
             isAnswerCorrect={game.isAnswerCorrect}
             isWaiting={false}
           />
-          
-          {/* Solo mode next button for matching */}
-          {currentQ.type === 'Matching' && game.isMatchingSubmitted && (
-            <div className="text-center mt-6">
-              <button
-                onClick={handleManualNext}
-                className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-white/40"
-              >
-                {game.currentQuestionIndex >= questions.length - 1 ? 'Finish Quiz →' : 'Next Question →'}
-              </button>
-            </div>
-          )}
         </div>
       )}
 
