@@ -779,9 +779,12 @@ const QuizGame = ({
     setAnswersHistory(newAnswersHistory);
 
     if (isCorrect) {
-      // Track correct answers (sync ref + state)
-      correctAnswersCountRef.current += 1;
-      setCorrectAnswersCount(correctAnswersCountRef.current);
+      // Track correct answers using state updater (prevents flickering)
+      setCorrectAnswersCount(prev => {
+        const newCount = prev + 1;
+        correctAnswersCountRef.current = newCount; // Keep ref in sync
+        return newCount;
+      });
       
       // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo' 
@@ -859,9 +862,12 @@ const QuizGame = ({
     game.setUserAnswer(actualAnswer + '_submitted');
     
     if (isCorrect) {
-      // Track correct answers (sync ref + state)
-      correctAnswersCountRef.current += 1;
-      setCorrectAnswersCount(correctAnswersCountRef.current);
+      // Track correct answers using state updater (prevents flickering)
+      setCorrectAnswersCount(prev => {
+        const newCount = prev + 1;
+        correctAnswersCountRef.current = newCount; // Keep ref in sync
+        return newCount;
+      });
       
       // ADAPTIVE SCORING: Award points based on difficulty
       const points = mode === 'solo' 
@@ -945,8 +951,12 @@ const QuizGame = ({
     // Award points (full points if correct, partial points otherwise)
     if (isCorrect || partialCredit > 0) {
       if (isCorrect || partialCredit >= 1) {
-        correctAnswersCountRef.current += 1;
-        setCorrectAnswersCount(correctAnswersCountRef.current);
+        // Track correct answers using state updater (prevents flickering)
+        setCorrectAnswersCount(prev => {
+          const newCount = prev + 1;
+          correctAnswersCountRef.current = newCount; // Keep ref in sync
+          return newCount;
+        });
       }
       
       const points = mode === 'solo'
@@ -974,7 +984,17 @@ const QuizGame = ({
         .catch(() => {});
     }
 
-    setIsProcessing(false);
+    // Auto-proceed after showing color feedback (like MC/TF)
+    setTimeout(() => {
+      setIsProcessing(false);
+      
+      // Advance to next question or finish quiz
+      if (game.currentQuestionIndex >= questions.length - 1) {
+        finishQuizWithAnswers(newAnswersHistory);
+      } else {
+        handleNextQuestion();
+      }
+    }, 800); // 800ms to see RED/GREEN feedback
   };
 
   const handleNextQuestion = () => {

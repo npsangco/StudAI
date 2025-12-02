@@ -430,14 +430,12 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     setMatches(prev => prev.filter(m => m[side] !== item));
   };
 
-  // AUTO-PROCEED like MC/TF - brief RED/GREEN flash then instant proceed
+  // AUTO-PROCEED like MC/TF - show RED/GREEN feedback and submit immediately
   const handleSubmit = () => {
     if (isPaused) return;
     setIsSubmitted(true);
-    // Brief delay to show RED/GREEN feedback, then auto-proceed (no review screen)
-    setTimeout(() => {
-      onSubmit(matches);
-    }, 800); // Short flash to see the colors
+    // Call onSubmit immediately - parent component (QuizGame) handles the timing
+    onSubmit(matches);
   };
 
   const getItemMatch = (item, side) => {
