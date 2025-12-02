@@ -280,6 +280,16 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   const [touchStartPos, setTouchStartPos] = useState(null);
   const [isDraggingTouch, setIsDraggingTouch] = useState(false);
 
+  // 🔒 CRITICAL: Reset state when question changes
+  useEffect(() => {
+    setMatches([]);
+    setDraggedItem(null);
+    setDragOverZone(null);
+    setIsSubmitted(false);
+    setTouchStartPos(null);
+    setIsDraggingTouch(false);
+  }, [question.id]);
+
   // Color palette for matched pairs
   const [colorPalette] = useState(() => {
     const colors = [];
