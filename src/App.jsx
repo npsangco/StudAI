@@ -53,7 +53,7 @@ function App() {
   }, []);
 
   // Routes that should have NO navigation
-  const noNavRoutes = ['/login', '/signup'];
+  const noNavRoutes = [];
   const shouldHideNav = noNavRoutes.includes(location.pathname);
 
   // Routes that should have landing navigation
@@ -74,7 +74,7 @@ function App() {
       {!shouldHideNav && !hideNavbar && isLandingPage && <LandingNavigation />}
       {!shouldHideNav && !hideNavbar && requiresAuth && <Navigation />}
 
-      <div className={`flex-1 ${requiresAuth ? "bg-gray-100" : ""}`}>
+      <div className={`flex-1 ${(!shouldHideNav && !hideNavbar && (isLandingPage || requiresAuth)) ? "pt-16" : ""} ${requiresAuth ? "bg-gray-100" : ""}`}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />

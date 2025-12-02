@@ -110,7 +110,7 @@ export const StreakExpirationEmail = (username, currentStreak, expiresIn) => {
             <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
-                        🔥 Streak Alert!
+                        Streak Alert!
                     </div>
                 </div>
                 
@@ -118,7 +118,7 @@ export const StreakExpirationEmail = (username, currentStreak, expiresIn) => {
                 <p style="color: #666; margin-bottom: 24px; font-size: 16px; line-height: 1.5;">Your ${currentStreak}-day study streak is about to expire! You have ${expiresIn} to complete an activity and keep your streak alive.</p>
                 
                 <div style="background: linear-gradient(135deg, #fef3c7 0%, #fee2e2 100%); border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
-                    <p style="margin: 0; color: #92400e; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Current Streak: ${currentStreak} days 🔥</p>
+                    <p style="margin: 0; color: #92400e; font-weight: 600; font-size: 14px; margin-bottom: 8px;">Current Streak: ${currentStreak} days</p>
                     <p style="margin: 0; color: #78350f; font-size: 14px;">Quick activities to maintain your streak: Take a quiz, create a note, or update your planner!</p>
                 </div>
                 
@@ -141,7 +141,7 @@ export const InactiveUserEmail = (username, daysSinceActivity) => {
             <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div style="display: inline-block; background-color: #818cf8; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
-                        👋 We Miss You!
+                        We Miss You!
                     </div>
                 </div>
                 
@@ -317,7 +317,7 @@ export const sendStreakExpirationEmail = async (userEmail, username, currentStre
         const mailOptions = {
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: userEmail,
-            subject: `🔥 Your ${currentStreak}-Day Streak is Expiring Soon!`,
+            subject: `Your ${currentStreak}-Day Streak is Expiring Soon!`,
             html: StreakExpirationEmail(username, currentStreak, expiresIn),
         };
 
@@ -336,7 +336,7 @@ export const sendInactiveUserEmail = async (userEmail, username, daysSinceActivi
         const mailOptions = {
             from: `"StudAI" <${process.env.EMAIL_USER}>`,
             to: userEmail,
-            subject: `👋 We Miss You at StudAI!`,
+            subject: `We Miss You at StudAI!`,
             html: InactiveUserEmail(username, daysSinceActivity),
         };
 

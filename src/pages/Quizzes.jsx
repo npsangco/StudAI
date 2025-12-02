@@ -141,9 +141,7 @@ const styles = `
 `;
 
 function QuizzesPage() {
-  // ============================================
   // INITIALIZE HOOKS
-  // ============================================
   const { toasts, toast, removeToast } = useToast();
   const [currentUser, setCurrentUser] = useState(null);
   const quizDataHook = useQuizData();
@@ -176,17 +174,14 @@ function QuizzesPage() {
           initial: userData.username[0].toUpperCase(),
           profile_picture: userData.profile_picture || null
         });
-
       } catch (error) {
-        console.error('❌ Failed to fetch user:', error);
+        // Silent fail - user will see generic error UI if needed
       }
     };
 
     fetchCurrentUser();
 
-    // Listen for profile updates from Profile page
     const handleProfileUpdate = () => {
-      
       fetchCurrentUser();
     };
 
@@ -200,6 +195,26 @@ function QuizzesPage() {
   // Pass currentUser and toast to handlers
   const handlers = useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, toast);
 
+  // Reload quiz questions after adding from question bank
+  const handleReloadQuiz = async (quizId) => {
+    try {
+      const result = await quizAPI.loadQuizWithQuestions(quizId);
+      if (result) {
+        quizDataHook.setQuestions(result.questions);
+        // Update the editing quiz metadata if needed
+        quizDataHook.updateQuizData({
+          editing: {
+            ...quizDataHook.quizData.editing,
+            ...result.quiz
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error reloading quiz:', error);
+      toast.error('Failed to reload quiz questions');
+    }
+  };
+
   const lobby = useLobby(
     quizDataHook.uiState.currentView === VIEWS.LOBBY,
     quizDataHook.gameState.gamePin,
@@ -207,23 +222,16 @@ function QuizzesPage() {
     quizDataHook.gameState.isHost
   );
   
-  // ============================================
   // CHECK FOR RECONNECTION ON PAGE LOAD
-  // ============================================
-  
   useEffect(() => {
     const opportunity = checkForReconnectionOpportunity();
     
     if (opportunity) {
-      
       setReconnectionOpportunity(opportunity);
     }
   }, []);
   
-  // ============================================
   // HANDLE RECONNECTION FROM BANNER
-  // ============================================
-  
   const handleBannerReconnect = async () => {
     if (!reconnectionOpportunity) return;
 
@@ -234,8 +242,6 @@ function QuizzesPage() {
       );
       
       if (result.success) {
-
-        // All data is now in result.playerData
         const { quizId, battleId, quizTitle, gamePin } = result.playerData;
         
         if (!quizId) {
@@ -244,7 +250,6 @@ function QuizzesPage() {
           return;
         }
         
-        // Load quiz questions from API
         const data = await quizAPI.loadQuizWithQuestions(quizId);
         
         if (data) {
@@ -257,7 +262,6 @@ function QuizzesPage() {
             }
           });
           
-          // Set game state
           quizDataHook.updateGameState({
             gamePin: gamePin,
             battleId: battleId,
@@ -265,10 +269,7 @@ function QuizzesPage() {
             currentUserId: reconnectionOpportunity.userId
           });
           
-          // Go to battle view
           quizDataHook.updateUiState({ currentView: VIEWS.BATTLE });
-          
-          // Clear opportunity
           setReconnectionOpportunity(null);
 
         } else {
@@ -280,39 +281,29 @@ function QuizzesPage() {
         setReconnectionOpportunity(null);
       }
     } catch (error) {
-      console.error('❌ Reconnection failed:', error);
       toast.error('Failed to rejoin battle: ' + error.message);
       setReconnectionOpportunity(null);
     }
   };
   
   const handleDismissBanner = () => {
-
-    // Permanently invalidate the reconnection token
     if (reconnectionOpportunity) {
       const { gamePin, userId } = reconnectionOpportunity;
-      
-      // Remove from localStorage
       const key = `reconnect_${gamePin}_${userId}`;
       localStorage.removeItem(key);
-
-      // Note: Firebase cleanup will happen via token expiration
-      // or can be done here if needed
     }
     
     setReconnectionOpportunity(null);
   };
 
-  // ============================================
   // EFFECTS
-  // ============================================
 
   // Load quizzes on mount
   useEffect(() => {
     quizAPI.loadQuizzesFromAPI();
   }, []);
 
-  // Real-time validation whenever questions change
+  // Real-time validation
   useEffect(() => {
     if (quizDataHook.uiState.currentView === VIEWS.EDITING && quizDataHook.questions.length > 0) {
       const validation = validateAllQuestions(quizDataHook.questions);
@@ -328,7 +319,7 @@ function QuizzesPage() {
     }
   }, [quizDataHook.questions, quizDataHook.uiState.currentView]);
 
-  // Control page overflow for list view
+  // Control page overflow
   useEffect(() => {
     if (quizDataHook.uiState.currentView === VIEWS.LIST) {
       document.body.classList.add('quiz-page-active');
@@ -339,25 +330,22 @@ function QuizzesPage() {
     return () => document.body.classList.remove('quiz-page-active');
   }, [quizDataHook.uiState.currentView]);
 
-  // Fix sticky header for editor view by removing overflow-x:hidden from html, body, and root
+  // Fix sticky header for editor
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
     const root = document.getElementById('root');
 
     if (quizDataHook.uiState.currentView === VIEWS.EDITING) {
-      // Store original values
       const originalHtmlOverflow = html.style.overflowX;
       const originalBodyOverflow = body.style.overflowX;
       const originalRootOverflow = root.style.overflowX;
 
-      // Set to visible for sticky to work
       html.style.overflowX = 'visible';
       body.style.overflowX = 'visible';
       root.style.overflowX = 'visible';
 
       return () => {
-        // Restore original values
         html.style.overflowX = originalHtmlOverflow || 'hidden';
         body.style.overflowX = originalBodyOverflow || 'hidden';
         root.style.overflowX = originalRootOverflow || 'hidden';
@@ -380,7 +368,6 @@ function QuizzesPage() {
   }, [quizDataHook.uiState.currentView]);
 
   // SYNC QUESTIONS: Listen for questions from Firebase (NON-HOST players)
-  // 🔥 FIX: Listen in LOBBY, LOADING_BATTLE, and BATTLE views to ensure questions are available
   useEffect(() => {
     const battleViews = [VIEWS.LOBBY, VIEWS.LOADING_BATTLE, VIEWS.BATTLE];
 
@@ -389,17 +376,14 @@ function QuizzesPage() {
       !quizDataHook.gameState.isHost &&
       quizDataHook.gameState.gamePin
     ) {
-
       const unsubscribe = listenToQuizQuestions(
         quizDataHook.gameState.gamePin,
         (firebaseQuestions) => {
-          
           quizDataHook.setQuestions(firebaseQuestions);
         }
       );
 
       return () => {
-        
         unsubscribe();
       };
     }
@@ -415,14 +399,10 @@ function QuizzesPage() {
       quizDataHook.uiState.currentView === VIEWS.LOBBY && 
       quizDataHook.gameState.gamePin
     ) {
-
       const unsubscribe = listenToBattleStatus(
         quizDataHook.gameState.gamePin,
         (newStatus) => {
-
           if (newStatus === 'in_progress') {
-
-            // Transition to loading screen, then countdown will start the game
             quizDataHook.updateUiState({ currentView: VIEWS.LOADING_BATTLE });
             countdown.start();
           }
@@ -430,7 +410,6 @@ function QuizzesPage() {
       );
       
       return () => {
-        
         unsubscribe();
       };
     }
@@ -439,23 +418,11 @@ function QuizzesPage() {
     quizDataHook.gameState.gamePin
   ]);
 
-  // ============================================
-  // RENDER: Loading Screens (Check these FIRST before general loading)
-  // ============================================
-
+  // RENDER: Loading Screens
   if (quizDataHook.uiState.currentView === VIEWS.LOADING || quizDataHook.uiState.currentView === VIEWS.LOADING_BATTLE) {
-    // Check if adaptive mode is enabled (only for solo mode)
-    // Use quizDataHook.questions (which is the loaded questions array) instead of selected.questions
     const rawQuestions = quizDataHook.questions || [];
     const isSoloMode = quizDataHook.uiState.currentView === VIEWS.LOADING;
     const adaptiveCheck = isSoloMode ? canUseAdaptiveMode(rawQuestions) : { enabled: false };
-
-    console.log('🔍 SoloLoadingScreen Debug:', {
-      questionsCount: rawQuestions.length,
-      adaptiveEnabled: adaptiveCheck.enabled,
-      adaptiveReason: adaptiveCheck.reason,
-      isSoloMode
-    });
 
     return (
       <SoloLoadingScreen
@@ -484,10 +451,7 @@ function QuizzesPage() {
     );
   }
 
-  // ============================================
   // RENDER: Solo Game
-  // ============================================
-
   if (quizDataHook.uiState.currentView === VIEWS.SOLO && quizDataHook.quizData.selected) {
     return (
       <>
@@ -510,10 +474,7 @@ function QuizzesPage() {
     );
   }
 
-  // ============================================
   // RENDER: Battle Game
-  // ============================================
-
   if (quizDataHook.uiState.currentView === VIEWS.BATTLE && quizDataHook.quizData.selected) {
     return (
       <>
@@ -546,18 +507,12 @@ function QuizzesPage() {
     );
   }
 
-  // ============================================
-  // RENDER: Initial Loading State (Quiz List ONLY)
-  // ============================================
-
+  // RENDER: Initial Loading State
   if (quizDataHook.loading && quizDataHook.uiState.currentView === VIEWS.LIST) {
     return <AppLoader message="Loading Quizzes..." />;
   }
 
-  // ============================================
   // RENDER: Error State
-  // ============================================
-
   if (quizDataHook.error && quizDataHook.uiState.currentView === VIEWS.LIST) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
@@ -576,10 +531,7 @@ function QuizzesPage() {
     );
   }
 
-  // ============================================
   // RENDER: Editor
-  // ============================================
-
   if (quizDataHook.uiState.currentView === VIEWS.EDITING && quizDataHook.quizData.editing) {
     return (
       <>
@@ -606,6 +558,7 @@ function QuizzesPage() {
           onAddMatchingPair={handlers.handleAddMatchingPair}
           onUpdateMatchingPair={handlers.handleUpdateMatchingPair}
           onRemoveMatchingPair={handlers.handleRemoveMatchingPair}
+          onReloadQuiz={handleReloadQuiz}
           onShowValidationErrors={() => quizDataHook.setShowValidationModal(true)}
           toast={toast}
         />
@@ -613,10 +566,7 @@ function QuizzesPage() {
     );
   }
 
-  // ============================================
-  // RENDER: Landing View (Default)
-  // ============================================
-
+  // RENDER: Landing View
   return (
     <>
       <ToastContainer toasts={toasts} onDismiss={removeToast} />

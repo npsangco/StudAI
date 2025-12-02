@@ -719,7 +719,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                   or click to browse
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
-                  Supported: PDF, PPT, PPTX • Max 25MB
+                  Supported: PDF & PPTX • Max 25MB
                 </p>
               </div>
 

@@ -1032,6 +1032,7 @@ export const QuizEditor = ({
   onUpdateMatchingPair,
   onRemoveMatchingPair,
   onReorderQuestions,
+  onReloadQuiz,
   toast
 }) => {
   const [draggedQuestionIndex, setDraggedQuestionIndex] = useState(null);
@@ -1163,8 +1164,13 @@ export const QuizEditor = ({
       const data = await response.json();
 
       if (response.ok) {
-        toast.success(`Inserted ${data.inserted} question${data.inserted !== 1 ? 's' : ''} from question bank. Please save to see them.`);
+        toast.success(`Inserted ${data.inserted} question${data.inserted !== 1 ? 's' : ''} from question bank.`);
         setShowQuestionBank(false);
+        
+        // Reload the quiz to get updated questions
+        if (onReloadQuiz) {
+          await onReloadQuiz(quiz.id);
+        }
       } else {
         toast.error(data.error || 'Failed to insert questions');
       }

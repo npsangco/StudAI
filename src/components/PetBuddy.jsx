@@ -5,6 +5,7 @@ import PetShop from "./PetShop";
 import PetInventory from "./PetInventory";
 import ToastContainer from "./ToastContainer";
 import { useToast } from "../hooks/useToast";
+import { Edit2, ShoppingCart, Backpack } from "lucide-react";
 
 export default function PetBuddy() {
   const [pet, setPet] = useState(null);
@@ -166,9 +167,9 @@ export default function PetBuddy() {
       
       // Show success message based on action type
       const actionMessages = {
-        feed: "Fed your pet! 🍖",
-        play: "Played with your pet! 🎾",
-        clean: "Cleaned your pet! 🧼"
+        feed: "Fed your pet!",
+        play: "Played with your pet!",
+        clean: "Cleaned your pet!"
       };
       toast.success(actionMessages[type]);
       
@@ -395,7 +396,7 @@ const CompactPetHeader = ({ pet, onUpdateName, onShop, onInventory }) => {
               }}
               className="text-gray-400 hover:text-blue-500 transition-colors text-xs flex-shrink-0"
             >
-              ✏️
+              <Edit2 className="w-4 h-4" />
             </button>
           </div>
           <div className="flex gap-1 flex-shrink-0">
@@ -403,13 +404,13 @@ const CompactPetHeader = ({ pet, onUpdateName, onShop, onInventory }) => {
               onClick={onShop}
               className="bg-yellow-500 text-white p-1.5 rounded-lg hover:bg-yellow-600 transition-colors text-sm"
             >
-              🛒
+              <ShoppingCart className="w-4 h-4" />
             </button>
             <button
               onClick={onInventory}
               className="bg-green-500 text-white p-1.5 rounded-lg hover:bg-green-600 transition-colors text-sm"
             >
-              🎒
+              <Backpack className="w-4 h-4" />
             </button>
           </div>
         </>
