@@ -245,9 +245,8 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
   );
 };
 
-// Matching Quiz Player Component
 export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode = 'solo' }) => {
-  // Parse matchingPairs if it's a JSON string
+  // Parse matchingPairs
   let parsedPairs = question.matchingPairs;
   if (typeof parsedPairs === 'string') {
     try {
@@ -257,10 +256,8 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     }
   }
   
-  // Ensure it's an array
   parsedPairs = Array.isArray(parsedPairs) ? parsedPairs : [];
   
-  // Validate matchingPairs exists
   if (!parsedPairs || parsedPairs.length === 0) {
     return (
       <div className="max-w-5xl mx-auto space-y-4">
@@ -276,15 +273,14 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverZone, setDragOverZone] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [showCorrectMatches, setShowCorrectMatches] = useState(false);
-  const [showMistakes, setShowMistakes] = useState(false);
   const [leftItems] = useState(parsedPairs.map(p => p.left));
   const [rightItems] = useState([...parsedPairs.map(p => p.right)].sort(() => Math.random() - 0.5));
 
-  // 📱 TOUCH STATE
+  // Touch state for mobile
   const [touchStartPos, setTouchStartPos] = useState(null);
   const [isDraggingTouch, setIsDraggingTouch] = useState(false);
 
+  // Color palette for matched pairs
   const [colorPalette] = useState(() => {
     const colors = [];
     const baseColors = [
@@ -319,22 +315,13 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     );
   };
 
-  const getCorrectMatch = (item, side) => {
-    return parsedPairs.find(pair => pair[side] === item);
-  };
-
-  // ========================================
-  // MOUSE/DESKTOP DRAG HANDLERS
-  // ========================================
-  
+  // Drag handlers (desktop)
   const handleDragStart = (e, item, side) => {
     if (isPaused || isSubmitted) return;
-    
     const existingMatch = matches.find(m => m[side] === item);
     if (existingMatch) {
       setMatches(prev => prev.filter(m => m[side] !== item));
     }
-    
     setDraggedItem({ item, side });
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -343,7 +330,6 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     if (isPaused || isSubmitted) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    
     if (draggedItem && draggedItem.side !== side) {
       setDragOverZone({ item, side });
     }
@@ -357,7 +343,6 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     if (isPaused || isSubmitted) return;
     e.preventDefault();
     setDragOverZone(null);
-    
     if (!draggedItem || draggedItem.side === dropSide) return;
 
     const filteredMatches = matches.filter(m => 
@@ -379,39 +364,28 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     setDragOverZone(null);
   };
 
-  // ========================================
-  // 📱 TOUCH/MOBILE DRAG HANDLERS
-  // ========================================
-  
+  // Touch handlers (mobile)
   const handleTouchStart = (e, item, side) => {
     if (isPaused || isSubmitted) return;
-    
     const touch = e.touches[0];
     setTouchStartPos({ x: touch.clientX, y: touch.clientY });
-    
     const existingMatch = matches.find(m => m[side] === item);
     if (existingMatch) {
       setMatches(prev => prev.filter(m => m[side] !== item));
     }
-    
     setDraggedItem({ item, side });
     setIsDraggingTouch(true);
   };
 
   const handleTouchMove = (e, item, side) => {
     if (isPaused || isSubmitted || !draggedItem || !isDraggingTouch) return;
-    
-    // touchAction: 'none' in CSS handles preventing scroll, no need for preventDefault
     const touch = e.touches[0];
     const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
-    
     if (elementUnderTouch) {
       const dropTarget = elementUnderTouch.closest('[data-drop-item]');
-      
       if (dropTarget) {
         const dropItem = dropTarget.getAttribute('data-drop-item');
         const dropSide = dropTarget.getAttribute('data-drop-side');
-        
         if (dropSide !== draggedItem.side) {
           setDragOverZone({ item: dropItem, side: dropSide });
         } else {
@@ -425,35 +399,26 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
   const handleTouchEnd = (e, currentItem, currentSide) => {
     if (isPaused || isSubmitted || !draggedItem || !isDraggingTouch) return;
-    
     const touch = e.changedTouches[0];
     const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
-    
     if (elementUnderTouch) {
       const dropTarget = elementUnderTouch.closest('[data-drop-item]');
-      
       if (dropTarget) {
         const dropItem = dropTarget.getAttribute('data-drop-item');
         const dropSide = dropTarget.getAttribute('data-drop-side');
-        
-        // Only create match if dropping on opposite side
         if (dropSide !== draggedItem.side) {
           const filteredMatches = matches.filter(m => 
             m[draggedItem.side] !== draggedItem.item && m[dropSide] !== dropItem
           );
-
           const newMatch = {
             left: draggedItem.side === 'left' ? draggedItem.item : dropItem,
             right: draggedItem.side === 'right' ? draggedItem.item : dropItem,
             color: colorPalette[filteredMatches.length]
           };
-
           setMatches([...filteredMatches, newMatch]);
         }
       }
     }
-    
-    // Reset states
     setDraggedItem(null);
     setDragOverZone(null);
     setIsDraggingTouch(false);
@@ -465,10 +430,11 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
     setMatches(prev => prev.filter(m => m[side] !== item));
   };
 
+  // AUTO-PROCEED on submit (like MC/TF)
   const handleSubmit = () => {
     if (isPaused) return;
     setIsSubmitted(true);
-    onSubmit(matches);
+    onSubmit(matches); // This triggers auto-proceed
   };
 
   const getItemMatch = (item, side) => {
@@ -481,32 +447,6 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
   const canSubmit = matches.length > 0 && matches.length === parsedPairs.length;
 
-  // Calculate results
-  const correctMatches = matches.filter(isMatchCorrect);
-  const incorrectMatches = matches.filter(match => !isMatchCorrect(match));
-  const correctCount = correctMatches.length;
-  const totalCount = parsedPairs.length;
-  const percentage = Math.round((correctCount / totalCount) * 100);
-
-  // Get solid color based on score
-  const getScoreColor = () => {
-    if (percentage === 100) return 'bg-green-500';
-    if (percentage >= 80) return 'bg-green-400';
-    if (percentage >= 60) return 'bg-yellow-500';
-    if (percentage >= 40) return 'bg-orange-500';
-    return 'bg-red-500';
-  };
-
-  // Get encouraging message
-  const getMessage = () => {
-    if (percentage === 100) return 'Perfect! You nailed it!';
-    if (percentage >= 80) return 'Great job! Almost perfect!';
-    if (percentage >= 60) return 'Good effort! Review the mistakes.';
-    if (percentage >= 40) return 'Keep trying! You\'re learning.';
-    return 'Don\'t worry! Review and try again.';
-  };
-
-  // Get question type config
   const config = {
     color: 'bg-orange-500',
     bgPattern: 'from-orange-50 to-red-50',
@@ -516,9 +456,8 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
 
   return (
     <div className="max-w-full sm:max-w-3xl lg:max-w-5xl mx-auto px-2 sm:px-4">
-      {/* OVERLAPPING BADGE */}
+      {/* Question Card */}
       <div className="relative mt-4 sm:mt-6">
-        {/* Question Type Badge */}
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
           <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${config.color} text-white font-bold text-sm shadow-lg`}>
             <Link size={16} />
@@ -526,71 +465,25 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
           </div>
         </div>
 
-        {/* Question Card - Frosted Glass Layers */}
         <div className="relative">
-          {/* Floating glass shards orbiting the card - Reduced on mobile for performance */}
-          <div className="absolute inset-0 pointer-events-none overflow-visible hidden sm:block">
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div
-                key={i}
-                className="absolute w-3 h-3 rounded-sm animate-float-shard"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(255, 219, 0, 0.8), rgba(99, 102, 241, 0.6))',
-                  left: `${5 + i * 12}%`,
-                  top: i % 2 === 0 ? '-20px' : 'calc(100% + 20px)',
-                  animationDelay: `${i * 0.6}s`,
-                  animationDuration: `${5 + (i % 3)}s`,
-                  transform: `rotate(${i * 45}deg)`,
-                  boxShadow: '0 0 12px rgba(255, 219, 0, 0.6)',
-                  opacity: 0.6
-                }}
-              />
-            ))}
-          </div>
-          {/* Simplified mobile shards - Only 3 elements */}
-          <div className="absolute inset-0 pointer-events-none overflow-visible sm:hidden">
-            {[0, 2, 5].map((i) => (
-              <div
-                key={i}
-                className="absolute w-2 h-2 rounded-sm animate-float-shard"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(255, 219, 0, 0.6), rgba(99, 102, 241, 0.4))',
-                  left: `${10 + i * 15}%`,
-                  top: i % 2 === 0 ? '-15px' : 'calc(100% + 15px)',
-                  animationDelay: `${i * 0.8}s`,
-                  animationDuration: `${6 + (i % 2)}s`,
-                  transform: `rotate(${i * 60}deg)`,
-                  boxShadow: '0 0 8px rgba(255, 219, 0, 0.4)',
-                  opacity: 0.5
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Background gradient layer (shifts subtly) */}
           <div className="absolute inset-0 rounded-3xl opacity-40 animate-gradient-shift" style={{
             background: 'linear-gradient(135deg, #FFDB00 0%, #FFC700 25%, rgba(99, 102, 241, 0.3) 50%, #FFB800 75%, #FFDB00 100%)',
             backgroundSize: '200% 200%'
           }} />
 
-          {/* Glass Layer 1 - Back layer (heaviest blur) */}
           <div className="absolute inset-0 rounded-3xl backdrop-blur-2xl bg-white/30 border-2 border-white/40 transform translate-y-2 translate-x-2" style={{
             boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)'
           }} />
 
-          {/* Glass Layer 2 - Middle layer */}
           <div className="absolute inset-0 rounded-3xl backdrop-blur-xl bg-white/40 border-2 border-white/50 transform translate-y-1 translate-x-1" style={{
             boxShadow: '0 15px 30px rgba(0, 0, 0, 0.1)'
           }} />
 
-          {/* Glass Layer 3 - Front layer (main content) */}
           <div className="relative rounded-2xl sm:rounded-3xl backdrop-blur-lg bg-white/60 border-2 border-white/70 p-5 sm:p-8 lg:p-10" style={{
             boxShadow: '0 25px 50px rgba(255, 219, 0, 0.25), 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
           }}>
-            {/* Top glass highlight */}
             <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-2xl sm:rounded-t-3xl pointer-events-none" />
 
-            {/* Question Text - sits between glass layers with overflow handling */}
             <div className="max-h-[200px] sm:max-h-[300px] lg:max-h-[400px] overflow-y-auto custom-scrollbar">
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-snug sm:leading-tight relative z-10 text-center break-words" style={{
                 textShadow: '0 1px 2px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.1)',
@@ -605,272 +498,150 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
         </div>
       </div>
 
-      {!isSubmitted ? (
-        <div className="mt-6 sm:mt-8 lg:mt-10 space-y-3 sm:space-y-4">
-          {/* Instructions */}
-          <p className="text-sm sm:text-base lg:text-lg text-black drop-shadow-sm px-2 font-bold text-center">
-            Drag items from one column and drop them on matching items in the other column
-          </p>
+      {/* Matching Interface */}
+      <div className="mt-6 sm:mt-8 lg:mt-10 space-y-3 sm:space-y-4">
+        <p className="text-sm sm:text-base lg:text-lg text-black drop-shadow-sm px-2 font-bold text-center">
+          Drag items from one column and drop them on matching items in the other column
+        </p>
 
-          {/* Matching Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-            {/* Left Column */}
-            <div className="space-y-2 sm:space-y-3">
-              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-black drop-shadow-sm text-center px-2">
-                Column A
-              </h3>
-              {leftItems.map((item, index) => {
-                const match = getItemMatch(item, 'left');
-                const matched = isMatched(item, 'left');
-                const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'left';
-                const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'left' && draggedItem?.side !== 'left';
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+          {/* Left Column */}
+          <div className="space-y-2 sm:space-y-3">
+            <h3 className="text-base sm:text-lg lg:text-xl font-bold text-black drop-shadow-sm text-center px-2">
+              Column A
+            </h3>
+            {leftItems.map((item, index) => {
+              const match = getItemMatch(item, 'left');
+              const matched = isMatched(item, 'left');
+              const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'left';
+              const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'left' && draggedItem?.side !== 'left';
+              
+              // RED/GREEN feedback after submission
+              const isCorrect = matched && isSubmitted ? isMatchCorrect(match) : null;
 
-                return (
-                  <div
-                    key={index}
-                    draggable={!isPaused}
-                    data-drop-item={item}
-                    data-drop-side="left"
-                    onDragStart={(e) => handleDragStart(e, item, 'left')}
-                    onDragOver={(e) => handleDragOver(e, item, 'left')}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, item, 'left')}
-                    onDragEnd={handleDragEnd}
-                    onTouchStart={(e) => handleTouchStart(e, item, 'left')}
-                    onTouchMove={(e) => handleTouchMove(e, item, 'left')}
-                    onTouchEnd={(e) => handleTouchEnd(e, item, 'left')}
-                    onClick={() => matched && handleUnmatch(item, 'left')}
-                    style={matched ? {
-                      backgroundColor: match.color.bg,
-                      borderColor: match.color.border,
-                      color: match.color.text,
-                      overflowWrap: 'break-word',
-                      wordWrap: 'break-word',
-                      hyphens: 'auto',
-                      touchAction: 'none'
-                    } : {
-                      overflowWrap: 'break-word',
-                      wordWrap: 'break-word',
-                      hyphens: 'auto',
-                      touchAction: 'none'
-                    }}
-                    className={`
-                      bg-white/30 backdrop-blur-md border-2 rounded-xl sm:rounded-2xl
-                      p-3 sm:p-4 lg:p-5 min-h-[56px] sm:min-h-[64px] max-h-[120px]
-                      overflow-y-auto custom-scrollbar-choice
-                      font-semibold text-sm sm:text-base lg:text-lg leading-snug
-                      transition-all duration-300 transform cursor-grab active:cursor-grabbing
-                      hover:scale-102 hover:-translate-y-1 hover:shadow-xl hover:bg-white/40
-                      touch-none select-none break-words
-                      ${matched ? 'border-2' : 'border-white/40 hover:border-white/60'}
-                      ${isDraggedItem ? 'opacity-50 scale-95' : ''}
-                      ${isDropZone ? 'border-yellow-400 bg-yellow-400/30 scale-105' : ''}
-                      ${matched ? 'shadow-lg' : 'shadow-md'}
-                      ${!matched ? 'text-black' : ''}
-                    `}
-                  >
-                    {item}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-2 sm:space-y-3">
-              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-black drop-shadow-sm text-center px-2">
-                Column B
-              </h3>
-              {rightItems.map((item, index) => {
-                const match = getItemMatch(item, 'right');
-                const matched = isMatched(item, 'right');
-                const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'right';
-                const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'right' && draggedItem?.side !== 'right';
-
-                return (
-                  <div
-                    key={index}
-                    draggable={!isPaused}
-                    data-drop-item={item}
-                    data-drop-side="right"
-                    onDragStart={(e) => handleDragStart(e, item, 'right')}
-                    onDragOver={(e) => handleDragOver(e, item, 'right')}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, item, 'right')}
-                    onDragEnd={handleDragEnd}
-                    onTouchStart={(e) => handleTouchStart(e, item, 'right')}
-                    onTouchMove={(e) => handleTouchMove(e, item, 'right')}
-                    onTouchEnd={(e) => handleTouchEnd(e, item, 'right')}
-                    onClick={() => matched && handleUnmatch(item, 'right')}
-                    style={matched ? {
-                      backgroundColor: match.color.bg,
-                      borderColor: match.color.border,
-                      color: match.color.text,
-                      overflowWrap: 'break-word',
-                      wordWrap: 'break-word',
-                      hyphens: 'auto',
-                      touchAction: 'none'
-                    } : {
-                      overflowWrap: 'break-word',
-                      wordWrap: 'break-word',
-                      hyphens: 'auto',
-                      touchAction: 'none'
-                    }}
-                    className={`
-                      bg-white/30 backdrop-blur-md border-2 rounded-xl sm:rounded-2xl
-                      p-3 sm:p-4 lg:p-5 min-h-[56px] sm:min-h-[64px] max-h-[120px]
-                      overflow-y-auto custom-scrollbar-choice
-                      font-semibold text-sm sm:text-base lg:text-lg leading-snug
-                      transition-all duration-300 transform cursor-grab active:cursor-grabbing
-                      hover:scale-102 hover:-translate-y-1 hover:shadow-xl hover:bg-white/40
-                      touch-none select-none break-words
-                      ${matched ? 'border-2' : 'border-white/40 hover:border-white/60'}
-                      ${isDraggedItem ? 'opacity-50 scale-95' : ''}
-                      ${isDropZone ? 'border-yellow-400 bg-yellow-400/30 scale-105' : ''}
-                      ${matched ? 'shadow-lg' : 'shadow-md'}
-                      ${!matched ? 'text-black' : ''}
-                    `}
-                  >
-                    {item}
-                  </div>
-                );
-              })}
-            </div>
+              return (
+                <div
+                  key={index}
+                  draggable={!isPaused && !isSubmitted}
+                  data-drop-item={item}
+                  data-drop-side="left"
+                  onDragStart={(e) => handleDragStart(e, item, 'left')}
+                  onDragOver={(e) => handleDragOver(e, item, 'left')}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, item, 'left')}
+                  onDragEnd={handleDragEnd}
+                  onTouchStart={(e) => handleTouchStart(e, item, 'left')}
+                  onTouchMove={(e) => handleTouchMove(e, item, 'left')}
+                  onTouchEnd={(e) => handleTouchEnd(e, item, 'left')}
+                  onClick={() => matched && !isSubmitted && handleUnmatch(item, 'left')}
+                  style={matched ? (isSubmitted ? {
+                    // RED or GREEN after submission
+                    backgroundColor: isCorrect ? '#dcfce7' : '#fee2e2',
+                    borderColor: isCorrect ? '#22c55e' : '#ef4444',
+                    color: isCorrect ? '#15803d' : '#991b1b',
+                    overflowWrap: 'break-word',
+                    wordWrap: 'break-word',
+                    hyphens: 'auto',
+                    touchAction: 'none'
+                  } : {
+                    // Color-coded before submission
+                    backgroundColor: match.color.bg,
+                    borderColor: match.color.border,
+                    color: match.color.text,
+                    overflowWrap: 'break-word',
+                    wordWrap: 'break-word',
+                    hyphens: 'auto',
+                    touchAction: 'none'
+                  }) : {
+                    overflowWrap: 'break-word',
+                    wordWrap: 'break-word',
+                    hyphens: 'auto',
+                    touchAction: 'none'
+                  }}
+                  className={`bg-white/30 backdrop-blur-md border-2 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-5 min-h-[56px] sm:min-h-[64px] max-h-[120px] overflow-y-auto custom-scrollbar-choice font-semibold text-sm sm:text-base lg:text-lg leading-snug transition-all duration-300 transform cursor-grab active:cursor-grabbing hover:scale-102 hover:-translate-y-1 hover:shadow-xl hover:bg-white/40 touch-none select-none break-words ${matched ? 'border-2' : 'border-white/40 hover:border-white/60'} ${isDraggedItem ? 'opacity-50 scale-95' : ''} ${isDropZone ? 'border-yellow-400 bg-yellow-400/30 scale-105' : ''} ${matched ? 'shadow-lg' : 'shadow-md'} ${!matched ? 'text-black' : ''}`}
+                >
+                  {item}
+                </div>
+              );
+            })}
           </div>
 
-          {/* Submit Button */}
+          {/* Right Column */}
+          <div className="space-y-2 sm:space-y-3">
+            <h3 className="text-base sm:text-lg lg:text-xl font-bold text-black drop-shadow-sm text-center px-2">
+              Column B
+            </h3>
+            {rightItems.map((item, index) => {
+              const match = getItemMatch(item, 'right');
+              const matched = isMatched(item, 'right');
+              const isDraggedItem = draggedItem?.item === item && draggedItem?.side === 'right';
+              const isDropZone = dragOverZone?.item === item && dragOverZone?.side === 'right' && draggedItem?.side !== 'right';
+              
+              // RED/GREEN feedback after submission
+              const isCorrect = matched && isSubmitted ? isMatchCorrect(match) : null;
+
+              return (
+                <div
+                  key={index}
+                  draggable={!isPaused && !isSubmitted}
+                  data-drop-item={item}
+                  data-drop-side="right"
+                  onDragStart={(e) => handleDragStart(e, item, 'right')}
+                  onDragOver={(e) => handleDragOver(e, item, 'right')}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, item, 'right')}
+                  onDragEnd={handleDragEnd}
+                  onTouchStart={(e) => handleTouchStart(e, item, 'right')}
+                  onTouchMove={(e) => handleTouchMove(e, item, 'right')}
+                  onTouchEnd={(e) => handleTouchEnd(e, item, 'right')}
+                  onClick={() => matched && !isSubmitted && handleUnmatch(item, 'right')}
+                  style={matched ? (isSubmitted ? {
+                    // RED or GREEN after submission
+                    backgroundColor: isCorrect ? '#dcfce7' : '#fee2e2',
+                    borderColor: isCorrect ? '#22c55e' : '#ef4444',
+                    color: isCorrect ? '#15803d' : '#991b1b',
+                    overflowWrap: 'break-word',
+                    wordWrap: 'break-word',
+                    hyphens: 'auto',
+                    touchAction: 'none'
+                  } : {
+                    // Color-coded before submission
+                    backgroundColor: match.color.bg,
+                    borderColor: match.color.border,
+                    color: match.color.text,
+                    overflowWrap: 'break-word',
+                    wordWrap: 'break-word',
+                    hyphens: 'auto',
+                    touchAction: 'none'
+                  }) : {
+                    overflowWrap: 'break-word',
+                    wordWrap: 'break-word',
+                    hyphens: 'auto',
+                    touchAction: 'none'
+                  }}
+                  className={`bg-white/30 backdrop-blur-md border-2 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-5 min-h-[56px] sm:min-h-[64px] max-h-[120px] overflow-y-auto custom-scrollbar-choice font-semibold text-sm sm:text-base lg:text-lg leading-snug transition-all duration-300 transform cursor-grab active:cursor-grabbing hover:scale-102 hover:-translate-y-1 hover:shadow-xl hover:bg-white/40 touch-none select-none break-words ${matched ? 'border-2' : 'border-white/40 hover:border-white/60'} ${isDraggedItem ? 'opacity-50 scale-95' : ''} ${isDropZone ? 'border-yellow-400 bg-yellow-400/30 scale-105' : ''} ${matched ? 'shadow-lg' : 'shadow-md'} ${!matched ? 'text-black' : ''}`}
+                >
+                  {item}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Submit Button - hide after submission */}
+        {!isSubmitted && (
           <div className="flex justify-center pt-3 sm:pt-4">
             <button
               onClick={handleSubmit}
               disabled={!canSubmit || isPaused}
-              className="
-                btn-branded-yellow
-                disabled:bg-white/20
-                text-black font-bold text-base sm:text-lg lg:text-xl
-                px-8 sm:px-10 lg:px-12 py-3 sm:py-4 lg:py-5
-                rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl
-                transition-all duration-300 transform hover:scale-105
-                disabled:cursor-not-allowed disabled:hover:scale-100 disabled:text-black/50
-                border-2 border-white/40
-              "
+              className="btn-branded-yellow disabled:bg-white/20 text-black font-bold text-base sm:text-lg lg:text-xl px-8 sm:px-10 lg:px-12 py-3 sm:py-4 lg:py-5 rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-50 border-2 border-white/40"
             >
               {canSubmit ? 'Submit Answers' : 'Match All Pairs to Submit'}
             </button>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Score Card */}
-          <div className={`relative overflow-hidden rounded-2xl shadow-2xl ${getScoreColor()} border-2 border-white/40`}>
-            <div className="absolute inset-0 bg-white/20 backdrop-blur-xl"></div>
-            <div className="relative px-5 sm:px-6 py-5 sm:py-6">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div>
-                  <div className="text-2xl sm:text-3xl font-bold mb-1 text-white drop-shadow-lg">
-                    {correctCount}/{totalCount} CORRECT
-                  </div>
-                  <div className="text-sm sm:text-base font-medium text-white/90 drop-shadow-sm">
-                    {getMessage()}
-                  </div>
-                </div>
-                <div className="text-4xl sm:text-5xl font-bold text-white drop-shadow-lg">
-                  {percentage}%
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Correct Answers Section */}
-          {correctMatches.length > 0 && (
-            <div className="bg-white/20 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/40 overflow-hidden">
-              <button
-                onClick={() => setShowCorrectMatches(!showCorrectMatches)}
-                className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/30 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-                    <Check className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-base sm:text-lg font-bold text-black drop-shadow-sm">
-                    Correct Answers ({correctMatches.length})
-                  </span>
-                </div>
-                <span className="text-black text-xl font-bold">
-                  {showCorrectMatches ? '▴' : '▾'}
-                </span>
-              </button>
-
-              {showCorrectMatches && (
-                <div className="px-5 pb-4 space-y-2 border-t-2 border-white/40 pt-3">
-                  {correctMatches.map((match, index) => (
-                    <div key={index} className="p-3 bg-green-50/90 backdrop-blur-sm rounded-xl border-2 border-green-200">
-                      <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900">
-                        <span>{match.left}</span>
-                        <span className="text-green-600 font-bold">→</span>
-                        <span>{match.right}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Mistakes Section */}
-          {incorrectMatches.length > 0 && (
-            <div className="bg-white/20 backdrop-blur-xl rounded-2xl shadow-lg border-2 border-white/40 overflow-hidden">
-              <button
-                onClick={() => setShowMistakes(!showMistakes)}
-                className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/30 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-lg">
-                    <X className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-base sm:text-lg font-bold text-black drop-shadow-sm">
-                    Mistakes to Review ({incorrectMatches.length})
-                  </span>
-                </div>
-                <span className="text-black text-xl font-bold">
-                  {showMistakes ? '▴' : '▾'}
-                </span>
-              </button>
-
-              {showMistakes && (
-                <div className="px-5 pb-4 space-y-3 border-t-2 border-white/40 pt-3">
-                  {incorrectMatches.map((match, index) => {
-                    const correctLeft = getCorrectMatch(match.left, 'left');
-                    return (
-                      <div key={index} className="p-3 bg-red-50/90 backdrop-blur-sm rounded-xl border-2 border-red-200 space-y-2">
-                        <div>
-                          <div className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1">
-                            Your Answer:
-                          </div>
-                          <div className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-                            <span className="text-gray-900">{match.left}</span>
-                            <span className="text-red-600 font-bold">→</span>
-                            <span className="line-through text-red-600">{match.right}</span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-xs font-bold text-green-700 uppercase tracking-wide mb-1">
-                            Correct Answer:
-                          </div>
-                          <div className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-                            <span className="text-gray-900">{match.left}</span>
-                            <span className="text-green-600 font-bold">→</span>
-                            <span className="text-green-700">{correctLeft.right}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
+
