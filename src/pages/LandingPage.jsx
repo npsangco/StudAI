@@ -10,7 +10,8 @@ export default function LandingPage() {
     const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
     const [stats, setStats] = useState({
         totalUsers: 0,
-        totalNotes: 0
+        totalNotes: 0,
+        totalQuizzes: 0
     });
 
     useEffect(() => {
@@ -19,7 +20,8 @@ export default function LandingPage() {
                 const res = await axios.get(`${API_URL}/api/public/stats`);
                 setStats({
                     totalUsers: res.data.totalUsers || 0,
-                    totalNotes: res.data.totalNotes || 0
+                    totalNotes: res.data.totalNotes || 0,
+                    totalQuizzes: res.data.totalQuizzes || 0
                 });
             } catch (err) {
                 console.error("Failed to fetch stats:", err);
@@ -90,8 +92,8 @@ export default function LandingPage() {
                                 <div className="text-sm text-gray-600 mt-1">Notes Generated</div>
                             </div>
                             <div className="text-center bg-white rounded-xl p-4 shadow-sm">
-                                <div className="text-3xl md:text-4xl font-bold text-green-600">0%</div>
-                                <div className="text-sm text-gray-600 mt-1">Success Rate</div>
+                                <div className="text-3xl md:text-4xl font-bold text-green-600">{stats.totalQuizzes}</div>
+                                <div className="text-sm text-gray-600 mt-1">Quizzes Generated</div>
                             </div>
                         </div>
                     </div>
