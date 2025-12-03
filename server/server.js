@@ -481,10 +481,12 @@ app.get("/api/public/stats", async (req, res) => {
     try {
         const totalUsers = await User.count();
         const totalNotes = Note ? await Note.count() : 0;
+        const totalQuizzes = Quiz ? await Quiz.count() : 0;
 
         res.json({
             totalUsers,
-            totalNotes
+            totalNotes,
+            totalQuizzes
         });
     } catch (error) {
         console.error("Error fetching public stats:", error);

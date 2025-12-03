@@ -83,17 +83,17 @@ export default function LandingPage() {
                         </div>
 
                         <div className="mt-12 sm:mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 max-w-2xl mx-auto">
-                            <div className="text-center bg-white rounded-xl p-4 shadow-sm">
+                            <div className="text-center">
                                 <div className="text-3xl md:text-4xl font-bold text-yellow-600">{stats.totalUsers}</div>
                                 <div className="text-sm text-gray-600 mt-1">Active Students</div>
                             </div>
-                            <div className="text-center bg-white rounded-xl p-4 shadow-sm">
+                            <div className="text-center">
                                 <div className="text-3xl md:text-4xl font-bold text-blue-600">{stats.totalNotes}</div>
                                 <div className="text-sm text-gray-600 mt-1">Notes Generated</div>
                             </div>
-                            <div className="text-center bg-white rounded-xl p-4 shadow-sm">
+                            <div className="text-center">
                                 <div className="text-3xl md:text-4xl font-bold text-green-600">{stats.totalQuizzes}</div>
-                                <div className="text-sm text-gray-600 mt-1">Quizzes Generated</div>
+                                <div className="text-sm text-gray-600 mt-1">Quizzes Created</div>
                             </div>
                         </div>
                     </div>
