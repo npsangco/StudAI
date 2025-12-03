@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Edit, Play, GripVertical, Trash2, MoreVertical, Share2, Plus, Sparkles, BookOpen, Users, Trophy, Circle, FileText, Clock, Target, Lock, Link2, Zap, Swords } from 'lucide-react';
 import { API_URL } from '../../../config/api.config';
+import { validateAllQuestions } from '../utils/validation';
 
 // Utility: Get quiz accent color based on quiz ID
 const getQuizAccentColor = (quizId) => {
@@ -198,7 +199,7 @@ const ModeBadge = ({ quiz }) => {
 };
 
 // Quiz Item Component with Drag & Drop - REDESIGNED
-const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete, toast }) => {
+const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete, toast, validateAllQuestions }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showShareCode, setShowShareCode] = useState(false);
@@ -209,6 +210,14 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
   const isPublic = quiz.isPublic || quiz.is_public;
   const shareCode = quiz.share_code;
   const accentColor = getQuizAccentColor(quiz.id);
+
+  // 🛡️ VALIDATION CHECK: Detect if quiz has errors
+  const hasErrors = React.useMemo(() => {
+    if (!quiz.questions || !Array.isArray(quiz.questions) || isEmpty) return false;
+    if (!validateAllQuestions) return false;
+    const validation = validateAllQuestions(quiz.questions);
+    return !validation.isValid && validation.errors.length > 0;
+  }, [quiz.questions, quiz.id, isEmpty, validateAllQuestions]);
 
   const handleDragStart = (e) => {
     e.currentTarget.style.cursor = 'grabbing';
@@ -285,6 +294,18 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
       >
         {/* Accent Stripe */}
         <div className={`h-full w-1 absolute left-0 top-0 bottom-0 ${accentColor}`}></div>
+
+        {/* 🚨 ERROR BADGE - Shows if quiz has validation errors */}
+        {hasErrors && !isEmpty && (
+          <div className="absolute top-3 right-3 z-10">
+            <div className="bg-red-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg animate-pulse">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>Errors</span>
+            </div>
+          </div>
+        )}
 
         <div className="p-6">
           {/* Title Section */}
@@ -666,6 +687,7 @@ export const QuizList = ({
                     onSelect={onQuizSelect}
                     onDelete={onDeleteQuiz}
                     toast={toast}
+                    validateAllQuestions={validateAllQuestions}
                   />
                 ))}
               </div>

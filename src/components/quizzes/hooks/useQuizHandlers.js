@@ -1,5 +1,6 @@
 import { VIEWS } from '../utils/constants';
 import { createNewQuestion } from '../utils/questionHelpers';
+import { validateAllQuestions } from '../utils/validation';
 import { createBattleRoom, addPlayerToBattle, markPlayerReady, storeQuizQuestions, updateBattleStatus } from '../../../firebase/battleOperations';
 import { API_URL } from '../../../config/api.config';
 
@@ -92,6 +93,24 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       toast?.error('Cannot start quiz: No valid questions found');
       return;
     }
+
+    // 🛡️ PRE-FLIGHT VALIDATION: Check for errors before starting
+    const validation = validateAllQuestions(questionsToUse);
+    if (!validation.isValid) {
+      console.error('🚨 QUIZ VALIDATION FAILED (Solo):', {
+        quizId: quizData.selected.id,
+        quizTitle: quizData.selected.title,
+        errorCount: validation.errors.length,
+        errors: validation.errors,
+        userId: currentUser?.id
+      });
+      setError(`This quiz has ${validation.errors.length} validation error(s). Please edit the quiz to fix them before starting.`);
+      updateUiState({ showModal: false, showValidationError: true });
+      quizDataHook.setValidationErrors(validation.errors);
+      toast?.error('Cannot start quiz: Validation errors found');
+      return;
+    }
+
     if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
       // Shuffle questions randomly
       questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
@@ -139,6 +158,24 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       toast?.error('Cannot start battle: No valid questions found');
       return;
     }
+
+    // 🛡️ PRE-FLIGHT VALIDATION: Check for errors before starting battle
+    const validation = validateAllQuestions(questionsToUse);
+    if (!validation.isValid) {
+      console.error('🚨 QUIZ VALIDATION FAILED (Battle):', {
+        quizId: quizData.selected.id,
+        quizTitle: quizData.selected.title,
+        errorCount: validation.errors.length,
+        errors: validation.errors,
+        userId: currentUser?.id
+      });
+      setError(`This quiz has ${validation.errors.length} validation error(s). Please edit the quiz to fix them before creating a battle.`);
+      updateUiState({ showModal: false, showValidationError: true });
+      quizDataHook.setValidationErrors(validation.errors);
+      toast?.error('Cannot start battle: Validation errors found');
+      return;
+    }
+
     if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
       // Shuffle questions randomly
       questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);

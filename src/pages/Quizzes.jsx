@@ -624,10 +624,30 @@ function QuizzesPage() {
         itemType="quiz"
       />
 
+      {/* Validation Error Modal - Shows when trying to start quiz with errors */}
       <ValidationErrorModal
-        isOpen={quizDataHook.showValidationModal}
-        onClose={() => quizDataHook.setShowValidationModal(false)}
-        errors={quizDataHook.validationErrors}
+        isOpen={quizDataHook.uiState.showValidationError || quizDataHook.showValidationModal}
+        onClose={() => {
+          quizDataHook.updateUiState({ showValidationError: false });
+          quizDataHook.setShowValidationModal?.(false);
+          quizDataHook.setValidationErrors([]);
+          // Optionally open editor to fix errors
+          if (quizDataHook.quizData.selected) {
+            handlers.handleEditQuiz(quizDataHook.quizData.selected);
+          }
+        }}
+        errors={quizDataHook.validationErrors.map((error, idx) => {
+          // Parse error message to extract question number
+          const match = error.match(/^Question (\d+):/);
+          const questionNumber = match ? parseInt(match[1]) : 0;
+          const message = error.replace(/^Question \d+: /, '');
+          
+          return {
+            questionNumber,
+            message,
+            details: null
+          };
+        })}
       />
 
       {/* Error Modal */}
