@@ -416,8 +416,9 @@ function Signup() {
             </div>
 
             {/* Right Side - Form */}
-            <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-6 sm:p-8 lg:p-12 relative z-20 overflow-y-auto">
-                <div className="w-full max-w-md my-auto">
+            <div className="w-full lg:w-1/2 bg-white relative z-20 overflow-hidden">
+                <div className="h-full overflow-y-auto p-6 sm:p-8 lg:p-12">
+                    <div className="w-full max-w-md mx-auto">
                     {/* Back Button */}
                             <button
                                 onClick={() => navigate("/")}
@@ -682,6 +683,7 @@ function Signup() {
                                 </button>
                             </form>
                         </div>
+                </div>
             </div>
 
             {/* Terms and Conditions Modal */}

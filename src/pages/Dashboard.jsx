@@ -941,7 +941,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                       <p className="text-lg font-bold text-blue-900">
                         {stats.totalQuizzes > 0 ? Math.round((stats.distinctQuizzes / stats.totalQuizzes) * 100) : 0}%
                       </p>
-                      <p className="text-xs text-blue-700 mt-0.5">Quiz rate</p>
+                      <p className="text-xs text-blue-700 mt-0.5">Quizzes Generated</p>
                     </div>
                     <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border border-green-200">
                       <div className="flex items-center justify-between mb-1">

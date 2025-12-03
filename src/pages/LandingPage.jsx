@@ -80,17 +80,17 @@ export default function LandingPage() {
                             </button>
                         </div>
 
-                        <div className="mt-16 grid grid-cols-3 gap-8 max-w-2xl mx-auto">
-                            <div className="text-center">
-                                <div className="text-3xl font-bold text-yellow-600">{stats.totalUsers}</div>
+                        <div className="mt-12 sm:mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 max-w-2xl mx-auto">
+                            <div className="text-center bg-white rounded-xl p-4 shadow-sm">
+                                <div className="text-3xl md:text-4xl font-bold text-yellow-600">{stats.totalUsers}</div>
                                 <div className="text-sm text-gray-600 mt-1">Active Students</div>
                             </div>
-                            <div className="text-center">
-                                <div className="text-3xl font-bold text-blue-600">{stats.totalNotes}</div>
+                            <div className="text-center bg-white rounded-xl p-4 shadow-sm">
+                                <div className="text-3xl md:text-4xl font-bold text-blue-600">{stats.totalNotes}</div>
                                 <div className="text-sm text-gray-600 mt-1">Notes Generated</div>
                             </div>
-                            <div className="text-center">
-                                <div className="text-3xl font-bold text-black-600">0%</div>
+                            <div className="text-center bg-white rounded-xl p-4 shadow-sm">
+                                <div className="text-3xl md:text-4xl font-bold text-green-600">0%</div>
                                 <div className="text-sm text-gray-600 mt-1">Success Rate</div>
                             </div>
                         </div>
@@ -110,46 +110,46 @@ export default function LandingPage() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
-                        <div className="group p-4 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-br from-yellow-100 to-blue-100 hover:shadow-xl transition-all transform hover:-translate-y-2">
-                            <div className="w-10 h-10 md:w-14 md:h-14 bg-yellow-600 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-6 group-hover:scale-110 transition-transform">
-                                <Trophy className="w-5 h-5 md:w-7 md:h-7 text-white" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+                        <div className="group p-6 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-br from-yellow-100 to-blue-100 hover:shadow-xl transition-all transform hover:-translate-y-2">
+                            <div className="w-12 h-12 md:w-14 md:h-14 bg-yellow-600 rounded-lg md:rounded-xl flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 transition-transform">
+                                <Trophy className="w-6 h-6 md:w-7 md:h-7 text-white" />
                             </div>
-                            <h3 className="text-sm md:text-xl font-bold mb-2 md:mb-3 text-gray-900">Smart Quizzes</h3>
-                            <p className="text-xs md:text-base text-gray-600 leading-relaxed">
+                            <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 text-gray-900">Smart Quizzes</h3>
+                            <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                                 AI-generated quizzes that adapt to your learning pace. Practice with multiple-choice,
                                 true/false, and matching questions tailored to your study materials.
                             </p>
                         </div>
 
-                        <div className="group p-4 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-100 to-yellow-100 hover:shadow-xl transition-all transform hover:-translate-y-2">
-                            <div className="w-10 h-10 md:w-14 md:h-14 bg-blue-600 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-6 group-hover:scale-110 transition-transform">
-                                <Brain className="w-5 h-5 md:w-7 md:h-7 text-white" />
+                        <div className="group p-6 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-100 to-yellow-100 hover:shadow-xl transition-all transform hover:-translate-y-2">
+                            <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-600 rounded-lg md:rounded-xl flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 transition-transform">
+                                <Brain className="w-6 h-6 md:w-7 md:h-7 text-white" />
                             </div>
-                            <h3 className="text-sm md:text-xl font-bold mb-2 md:mb-3 text-gray-900">AI Summarization</h3>
-                            <p className="text-xs md:text-base text-gray-600 leading-relaxed">
+                            <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 text-gray-900">AI Summarization</h3>
+                            <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                                 Upload PDFs and presentations to get instant, comprehensive summaries.
                                 Extract key concepts and save hours of study time.
                             </p>
                         </div>
 
-                        <div className="group p-4 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-br from-yellow-100 to-blue-100 hover:shadow-xl transition-all transform hover:-translate-y-2">
-                            <div className="w-10 h-10 md:w-14 md:h-14 bg-pink-600 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-6 group-hover:scale-110 transition-transform">
-                                <MessageCircle className="w-5 h-5 md:w-7 md:h-7 text-white" />
+                        <div className="group p-6 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-br from-yellow-100 to-blue-100 hover:shadow-xl transition-all transform hover:-translate-y-2">
+                            <div className="w-12 h-12 md:w-14 md:h-14 bg-pink-600 rounded-lg md:rounded-xl flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 transition-transform">
+                                <MessageCircle className="w-6 h-6 md:w-7 md:h-7 text-white" />
                             </div>
-                            <h3 className="text-sm md:text-xl font-bold mb-2 md:mb-3 text-gray-900">Study Buddy AI</h3>
-                            <p className="text-xs md:text-base text-gray-600 leading-relaxed">
+                            <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 text-gray-900">Study Buddy AI</h3>
+                            <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                                 24/7 AI assistant ready to answer questions, explain complex topics,
                                 and provide personalized learning support whenever you need it.
                             </p>
                         </div>
 
-                        <div className="group p-4 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-100 to-yellow-100 hover:shadow-xl transition-all transform hover:-translate-y-2">
-                            <div className="w-10 h-10 md:w-14 md:h-14 bg-green-600 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-6 group-hover:scale-110 transition-transform">
-                                <Users className="w-5 h-5 md:w-7 md:h-7 text-white" />
+                        <div className="group p-6 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-100 to-yellow-100 hover:shadow-xl transition-all transform hover:-translate-y-2">
+                            <div className="w-12 h-12 md:w-14 md:h-14 bg-green-600 rounded-lg md:rounded-xl flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 transition-transform">
+                                <Users className="w-6 h-6 md:w-7 md:h-7 text-white" />
                             </div>
-                            <h3 className="text-sm md:text-xl font-bold mb-2 md:mb-3 text-gray-900">Group Learning</h3>
-                            <p className="text-xs md:text-base text-gray-600 leading-relaxed">
+                            <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 text-gray-900">Group Learning</h3>
+                            <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                                 Collaborate with peers in real-time study sessions. Share notes,
                                 compete in quiz battles, and learn together effectively.
                             </p>
@@ -170,75 +170,75 @@ export default function LandingPage() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6 max-w-6xl mx-auto">
-                        <div className="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
-                            <div className="flex items-start space-x-2 md:space-x-4">
-                                <div className="w-8 h-8 md:w-12 md:h-12 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <FileText className="w-4 h-4 md:w-6 md:h-6 text-indigo-600" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 max-w-6xl mx-auto">
+                        <div className="bg-white p-4 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
+                            <div className="flex items-start space-x-3 md:space-x-4">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <FileText className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-xs md:text-base">Smart Notes</h3>
-                                    <p className="text-xs md:text-sm text-gray-600">Create, organize, and share notes with rich text formatting and AI assistance</p>
+                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-sm md:text-base">Smart Notes</h3>
+                                    <p className="text-xs md:text-sm text-gray-600 leading-relaxed">Create, organize, and share notes with rich text formatting and AI assistance</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
-                            <div className="flex items-start space-x-2 md:space-x-4">
-                                <div className="w-8 h-8 md:w-12 md:h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <Trophy className="w-4 h-4 md:w-6 md:h-6 text-purple-600" />
+                        <div className="bg-white p-4 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
+                            <div className="flex items-start space-x-3 md:space-x-4">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <Trophy className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-xs md:text-base">Quiz Builder</h3>
-                                    <p className="text-xs md:text-sm text-gray-600">Create custom quizzes or generate them automatically from your study materials</p>
+                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-sm md:text-base">Quiz Builder</h3>
+                                    <p className="text-xs md:text-sm text-gray-600 leading-relaxed">Create custom quizzes or generate them automatically from your study materials</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
-                            <div className="flex items-start space-x-2 md:space-x-4">
-                                <div className="w-8 h-8 md:w-12 md:h-12 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <Calendar className="w-4 h-4 md:w-6 md:h-6 text-pink-600" />
+                        <div className="bg-white p-4 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
+                            <div className="flex items-start space-x-3 md:space-x-4">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <Calendar className="w-5 h-5 md:w-6 md:h-6 text-pink-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-xs md:text-base">Study Planner</h3>
-                                    <p className="text-xs md:text-sm text-gray-600">Plan your study schedule with smart reminders and deadline tracking</p>
+                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-sm md:text-base">Study Planner</h3>
+                                    <p className="text-xs md:text-sm text-gray-600 leading-relaxed">Plan your study schedule with smart reminders and deadline tracking</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
-                            <div className="flex items-start space-x-2 md:space-x-4">
-                                <div className="w-8 h-8 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <Video className="w-4 h-4 md:w-6 md:h-6 text-blue-600" />
+                        <div className="bg-white p-4 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
+                            <div className="flex items-start space-x-3 md:space-x-4">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <Video className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-xs md:text-base">Video Sessions</h3>
-                                    <p className="text-xs md:text-sm text-gray-600">Host or join live study sessions with integrated Zoom functionality</p>
+                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-sm md:text-base">Video Sessions</h3>
+                                    <p className="text-xs md:text-sm text-gray-600 leading-relaxed">Host or join live study sessions with integrated Zoom functionality</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
-                            <div className="flex items-start space-x-2 md:space-x-4">
-                                <div className="w-8 h-8 md:w-12 md:h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <MessageCircle className="w-4 h-4 md:w-6 md:h-6 text-green-600" />
+                        <div className="bg-white p-4 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
+                            <div className="flex items-start space-x-3 md:space-x-4">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <MessageCircle className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-xs md:text-base">AI Chatbot</h3>
-                                    <p className="text-xs md:text-sm text-gray-600">Get instant answers and explanations from your personal AI study assistant</p>
+                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-sm md:text-base">AI Chatbot</h3>
+                                    <p className="text-xs md:text-sm text-gray-600 leading-relaxed">Get instant answers and explanations from your personal AI study assistant</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white p-3 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
-                            <div className="flex items-start space-x-2 md:space-x-4">
-                                <div className="w-8 h-8 md:w-12 md:h-12 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <BookOpen className="w-4 h-4 md:w-6 md:h-6 text-yellow-600" />
+                        <div className="bg-white p-4 md:p-6 rounded-lg md:rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200">
+                            <div className="flex items-start space-x-3 md:space-x-4">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-yellow-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-xs md:text-base">Resource Library</h3>
-                                    <p className="text-xs md:text-sm text-gray-600">Access and organize all your study materials in one centralized location</p>
+                                    <h3 className="font-bold text-gray-900 mb-1 md:mb-2 text-sm md:text-base">Resource Library</h3>
+                                    <p className="text-xs md:text-sm text-gray-600 leading-relaxed">Access and organize all your study materials in one centralized location</p>
                                 </div>
                             </div>
                         </div>
@@ -258,25 +258,25 @@ export default function LandingPage() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 max-w-6xl mx-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8 max-w-6xl mx-auto">
                         {[
                             { name: 'Bunyi, Denise Arielle', role: 'Developer', image: '' },
                             { name: 'Sangco, Nimrod', role: 'Developer', image: '' },
                             { name: 'Taloyo, Denniel Gerald', role: 'Developer', image: '' },
                             { name: 'Viaña, Vince Carl', role: 'Developer', image: '' },
                         ].map((dev, index) => (
-                            <div key={index} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl md:rounded-2xl p-4 md:p-6 text-center hover:shadow-xl transition-all transform hover:-translate-y-2">
-                                <div className="text-4xl md:text-6xl mb-2 md:mb-4">{dev.image}</div>
-                                <h3 className="text-sm md:text-xl font-bold text-gray-900 mb-1">{dev.name}</h3>
-                                <p className="text-xs md:text-base text-gray-600 mb-3 md:mb-4">{dev.role}</p>
+                            <div key={index} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl md:rounded-2xl p-6 md:p-6 text-center hover:shadow-xl transition-all transform hover:-translate-y-2">
+                                <div className="text-5xl md:text-6xl mb-3 md:mb-4">{dev.image}</div>
+                                <h3 className="text-base md:text-xl font-bold text-gray-900 mb-1">{dev.name}</h3>
+                                <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-4">{dev.role}</p>
                                 <div className="flex justify-center space-x-2 md:space-x-3">
-                                    <button className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-lg flex items-center justify-center hover:bg-gray-900 hover:text-white transition-all shadow-sm hover:shadow-md group">
+                                    <button className="w-9 h-9 md:w-10 md:h-10 bg-white rounded-lg flex items-center justify-center hover:bg-gray-900 hover:text-white transition-all shadow-sm hover:shadow-md group">
                                         <Github className="w-4 h-4 md:w-5 md:h-5 text-gray-700 group-hover:text-white transition-colors" />
                                     </button>
-                                    <button className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-lg flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm hover:shadow-md group">
+                                    <button className="w-9 h-9 md:w-10 md:h-10 bg-white rounded-lg flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm hover:shadow-md group">
                                         <Linkedin className="w-4 h-4 md:w-5 md:h-5 text-gray-700 group-hover:text-white transition-colors" />
                                     </button>
-                                    <button className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm hover:shadow-md group">
+                                    <button className="w-9 h-9 md:w-10 md:h-10 bg-white rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm hover:shadow-md group">
                                         <Mail className="w-4 h-4 md:w-5 md:h-5 text-gray-700 group-hover:text-white transition-colors" />
                                     </button>
                                 </div>
