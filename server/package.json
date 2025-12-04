@@ -7,7 +7,10 @@
     "dev": "nodemon server.js",
     "start": "node server.js",
     "dev:all": "concurrently \"nodemon server.js\" \"cd .. && npm run dev\"",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "test:ui": "vitest --ui"
   },
   "keywords": [],
   "author": "",
@@ -44,7 +47,11 @@
     "validator": "^13.11.0"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^1.6.1",
+    "@vitest/ui": "^1.6.1",
     "concurrently": "^9.2.1",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "supertest": "^6.3.4",
+    "vitest": "^1.6.1"
   }
 }
