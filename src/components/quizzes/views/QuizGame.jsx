@@ -154,6 +154,10 @@ const QuizGame = ({
   // GET REAL PLAYERS from props
   const [realPlayers, setRealPlayers] = useState([]);
 
+  // Track actual battle question count from Firebase
+  // After reconnection, quiz.questions might have ALL questions (15), not battle questions (10)
+  const [battleTotalQuestions, setBattleTotalQuestions] = useState(null);
+
   // 🎭 EMOJI REACTIONS: Track recent answers for pulse effect
   const [recentAnsweredUsers, setRecentAnsweredUsers] = useState([]);
   const recentAnswersTimeoutRef = useRef(null);
@@ -264,6 +268,27 @@ const QuizGame = ({
     };
   }, [game.currentQuestionIndex, showPetMessage]);
 
+  // FETCH BATTLE TOTAL QUESTIONS from Firebase metadata
+  useEffect(() => {
+    if (mode === 'battle' && quiz?.gamePin) {
+      const fetchBattleMetadata = async () => {
+        try {
+          const metadataRef = ref(realtimeDb, `battles/${quiz.gamePin}/metadata`);
+          const snapshot = await get(metadataRef);
+          if (snapshot.exists()) {
+            const metadata = snapshot.val();
+            setBattleTotalQuestions(metadata.totalQuestions || questions.length);
+          }
+        } catch (error) {
+          console.error('❌ Error fetching battle metadata:', error);
+          // Fallback to questions.length
+          setBattleTotalQuestions(questions.length);
+        }
+      };
+      fetchBattleMetadata();
+    }
+  }, [mode, quiz?.gamePin]);
+
   // Listen to real players in battle mode
   useEffect(() => {
     if (mode === 'battle' && quiz?.gamePin) {
@@ -303,6 +328,15 @@ const QuizGame = ({
   }, [mode, quiz?.gamePin]);
 
   const allPlayers = mode === 'battle' ? realPlayers : [];
+
+  // HELPER: Get correct total questions count
+  // In battle mode after reconnection, use Firebase metadata instead of questions.length
+  const getTotalQuestions = () => {
+    if (mode === 'battle' && battleTotalQuestions !== null) {
+      return battleTotalQuestions;
+    }
+    return questions.length;
+  };
 
   const currentQ = game.currentQuestion;
 
@@ -1456,7 +1490,7 @@ const QuizGame = ({
       <QuizGameHeader
         quiz={quiz}
         currentQuestion={game.currentQuestionIndex}
-        totalQuestions={questions.length}
+        totalQuestions={getTotalQuestions()}
         timeLeft={timeLeft}
         timeLimit={quizTimer}
         displayScore={game.displayScore}
@@ -1551,7 +1585,7 @@ const QuizGame = ({
                     currentPlayerName="You"
                     currentUserId={quiz?.currentUserId}
                     mode="desktop"
-                    totalQuestions={questions.length}
+                    totalQuestions={getTotalQuestions()}
                     recentAnswers={recentAnsweredUsers}
                   />
                 </div>
@@ -1584,7 +1618,7 @@ const QuizGame = ({
                   currentPlayerName="You"
                   currentUserId={quiz?.currentUserId}
                   mode="tablet"
-                  totalQuestions={questions.length}
+                  totalQuestions={getTotalQuestions()}
                   recentAnswers={recentAnsweredUsers}
                 />
               </div>
@@ -1615,7 +1649,7 @@ const QuizGame = ({
                 currentPlayerName="You"
                 currentUserId={quiz?.currentUserId}
                 mode="mobile"
-                totalQuestions={questions.length}
+                totalQuestions={getTotalQuestions()}
                 recentAnswers={recentAnsweredUsers}
               />
             </div>
