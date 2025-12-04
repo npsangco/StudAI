@@ -32,20 +32,19 @@ export const initializeConnectionTracking = async (gamePin, userId) => {
     await update(playerRef, {
       isOnline: true,
       inGracePeriod: false,
-      disconnectedAt: null, // Clear any previous disconnect
-      gracePeriodExpiresAt: null // Clear expiration timestamp
+      disconnectedAt: null // Clear any previous disconnect
     });
 
     // Setup disconnect handler - auto-mark as offline with grace period
     const disconnectRef = onDisconnect(connectionRef);
-    const disconnectTimestamp = Date.now();
-    const gracePeriodExpiresAt = disconnectTimestamp + 90000; // 90 seconds from now
 
+    // Calculate timestamp at DISCONNECT time, not initialization time
+    // We use a Firebase transaction to get server timestamp when disconnect actually happens
     await disconnectRef.update({
       isOnline: false,
-      disconnectedAt: disconnectTimestamp,
-      gracePeriodActive: true, // Start grace period
-      gracePeriodExpiresAt // When grace period expires
+      disconnectedAt: serverTimestamp(), // Server timestamp at disconnect
+      gracePeriodActive: true,
+      gracePeriodExpiresAt: null // Will be calculated by checkGracePeriod using disconnectedAt
     });
 
     // Also update player's isOnline status (but keep in grace period)
@@ -53,8 +52,8 @@ export const initializeConnectionTracking = async (gamePin, userId) => {
     await playerDisconnectRef.update({
       isOnline: false,
       inGracePeriod: true,
-      disconnectedAt: disconnectTimestamp,
-      gracePeriodExpiresAt // When grace period expires
+      disconnectedAt: serverTimestamp(), // Server timestamp at disconnect
+      gracePeriodExpiresAt: null // Will be calculated by checkGracePeriod using disconnectedAt
     });
 
     return {
@@ -82,8 +81,7 @@ export const sendHeartbeat = async (gamePin, userId) => {
       isOnline: true,
       lastHeartbeat: Date.now(),
       disconnectedAt: null,
-      gracePeriodActive: false,
-      gracePeriodExpiresAt: null // Clear expiration
+      gracePeriodActive: false
     });
 
     // Also update player status (clear grace period)
@@ -91,8 +89,7 @@ export const sendHeartbeat = async (gamePin, userId) => {
     await update(playerRef, {
       isOnline: true,
       inGracePeriod: false,
-      disconnectedAt: null,
-      gracePeriodExpiresAt: null // Clear expiration
+      disconnectedAt: null
     });
 
   } catch (error) {
@@ -218,9 +215,13 @@ export const checkGracePeriod = async (gamePin, userId) => {
       return { inGracePeriod: false, timeRemaining: 0, isForfeited: false };
     }
 
-    // Check grace period using stored expiration timestamp
-    if (data.gracePeriodExpiresAt) {
-      const timeRemaining = Math.max(0, data.gracePeriodExpiresAt - now);
+    // Calculate grace period from disconnectedAt timestamp
+    // Grace period = 90 seconds from when they disconnected
+    if (data.disconnectedAt) {
+      const GRACE_PERIOD_MS = 90000; // 90 seconds
+      const disconnectTime = data.disconnectedAt;
+      const gracePeriodEndsAt = disconnectTime + GRACE_PERIOD_MS;
+      const timeRemaining = Math.max(0, gracePeriodEndsAt - now);
 
       if (timeRemaining > 0) {
         return {
@@ -235,7 +236,7 @@ export const checkGracePeriod = async (gamePin, userId) => {
       return { inGracePeriod: false, timeRemaining: 0, isForfeited: true };
     }
 
-    // No grace period data (shouldn't happen, but handle gracefully)
+    // No disconnectedAt timestamp (player never disconnected or just connected)
     return { inGracePeriod: false, timeRemaining: 0, isForfeited: false };
 
   } catch (error) {

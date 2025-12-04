@@ -468,13 +468,15 @@ const QuizGame = ({
                 // ✅ USE SETTER to trigger re-render!
                 game.setCurrentQuestionIndex(validTargetQuestion);
 
-                // 🔥 FIX: Update progress AND check if we should be waiting (use validated question)
-                await updatePlayerProgress(quiz.gamePin, quiz.currentUserId, validTargetQuestion);
+                // Don't update progress here - it's already correct in Firebase!
+                // The player's currentQuestion in Firebase is their saved progress (where they were)
+                // Only update if we're syncing them forward/backward to match the group
+                // We'll let the natural game flow update progress when they answer
 
                 // Reset timer for this question
                 resetTimer(quizTimer);
 
-                // 🔥 FIX: Check if we should enter waiting state immediately after reconnection
+                // Check if we should enter waiting state immediately after reconnection
                 // If I was ahead (shouldWait = true), enter waiting immediately
                 if (shouldWait) {
 
