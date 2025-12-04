@@ -89,7 +89,6 @@ function startArchivedNoteCleanup() {
     await cleanupExpiredArchivedNotes();
   });
 }
-}
 
 export {
   startArchivedNoteCleanup,
