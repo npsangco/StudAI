@@ -22,11 +22,7 @@ async function cleanupExpiredArchivedNotes() {
       }
     });
 
-    if (deletedCount > 0) {
-      console.log(`🗑️ [Archive Cleanup] Deleted ${deletedCount} expired archived note(s) (older than ${ARCHIVE_EXPIRATION_DAYS} days)`);
-    } else {
-      console.log(`✅ [Archive Cleanup] No expired archived notes to delete`);
-    }
+    // Cleanup completed
 
     return deletedCount;
   } catch (error) {

@@ -12,11 +12,6 @@ class ZoomOAuth {
     this.tokenUrl = 'https://zoom.us/oauth/token';
     this.apiBaseUrl = 'https://api.zoom.us/v2';
     
-    console.log('🔑 Zoom OAuth Configuration:');
-    console.log('   Client ID:', this.clientId);
-    console.log('   Client Secret length:', this.clientSecret ? this.clientSecret.length : 'Missing');
-    console.log('   Redirect URI:', this.redirectUri);
-    
     this.validateConfig();
   }
 
@@ -24,12 +19,6 @@ class ZoomOAuth {
     if (!this.clientId || !this.clientSecret) {
       throw new Error('Zoom OAuth configuration missing: Client ID and Secret are required');
     }
-    
-    // Test the credentials format
-    const authHeader = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
-    console.log('   Auth Header (first 20 chars):', authHeader.substring(0, 20) + '...');
-    
-    console.log('✅ Zoom OAuth configuration validated');
   }
 
   getAuthorizationUrl() {

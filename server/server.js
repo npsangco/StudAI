@@ -392,13 +392,8 @@ if (sessionStore) {
 app.use(passport.initialize());
 app.use(passport.session());
 
-console.log('🔍 Google OAuth Configuration Check:');
-console.log('   GOOGLE_ID:', process.env.GOOGLE_ID ? '✓ Set' : '✗ Missing');
-console.log('   GOOGLE_SECRET:', process.env.GOOGLE_SECRET ? '✓ Set' : '✗ Missing');
-console.log('   GOOGLE_CALLBACK_URL:', process.env.GOOGLE_CALLBACK_URL || 'Not set');
-
 if (!process.env.GOOGLE_ID || !process.env.GOOGLE_SECRET) {
-    console.warn(' Google OAuth not configured - OAuth login will not be available');
+    console.warn('⚠️ Google OAuth not configured - OAuth login will not be available');
 }
 
 if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
@@ -453,15 +448,6 @@ passport.deserializeUser(async (id, done) => {
         done(err, null);
     }
 });
-
-console.log('🔍 Checking PPT conversion methods:');
-if (process.env.CLOUDCONVERT_API_KEY) {
-    console.log('✅ CloudConvert API enabled');
-} else {
-    console.log('⚠️ No conversion API configured. Will use direct text extraction (limited accuracy).');
-    console.log('   For better results, sign up for CloudConvert: https://cloudconvert.com/');
-    console.log('   Add CLOUDCONVERT_API_KEY to your .env file');
-}
 
 // ----------------- ROUTE REGISTRATION -----------------
 app.use("/api/pet", sessionLockCheck, petRoutes);
@@ -540,7 +526,6 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
         });
 
         const openAiApiKey = process.env.OPENAI_API_KEY;
-        console.log('🔑 [Server] OpenAI API Key status:', openAiApiKey ? 'Present ✓' : 'Missing ✗');
         if (!openAiApiKey) {
             console.error('[Server] OpenAI API key not configured in environment variables');
             return res.status(500).json({ error: "OpenAI API key not configured" });

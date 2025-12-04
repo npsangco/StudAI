@@ -71,8 +71,6 @@ async function cleanupAbandonedBattles() {
       return { cleaned: 0, battles: [] };
     }
     
-    console.log(`🧹 Found ${abandonedBattles.length} abandoned battles in MySQL`);
-    
     const cleanedBattles = [];
     
     for (const battle of abandonedBattles) {
@@ -121,12 +119,6 @@ async function cleanupAbandonedBattles() {
 let cleanupInterval = null;
 
 export function startBattleCleanup() {
-  console.log('🚀 Battle cleanup service initialized (MySQL only)');
-  console.log(`   Interval: Every ${CLEANUP_CONFIG.INTERVAL_MS / 60000} minutes`);
-  console.log(`   Waiting timeout: ${CLEANUP_CONFIG.WAITING_TIMEOUT_MINUTES} minutes`);
-  console.log(`   In-progress timeout: ${CLEANUP_CONFIG.IN_PROGRESS_TIMEOUT_HOURS} hours`);
-  console.log('   Firebase cleanup: Handled by client-side code\n');
-  
   // Run immediately on startup (after 10 seconds)
   setTimeout(async () => {
     try {

@@ -29,13 +29,10 @@ async function cleanupOldUploadedFiles() {
         if (key && !key.startsWith('/') && !key.startsWith('http') && key.startsWith('uploads/')) {
           try {
             await deleteFile(key);
-            console.log(`🗑️ [File Cleanup] Deleted object from R2: ${key}`);
             deletedCount++;
           } catch (err) {
             console.warn(`⚠️ [File Cleanup] Failed to delete R2 object ${key}:`, err.message || err);
           }
-        } else {
-          console.log(`🔒 [File Cleanup] Skipping non-upload or external key: ${key}`);
         }
 
         // Keep the database record - don't delete from file table
@@ -43,12 +40,6 @@ async function cleanupOldUploadedFiles() {
       } catch (err) {
         console.error('❌ [File Cleanup] Error during file cleanup:', err);
       }
-    }
-
-    if (deletedCount > 0) {
-      console.log(`🗑️ [File Cleanup] Deleted ${deletedCount} file(s) from R2 storage (DB records kept)`);
-    } else {
-      console.log('✅ [File Cleanup] No old uploaded files to delete');
     }
 
     return deletedCount;
@@ -59,16 +50,12 @@ async function cleanupOldUploadedFiles() {
 }
 
 function startUploadedFileCleanup() {
-  console.log('🔄 [File Cleanup] Running initial cleanup...');
   cleanupOldUploadedFiles();
 
   // Run daily at 02:00 AM
   cron.schedule('0 2 * * *', async () => {
-    console.log('🔄 [File Cleanup] Running scheduled cleanup...');
     await cleanupOldUploadedFiles();
   });
-
-  console.log(`✅ [File Cleanup] Scheduled job started (runs daily at 02:00 AM). Files expire after ${FILE_EXPIRATION_DAYS} days`);
 }
 
 export { startUploadedFileCleanup, cleanupOldUploadedFiles, FILE_EXPIRATION_DAYS };
