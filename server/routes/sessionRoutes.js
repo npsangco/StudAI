@@ -31,8 +31,6 @@ router.get('/zoom/connect', async (req, res) => {
 
 // OAuth callback
 router.get('/zoom/callback', async (req, res) => {
-  console.log('🔄 Zoom OAuth callback received for user');
-  
   try {
     const { code, error: zoomError } = req.query;
     
@@ -51,7 +49,6 @@ router.get('/zoom/callback', async (req, res) => {
       return res.redirect(`${CLIENT_URL}/sessions?error=no_user_session`);
     }
 
-    console.log('🔄 Exchanging authorization code for access token...');
     const tokenResult = await zoomOAuth.getAccessToken(code);
     
     if (!tokenResult.success) {
@@ -66,7 +63,6 @@ router.get('/zoom/callback', async (req, res) => {
       return res.redirect(`${CLIENT_URL}/sessions?error=token_storage_failed`);
     }
 
-    console.log('✅ Zoom OAuth completed successfully for user:', req.session.userId);
     res.redirect(`${CLIENT_URL}/sessions?zoom_connected=true`);
   } catch (error) {
     console.error('💥 Zoom callback error:', error);
@@ -133,8 +129,6 @@ router.post('/create', async (req, res) => {
       session_password: hashedPassword,
       host_name: req.session.username
     });
-
-    console.log('✅ Session created successfully for user:', req.session.userId);
 
     // Check for session-related achievements
     try {
@@ -301,9 +295,6 @@ router.post('/verify-password', async (req, res) => {
       console.log('❌ Invalid password attempt');
       return res.status(401).json({ error: 'Incorrect password' });
     }
-
-    console.log('✅ Password verified successfully');
-
     // Return session details
     res.json({
       success: true,
@@ -371,7 +362,6 @@ router.delete('/:session_id', async (req, res) => {
     }
 
     await session.destroy();
-    console.log('✅ Session deleted successfully');
     res.json({ message: 'Session deleted successfully' });
   } catch (error) {
     console.error('❌ Delete session error:', error);
@@ -560,7 +550,6 @@ async function handleMeetingStarted(payload) {
       session.status = 'active';
       session.actual_start = new Date(payload.object.start_time);
       await session.save();
-      console.log('✅ Session status updated to active');
     }
   } catch (error) {
     console.error('❌ Error handling meeting started:', error);
@@ -579,7 +568,6 @@ async function handleMeetingEnded(payload) {
       session.status = 'completed';
       session.actual_end = new Date(payload.object.end_time);
       await session.save();
-      console.log('✅ Session status updated to completed');
     }
   } catch (error) {
     console.error('❌ Error handling meeting ended:', error);
@@ -603,7 +591,6 @@ async function handleParticipantJoined(payload) {
         join_time: new Date(payload.object.participant.join_time),
         status: 'in_meeting'
       });
-      console.log('✅ Participant record created');
     }
   } catch (error) {
     console.error('❌ Error storing participant:', error);
@@ -631,7 +618,6 @@ async function handleParticipantLeft(payload) {
         participant.status = 'left';
         participant.calculateDuration();
         await participant.save();
-        console.log('✅ Participant leave time updated');
       }
     }
   } catch (error) {

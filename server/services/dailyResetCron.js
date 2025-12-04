@@ -13,7 +13,6 @@ export async function performDailyReset() {
   const transaction = await sequelize.transaction();
   
   try {
-    console.log('🔄 Starting daily reset...');
     const today = getTodayPhilippines();
     const yesterday = getYesterdayPhilippines();
     
@@ -184,11 +183,8 @@ export async function cleanupOldStats() {
  * Initialize cron jobs
  */
 export function initializeCronJobs() {
-  console.log('⏰ Initializing cron jobs...');
-  
   // Daily reset at midnight (00:00 Philippines Time)
   cron.schedule('0 0 * * *', async () => {
-    console.log('\n🕛 Midnight (Philippines) - Running daily reset...');
     await performDailyReset();
     await awardStreakBonuses();
   }, {
@@ -197,22 +193,16 @@ export function initializeCronJobs() {
   
   // Weekly cleanup on Sunday at 2 AM (Philippines Time)
   cron.schedule('0 2 * * 0', async () => {
-    console.log('\n🗑️ Sunday 2 AM (Philippines) - Running weekly cleanup...');
     await cleanupOldStats();
   }, {
     timezone: 'Asia/Manila'
   });
-  
-  console.log('✅ Cron jobs initialized');
-  console.log('   - Daily reset: Every day at 00:00 Asia/Manila');
-  console.log('   - Weekly cleanup: Sunday at 02:00 Asia/Manila');
 }
 
 /**
  * Manual trigger endpoint (for testing)
  */
 export async function manualReset() {
-  console.log('🔧 Manual reset triggered...');
   const resetResult = await performDailyReset();
   const bonusResult = await awardStreakBonuses();
   const cleanupResult = await cleanupOldStats();

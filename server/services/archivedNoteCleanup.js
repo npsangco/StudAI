@@ -82,17 +82,13 @@ function getDaysUntilExpiration(archivedAt) {
  */
 function startArchivedNoteCleanup() {
   // Run immediately on startup
-  console.log('🔄 [Archive Cleanup] Running initial cleanup...');
   cleanupExpiredArchivedNotes();
 
   // Run daily at 12:00 AM (midnight)
   cron.schedule('0 0 * * *', async () => {
-    console.log('🔄 [Archive Cleanup] Running scheduled cleanup...');
     await cleanupExpiredArchivedNotes();
   });
-
-  console.log('✅ [Archive Cleanup] Scheduled job started (runs daily at 12:00 AM)');
-  console.log(`📅 [Archive Cleanup] Archived notes expire after ${ARCHIVE_EXPIRATION_DAYS} days (20 weeks)`);
+}
 }
 
 export {

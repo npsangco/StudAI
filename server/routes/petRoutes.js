@@ -112,8 +112,6 @@ async function applyStatDecay(pet) {
   const hungerDecay = calculateDecay(pet.last_fed, now, 'hunger');
   const happinessDecay = calculateDecay(pet.last_played, now, 'happiness');
   const cleanlinessDecay = calculateDecay(pet.last_cleaned, now, 'cleanliness');
-  
-  console.log(`[Pet Decay] User ${pet.user_id}: hunger=-${hungerDecay}, happiness=-${happinessDecay}, cleanliness=-${cleanlinessDecay}`);
 
   // Energy replenishment (same calculation as decay - uses minutes)
   let energyReplenish = 0;
@@ -128,12 +126,7 @@ async function applyStatDecay(pet) {
     } else {
       const replenishPeriods = Math.floor(minutesElapsed / CONFIG.stats.energy.interval);
       energyReplenish = replenishPeriods * CONFIG.stats.energy.replenish;
-      
-      console.log(`[Pet Energy] User ${pet.user_id}: ${minutesElapsed.toFixed(1)} min elapsed, ${replenishPeriods} periods, +${energyReplenish} energy`);
     }
-  } else {
-    // If last_updated is null, set it now
-    console.log(`[Pet Energy] User ${pet.user_id}: last_updated was null, initializing`);
   }
 
   const updatedStats = {
@@ -359,9 +352,6 @@ async function checkPetAchievements(userId) {
 // ============================================
 
 router.get("/", generalLimiter, requireAuth, async (req, res) => {
-  // Debug: Log session and cookies for troubleshooting
-  console.log('[Pet API] Session:', req.session);
-  console.log('[Pet API] Cookies:', req.cookies);
   const userId = req.session.userId;
 
   if (!userId) {

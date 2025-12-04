@@ -606,7 +606,7 @@ Please format the summary in a clear, organized manner with proper headings and 
                 <div className="bg-blue-100 p-3 rounded-xl group-hover:bg-blue-600 transition-colors">
                   <FileText className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
                 </div>
-                <div className="bg-yellow-50 px-3 py-1 rounded-full">
+                <div className="bg-blue-50 px-3 py-1 rounded-full">
                   <span className="text-xs font-semibold text-blue-700">Total</span>
                 </div>
               </div>

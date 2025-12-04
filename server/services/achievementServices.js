@@ -185,7 +185,6 @@ export async function getUserAchievements(userId) {
     const user = await User.findByPk(userId);
 
     // First, check and unlock any newly unlocked achievements
-    console.log(`🔄 Checking for newly unlocked achievements for user ${userId}...`);
     await checkAndUnlockAchievements(userId);
 
     // Get all achievements
