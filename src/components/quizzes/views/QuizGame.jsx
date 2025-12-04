@@ -375,6 +375,17 @@ const QuizGame = ({
   // ============================================
   
   const handleReconnection = async () => {
+    // 🔥 NEW: Set isReconnecting flag in Firebase so leaderboard shows "Reconnecting"
+    if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
+      try {
+        const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
+        await update(playerRef, {
+          isReconnecting: true
+        });
+      } catch (error) {
+        console.error('❌ Failed to set isReconnecting flag:', error);
+      }
+    }
 
     const result = await reconnection.attemptReconnection();
 
@@ -522,11 +533,34 @@ const QuizGame = ({
         }
       }
 
-      // 3. Resume game
+      // 3. Clear isReconnecting flag
+      if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
+        try {
+          const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
+          await update(playerRef, {
+            isReconnecting: false
+          });
+        } catch (error) {
+          console.error('❌ Failed to clear isReconnecting flag:', error);
+        }
+      }
+
+      // 4. Resume game
       game.setIsPaused(false);
 
       return result;
     } else {
+      // Clear isReconnecting flag on failure too
+      if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
+        try {
+          const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
+          await update(playerRef, {
+            isReconnecting: false
+          });
+        } catch (error) {
+          console.error('❌ Failed to clear isReconnecting flag:', error);
+        }
+      }
 
       return result;
     }

@@ -30,16 +30,7 @@ export const LiveLeaderboard = ({
   
   // Get connection status badge
   const getConnectionStatus = (player) => {
-    // 1. Reconnecting (in grace period, can still come back)
-    if (player.inGracePeriod && player.isOnline === false) {
-      return (
-        <span className="px-1.5 py-0.5 bg-yellow-500/80 text-white text-[10px] font-bold rounded uppercase animate-pulse">
-          Reconnecting
-        </span>
-      );
-    }
-
-    // 2. QUIT (explicitly forfeited - score reset to 0)
+    // 1. QUIT (explicitly forfeited - score reset to 0) - HIGHEST PRIORITY
     if (player.forfeited === true || player.hasForfeited === true) {
       return (
         <span className="px-1.5 py-0.5 bg-red-500/80 text-white text-[10px] font-bold rounded uppercase">
@@ -48,7 +39,27 @@ export const LiveLeaderboard = ({
       );
     }
 
-    // 3. OFFLINE (disconnected, grace period expired, can't reconnect)
+    // 2. Reconnecting (actively attempting reconnection)
+    // Only show "Reconnecting" if isReconnecting flag is explicitly set
+    if (player.isReconnecting === true) {
+      return (
+        <span className="px-1.5 py-0.5 bg-blue-500/80 text-white text-[10px] font-bold rounded uppercase animate-pulse">
+          Reconnecting
+        </span>
+      );
+    }
+
+    // 3. OFFLINE (disconnected, in grace period - can still come back)
+    // Show "Offline" when disconnected but still have time to reconnect
+    if (player.inGracePeriod && player.isOnline === false) {
+      return (
+        <span className="px-1.5 py-0.5 bg-yellow-500/80 text-white text-[10px] font-bold rounded uppercase">
+          Offline
+        </span>
+      );
+    }
+
+    // 4. OFFLINE (disconnected, grace period expired, can't reconnect)
     if (player.isOnline === false && !player.inGracePeriod) {
       return (
         <span className="px-1.5 py-0.5 bg-gray-500/80 text-white text-[10px] font-bold rounded uppercase">

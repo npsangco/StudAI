@@ -390,7 +390,8 @@ export const rejoinBattle = async (gamePin, userId) => {
     
     await update(ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`), {
       isOnline: true,
-      inGracePeriod: false
+      inGracePeriod: false,
+      isReconnecting: false // Clear reconnecting flag
     });
 
     return {
