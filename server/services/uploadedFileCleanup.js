@@ -24,11 +24,13 @@ async function cleanupOldUploadedFiles() {
       try {
         const key = f.file_path;
 
-        // Only delete objects in the `uploads/` prefix to avoid removing other data
+        // Delete file from R2 storage but keep DB record
+        // This allows notes to keep the reference without breaking foreign key constraints
         if (key && !key.startsWith('/') && !key.startsWith('http') && key.startsWith('uploads/')) {
           try {
             await deleteFile(key);
             console.log(`🗑️ [File Cleanup] Deleted object from R2: ${key}`);
+            deletedCount++;
           } catch (err) {
             console.warn(`⚠️ [File Cleanup] Failed to delete R2 object ${key}:`, err.message || err);
           }
@@ -36,15 +38,15 @@ async function cleanupOldUploadedFiles() {
           console.log(`🔒 [File Cleanup] Skipping non-upload or external key: ${key}`);
         }
 
-        await File.destroy({ where: { file_id: f.file_id } });
-        deletedCount++;
+        // Keep the database record - don't delete from file table
+        // This prevents foreign key constraint errors with notes
       } catch (err) {
-        console.error('❌ [File Cleanup] Error deleting file record:', err);
+        console.error('❌ [File Cleanup] Error during file cleanup:', err);
       }
     }
 
     if (deletedCount > 0) {
-      console.log(`🗑️ [File Cleanup] Deleted ${deletedCount} uploaded file(s) older than ${FILE_EXPIRATION_DAYS} days`);
+      console.log(`🗑️ [File Cleanup] Deleted ${deletedCount} file(s) from R2 storage (DB records kept)`);
     } else {
       console.log('✅ [File Cleanup] No old uploaded files to delete');
     }
