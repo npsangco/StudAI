@@ -173,6 +173,7 @@ const QuizGame = ({
   const [waitingTimeRemaining, setWaitingTimeRemaining] = useState(60); // 1 minute countdown
   const encouragementTimerRef = useRef(null);
   const waitingTimeoutRef = useRef(null);
+  const waitingCountdownRef = useRef(null);
 
   // 🔒 SUBMISSION MUTEX: Prevent race condition between timer and manual submission
   const submissionLockRef = useRef({ locked: false, timestamp: 0 });
@@ -247,10 +248,10 @@ const QuizGame = ({
       clearTimeout(encouragementTimerRef.current);
       encouragementTimerRef.current = null;
     }
-    
+
     // Reset encouragement state
     setShowEncouragement(false);
-    
+
     // Start new 5-second timer for encouragement
     encouragementTimerRef.current = setTimeout(() => {
       // Only show if user hasn't answered yet (no pet message showing)
@@ -258,7 +259,7 @@ const QuizGame = ({
         setShowEncouragement(true);
       }
     }, 5000);
-    
+
     // Cleanup on unmount or question change
     return () => {
       if (encouragementTimerRef.current) {
@@ -267,6 +268,71 @@ const QuizGame = ({
       }
     };
   }, [game.currentQuestionIndex, showPetMessage]);
+
+  // ⏳ Waiting state countdown and auto-proceed
+  useEffect(() => {
+    if (!waitingForPlayers) {
+      // Clear countdown when not waiting
+      if (waitingCountdownRef.current) {
+        clearInterval(waitingCountdownRef.current);
+        waitingCountdownRef.current = null;
+      }
+      return;
+    }
+
+    // Reset timer to 60 seconds when entering waiting state
+    setWaitingTimeRemaining(60);
+
+    // Start countdown
+    waitingCountdownRef.current = setInterval(() => {
+      setWaitingTimeRemaining(prev => {
+        if (prev <= 1) {
+          // Time's up! Auto-proceed to results
+          clearInterval(waitingCountdownRef.current);
+          waitingCountdownRef.current = null;
+
+          // Mark disconnected players as forfeited and finished
+          if (quiz?.gamePin) {
+            const markDisconnectedAsFinished = async () => {
+              try {
+                const battleRef = ref(realtimeDb, `battles/${quiz.gamePin}/players`);
+                const snapshot = await get(battleRef);
+                if (snapshot.exists()) {
+                  const playersData = snapshot.val();
+                  const updates = {};
+
+                  Object.entries(playersData).forEach(([key, player]) => {
+                    // Mark offline/disconnected players as finished
+                    if (player.isOnline === false && player.finished !== true) {
+                      updates[`${key}/finished`] = true;
+                      updates[`${key}/hasForfeited`] = true;
+                    }
+                  });
+
+                  if (Object.keys(updates).length > 0) {
+                    await update(battleRef, updates);
+                  }
+                }
+              } catch (error) {
+                console.error('❌ Error marking disconnected players:', error);
+              }
+            };
+            markDisconnectedAsFinished();
+          }
+
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (waitingCountdownRef.current) {
+        clearInterval(waitingCountdownRef.current);
+        waitingCountdownRef.current = null;
+      }
+    };
+  }, [waitingForPlayers, quiz?.gamePin]);
 
   // FETCH BATTLE TOTAL QUESTIONS from Firebase metadata
   useEffect(() => {
@@ -470,8 +536,10 @@ const QuizGame = ({
               const minCurrentQuestion = Math.min(...activePlayersQuestions);
               const maxCurrentQuestion = Math.max(...activePlayersQuestions);
 
-              // Determine target question based on my progress vs group
-              const myProgress = result.playerData.currentQuestion || 0;
+              // Use savedState FIRST, fallback to playerData
+              // savedState.currentQuestionIndex is the ACTUAL question they were on
+              // playerData.currentQuestion might be undefined if they never answered
+              const myProgress = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
 
               let targetQuestion;
               let shouldWait = false;
