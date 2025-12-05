@@ -35,8 +35,14 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
-      <div className="bg-white rounded-xl sm:rounded-2xl max-w-lg w-full mx-auto relative shadow-2xl animate-scale-in overflow-hidden">
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-xl sm:rounded-2xl max-w-lg w-full mx-auto relative shadow-2xl animate-scale-in overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Close Button */}
         <button
           onClick={onClose}

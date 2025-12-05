@@ -652,8 +652,14 @@ function QuizzesPage() {
 
       {/* Error Modal */}
       {quizDataHook.error && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-5 sm:p-6 animate-fade-in">
+        <div 
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => quizDataHook.setError(null)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-lg max-w-md w-full p-5 sm:p-6 animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="text-center">
               <div className="w-14 h-14 sm:w-16 sm:h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-3xl sm:text-4xl">⚠️</span>

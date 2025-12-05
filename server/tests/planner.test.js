@@ -24,6 +24,26 @@ describe('Planner System', () => {
       expect(endDate.getTime()).toBeGreaterThan(startDate.getTime());
     });
 
+    it('should reject plans where end date is before start date', () => {
+      const startDate = new Date('2024-12-31');
+      const endDate = new Date('2024-12-01');
+      
+      const isValidDateRange = endDate.getTime() > startDate.getTime();
+      
+      expect(isValidDateRange).toBe(false);
+    });
+
+    it('should reject plans with empty title', () => {
+      const plan = {
+        title: '',
+        description: 'Test plan'
+      };
+      
+      const isValid = plan.title && plan.title.trim().length > 0;
+      
+      expect(isValid).toBe(false);
+    });
+
     it('should set default priority', () => {
       const plan = {
         title: 'Task',
@@ -227,6 +247,21 @@ describe('Planner System', () => {
       
       expect(plan.status).toBe('in-progress');
       expect(statuses).toContain(plan.status);
+    });
+
+    it('should allow creating task in the past', () => {
+      const taskDate = new Date('2020-01-01');
+      const today = new Date();
+      const isValid = taskDate >= today;
+      
+      expect(isValid).toBe(true); // FAIL: Task date is in the past
+    });
+
+    it('should accept task title with 500 characters', () => {
+      const title = 'A'.repeat(500);
+      const maxLength = 200;
+      
+      expect(title.length <= maxLength).toBe(true); // FAIL: Title too long
     });
 
     it('should filter by status', () => {

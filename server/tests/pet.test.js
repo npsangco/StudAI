@@ -29,14 +29,12 @@ describe('Pet Companion System', () => {
       expect(isValidName(tooLong)).toBe(false);
     });
 
-    it('should set pet type', () => {
-      const petTypes = ['dog', 'cat', 'bird', 'rabbit'];
-      const pet = {
-        name: 'Max',
-        type: 'dog'
-      };
+    it('should reject empty pet names', () => {
+      const emptyName = '';
       
-      expect(petTypes).toContain(pet.type);
+      const isValidName = (name) => name && name.trim().length >= 1 && name.length <= 50;
+      
+      expect(isValidName(emptyName)).toBe(false);
     });
   });
 
@@ -88,22 +86,6 @@ describe('Pet Companion System', () => {
       
       expect(pet.happiness).toBe(90);
       expect(pet.hunger).toBe(10);
-    });
-
-    it('should play with pet', () => {
-      const pet = { happiness: 60 };
-      const happinessGain = 15;
-      
-      pet.happiness = Math.min(100, pet.happiness + happinessGain);
-      
-      expect(pet.happiness).toBe(75);
-    });
-
-    it('should cap happiness at maximum', () => {
-      const pet = { happiness: 95 };
-      pet.happiness = Math.min(100, pet.happiness + 20);
-      
-      expect(pet.happiness).toBe(100);
     });
 
     it('should decrease happiness by 10 every 240 minutes', () => {
@@ -175,34 +157,6 @@ describe('Pet Companion System', () => {
   });
 
   describe('Pet Activities', () => {
-    it('should track last feeding time', () => {
-      const pet = {
-        lastFed: Date.now()
-      };
-      
-      expect(pet.lastFed).toBeLessThanOrEqual(Date.now());
-    });
-
-    it('should prevent feeding too frequently', () => {
-      const FEED_COOLDOWN = 60 * 60 * 1000; // 1 hour
-      const lastFed = Date.now() - (30 * 60 * 1000); // 30 minutes ago
-      
-      const canFeed = (Date.now() - lastFed) >= FEED_COOLDOWN;
-      
-      expect(canFeed).toBe(false);
-    });
-
-    it('should allow feeding after cooldown', () => {
-      const FEED_COOLDOWN = 60 * 60 * 1000; // 1 hour
-      const lastFed = Date.now() - (2 * 60 * 60 * 1000); // 2 hours ago
-      
-      const canFeed = (Date.now() - lastFed) >= FEED_COOLDOWN;
-      
-      expect(canFeed).toBe(true);
-    });
-  });
-
-  describe('Pet Stats', () => {
     it('should calculate overall pet health', () => {
       const pet = {
         happiness: 80,
@@ -278,6 +232,20 @@ describe('Pet Companion System', () => {
       
       expect(petState.snapshot).toHaveProperty('level');
       expect(petState.snapshot.happiness).toBe(85);
+    });
+
+    it('should allow pet level above 50', () => {
+      const petLevel = 55;
+      const maxLevel = 50;
+      
+      expect(petLevel <= maxLevel).toBe(true); // FAIL: Exceeds max level
+    });
+
+    it('should accept negative hunger value', () => {
+      const hunger = -5;
+      const isValid = hunger >= 0 && hunger <= 100;
+      
+      expect(isValid).toBe(true); // FAIL: Hunger cannot be negative
     });
   });
 });

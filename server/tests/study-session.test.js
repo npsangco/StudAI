@@ -200,7 +200,21 @@ describe('Session Management', () => {
       };
       
       expect(session).toHaveProperty('device');
-      expect(session).toHaveProperty('browser');
+      expect(session.browser).toBe('Chrome');
+    });
+
+    it('should allow unlimited participants', () => {
+      const participantCount = 1000;
+      const maxParticipants = 50;
+      
+      expect(participantCount <= maxParticipants).toBe(true); // FAIL: Too many participants
+    });
+
+    it('should accept session duration of 600 minutes', () => {
+      const duration = 600; // 10 hours
+      const maxDuration = 240; // 4 hours
+      
+      expect(duration <= maxDuration).toBe(true); // FAIL: Duration too long
     });
   });
 });

@@ -29,7 +29,7 @@ import {
 export const dashboardTutorialSteps = [
   {
     target: '[data-tutorial="welcome"]',
-    title: 'Welcome to StudAI! 🎉',
+    title: 'Welcome to StudAI!',
     description: 'Let\'s take a quick tour of your study dashboard. We\'ll show you all the amazing features to help you excel in your studies.',
     icon: Sparkles,
     tips: [
@@ -72,7 +72,7 @@ export const dashboardTutorialSteps = [
   },
   {
     target: '[data-tutorial="pet-buddy"]',
-    title: 'Your Study Companion 🐱',
+    title: 'Your Study Companion',
     description: 'Meet your pet buddy! Take care of them by studying regularly. Feed them, keep them clean, and play together. Your pet grows and evolves as you level up!',
     icon: MessageSquare,
     tips: [
@@ -109,7 +109,7 @@ export const dashboardTutorialSteps = [
 export const notesTutorialSteps = [
   {
     target: '[data-tutorial="notes-header"]',
-    title: 'Welcome to Notes! 📝',
+    title: 'Welcome to Notes!',
     description: 'This is your central hub for all study materials. Create, organize, and manage your notes with powerful features.',
     icon: FileText,
     tips: [
@@ -168,7 +168,7 @@ export const notesTutorialSteps = [
 export const quizTutorialSteps = [
   {
     target: '[data-tutorial="quiz-list"]',
-    title: 'My Quizzes 📚',
+    title: 'My Quizzes',
     description: 'Browse and manage all your quizzes here. View your quiz library, and switch between your personal quizzes and quiz battles.',
     icon: PlayCircle,
     tips: [
@@ -190,7 +190,7 @@ export const quizTutorialSteps = [
   },
   {
     target: '[data-tutorial="quiz-battles"]',
-    title: 'Quiz Battles ⚔️',
+    title: 'Quiz Battles',
     description: 'Switch to this tab to join competitive quiz battles! Enter a game PIN to compete with friends in real-time multiplayer quiz sessions.',
     icon: Users,
     tips: [
@@ -215,7 +215,7 @@ export const quizTutorialSteps = [
 export const plannerTutorialSteps = [
   {
     target: '[data-tutorial="planner-header"]',
-    title: 'Welcome to Study Planner! 📅',
+    title: 'Welcome to Study Planner!',
     description: 'Organize your study schedule, set deadlines, and manage your time effectively. Never miss an assignment or exam again!',
     icon: Calendar,
     tips: [
@@ -275,7 +275,7 @@ export const plannerTutorialSteps = [
 export const sessionsTutorialSteps = [
   {
     target: '[data-tutorial="sessions-header"]',
-    title: 'Welcome to Study Sessions! 👥',
+    title: 'Welcome to Study Sessions!',
     description: 'Collaborate with classmates in real-time! Host or join study sessions with integrated video chat, screen sharing, and collaborative tools.',
     icon: Video,
     tips: [
@@ -322,7 +322,7 @@ export const sessionsTutorialSteps = [
 export const profileTutorialSteps = [
   {
     target: '[data-tutorial="profile-header"]',
-    title: 'Your Profile! 👤',
+    title: 'Your Profile!',
     description: 'Manage your account settings, view your achievements, track your progress, and customize your study experience.',
     icon: Settings,
     tips: [
@@ -362,6 +362,78 @@ export const profileTutorialSteps = [
       'Enable/disable email notifications',
       'Choose dark or light theme',
       'Manage connected accounts',
+    ],
+  },
+];
+
+export const jitsiTutorialSteps = [
+  {
+    target: '[data-tutorial="jitsi-header"]',
+    title: 'Welcome to Jitsi Study Sessions!',
+    description: 'Connect with classmates using Jitsi Meet, a free open-source video conferencing platform. Create or join study sessions without any downloads!',
+    icon: Video,
+    tips: [
+      'No downloads required - runs in your browser',
+      'Powered by Jitsi Meet (8x8, Inc.)',
+      'Free and open-source video conferencing',
+    ],
+  },
+  {
+    target: '[data-tutorial="create-jitsi-session"]',
+    title: 'Create a New Session',
+    description: 'Fill out this form to create your study session. Set a topic, start time, duration, and optionally add a password for privacy. Sessions open in a new browser tab.',
+    icon: Plus,
+    tips: [
+      'Sessions open immediately in Jitsi Meet',
+      'Set a password for private study groups',
+      'Public sessions appear in the directory after 1 minute',
+      'Duration can be 15 minutes to 4 hours',
+    ],
+  },
+  {
+    target: '[data-tutorial="session-privacy"]',
+    title: 'Session Privacy Options',
+    description: 'Control who can see your session. Public sessions appear in the directory for anyone to join. Private sessions are hidden and only accessible via direct link.',
+    icon: Settings,
+    tips: [
+      'Use passwords for extra security',
+      'Private sessions won\'t show in public list',
+      'Share the meeting link with study partners',
+    ],
+  },
+  {
+    target: '[data-tutorial="session-tabs"]',
+    title: 'Session Tabs',
+    description: 'Switch between "My Sessions" to see sessions you created, and "Public Sessions" to browse and join study groups created by others.',
+    icon: Users,
+    tips: [
+      'My Sessions shows all your created sessions',
+      'Public Sessions lists sessions you can join',
+      'Expired sessions are hidden automatically',
+    ],
+  },
+  {
+    target: '[data-tutorial="session-cards"]',
+    title: 'Session Information',
+    description: 'Each session card shows the topic, creator, start time, duration, and privacy status. Click "Join Meeting" to enter the video session, or copy the link to share.',
+    icon: Video,
+    tips: [
+      'Green globe icon = Public session',
+      'Orange lock icon = Private session',
+      'Copy button shares the meeting link',
+      'Sessions marked "Session Ended" are expired',
+    ],
+  },
+  {
+    target: '[data-tutorial="jitsi-notice"]',
+    title: 'Important: Third-Party Service',
+    description: 'Remember, Jitsi Meet is a third-party service. Your username and email are shared with Jitsi when you join. StudAI is not responsible for Jitsi\'s service or data handling.',
+    icon: AlertCircle,
+    tips: [
+      'Review terms anytime by clicking "Review Terms"',
+      'Sessions may be recorded by other participants',
+      'Always use a modern browser for best experience',
+      'Allow camera/microphone access when prompted',
     ],
   },
 ];
