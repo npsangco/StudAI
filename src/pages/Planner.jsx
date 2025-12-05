@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, Plus, Info, X, Calendar, Check, Pencil } from "lucide-react";
 import { plannerService } from "../utils/syncService";
+import { userApi } from "../api/api";
 import ToastContainer from "../components/ToastContainer";
 import AppLoader from "../components/AppLoader";
 import { useToast } from "../hooks/useToast";
@@ -13,6 +14,7 @@ import TutorialButton from '../components/TutorialButton';
 
 export default function Planner() {
   const [currentYear] = useState(new Date().getFullYear());
+  const [accountCreatedYear, setAccountCreatedYear] = useState(null);
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -42,7 +44,20 @@ export default function Planner() {
 
   useEffect(() => {
     fetchPlans();
+    fetchUserCreationYear();
   }, []);
+
+  const fetchUserCreationYear = async () => {
+    try {
+      const response = await userApi.getUserProfile();
+      if (response.data.createdAt) {
+        const createdDate = new Date(response.data.createdAt);
+        setAccountCreatedYear(createdDate.getFullYear());
+      }
+    } catch (error) {
+      console.error('Failed to fetch user creation year:', error);
+    }
+  };
 
   useEffect(() => {
     // Update daily task status whenever plans change
@@ -90,8 +105,10 @@ export default function Planner() {
 
   const getYearRange = () => {
     const years = [];
-    for (let i = 0; i < 8; i++) {
-      years.push(currentYear + i);
+    // Show 4 years starting from account creation year (or current year if not available)
+    const startYear = accountCreatedYear || currentYear;
+    for (let i = 0; i < 4; i++) {
+      years.push(startYear + i);
     }
     return years;
   };
@@ -328,14 +345,14 @@ export default function Planner() {
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-2">Select Year</h1>
           <p className="text-base sm:text-lg text-gray-600">Choose a year to start planning</p>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
           {getYearRange().map(year => {
             const isCurrent = year === currentYear;
             return (
               <button
                 key={year}
                 onClick={() => handleYearSelect(year)}
-                className={`group relative p-6 sm:p-8 md:p-10 rounded-2xl border-2 text-xl sm:text-2xl md:text-3xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl cursor-pointer ${
+                className={`group relative p-8 sm:p-10 md:p-12 lg:p-14 rounded-3xl border-2 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl cursor-pointer ${
                   isCurrent
                     ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-blue-600 shadow-xl'
                     : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300 shadow-lg'
@@ -343,7 +360,7 @@ export default function Planner() {
               >
                 {year}
                 {isCurrent && (
-                  <span className="absolute top-2 right-2 sm:top-3 sm:right-3 px-2 sm:px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">
+                  <span className="absolute top-3 right-3 sm:top-4 sm:right-4 px-3 sm:px-4 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-xs sm:text-sm font-semibold">
                     Current
                   </span>
                 )}

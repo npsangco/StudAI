@@ -66,7 +66,12 @@ export default function Profile() {
                 // Set member since date
                 if (user.createdAt) {
                     const createdDate = new Date(user.createdAt);
-                    setMemberSince(createdDate.getFullYear());
+                    const formattedDate = createdDate.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                    setMemberSince(formattedDate);
                 }
                 
                 // Set last updated to current date
@@ -278,7 +283,7 @@ export default function Profile() {
                                         <div className="space-y-3 text-sm text-gray-600">
                                             <div className="flex justify-between">
                                                 <span>Member since</span>
-                                                <span className="font-medium">{memberSince || "2024"}</span>
+                                                <span className="font-medium">{memberSince || "Recently"}</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>Last updated</span>

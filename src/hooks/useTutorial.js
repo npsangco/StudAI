@@ -5,7 +5,6 @@ export function useTutorial(pageName = 'dashboard') {
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    // Get user from localStorage
     const userStr = localStorage.getItem('user');
     if (userStr) {
       try {
@@ -14,16 +13,13 @@ export function useTutorial(pageName = 'dashboard') {
 
         // Check if tutorial has been completed for this specific page
         const tutorialCompleted = localStorage.getItem(`tutorial_completed_${user.id}_${pageName}`);
-        
-        // Check if user is new (created within last 7 days or has never seen tutorial)
+
         const isNewUser = checkIfNewUser(user);
         
         // Show tutorial if not completed and user is new, or if tutorial was never shown for this page
         if (!tutorialCompleted && (isNewUser || !localStorage.getItem(`tutorial_shown_${user.id}_${pageName}`))) {
-          // Mark that tutorial has been shown for this page
           localStorage.setItem(`tutorial_shown_${user.id}_${pageName}`, 'true');
-          
-          // Delay showing tutorial slightly so page can load
+
           setTimeout(() => {
             setShowTutorial(true);
           }, 1000);
