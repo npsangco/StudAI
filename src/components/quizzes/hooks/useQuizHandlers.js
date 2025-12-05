@@ -23,7 +23,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     setIsSaving,
     quizData,
     questions,
-    gameState  // ← Make sure we have access to gameState
+    gameState 
   } = quizDataHook;
 
   // ============================================
@@ -79,7 +79,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     // Shuffle and limit questions based on user selection
     let questionsToUse = [...data.questions];
 
-    // 🔒 SAFETY: Filter out any invalid questions
+    // SAFETY: Filter out any invalid questions
     questionsToUse = questionsToUse.filter(q =>
       q &&
       q.question &&
@@ -159,7 +159,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       return;
     }
 
-    // 🛡️ PRE-FLIGHT VALIDATION: Check for errors before starting battle
+    // PRE-FLIGHT VALIDATION: Check for errors before starting battle
     const validation = validateAllQuestions(questionsToUse);
     if (!validation.isValid) {
       console.error('🚨 QUIZ VALIDATION FAILED (Battle):', {
@@ -268,13 +268,13 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       }
     });
 
-    // ✅ Go directly to lobby WITHOUT loading questions
+    // Go directly to lobby WITHOUT loading questions
     updateUiState({ currentView: VIEWS.LOBBY });
 
   };
 
   const handleStartBattle = async () => {
-    // FIX: Get gamePin from gameState instead of quizData
+    // Get gamePin from gameState instead of quizData
     const currentGamePin = gameState.gamePin;
 
     console.log('🎮 START BATTLE - Debug Info:', {

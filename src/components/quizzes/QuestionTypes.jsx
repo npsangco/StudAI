@@ -280,7 +280,7 @@ export const MatchingQuizPlayer = ({ question, onSubmit, isPaused = false, mode 
   const [touchStartPos, setTouchStartPos] = useState(null);
   const [isDraggingTouch, setIsDraggingTouch] = useState(false);
 
-  // 🔒 CRITICAL: Reset state when question changes
+  // Reset state when question changes
   useEffect(() => {
     setMatches([]);
     setDraggedItem(null);

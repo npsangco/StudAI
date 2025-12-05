@@ -198,7 +198,7 @@ const ModeBadge = ({ quiz }) => {
   );
 };
 
-// Quiz Item Component with Drag & Drop - REDESIGNED
+// Quiz Item Component with Drag & Drop
 const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, onEdit, onSelect, onDelete, toast, validateAllQuestions }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -266,7 +266,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
         </div>
       )}
 
-      {/* Drag Handle - Outside card for better UX */}
+      {/* Drag Handle - Outside card */}
       <div className="hidden lg:block absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
         <GripVertical className={`w-5 h-5 ${isBeingDragged ? 'text-blue-500' : 'text-gray-400'}`} />
       </div>
@@ -295,7 +295,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
         {/* Accent Stripe */}
         <div className={`h-full w-1 absolute left-0 top-0 bottom-0 ${accentColor}`}></div>
 
-        {/* 🚨 ERROR BADGE - Shows if quiz has validation errors */}
+        {/* ERROR BADGE - Shows if quiz has validation errors */}
         {hasErrors && !isEmpty && (
           <div className="absolute top-3 right-3 z-10">
             <div className="bg-red-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg animate-pulse">
@@ -551,7 +551,7 @@ export const QuizList = ({
         /* EMPTY STATE - No Header, Import at Top */
         /* ============================================ */
         <>
-          {/* Import Quiz Section - Replaces Header - Responsive */}
+          {/* Import Quiz Section - Replaces Header */}
           <div className="flex-shrink-0 p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-100">
             <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg sm:rounded-xl border-2 border-dashed border-yellow-300 p-3 sm:p-5 hover:border-yellow-400 transition-all">
               <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
@@ -592,11 +592,11 @@ export const QuizList = ({
             </div>
           </div>
 
-          {/* Empty State Content - Ultra Minified */}
+          {/* Empty State Content */}
           <div className="flex-1 overflow-y-auto px-6 py-2">
             <div className="flex items-center justify-center min-h-full">
               <div className="w-full max-w-2xl">
-                {/* Header & Subtext - Compact */}
+                {/* Header & Subtext*/}
                 <div className="text-center mb-3">
                   <h2 className="text-lg font-bold text-gray-900 mb-1">
                     Master Any Subject with Smart Quizzes
@@ -606,7 +606,7 @@ export const QuizList = ({
                   </p>
                 </div>
 
-                {/* Feature Cards - 2x2 Grid - Ultra Compact */}
+                {/* Feature Cards - 2x2 Grid */}
                 <div className="grid grid-cols-2 gap-2">
                   {/* Card 1 - 4 Question Types (Yellow) */}
                   <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-2.5 border border-yellow-200 hover:shadow-md transition-all">

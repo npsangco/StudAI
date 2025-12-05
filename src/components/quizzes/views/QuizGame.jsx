@@ -154,6 +154,10 @@ const QuizGame = ({
   // GET REAL PLAYERS from props
   const [realPlayers, setRealPlayers] = useState([]);
 
+  // Track actual battle question count from Firebase
+  // After reconnection, quiz.questions might have ALL questions (15), not battle questions (10)
+  const [battleTotalQuestions, setBattleTotalQuestions] = useState(null);
+
   // 🎭 EMOJI REACTIONS: Track recent answers for pulse effect
   const [recentAnsweredUsers, setRecentAnsweredUsers] = useState([]);
   const recentAnswersTimeoutRef = useRef(null);
@@ -169,6 +173,7 @@ const QuizGame = ({
   const [waitingTimeRemaining, setWaitingTimeRemaining] = useState(60); // 1 minute countdown
   const encouragementTimerRef = useRef(null);
   const waitingTimeoutRef = useRef(null);
+  const waitingCountdownRef = useRef(null);
 
   // 🔒 SUBMISSION MUTEX: Prevent race condition between timer and manual submission
   const submissionLockRef = useRef({ locked: false, timestamp: 0 });
@@ -243,10 +248,10 @@ const QuizGame = ({
       clearTimeout(encouragementTimerRef.current);
       encouragementTimerRef.current = null;
     }
-    
+
     // Reset encouragement state
     setShowEncouragement(false);
-    
+
     // Start new 5-second timer for encouragement
     encouragementTimerRef.current = setTimeout(() => {
       // Only show if user hasn't answered yet (no pet message showing)
@@ -254,7 +259,7 @@ const QuizGame = ({
         setShowEncouragement(true);
       }
     }, 5000);
-    
+
     // Cleanup on unmount or question change
     return () => {
       if (encouragementTimerRef.current) {
@@ -263,6 +268,92 @@ const QuizGame = ({
       }
     };
   }, [game.currentQuestionIndex, showPetMessage]);
+
+  // ⏳ Waiting state countdown and auto-proceed
+  useEffect(() => {
+    if (!waitingForPlayers) {
+      // Clear countdown when not waiting
+      if (waitingCountdownRef.current) {
+        clearInterval(waitingCountdownRef.current);
+        waitingCountdownRef.current = null;
+      }
+      return;
+    }
+
+    // Reset timer to 60 seconds when entering waiting state
+    setWaitingTimeRemaining(60);
+
+    // Start countdown
+    waitingCountdownRef.current = setInterval(() => {
+      setWaitingTimeRemaining(prev => {
+        if (prev <= 1) {
+          // Time's up! Auto-proceed to results
+          clearInterval(waitingCountdownRef.current);
+          waitingCountdownRef.current = null;
+
+          // Mark disconnected players as forfeited and finished
+          if (quiz?.gamePin) {
+            const markDisconnectedAsFinished = async () => {
+              try {
+                const battleRef = ref(realtimeDb, `battles/${quiz.gamePin}/players`);
+                const snapshot = await get(battleRef);
+                if (snapshot.exists()) {
+                  const playersData = snapshot.val();
+                  const updates = {};
+
+                  Object.entries(playersData).forEach(([key, player]) => {
+                    // Mark offline/disconnected players as finished
+                    if (player.isOnline === false && player.finished !== true) {
+                      updates[`${key}/finished`] = true;
+                      updates[`${key}/hasForfeited`] = true;
+                    }
+                  });
+
+                  if (Object.keys(updates).length > 0) {
+                    await update(battleRef, updates);
+                  }
+                }
+              } catch (error) {
+                console.error('❌ Error marking disconnected players:', error);
+              }
+            };
+            markDisconnectedAsFinished();
+          }
+
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (waitingCountdownRef.current) {
+        clearInterval(waitingCountdownRef.current);
+        waitingCountdownRef.current = null;
+      }
+    };
+  }, [waitingForPlayers, quiz?.gamePin]);
+
+  // FETCH BATTLE TOTAL QUESTIONS from Firebase metadata
+  useEffect(() => {
+    if (mode === 'battle' && quiz?.gamePin) {
+      const fetchBattleMetadata = async () => {
+        try {
+          const metadataRef = ref(realtimeDb, `battles/${quiz.gamePin}/metadata`);
+          const snapshot = await get(metadataRef);
+          if (snapshot.exists()) {
+            const metadata = snapshot.val();
+            setBattleTotalQuestions(metadata.totalQuestions || questions.length);
+          }
+        } catch (error) {
+          console.error('❌ Error fetching battle metadata:', error);
+          // Fallback to questions.length
+          setBattleTotalQuestions(questions.length);
+        }
+      };
+      fetchBattleMetadata();
+    }
+  }, [mode, quiz?.gamePin]);
 
   // Listen to real players in battle mode
   useEffect(() => {
@@ -303,6 +394,15 @@ const QuizGame = ({
   }, [mode, quiz?.gamePin]);
 
   const allPlayers = mode === 'battle' ? realPlayers : [];
+
+  // HELPER: Get correct total questions count
+  // In battle mode after reconnection, use Firebase metadata instead of questions.length
+  const getTotalQuestions = () => {
+    if (mode === 'battle' && battleTotalQuestions !== null) {
+      return battleTotalQuestions;
+    }
+    return questions.length;
+  };
 
   const currentQ = game.currentQuestion;
 
@@ -375,6 +475,17 @@ const QuizGame = ({
   // ============================================
   
   const handleReconnection = async () => {
+    // 🔥 NEW: Set isReconnecting flag in Firebase so leaderboard shows "Reconnecting"
+    if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
+      try {
+        const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
+        await update(playerRef, {
+          isReconnecting: true
+        });
+      } catch (error) {
+        console.error('❌ Failed to set isReconnecting flag:', error);
+      }
+    }
 
     const result = await reconnection.attemptReconnection();
 
@@ -425,8 +536,10 @@ const QuizGame = ({
               const minCurrentQuestion = Math.min(...activePlayersQuestions);
               const maxCurrentQuestion = Math.max(...activePlayersQuestions);
 
-              // Determine target question based on my progress vs group
-              const myProgress = result.playerData.currentQuestion || 0;
+              // Use savedState FIRST, fallback to playerData
+              // savedState.currentQuestionIndex is the ACTUAL question they were on
+              // playerData.currentQuestion might be undefined if they never answered
+              const myProgress = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
 
               let targetQuestion;
               let shouldWait = false;
@@ -457,13 +570,15 @@ const QuizGame = ({
                 // ✅ USE SETTER to trigger re-render!
                 game.setCurrentQuestionIndex(validTargetQuestion);
 
-                // 🔥 FIX: Update progress AND check if we should be waiting (use validated question)
-                await updatePlayerProgress(quiz.gamePin, quiz.currentUserId, validTargetQuestion);
+                // Don't update progress here - it's already correct in Firebase!
+                // The player's currentQuestion in Firebase is their saved progress (where they were)
+                // Only update if we're syncing them forward/backward to match the group
+                // We'll let the natural game flow update progress when they answer
 
                 // Reset timer for this question
                 resetTimer(quizTimer);
 
-                // 🔥 FIX: Check if we should enter waiting state immediately after reconnection
+                // Check if we should enter waiting state immediately after reconnection
                 // If I was ahead (shouldWait = true), enter waiting immediately
                 if (shouldWait) {
 
@@ -522,11 +637,34 @@ const QuizGame = ({
         }
       }
 
-      // 3. Resume game
+      // 3. Clear isReconnecting flag
+      if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
+        try {
+          const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
+          await update(playerRef, {
+            isReconnecting: false
+          });
+        } catch (error) {
+          console.error('❌ Failed to clear isReconnecting flag:', error);
+        }
+      }
+
+      // 4. Resume game
       game.setIsPaused(false);
 
       return result;
     } else {
+      // Clear isReconnecting flag on failure too
+      if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
+        try {
+          const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
+          await update(playerRef, {
+            isReconnecting: false
+          });
+        } catch (error) {
+          console.error('❌ Failed to clear isReconnecting flag:', error);
+        }
+      }
 
       return result;
     }
@@ -1420,7 +1558,7 @@ const QuizGame = ({
       <QuizGameHeader
         quiz={quiz}
         currentQuestion={game.currentQuestionIndex}
-        totalQuestions={questions.length}
+        totalQuestions={getTotalQuestions()}
         timeLeft={timeLeft}
         timeLimit={quizTimer}
         displayScore={game.displayScore}
@@ -1515,7 +1653,7 @@ const QuizGame = ({
                     currentPlayerName="You"
                     currentUserId={quiz?.currentUserId}
                     mode="desktop"
-                    totalQuestions={questions.length}
+                    totalQuestions={getTotalQuestions()}
                     recentAnswers={recentAnsweredUsers}
                   />
                 </div>
@@ -1548,7 +1686,7 @@ const QuizGame = ({
                   currentPlayerName="You"
                   currentUserId={quiz?.currentUserId}
                   mode="tablet"
-                  totalQuestions={questions.length}
+                  totalQuestions={getTotalQuestions()}
                   recentAnswers={recentAnsweredUsers}
                 />
               </div>
@@ -1579,7 +1717,7 @@ const QuizGame = ({
                 currentPlayerName="You"
                 currentUserId={quiz?.currentUserId}
                 mode="mobile"
-                totalQuestions={questions.length}
+                totalQuestions={getTotalQuestions()}
                 recentAnswers={recentAnsweredUsers}
               />
             </div>

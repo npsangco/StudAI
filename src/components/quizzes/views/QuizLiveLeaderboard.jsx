@@ -23,23 +23,14 @@ export const LiveLeaderboard = ({
   const getStreakIcon = (player) => {
     // If player has score of 3+, show fire icon
     if (player.score >= 3 && !player.forfeited) {
-      return <Flame className="w-4 h-4 text-orange-500" title="On fire!" />;
+      return <Flame className="w-3 h-3 text-orange-500" title="On fire!" />;
     }
     return null;
   };
   
   // Get connection status badge
   const getConnectionStatus = (player) => {
-    // 1. Reconnecting (in grace period, can still come back)
-    if (player.inGracePeriod && player.isOnline === false) {
-      return (
-        <span className="px-1.5 py-0.5 bg-yellow-500/80 text-white text-[10px] font-bold rounded uppercase animate-pulse">
-          Reconnecting
-        </span>
-      );
-    }
-
-    // 2. QUIT (explicitly forfeited - score reset to 0)
+    // 1. QUIT (explicitly forfeited - score reset to 0) - HIGHEST PRIORITY
     if (player.forfeited === true || player.hasForfeited === true) {
       return (
         <span className="px-1.5 py-0.5 bg-red-500/80 text-white text-[10px] font-bold rounded uppercase">
@@ -48,7 +39,27 @@ export const LiveLeaderboard = ({
       );
     }
 
-    // 3. OFFLINE (disconnected, grace period expired, can't reconnect)
+    // 2. Reconnecting (actively attempting reconnection)
+    // Only show "Reconnecting" if isReconnecting flag is explicitly set
+    if (player.isReconnecting === true) {
+      return (
+        <span className="px-1.5 py-0.5 bg-blue-500/80 text-white text-[10px] font-bold rounded uppercase animate-pulse">
+          Reconnecting
+        </span>
+      );
+    }
+
+    // 3. OFFLINE (disconnected, in grace period - can still come back)
+    // Show "Offline" when disconnected but still have time to reconnect
+    if (player.inGracePeriod && player.isOnline === false) {
+      return (
+        <span className="px-1.5 py-0.5 bg-yellow-500/80 text-white text-[10px] font-bold rounded uppercase">
+          Offline
+        </span>
+      );
+    }
+
+    // 4. OFFLINE (disconnected, grace period expired, can't reconnect)
     if (player.isOnline === false && !player.inGracePeriod) {
       return (
         <span className="px-1.5 py-0.5 bg-gray-500/80 text-white text-[10px] font-bold rounded uppercase">
@@ -67,9 +78,9 @@ export const LiveLeaderboard = ({
   
   // Get rank icon
   const getRankIcon = (rank) => {
-    if (rank === 1) return <Award className="w-4 h-4 text-yellow-500" />;
-    if (rank === 2) return <Medal className="w-4 h-4 text-gray-400" />;
-    if (rank === 3) return <Medal className="w-4 h-4 text-amber-600" />;
+    if (rank === 1) return <Award className="w-3.5 h-3.5 text-yellow-500" />;
+    if (rank === 2) return <Medal className="w-3.5 h-3.5 text-gray-400" />;
+    if (rank === 3) return <Medal className="w-3.5 h-3.5 text-amber-600" />;
     return rank;
   };
 
@@ -141,17 +152,17 @@ export const LiveLeaderboard = ({
   // Desktop - Yellow Glass Theme
   if (mode === 'desktop') {
     return (
-      <div className="w-full bg-white/20 backdrop-blur-xl rounded-2xl border-2 border-white/40 shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="bg-amber-500 px-4 py-3 border-b-2 border-amber-600">
+      <div className="w-full bg-white/20 backdrop-blur-xl rounded-xl border-2 border-white/40 shadow-2xl overflow-hidden">
+        {/* Header - Compact */}
+        <div className="bg-amber-500 px-3 py-2 border-b-2 border-amber-600">
           <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-white drop-shadow-sm" />
-            <h3 className="text-lg font-bold text-white drop-shadow-sm">Leaderboard</h3>
+            <Trophy className="w-4 h-4 text-white drop-shadow-sm" />
+            <h3 className="text-base font-bold text-white drop-shadow-sm">Leaderboard</h3>
           </div>
         </div>
 
-        {/* Player List - Auto height, scrollable if too many players */}
-        <div className="p-3 space-y-2 max-h-[calc(100vh-12rem)] overflow-y-auto">
+        {/* Player List - Compact with more space for pet */}
+        <div className="p-2 space-y-1.5 max-h-[calc(100vh-14rem)] overflow-y-auto">
           {sortedPlayers.map((player, index) => {
             const rank = index + 1;
             // Identify current user by userId
@@ -161,62 +172,36 @@ export const LiveLeaderboard = ({
               <div
                 key={player.id}
                 className={`
-                  flex flex-col px-3 py-2.5 rounded-lg transition-all duration-200
+                  flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-all duration-200
                   ${isCurrentUser
                     ? 'bg-yellow-400/80 backdrop-blur-md text-amber-900 border-2 border-yellow-500'
                     : 'bg-white/20 backdrop-blur-sm text-amber-900 border border-white/30 hover:border-yellow-400 hover:bg-white/30'
                   }
                   ${justAnswered(player.id) ? 'animate-pulse ring-2 ring-yellow-500' : ''}
                 `}
-              ><div className="flex items-center justify-between mb-1">
+              >
                 {/* Rank & Name */}
-                <div className="flex items-center gap-3 flex-1">
+                <div className="flex items-center gap-1.5 flex-1">
                   <span className={`
-                    text-xl font-bold min-w-[32px] text-center
+                    text-base font-bold min-w-[24px] text-center
                     ${isCurrentUser ? 'text-amber-900' : 'text-amber-800'}
                   `}>
                     {getRankIcon(rank)}
                   </span>
 
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <p className={`font-bold text-sm drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
-                        {isCurrentUser ? 'You' : player.name}
-                      </p>
-                      {getStreakIcon(player)}
-                      {getConnectionStatus(player)}
-                    </div>
-                    <p className={`text-xs ${isCurrentUser ? 'text-amber-800' : 'text-amber-700'}`}>
-                      {rank}{getRankSuffix(rank)} place
+                  <div className="flex items-center gap-1">
+                    <p className={`font-bold text-xs drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
+                      {isCurrentUser ? 'You' : player.name}
                     </p>
+                    {getStreakIcon(player)}
+                    {getConnectionStatus(player)}
                   </div>
                 </div>
 
                 {/* Score */}
-                <span className={`text-lg font-bold drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
+                <span className={`text-base font-bold drop-shadow-sm ${isCurrentUser ? 'text-amber-900' : 'text-amber-900'}`}>
                   {player.score}pts
                 </span>
-                </div>
-
-                {/* Progress Bar */}
-                {totalQuestions > 0 && player.currentQuestion !== undefined && (
-                  <div className="mt-2">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className={isCurrentUser ? 'text-amber-800' : 'text-amber-700'}>
-                        Progress: {player.currentQuestion}/{totalQuestions}
-                      </span>
-                      <span className={isCurrentUser ? 'text-amber-800' : 'text-amber-700'}>
-                        {Math.round((player.currentQuestion / totalQuestions) * 100)}%
-                      </span>
-                    </div>
-                    <div className={`h-1.5 rounded-full ${isCurrentUser ? 'bg-amber-900/20' : 'bg-white/20'} overflow-hidden`}>
-                      <div
-                        className="h-full bg-amber-500 transition-all duration-500 ease-out shadow-lg"
-                        style={{ width: `${(player.currentQuestion / totalQuestions) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}

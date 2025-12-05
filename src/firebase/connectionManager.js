@@ -17,7 +17,7 @@ export const initializeConnectionTracking = async (gamePin, userId) => {
   try {
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
     const connectionRef = ref(realtimeDb, `battles/${gamePin}/connections/user_${userId}`);
-    
+
     // Set initial connection state
     await set(connectionRef, {
       userId,
@@ -27,33 +27,40 @@ export const initializeConnectionTracking = async (gamePin, userId) => {
       disconnectedAt: null,
       gracePeriodActive: false
     });
-    
+
     // IMPORTANT: Also update player's isOnline status so leaderboard shows correctly
     await update(playerRef, {
       isOnline: true,
-      inGracePeriod: false
+      inGracePeriod: false,
+      disconnectedAt: null // Clear any previous disconnect
     });
-    
+
     // Setup disconnect handler - auto-mark as offline with grace period
     const disconnectRef = onDisconnect(connectionRef);
+
+    // Calculate timestamp at DISCONNECT time, not initialization time
+    // We use a Firebase transaction to get server timestamp when disconnect actually happens
     await disconnectRef.update({
       isOnline: false,
-      disconnectedAt: Date.now(),
-      gracePeriodActive: true // Start grace period
+      disconnectedAt: serverTimestamp(), // Server timestamp at disconnect
+      gracePeriodActive: true,
+      gracePeriodExpiresAt: null // Will be calculated by checkGracePeriod using disconnectedAt
     });
-    
+
     // Also update player's isOnline status (but keep in grace period)
     const playerDisconnectRef = onDisconnect(playerRef);
     await playerDisconnectRef.update({
       isOnline: false,
-      inGracePeriod: true
+      inGracePeriod: true,
+      disconnectedAt: serverTimestamp(), // Server timestamp at disconnect
+      gracePeriodExpiresAt: null // Will be calculated by checkGracePeriod using disconnectedAt
     });
 
     return {
       connectionRef,
       playerRef
     };
-    
+
   } catch (error) {
     console.error('❌ Error initializing connection tracking:', error);
     throw error;
@@ -68,7 +75,7 @@ export const initializeConnectionTracking = async (gamePin, userId) => {
 export const sendHeartbeat = async (gamePin, userId) => {
   try {
     const connectionRef = ref(realtimeDb, `battles/${gamePin}/connections/user_${userId}`);
-    
+
     await set(connectionRef, {
       userId,
       isOnline: true,
@@ -76,14 +83,15 @@ export const sendHeartbeat = async (gamePin, userId) => {
       disconnectedAt: null,
       gracePeriodActive: false
     });
-    
+
     // Also update player status (clear grace period)
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
     await update(playerRef, {
       isOnline: true,
-      inGracePeriod: false
+      inGracePeriod: false,
+      disconnectedAt: null
     });
-    
+
   } catch (error) {
     console.error('❌ Heartbeat failed:', error);
     // Don't throw - heartbeat failures shouldn't crash the app
@@ -187,28 +195,34 @@ export const getOnlinePlayers = async (gamePin) => {
  */
 export const checkGracePeriod = async (gamePin, userId) => {
   try {
-    const connectionRef = ref(realtimeDb, `battles/${gamePin}/connections/user_${userId}`);
-    const snapshot = await get(connectionRef);
-    
+    const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
+    const snapshot = await get(playerRef);
+
     if (!snapshot.exists()) {
       return { inGracePeriod: false, timeRemaining: 0, isForfeited: true };
     }
-    
+
     const data = snapshot.val();
     const now = Date.now();
-    const GRACE_PERIOD = 90000; // 90 seconds
-    
+
+    // Check if already forfeited
+    if (data.hasForfeited === true) {
+      return { inGracePeriod: false, timeRemaining: 0, isForfeited: true };
+    }
+
     // Check if currently online
-    const heartbeatAge = now - (data.lastHeartbeat || 0);
-    if (data.isOnline && heartbeatAge < 10000) {
+    if (data.isOnline === true) {
       return { inGracePeriod: false, timeRemaining: 0, isForfeited: false };
     }
-    
-    // Check grace period
+
+    // Calculate grace period from disconnectedAt timestamp
+    // Grace period = 90 seconds from when they disconnected
     if (data.disconnectedAt) {
-      const disconnectAge = now - data.disconnectedAt;
-      const timeRemaining = Math.max(0, GRACE_PERIOD - disconnectAge);
-      
+      const GRACE_PERIOD_MS = 90000; // 90 seconds
+      const disconnectTime = data.disconnectedAt;
+      const gracePeriodEndsAt = disconnectTime + GRACE_PERIOD_MS;
+      const timeRemaining = Math.max(0, gracePeriodEndsAt - now);
+
       if (timeRemaining > 0) {
         return {
           inGracePeriod: true,
@@ -216,13 +230,15 @@ export const checkGracePeriod = async (gamePin, userId) => {
           isForfeited: false
         };
       }
-      
-      // Grace period expired
+
+      // Grace period expired - mark as forfeited in Firebase
+      await markAsForfeited(gamePin, userId);
       return { inGracePeriod: false, timeRemaining: 0, isForfeited: true };
     }
-    
-    return { inGracePeriod: false, timeRemaining: 0, isForfeited: true };
-    
+
+    // No disconnectedAt timestamp (player never disconnected or just connected)
+    return { inGracePeriod: false, timeRemaining: 0, isForfeited: false };
+
   } catch (error) {
     console.error('❌ Error checking grace period:', error);
     return { inGracePeriod: false, timeRemaining: 0, isForfeited: false };
@@ -390,7 +406,8 @@ export const rejoinBattle = async (gamePin, userId) => {
     
     await update(ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`), {
       isOnline: true,
-      inGracePeriod: false
+      inGracePeriod: false,
+      isReconnecting: false // Clear reconnecting flag
     });
 
     return {
