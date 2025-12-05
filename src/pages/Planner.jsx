@@ -339,13 +339,13 @@ export default function Planner() {
 
   const renderYearSelection = () => (
     <div className="min-h-screen p-4 sm:p-6 md:p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8 sm:mb-12" data-tutorial="calendar-view">
           <Calendar className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-indigo-600" />
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-2">Select Year</h1>
           <p className="text-base sm:text-lg text-gray-600">Choose a year to start planning</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           {getYearRange().map(year => {
             const isCurrent = year === currentYear;
             return (
@@ -354,8 +354,8 @@ export default function Planner() {
                 onClick={() => handleYearSelect(year)}
                 className={`group relative p-8 sm:p-10 md:p-12 lg:p-14 rounded-3xl border-2 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl cursor-pointer ${
                   isCurrent
-                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-blue-600 shadow-xl'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300 shadow-lg'
+                    ? 'bg-black text-white border-black shadow-xl'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400 shadow-lg'
                 }`}
               >
                 {year}
@@ -402,8 +402,8 @@ export default function Planner() {
                 onClick={() => setSelectedMonth(idx)}
                 className={`group relative p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl cursor-pointer ${
                   isCurrentMonth
-                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-blue-600 shadow-xl'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-300 shadow-lg'
+                    ? 'bg-black text-white border-black shadow-xl'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400 shadow-lg'
                 }`}
               >
                 <div className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">{month}</div>
@@ -463,9 +463,9 @@ export default function Planner() {
           onClick={() => setSelectedDate(day)}
           className={`group relative p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl min-h-[80px] sm:min-h-[100px] md:min-h-[120px] flex flex-col items-center justify-center cursor-pointer ${
             isToday 
-              ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-blue-600 shadow-xl' 
+              ? 'bg-black text-white border-black shadow-xl' 
               : hasPlan
-              ? 'bg-white border-indigo-200 hover:border-indigo-400 shadow-lg'
+              ? 'bg-white border-gray-200 hover:border-gray-400 shadow-lg'
               : 'bg-white border-gray-200 hover:border-gray-300 shadow-md'
           }`}
         >
