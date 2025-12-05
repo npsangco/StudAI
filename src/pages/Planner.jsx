@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, Plus, Info, X, Calendar, Check, Pencil } from "lucide-react";
 import { plannerService } from "../utils/syncService";
-import { userApi } from "../api/api";
+import { petApi } from "../api/api";
 import ToastContainer from "../components/ToastContainer";
 import AppLoader from "../components/AppLoader";
 import { useToast } from "../hooks/useToast";
@@ -49,7 +49,7 @@ export default function Planner() {
 
   const fetchUserCreationYear = async () => {
     try {
-      const response = await userApi.getUserProfile();
+      const response = await petApi.getUserProfile();
       if (response.data.createdAt) {
         const createdDate = new Date(response.data.createdAt);
         setAccountCreatedYear(createdDate.getFullYear());

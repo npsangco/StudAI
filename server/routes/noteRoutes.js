@@ -309,14 +309,14 @@ router.post('/create', requireAuth, async (req, res) => {
     const userId = req.session.userId;
     const { title, content, file_id, category_id } = req.body;
     
-    // Validate word count (500 words max for storage optimization)
+    // Validate character count (5000 characters max for storage optimization)
     if (content) {
-      const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
-      if (wordCount > 500) {
+      const charCount = content.length;
+      if (charCount > 5000) {
         return res.status(400).json({ 
-          error: 'Note content exceeds 500 word limit',
-          wordCount: wordCount,
-          maxWords: 500
+          error: 'Note content exceeds 5000 character limit',
+          charCount: charCount,
+          maxChars: 5000
         });
       }
     }
@@ -521,14 +521,14 @@ router.put('/:id', requireAuth, async (req, res) => {
     const { title, content, category_id } = req.body;
     const noteId = req.params.id;
 
-    // Validate word count (500 words max for storage optimization)
+    // Validate character count (5000 characters max for storage optimization)
     if (content) {
-      const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
-      if (wordCount > 500) {
+      const charCount = content.length;
+      if (charCount > 5000) {
         return res.status(400).json({ 
-          error: 'Note content exceeds 500 word limit',
-          wordCount: wordCount,
-          maxWords: 500
+          error: 'Note content exceeds 5000 character limit',
+          charCount: charCount,
+          maxChars: 5000
         });
       }
     }

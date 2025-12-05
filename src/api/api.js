@@ -49,12 +49,18 @@ api.interceptors.response.use(
   }
 );
 
+// User API
+export const userApi = {
+  // Get user profile
+  getUserProfile: () => api.get(`/user/profile`),
+};
+
 // Pet API
 export const petApi = {
   // Get a user's pet
   getPet: () => api.get(`/pet`),
 
-  // Get user profile
+  // Get user profile (kept for backward compatibility with PetShop component)
   getUserProfile: () => api.get(`/user/profile`),
 
   // Adopt new pet

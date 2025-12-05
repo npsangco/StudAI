@@ -425,10 +425,10 @@ const NoteEditor = ({
           {/* Status Bar */}
           <div className="px-4 sm:px-6 py-2 sm:py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 text-xs sm:text-sm text-slate-500">
             <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm">
-              <span>Chars: {editContent.length}</span>
-              <span className={currentWordCount > 500 ? 'text-red-600 font-bold' : currentWordCount > 450 ? 'text-orange-600 font-semibold' : ''}>
-                Words: {currentWordCount}{currentWordCount > 500 ? ' / 500 (Over Limit!)' : currentWordCount > 450 ? ' / 500' : ''}
+              <span className={editContent.length > 5000 ? 'text-red-600 font-bold' : editContent.length > 4500 ? 'text-orange-600 font-semibold' : ''}>
+                Chars: {editContent.length}{editContent.length > 5000 ? ' / 5000 (Over Limit!)' : editContent.length > 4500 ? ' / 5000' : ''}
               </span>
+              <span className="hidden sm:inline">Characters: {currentWordCount}</span>
               <span className="hidden sm:inline">Lines: {editContent.split('\n').length}</span>
             </div>
             <div className="flex items-center gap-2">
