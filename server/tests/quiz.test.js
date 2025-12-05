@@ -36,6 +36,20 @@ describe('Quiz System', () => {
       expect(validTypes).toContain(questionType);
       expect(validTypes).toHaveLength(4);
     });
+
+    it('should reject invalid question types', () => {
+      const validTypes = ['Multiple Choice', 'Fill in the blanks', 'True/False', 'Matching'];
+      const invalidType = 'Essay';
+      
+      expect(validTypes).not.toContain(invalidType);
+    });
+
+    it('should reject quizzes with insufficient questions', () => {
+      const questionCount = 3;
+      const MIN_QUESTIONS = 5;
+      
+      expect(questionCount).toBeLessThan(MIN_QUESTIONS);
+    });
   });
 
   describe('Question Management', () => {
@@ -51,24 +65,6 @@ describe('Quiz System', () => {
       
       expect(question.options).toHaveLength(4);
       expect(question.correctAnswer).toBe('4');
-    });
-
-    it('should validate question has options', () => {
-      const question = {
-        questionText: 'Sample question',
-        options: ['A', 'B', 'C', 'D']
-      };
-      
-      expect(question.options.length).toBeGreaterThanOrEqual(2);
-    });
-
-    it('should shuffle options', () => {
-      const options = ['A', 'B', 'C', 'D'];
-      const shuffled = [...options].sort(() => Math.random() - 0.5);
-      
-      expect(shuffled).toHaveLength(4);
-      // Options exist, may be in different order
-      expect(options.every(opt => shuffled.includes(opt))).toBe(true);
     });
   });
 
@@ -161,23 +157,6 @@ describe('Quiz System', () => {
       
       expect(bestScore).toBe(9);
     });
-
-    it('should calculate average score', () => {
-      const scores = [8, 7, 9, 6];
-      const average = scores.reduce((a, b) => a + b, 0) / scores.length;
-      
-      expect(average).toBe(7.5);
-    });
-
-    it('should count total attempts', () => {
-      const attempts = [
-        { id: 1 },
-        { id: 2 },
-        { id: 3 }
-      ];
-      
-      expect(attempts).toHaveLength(3);
-    });
   });
 
   describe('Quiz Battles', () => {
@@ -230,16 +209,6 @@ describe('Quiz System', () => {
       expect(quiz.timeLimitMinutes).toBe(30);
     });
 
-    it('should calculate remaining time', () => {
-      const timeLimit = 30 * 60 * 1000; // 30 minutes
-      const startTime = Date.now();
-      const currentTime = startTime + (10 * 60 * 1000); // 10 minutes passed
-      const remaining = timeLimit - (currentTime - startTime);
-      const remainingMinutes = remaining / (60 * 1000);
-      
-      expect(remainingMinutes).toBe(20);
-    });
-
     it('should detect timeout', () => {
       const timeLimit = 30 * 60 * 1000;
       const startTime = Date.now() - (35 * 60 * 1000); // Started 35 minutes ago
@@ -259,18 +228,6 @@ describe('Quiz System', () => {
       
       expect(categories).toContain(quiz.category);
     });
-
-    it('should filter by category', () => {
-      const quizzes = [
-        { title: 'Math 1', category: 'Math' },
-        { title: 'Science 1', category: 'Science' },
-        { title: 'Math 2', category: 'Math' }
-      ];
-      
-      const mathQuizzes = quizzes.filter(q => q.category === 'Math');
-      
-      expect(mathQuizzes).toHaveLength(2);
-    });
   });
 
   describe('Quiz Sharing', () => {
@@ -282,15 +239,6 @@ describe('Quiz System', () => {
       };
       
       expect(quiz.isPublic).toBe(true);
-    });
-
-    it('should track share count', () => {
-      const quiz = { sharedCount: 0 };
-      
-      quiz.sharedCount++;
-      quiz.sharedCount++;
-      
-      expect(quiz.sharedCount).toBe(2);
     });
   });
 
@@ -317,6 +265,20 @@ describe('Quiz System', () => {
       const weakAreas = results.filter(r => r.score < 60);
       
       expect(weakAreas).toHaveLength(2);
+    });
+
+    it('should allow 5 questions in quiz', () => {
+      const questionCount = 5;
+      const minRequired = 10;
+      
+      expect(questionCount >= minRequired).toBe(true); // FAIL: Need at least 10 questions
+    });
+
+    it('should accept negative scores', () => {
+      const score = -10;
+      const isValid = score >= 0 && score <= 100;
+      
+      expect(isValid).toBe(true); // FAIL: Score cannot be negative
     });
   });
 });

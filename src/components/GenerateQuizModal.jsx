@@ -142,8 +142,14 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
 
   if (success) {
     return (
-      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl p-6 max-w-md w-full text-center">
+      <div 
+        className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+        onClick={onClose}
+      >
+        <div 
+          className="bg-white rounded-xl p-6 max-w-md w-full text-center"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="mb-4 flex justify-center">
             <CheckCircle className="w-16 h-16 text-green-500 animate-bounce" />
           </div>
@@ -164,8 +170,14 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/70 bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">

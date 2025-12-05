@@ -44,6 +44,24 @@ describe('Notes System', () => {
       expect(isValidContent(validContent)).toBe(true);
       expect(isValidContent(tooLong)).toBe(false);
     });
+
+    it('should validate note content max 500 words for storage optimization', () => {
+      const validContent = 'This is a short note with less than 500 words';
+      const wordCount = validContent.trim().split(/\s+/).filter(word => word.length > 0).length;
+      
+      expect(wordCount).toBeLessThanOrEqual(500);
+    });
+
+    it('should reject notes exceeding 500 word limit', () => {
+      const longContent = Array(501).fill('word').join(' ');
+      const wordCount = longContent.trim().split(/\s+/).filter(word => word.length > 0).length;
+      const maxWords = 500;
+      
+      const isValid = wordCount <= maxWords;
+      
+      expect(isValid).toBe(false);
+      expect(wordCount).toBe(501);
+    });
   });
 
   describe('Note Categories', () => {
@@ -168,6 +186,20 @@ describe('Notes System', () => {
       const updatedAt = Date.now() + 1000;
       
       expect(updatedAt).toBeGreaterThanOrEqual(createdAt);
+    });
+
+    it('should accept 300 character title', () => {
+      const longTitle = 'A'.repeat(300);
+      const maxLength = 200;
+      
+      expect(longTitle.length <= maxLength).toBe(true); // FAIL: Title too long
+    });
+
+    it('should allow empty note content', () => {
+      const content = '';
+      const hasContent = content.trim().length > 0;
+      
+      expect(hasContent).toBe(true); // FAIL: Content is required
     });
   });
 });

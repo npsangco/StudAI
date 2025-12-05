@@ -6,10 +6,15 @@ import { useToast } from '../hooks/useToast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useConfirm } from '../hooks/useConfirm';
 import { API_URL } from '../config/api.config';
+import TutorialOverlay from '../components/TutorialOverlay';
+import TutorialButton from '../components/TutorialButton';
+import { useTutorial } from '../hooks/useTutorial';
+import { jitsiTutorialSteps } from '../config/tutorialSteps';
 
 const JitsiSessions = () => {
   const { toasts, toast, removeToast } = useToast();
   const { confirmState, confirm, closeConfirm } = useConfirm();
+  const { showTutorial, completeTutorial, skipTutorial, startTutorial } = useTutorial('jitsi');
   const [mySessions, setMySessions] = useState([]);
   const [publicSessions, setPublicSessions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -62,6 +67,11 @@ const JitsiSessions = () => {
       setShowConsentForm(false);
       setInitialLoading(true);
       loadInitialData();
+      
+      // Start tutorial after accepting terms
+      setTimeout(() => {
+        startTutorial();
+      }, 1500);
     } else {
       toast.error('Please read and accept the terms to continue');
     }
@@ -335,8 +345,14 @@ const JitsiSessions = () => {
   if (showConsentForm && !hasConsented) {
     return (
       <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg max-w-3xl w-full my-8">
+        <div 
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto"
+          onClick={handleDeclineConsent}
+        >
+          <div 
+            className="bg-white rounded-lg max-w-3xl w-full my-8"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="bg-blue-600 text-white p-6 rounded-t-lg">
               <div className="flex items-center gap-3">
@@ -537,9 +553,21 @@ const JitsiSessions = () => {
         />
       )}
 
+      {/* Tutorial Overlay */}
+      {showTutorial && (
+        <TutorialOverlay
+          steps={jitsiTutorialSteps}
+          onComplete={completeTutorial}
+          onSkip={skipTutorial}
+        />
+      )}
+
+      {/* Tutorial Button */}
+      <TutorialButton onClick={startTutorial} />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8" data-tutorial="jitsi-header">
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Study Sessions</h1>
@@ -555,6 +583,7 @@ const JitsiSessions = () => {
               }}
               className="text-sm text-gray-600 hover:text-gray-800 underline"
               title="Review Jitsi Terms & Privacy"
+              data-tutorial="jitsi-notice"
             >
               Review Terms
             </button>
@@ -562,7 +591,7 @@ const JitsiSessions = () => {
         </div>
 
         {/* Create Session Form */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8" data-tutorial="create-jitsi-session">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Create New Session</h2>
           <form onSubmit={createSession} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -634,7 +663,7 @@ const JitsiSessions = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" data-tutorial="session-privacy">
               <input
                 type="checkbox"
                 id="is_private"
@@ -669,7 +698,7 @@ const JitsiSessions = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-6 border-b">
+        <div className="flex gap-4 mb-6 border-b" data-tutorial="session-tabs">
           <button
             onClick={() => setActiveTab('my-sessions')}
             className={`pb-3 px-2 font-medium transition-colors ${
@@ -693,7 +722,7 @@ const JitsiSessions = () => {
         </div>
 
         {/* Sessions List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-tutorial="session-cards">
           {activeTab === 'my-sessions' && mySessions.length === 0 && (
             <div className="col-span-full text-center py-12 text-gray-500">
               No sessions yet. Create your first study session above!
@@ -726,8 +755,17 @@ const JitsiSessions = () => {
 
       {/* Password Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+        <div 
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setShowPasswordModal(false);
+            setPasswordInput('');
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Enter Session Password</h3>
             <input
               type="password"

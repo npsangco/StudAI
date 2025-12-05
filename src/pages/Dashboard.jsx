@@ -452,8 +452,14 @@ Please format the summary in a clear, organized manner with proper headings and 
   };
 
   const GenerateModal = () => (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-xl">
+    <div 
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+      onClick={() => setShowGenerateModal(false)}
+    >
+      <div 
+        className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Generate Summary</h2>
         <p className="text-gray-600 mb-6">Configure your summary preferences</p>
 

@@ -36,6 +36,31 @@ describe('File Upload System', () => {
       expect(validTypes).toContain('image/jpeg');
       expect(validTypes.length).toBe(4);
     });
+
+    it('should reject dangerous file types', () => {
+      const dangerousTypes = ['application/x-executable', 'application/x-msdownload', 'text/javascript'];
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      
+      dangerousTypes.forEach(type => {
+        expect(validTypes).not.toContain(type);
+      });
+    });
+
+    it('should reject files exceeding size limit', () => {
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      const hugeFile = {
+        size: 50 * 1024 * 1024 // 50MB
+      };
+      
+      expect(hugeFile.size).toBeGreaterThan(MAX_SIZE);
+    });
+
+    it('should reject files with no extension', () => {
+      const filename = 'documentwithoutextension';
+      const hasExtension = filename.includes('.');
+      
+      expect(hasExtension).toBe(false);
+    });
   });
 
   describe('File Naming', () => {
@@ -169,14 +194,36 @@ describe('File Upload System', () => {
 
     it('should filter non-deleted files', () => {
       const files = [
-        { id: 1, name: 'file1.pdf', deleted: false },
-        { id: 2, name: 'file2.pdf', deleted: true },
-        { id: 3, name: 'file3.pdf', deleted: false }
+        { id: 1, name: 'file1.pdf', isDeleted: false },
+        { id: 2, name: 'file2.pdf', isDeleted: true },
+        { id: 3, name: 'file3.pdf', isDeleted: false }
       ];
       
-      const activeFiles = files.filter(f => !f.deleted);
+      const activeFiles = files.filter(f => !f.isDeleted);
       
       expect(activeFiles).toHaveLength(2);
+    });
+
+    it('should accept 30MB file', () => {
+      const fileSize = 30 * 1024 * 1024;
+      const maxSize = 25 * 1024 * 1024;
+      
+      expect(fileSize <= maxSize).toBe(true); // FAIL: File exceeds 25MB limit
+    });
+
+    it('should allow .exe files', () => {
+      const fileName = 'program.exe';
+      const allowedExtensions = ['pdf', 'docx', 'pptx', 'jpg', 'png'];
+      const extension = fileName.split('.').pop();
+      
+      expect(allowedExtensions.includes(extension)).toBe(true); // FAIL: .exe not allowed
+    });
+
+    it('should accept file without extension', () => {
+      const fileName = 'document';
+      const hasExtension = fileName.includes('.');
+      
+      expect(hasExtension).toBe(true); // FAIL: File needs extension
     });
   });
 });

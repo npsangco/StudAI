@@ -95,8 +95,14 @@ export default function PetInventory({ onClose, onUseItem }) {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
+      <div 
+        className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+        onClick={onClose}
+      >
+        <div 
+          className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide"
+          onClick={(e) => e.stopPropagation()}
+        >
           <p className="text-center">Loading inventory...</p>
         </div>
         <style jsx>{`
@@ -114,8 +120,14 @@ export default function PetInventory({ onClose, onUseItem }) {
 
   if (error) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl p-6 w-full max-w-2xl text-center">
+      <div 
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        onClick={onClose}
+      >
+        <div 
+          className="bg-white rounded-2xl p-6 w-full max-w-2xl text-center"
+          onClick={(e) => e.stopPropagation()}
+        >
           <p className="text-red-600 font-semibold">{error}</p>
           <button
             onClick={loadInventory}
@@ -141,8 +153,14 @@ export default function PetInventory({ onClose, onUseItem }) {
     <>
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
+      <div 
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        onClick={onClose}
+      >
+        <div 
+          className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Compact Header */}
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg sm:text-xl font-bold text-gray-800">Inventory</h2>

@@ -254,8 +254,14 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl p-8 text-center shadow-2xl">
+      <div 
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        onClick={onClose}
+      >
+        <div 
+          className="bg-white rounded-2xl p-8 text-center shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
           <span className="text-gray-600 font-medium">Loading results...</span>
         </div>
@@ -289,8 +295,14 @@ const QuizLeaderboard = ({ isOpen, onClose, results }) => {
   // RENDER
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md mx-auto overflow-hidden">
+      <div 
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        onClick={onClose}
+      >
+        <div 
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md mx-auto overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
           
           {/* Content */}
           <div className="p-5 sm:p-6">

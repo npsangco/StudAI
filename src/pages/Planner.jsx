@@ -852,8 +852,14 @@ export default function Planner() {
 
         {/* Limit Modal */}
         {showLimitModal && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+          <div 
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowLimitModal(false)}
+          >
+            <div 
+              className="bg-white rounded-2xl p-6 max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="text-center">
                 <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Info className="w-8 h-8 text-yellow-600" />

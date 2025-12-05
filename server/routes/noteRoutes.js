@@ -309,6 +309,18 @@ router.post('/create', requireAuth, async (req, res) => {
     const userId = req.session.userId;
     const { title, content, file_id, category_id } = req.body;
     
+    // Validate word count (500 words max for storage optimization)
+    if (content) {
+      const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
+      if (wordCount > 500) {
+        return res.status(400).json({ 
+          error: 'Note content exceeds 500 word limit',
+          wordCount: wordCount,
+          maxWords: 500
+        });
+      }
+    }
+    
     // Get daily stats
     const dailyStats = await getDailyStats(userId);
     
@@ -508,6 +520,18 @@ router.put('/:id', requireAuth, async (req, res) => {
   try {
     const { title, content, category_id } = req.body;
     const noteId = req.params.id;
+
+    // Validate word count (500 words max for storage optimization)
+    if (content) {
+      const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
+      if (wordCount > 500) {
+        return res.status(400).json({ 
+          error: 'Note content exceeds 500 word limit',
+          wordCount: wordCount,
+          maxWords: 500
+        });
+      }
+    }
 
     const note = await Note.findOne({
       where: { 
