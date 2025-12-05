@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText,
          MessageCircle, Edit3, ExternalLink, Pin, PinOff, FolderPlus,
          Tag, Wifi, WifiOff, RefreshCw, FileDown, X, Check, Brain,
-         Archive, ArchiveRestore, Inbox } from 'lucide-react';
+         Archive, ArchiveRestore, Inbox, AlertCircle } from 'lucide-react';
 import { notesService } from '../utils/syncService';
 import { cacheSingleNote } from '../utils/indexedDB';
 import NoteEditor from '../components/NoteEditor';
