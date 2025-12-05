@@ -11,6 +11,7 @@ import { ref, update, get } from 'firebase/database';
 import { realtimeDb } from '../../../firebase/config';
 import { useReconnection } from '../hooks/useReconnection';
 import { ReconnectionModal } from './ReconnectionModal';
+import { savePlayerState } from '../../../firebase/connectionManager';
 import { QuizBackgroundPattern } from '../utils/QuizPatterns';
 import {
   sortQuestionsByDifficulty,
@@ -469,6 +470,41 @@ const QuizGame = ({
       }
     }
   }, [mode]); // Only depend on mode, not reconnection state (to avoid loops)
+
+  // ============================================
+  // AUTO-SAVE PROGRESS TO FIREBASE (Battle Mode Only)
+  // ============================================
+  
+  // Auto-save game state every 3 seconds for reliable reconnection
+  useEffect(() => {
+    if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) return;
+    
+    console.log('🔄 Starting auto-save for battle progress');
+    
+    const autoSaveInterval = setInterval(() => {
+      const currentGameState = {
+        score: game.score,
+        currentQuestionIndex: game.currentQuestionIndex,
+        userAnswers: game.userAnswers,
+        answeredQuestions: game.answeredQuestions
+      };
+      
+      // Save to Firebase savedStates node
+      savePlayerState(quiz.gamePin, quiz.currentUserId, currentGameState).catch(err => {
+        console.warn('⚠️ Auto-save failed:', err);
+      });
+      
+      console.log('💾 Auto-saved progress:', {
+        question: currentGameState.currentQuestionIndex,
+        score: currentGameState.score
+      });
+    }, 3000); // Every 3 seconds
+    
+    return () => {
+      console.log('🛑 Stopping auto-save');
+      clearInterval(autoSaveInterval);
+    };
+  }, [mode, quiz?.gamePin, quiz?.currentUserId, game.score, game.currentQuestionIndex, game.userAnswers, game.answeredQuestions]);
 
   // ============================================
   // RECONNECTION HANDLERS 

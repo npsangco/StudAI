@@ -396,6 +396,47 @@ export const rejoinBattle = async (gamePin, userId) => {
     
     const playerData = snapshot.val();
     
+    // 🔥 ENHANCED: Check multiple sources for most reliable progress
+    let currentQuestion = 0;
+    let resolvedScore = playerData.score || 0;
+    
+    // Priority 1: Check savedStates (most recent, auto-saved every 3s)
+    try {
+      const savedStateRef = ref(realtimeDb, `battles/${gamePin}/savedStates/user_${userId}`);
+      const savedStateSnapshot = await get(savedStateRef);
+      
+      if (savedStateSnapshot.exists()) {
+        const savedState = savedStateSnapshot.val();
+        const now = Date.now();
+        
+        // Use if not expired (5 minutes)
+        if (!savedState.expiresAt || now <= savedState.expiresAt) {
+          currentQuestion = savedState.currentQuestionIndex || 0;
+          resolvedScore = savedState.score || resolvedScore;
+          console.log('✅ Using savedState progress:', { currentQuestion, score: resolvedScore });
+        } else {
+          console.log('⚠️ savedState expired, using fallback');
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not fetch savedState:', err);
+    }
+    
+    // Priority 2: Fallback to player's currentQuestion if savedState not found/expired
+    if (currentQuestion === 0 && playerData.currentQuestion) {
+      currentQuestion = playerData.currentQuestion;
+      console.log('✅ Using player currentQuestion fallback:', currentQuestion);
+    }
+    
+    console.log('🔄 Reconnection resolved progress:', { 
+      currentQuestion, 
+      score: resolvedScore,
+      sources: {
+        savedState: 'checked',
+        playerData: playerData.currentQuestion || 0
+      }
+    });
+    
     // Mark player as back online
     await set(ref(realtimeDb, `battles/${gamePin}/connections/user_${userId}`), {
       userId,
@@ -407,7 +448,9 @@ export const rejoinBattle = async (gamePin, userId) => {
     await update(ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`), {
       isOnline: true,
       inGracePeriod: false,
-      isReconnecting: false // Clear reconnecting flag
+      isReconnecting: false, // Clear reconnecting flag
+      currentQuestion: currentQuestion, // Sync resolved progress back to player node
+      score: resolvedScore // Sync resolved score back
     });
 
     return {
@@ -415,8 +458,8 @@ export const rejoinBattle = async (gamePin, userId) => {
       playerData: {
         userId: playerData.userId,
         name: playerData.name,
-        score: playerData.score || 0,
-        currentQuestion: playerData.currentQuestion || 0,
+        score: resolvedScore,
+        currentQuestion: currentQuestion, // Use resolved progress
         isReady: playerData.isReady || false,
         // 🔥 ADD BATTLE METADATA
         quizId: metadata.quizId,
@@ -464,14 +507,19 @@ export const savePlayerState = async (gamePin, userId, state) => {
   try {
     const stateRef = ref(realtimeDb, `battles/${gamePin}/savedStates/user_${userId}`);
     
+    // Convert Set to Array for Firebase (Firebase doesn't support Set type)
+    const answeredQuestionsArray = state.answeredQuestions instanceof Set 
+      ? Array.from(state.answeredQuestions)
+      : (Array.isArray(state.answeredQuestions) ? state.answeredQuestions : []);
+    
     await set(stateRef, {
       userId,
       score: state.score || 0,
       currentQuestionIndex: state.currentQuestionIndex || 0,
       userAnswers: state.userAnswers || [],
-      answeredQuestions: state.answeredQuestions || new Set(),
+      answeredQuestions: answeredQuestionsArray,
       savedAt: Date.now(),
-      expiresAt: Date.now() + 90000 // Expires after 90 seconds
+      expiresAt: Date.now() + 300000 // Expires after 5 minutes (increased from 90 seconds)
     });
     
   } catch (error) {
