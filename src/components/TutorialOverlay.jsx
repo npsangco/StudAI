@@ -309,9 +309,6 @@ export default function TutorialOverlay({ steps, onComplete, onSkip }) {
           {step.tips && step.tips.length > 0 && (
             <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg md:rounded-xl p-2.5 sm:p-3 md:p-4 mb-3">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5">
-                <div className="bg-yellow-200 rounded-full p-0.5 sm:p-1">
-                  <span className="text-xs sm:text-sm">💡</span>
-                </div>
                 <p className="text-xs sm:text-sm font-bold text-yellow-900">Pro Tips:</p>
               </div>
               <ul className="text-xs sm:text-sm text-yellow-800 space-y-1 sm:space-y-1.5">

@@ -146,7 +146,11 @@ const NoteEditor = ({
   };
 
   const handleContentChange = (e) => {
-    setEditContent(e.target.value);
+    const newContent = e.target.value;
+    if (newContent.length > 5000) {
+      return;
+    }
+    setEditContent(newContent);
   };
 
   const showNotification = (message, type = 'success') => {
@@ -428,7 +432,7 @@ const NoteEditor = ({
               <span className={editContent.length > 5000 ? 'text-red-600 font-bold' : editContent.length > 4500 ? 'text-orange-600 font-semibold' : ''}>
                 Chars: {editContent.length}{editContent.length > 5000 ? ' / 5000 (Over Limit!)' : editContent.length > 4500 ? ' / 5000' : ''}
               </span>
-              <span className="hidden sm:inline">Characters: {currentWordCount}</span>
+              <span className="hidden sm:inline">Words: {currentWordCount}</span>
               <span className="hidden sm:inline">Lines: {editContent.split('\n').length}</span>
             </div>
             <div className="flex items-center gap-2">
