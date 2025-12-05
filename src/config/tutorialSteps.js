@@ -23,7 +23,8 @@ import {
   Trash2,
   Download,
   Upload,
-  Settings
+  Settings,
+  AlertCircle
 } from 'lucide-react';
 
 export const dashboardTutorialSteps = [
