@@ -479,8 +479,6 @@ const QuizGame = ({
   useEffect(() => {
     if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) return;
     
-    console.log('🔄 Starting auto-save for battle progress');
-    
     const autoSaveInterval = setInterval(() => {
       const currentGameState = {
         score: game.score,
@@ -493,15 +491,9 @@ const QuizGame = ({
       savePlayerState(quiz.gamePin, quiz.currentUserId, currentGameState).catch(err => {
         console.warn('⚠️ Auto-save failed:', err);
       });
-      
-      console.log('💾 Auto-saved progress:', {
-        question: currentGameState.currentQuestionIndex,
-        score: currentGameState.score
-      });
     }, 3000); // Every 3 seconds
     
     return () => {
-      console.log('🛑 Stopping auto-save');
       clearInterval(autoSaveInterval);
     };
   }, [mode, quiz?.gamePin, quiz?.currentUserId, game.score, game.currentQuestionIndex, game.userAnswers, game.answeredQuestions]);
@@ -572,25 +564,25 @@ const QuizGame = ({
               const minCurrentQuestion = Math.min(...activePlayersQuestions);
               const maxCurrentQuestion = Math.max(...activePlayersQuestions);
 
-              // Use savedState FIRST, fallback to playerData
-              // savedState.currentQuestionIndex is the ACTUAL question they were on
-              // playerData.currentQuestion might be undefined if they never answered
+              // FAIRNESS: Resume at the NEXT question after last submission
+              // - savedState.currentQuestionIndex = index of question player was viewing
+              // - playerData.currentQuestion = index of NEXT question to answer (saved after submission)
+              // - Auto-save captures currentQuestionIndex every 3s
+              // 
+              // Example: Player submits Q5 (index 4), moves to Q6 (index 5)
+              //   → Auto-save captures: currentQuestionIndex = 5
+              //   → On reconnect: Resume at Q6 (index 5) 
+              //
+              // Priority: savedState (most recent) > playerData (after submission) > 0
               const myProgress = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
 
-              let targetQuestion;
+              // Always use saved progress - ensures fairness regardless of other players' positions
+              let targetQuestion = myProgress;
               let shouldWait = false;
 
+              // Only check if we need to wait for others (if we're ahead)
               if (myProgress > minCurrentQuestion) {
-                // I'm AHEAD of the slowest player
-                // Put me on MY current progress and enter waiting state
-                targetQuestion = myProgress;
                 shouldWait = true;
-
-              } else {
-                // I'm BEHIND or EQUAL to the group
-                // Sync to where the slowest player is
-                targetQuestion = minCurrentQuestion;
-
               }
 
               // 🔥 BULLETPROOF: Validate target question is within valid range
@@ -648,27 +640,23 @@ const QuizGame = ({
                 }
 
               } else if (targetQuestion >= questions.length) {
-
-                const savedQuestion = result.playerData.currentQuestion || 0;
+                const savedQuestion = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
                 game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
               }
             } else {
               // No other active players online, use SAVED progress (not question 0!)
-              const savedQuestion = result.playerData.currentQuestion || 0;
-
+              const savedQuestion = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
               game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
             }
           } else {
             // Battle doesn't exist, use saved progress
-            const savedQuestion = result.playerData.currentQuestion || 0;
-
+            const savedQuestion = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
             game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
           }
         } catch (error) {
-
+          console.error('❌ Error checking other players:', error);
           // Fallback to SAVED progress (not question 0!)
-          const savedQuestion = result.playerData.currentQuestion || 0;
-
+          const savedQuestion = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
           game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
         }
       }
