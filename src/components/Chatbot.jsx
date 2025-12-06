@@ -203,7 +203,7 @@ const Chatbot = ({ currentNote, onBack }) => {
   async function callOpenAIAPI(userQuestion, noteIdentifier) {
     try {
       const systemPrompt = deepThinkingMode
-        ? `You are an AI study assistant helping with this note. You can use external knowledge to provide comprehensive answers.
+        ? `You are an AI study assistant helping with this note. You can use external knowledge to provide comprehensive answers ABOUT THE TOPICS IN THIS NOTE.
 
 Note Title: "${currentNote?.title || 'Untitled Note'}"
 Note Content:
@@ -212,11 +212,13 @@ ${currentNote?.content || ''}
 """
 
 You are in DEEP THINKING mode:
-1. Answer questions about the note content
-2. You may supplement with external knowledge and sources when helpful
-3. Provide detailed explanations with context from broader knowledge
-4. Help connect note concepts to real-world applications
-5. Suggest additional resources or related topics when relevant`
+1. Answer questions about the topics and concepts mentioned in the note content
+2. You may supplement with external knowledge BUT ONLY about topics that are already in the note
+3. Provide detailed explanations with additional context from broader knowledge about the note's topics
+4. Help connect note concepts to real-world applications of those specific topics
+5. Suggest additional resources or related information ONLY for topics mentioned in the note
+6. IMPORTANT: Stay focused on the subject matter in the note - do not discuss unrelated topics
+7. If asked about something not in the note, redirect: "I can only help with topics related to your note about '${currentNote?.title}'. Please ask about the content or concepts mentioned in your note."`
         : `You are an AI study assistant that ONLY answers questions about this specific note. 
 
 Note Title: "${currentNote?.title || 'Untitled Note'}"
@@ -389,23 +391,32 @@ IMPORTANT RULES:
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 min-h-0 relative">
+        {/* Watermark */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
+          <div className="text-slate-200 font-bold text-6xl sm:text-7xl md:text-8xl lg:text-9xl opacity-5 transform rotate-[-30deg]">
+            StudAI
+          </div>
+        </div>
+        
+        </div>
+        
         {historyError && (
-          <div className="text-xs sm:text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg shadow-sm">
+          <div className="text-xs sm:text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg shadow-sm relative z-10">
             {historyError}
           </div>
         )}
         {isHistoryLoading && (
-          <div className="text-xs sm:text-sm text-slate-500 bg-slate-50 border border-slate-200 p-3 rounded-lg shadow-sm">
+          <div className="text-xs sm:text-sm text-slate-500 bg-slate-50 border border-slate-200 p-3 rounded-lg shadow-sm relative z-10">
             Loading your previous conversation...
           </div>
         )}
         {messages.map((message, index) => (
           <div
             key={message.id || index}
-            className={`flex gap-2 sm:gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
+            className={`flex gap-2 sm:gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn relative z-10`}
           >
             {message.type === 'bot' && (
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-black">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-black self-start">
                 <img src="/StudAI_Logo-white.svg" alt="StudAI" className="w-3 h-3 sm:w-4 sm:h-4 object-contain" />
               </div>
             )}
@@ -447,7 +458,7 @@ IMPORTANT RULES:
             </div>
             
             {message.type === 'user' && (
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden order-3 shadow-md">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden order-3 shadow-md self-start">
                 <img src={userPhoto || '/default-avatar.png'} alt="You" className="w-full h-full object-cover" />
               </div>
             )}
