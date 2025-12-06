@@ -1,4 +1,5 @@
 import express from "express";
+import { Op } from "sequelize";
 import AuditLog from "../models/AuditLog.js";
 import User from "../models/User.js";
 
@@ -6,7 +7,26 @@ const router = express.Router();
 
 router.get("/audit-logs", async (req, res) => {
     try {
+        const { startDate, endDate } = req.query;
+        
+        // Build where clause for date filtering
+        let whereClause = {};
+        if (startDate || endDate) {
+            whereClause.timestamp = {};
+            if (startDate) {
+                whereClause.timestamp[Op.gte] = new Date(startDate);
+            }
+            if (endDate) {
+                // Add 1 day to endDate and make it end of day to include the full end date
+                const endDateTime = new Date(endDate);
+                endDateTime.setDate(endDateTime.getDate() + 1);
+                endDateTime.setMilliseconds(endDateTime.getMilliseconds() - 1);
+                whereClause.timestamp[Op.lte] = endDateTime;
+            }
+        }
+        
         const logs = await AuditLog.findAll({
+            where: whereClause,
             include: [
                 {
                     model: User,

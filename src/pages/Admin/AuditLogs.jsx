@@ -9,12 +9,19 @@ export default function AuditLogs() {
     const [currentPage, setCurrentPage] = useState(1);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
     const logsPerPage = 13;
 
     useEffect(() => {
         const fetchLogs = async () => {
             try {
-                const res = await axios.get(`${API_URL}/api/admin/audit-logs`, {
+                const params = new URLSearchParams();
+                if (startDate) params.append('startDate', startDate);
+                if (endDate) params.append('endDate', endDate);
+                
+                const url = `${API_URL}/api/admin/audit-logs${params.toString() ? `?${params.toString()}` : ''}`;
+                const res = await axios.get(url, {
                     withCredentials: true,
                 });
                 setLogs(res.data || []);
@@ -23,7 +30,7 @@ export default function AuditLogs() {
             }
         };
         fetchLogs();
-    }, []);
+    }, [startDate, endDate]);
 
     // Search
     const filteredLogs = logs.filter((log) => {
@@ -45,7 +52,7 @@ export default function AuditLogs() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm]);
+    }, [searchTerm, startDate, endDate]);
 
     return (
         <div className="flex w-full min-h-screen bg-gray-100 relative">
@@ -86,21 +93,59 @@ export default function AuditLogs() {
 
                 <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 py-6 sm:py-8">
                     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                                System Audit Logs
-                            </h2>
+                        <div className="flex flex-col gap-4 mb-4">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                                    System Audit Logs
+                                </h2>
 
-                            {/* Search only */}
-                            <div className="relative w-full sm:w-auto">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search logs..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full sm:w-64"
-                                />
+                                {/* Search */}
+                                <div className="relative w-full sm:w-auto">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search logs..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full sm:w-64"
+                                    />
+                                </div>
+                            </div>
+                            
+                            {/* Date Filters */}
+                            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                                <span className="text-sm font-medium text-gray-700 min-w-fit">Filter by date:</span>
+                                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                    <div className="flex flex-col">
+                                        <label className="text-xs text-gray-600 mb-1">From:</label>
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full sm:w-auto"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <label className="text-xs text-gray-600 mb-1">To:</label>
+                                        <input
+                                            type="date"
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full sm:w-auto"
+                                        />
+                                    </div>
+                                    {(startDate || endDate) && (
+                                        <button
+                                            onClick={() => {
+                                                setStartDate("");
+                                                setEndDate("");
+                                            }}
+                                            className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors self-end"
+                                        >
+                                            Clear
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
