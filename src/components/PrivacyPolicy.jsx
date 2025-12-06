@@ -131,8 +131,7 @@ export default function PrivacyPolicyModal() {
                 <div>
                   <h3 className="font-bold text-gray-900 mb-2">8. Children's Privacy</h3>
                   <p>
-                    Our service is intended for students of all ages. For users under 13, we comply with applicable 
-                    children's privacy laws and require parental consent where necessary.
+                    Our service is not intended for students of all ages.
                   </p>
                 </div>
 
