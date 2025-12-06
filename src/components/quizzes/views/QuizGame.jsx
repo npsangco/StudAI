@@ -519,15 +519,12 @@ const QuizGame = ({
 
     if (result.success) {
 
-      // 1. Restore score and game state from saved state
+      // 1. Restore score and answers (but NOT currentQuestionIndex yet - we'll determine that below based on battle state)
       if (result.savedState) {
-        // Restore from saved state (preserves exact progress)
         game.scoreRef.current = result.savedState.score;
-        game.setCurrentQuestionIndex(result.savedState.currentQuestionIndex);
         game.setUserAnswers(result.savedState.userAnswers || []);
         game.setAnsweredQuestions(result.savedState.answeredQuestions || new Set());
       } else if (result.playerData.score !== undefined) {
-        // Fallback to player data from Firebase
         game.scoreRef.current = result.playerData.score;
       }
 
@@ -564,17 +561,9 @@ const QuizGame = ({
               const minCurrentQuestion = Math.min(...activePlayersQuestions);
               const maxCurrentQuestion = Math.max(...activePlayersQuestions);
 
-              // FAIRNESS: Resume at the NEXT question after last submission
-              // - savedState.currentQuestionIndex = index of question player was viewing
-              // - playerData.currentQuestion = index of NEXT question to answer (saved after submission)
-              // - Auto-save captures currentQuestionIndex every 3s
-              // 
-              // Example: Player submits Q5 (index 4), moves to Q6 (index 5)
-              //   → Auto-save captures: currentQuestionIndex = 5
-              //   → On reconnect: Resume at Q6 (index 5) 
-              //
-              // Priority: savedState (most recent) > playerData (after submission) > 0
-              const myProgress = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
+              // Resume at NEXT question after last submission
+              // Fixed priority: playerData (instant) > savedState (delayed 3s) > 0
+              const myProgress = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
 
               // Always use saved progress - ensures fairness regardless of other players' positions
               let targetQuestion = myProgress;
@@ -585,7 +574,7 @@ const QuizGame = ({
                 shouldWait = true;
               }
 
-              // 🔥 BULLETPROOF: Validate target question is within valid range
+              // Validate target question is within valid range
               const validTargetQuestion = Math.max(0, Math.min(targetQuestion, questions.length - 1));
 
               if (validTargetQuestion !== targetQuestion) {
@@ -595,7 +584,7 @@ const QuizGame = ({
               if (validTargetQuestion >= 0 && validTargetQuestion < questions.length) {
 
 
-                // ✅ USE SETTER to trigger re-render!
+                // USE SETTER to trigger re-render!
                 game.setCurrentQuestionIndex(validTargetQuestion);
 
                 // Don't update progress here - it's already correct in Firebase!
@@ -640,23 +629,23 @@ const QuizGame = ({
                 }
 
               } else if (targetQuestion >= questions.length) {
-                const savedQuestion = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
+                const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
                 game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
               }
             } else {
               // No other active players online, use SAVED progress (not question 0!)
-              const savedQuestion = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
+              const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
               game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
             }
           } else {
             // Battle doesn't exist, use saved progress
-            const savedQuestion = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
+            const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
             game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
           }
         } catch (error) {
           console.error('❌ Error checking other players:', error);
           // Fallback to SAVED progress (not question 0!)
-          const savedQuestion = result.savedState?.currentQuestionIndex ?? result.playerData.currentQuestion ?? 0;
+          const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
           game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
         }
       }
