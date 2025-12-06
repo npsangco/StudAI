@@ -557,6 +557,7 @@ function QuizzesPage() {
           onUpdatePublicStatus={handlers.handleUpdatePublicStatus}
           onUpdateTimer={handlers.handleUpdateQuizTimer}
           onAddQuestion={handlers.handleAddQuestion}
+          onBatchAddQuestions={handlers.handleBatchAddQuestions}
           onDeleteQuestion={handlers.handleDeleteQuestion}
           onDuplicateQuestion={handlers.handleDuplicateQuestion}
           onReorderQuestions={handlers.handleReorderQuestions}

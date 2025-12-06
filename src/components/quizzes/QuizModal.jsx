@@ -18,6 +18,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   const [questionCount, setQuestionCount] = React.useState(maxSelectableQuestions);
   const [selectedMode, setSelectedMode] = React.useState(null); // 'solo-casual', 'solo-adaptive', or 'battle'
   const [showModeSelection, setShowModeSelection] = React.useState(false);
+  const [showModesInfoModal, setShowModesInfoModal] = React.useState(false);
 
   // Reset question count and mode when quiz changes
   React.useEffect(() => {
@@ -83,7 +84,16 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
             <div className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl mb-1.5 sm:mb-2 shadow-lg">
               <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-0.5 sm:mb-1">Ready to Quiz?</h2>
+            <div className="flex items-center justify-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-0.5 sm:mb-1">Ready to Quiz?</h2>
+              <button
+                onClick={() => setShowModesInfoModal(true)}
+                className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                title="Learn about quiz modes"
+              >
+                <AlertCircle className="w-4 h-4 text-white/90" />
+              </button>
+            </div>
             <p className="text-white/90 text-[10px] sm:text-xs font-medium">Choose your challenge mode</p>
           </div>
         </div>
@@ -239,6 +249,71 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
           )}
         </div>
       </div>
+
+      {/* Quiz Modes Info Modal */}
+      {showModesInfoModal && (
+        <div
+          className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-3"
+          onClick={() => setShowModesInfoModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 px-4 py-3 rounded-t-xl">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                Quiz Modes: How It Works
+              </h3>
+            </div>
+
+            <div className="p-4 space-y-2">
+              {/* Casual Mode */}
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <div className="flex items-start gap-2">
+                  <div className="w-7 h-7 bg-blue-500 rounded flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-blue-900 text-sm mb-1">Casual Mode</h4>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Questions are shuffled randomly for straightforward practice. Perfect for quick review sessions.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Adaptive Mode */}
+              <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                <div className="flex items-start gap-2">
+                  <div className="w-7 h-7 bg-purple-500 rounded flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-purple-900 text-sm mb-1">Adaptive Mode</h4>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Smart system adjusts difficulty based on your performance. Levels up when you excel, scales down when you struggle. Creates a personalized learning experience.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex justify-end rounded-b-xl">
+              <button
+                onClick={() => setShowModesInfoModal(false)}
+                className="px-4 py-2 bg-yellow-500 text-white text-sm font-semibold rounded-lg hover:bg-yellow-600 transition-colors"
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes fade-in {

@@ -549,6 +549,29 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     setIsDirty(true); // Mark as dirty when question added
   };
 
+  const handleBatchAddQuestions = (questionsToAdd) => {
+    // Convert question bank questions to quiz questions format
+    const maxOrder = questions.length > 0 
+      ? Math.max(...questions.map(q => q.question_order || 0))
+      : 0;
+
+    const newQuestions = questionsToAdd.map((sourceQ, index) => ({
+      id: `question-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+      type: sourceQ.type,
+      question: sourceQ.question,
+      question_order: maxOrder + index + 1,
+      choices: sourceQ.choices || [],
+      correctAnswer: sourceQ.correct_answer || '',
+      answer: sourceQ.answer || '',
+      matchingPairs: sourceQ.matchingPairs || sourceQ.matching_pairs || [],
+      points: sourceQ.points || 1,
+      difficulty: sourceQ.difficulty || 'medium'
+    }));
+
+    setQuestions([...questions, ...newQuestions]);
+    setIsDirty(true); // Mark as dirty when questions added
+  };
+
   const handleDeleteQuestion = (questionId) => {
     setQuestions(questions.filter(q => q.id !== questionId));
     setIsDirty(true); // Mark as dirty when question deleted
@@ -811,6 +834,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
 
     // Questions
     handleAddQuestion,
+    handleBatchAddQuestions,
     handleDeleteQuestion,
     handleDuplicateQuestion,
     handleReorderQuestions,

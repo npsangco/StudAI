@@ -751,43 +751,6 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                   {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
                 </span>
 
-                {/* Adaptive Mode Indicator with Info Icon */}
-                {(() => {
-                  // Check adaptive mode eligibility
-                  const adaptiveCheck = canUseAdaptiveMode(questions);
-
-                  if (adaptiveCheck.enabled) {
-                    // ✅ Adaptive Difficulty Enabled
-                    return (
-                      <button
-                        onClick={() => setShowModesInfoModal(true)}
-                        className="px-3 py-1.5 text-sm rounded-full font-medium bg-purple-100 text-purple-700 flex items-center gap-1.5 hover:bg-purple-200 transition-colors cursor-pointer"
-                        title="Click to learn how Question Bank and difficulty modes work"
-                      >
-                        <Target className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Adaptive Difficulty</span>
-                        <span className="sm:hidden">Adaptive</span>
-                        <Info className="w-3.5 h-3.5 opacity-70" />
-                      </button>
-                    );
-                  } else if (questionCount > 0) {
-                    // ❌ Classic Difficulty
-                    return (
-                      <button
-                        onClick={() => setShowModesInfoModal(true)}
-                        className="px-3 py-1.5 text-sm rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-1.5 hover:bg-amber-200 transition-colors cursor-pointer"
-                        title="Click to learn how Question Bank and difficulty modes work"
-                      >
-                        <Circle className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Classic Difficulty</span>
-                        <span className="sm:hidden">Classic</span>
-                        <Info className="w-3.5 h-3.5 opacity-70" />
-                      </button>
-                    );
-                  }
-                  return null;
-                })()}
-
                 {/* Error Badge */}
                 {hasErrors && (
                   <button
@@ -1023,6 +986,7 @@ export const QuizEditor = ({
   onUpdatePublicStatus,
   onUpdateTimer,
   onAddQuestion,
+  onBatchAddQuestions,
   onDeleteQuestion,
   onDuplicateQuestion,
   onUpdateQuestion,
@@ -1143,36 +1107,15 @@ export const QuizEditor = ({
   };
 
   const handleInsertFromBank = async (selectedQuestions) => {
-    // For new unsaved quizzes, add questions directly to local state
+    // For new unsaved quizzes, use batch add handler
     if (!quiz || !quiz.id || quiz.isTemp) {
-      const maxOrder = questions.length > 0 
-        ? Math.max(...questions.map(q => q.question_order || 0))
-        : 0;
-
-      const newQuestions = selectedQuestions.map((sourceQ, index) => ({
-        question_id: `temp-${Date.now()}-${index}`,
-        quiz_id: quiz?.id || null,
-        type: sourceQ.type,
-        question: sourceQ.question,
-        question_order: maxOrder + index + 1,
-        choices: sourceQ.choices,
-        correctAnswer: sourceQ.correct_answer,
-        answer: sourceQ.answer,
-        matchingPairs: sourceQ.matchingPairs || [],
-        points: sourceQ.points || 1,
-        difficulty: sourceQ.difficulty || 'medium'
-      }));
-
-      // Add to existing questions
-      const updatedQuestions = [...questions, ...newQuestions];
-      
-      // Update via parent callback
-      if (onUpdateQuestions) {
-        onUpdateQuestions(updatedQuestions);
+      if (onBatchAddQuestions) {
+        onBatchAddQuestions(selectedQuestions);
+        toast.success(`Added ${selectedQuestions.length} question${selectedQuestions.length !== 1 ? 's' : ''} from question bank. Save quiz to persist.`);
+        setShowQuestionBank(false);
+      } else {
+        toast.warning('Unable to add questions. Please try again.');
       }
-
-      toast.success(`Added ${newQuestions.length} question${newQuestions.length !== 1 ? 's' : ''} from question bank. Save quiz to persist.`);
-      setShowQuestionBank(false);
       return;
     }
 
@@ -1238,45 +1181,6 @@ export const QuizEditor = ({
       <div className="max-w-5xl mx-auto p-4 md:p-6">
         {questions.length === 0 ? (
           <div className="text-center">
-
-            {/* Card Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto mb-8">
-              {/* Row 1: Question Bank (Full Width) */}
-              <div className="md:col-span-2 bg-purple-50 rounded-xl p-6 text-left border border-purple-200 shadow-sm">
-                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-4">
-                  <Database className="w-6 h-6 text-white" />
-                </div>
-                <h4 className="font-bold text-purple-900 text-lg mb-2">Question Bank</h4>
-                <p className="text-gray-700 text-sm mb-3">
-                  Your personal question library! Every question auto-saves here for instant reuse across any quiz. Build a pool of 15+ questions and each session pulls fresh, randomized questions—no two attempts feel the same!
-                </p>
-              </div>
-
-              {/* Row 2: Quiz Modes */}
-              <div className="bg-yellow-50 rounded-xl p-6 text-left border border-yellow-200 shadow-sm">
-                <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center mb-4">
-                  <Target className="w-6 h-6 text-white" />
-                </div>
-                <h4 className="font-bold text-gray-900 text-lg mb-2">Quiz Modes</h4>
-                <p className="text-gray-700 text-sm">
-                  <strong>Solo:</strong> Study at your own pace—pick how many questions you want per session<br/>
-                  <strong>Battle:</strong> Compete with up to 5 players—everyone gets identical randomized questions!
-                </p>
-              </div>
-
-              {/* Row 2: Difficulty Types */}
-              <div className="bg-purple-50 rounded-xl p-6 text-left border border-purple-200 shadow-sm">
-                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-4">
-                  <Zap className="w-6 h-6 text-white" />
-                </div>
-                <h4 className="font-bold text-gray-900 text-lg mb-2">Difficulty Types</h4>
-                <p className="text-gray-700 text-sm">
-                  <strong className="text-purple-700">Adaptive:</strong> Smart system reads your performance—levels up when you excel, scales down when you struggle (needs 2+ difficulty levels)<br/>
-                  <strong className="text-amber-700">Classic:</strong> Consistent challenge from start to finish
-                </p>
-              </div>
-            </div>
-
             <button
               onClick={onAddQuestion}
               className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105 shadow-md mx-auto"

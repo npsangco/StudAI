@@ -363,8 +363,6 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
             <span className="text-xs" title={quiz.created_at || quiz.created}>
               {formatQuizDate(quiz.created_at || quiz.created)}
             </span>
-            <span className="text-gray-400">•</span>
-            <ModeBadge quiz={quiz} />
           </div>
 
           {/* Action Buttons */}
