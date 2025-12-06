@@ -480,8 +480,19 @@ const QuizGame = ({
   
   // Auto-save game state every 3 seconds for reliable reconnection
   useEffect(() => {
-    if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) return;
+    console.log('🔄 Auto-save useEffect triggered:', {
+      mode,
+      gamePin: quiz?.gamePin,
+      userId: quiz?.currentUserId,
+      willSetupInterval: mode === 'battle' && !!quiz?.gamePin && !!quiz?.currentUserId
+    });
 
+    if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) {
+      console.log('⏸️ Auto-save SKIPPED - conditions not met');
+      return;
+    }
+
+    console.log('✅ Setting up auto-save interval (every 3s)');
     const autoSaveInterval = setInterval(() => {
       // Capture current state at save time (not at interval creation time)
       const currentGameState = {
@@ -492,11 +503,13 @@ const QuizGame = ({
         questions: questions
       };
 
+      console.log('⏰ Auto-save interval fired!', currentGameState);
       // Save to Firebase savedStates node
       savePlayerState(quiz.gamePin, quiz.currentUserId, currentGameState);
     }, 3000); // Every 3 seconds
 
     return () => {
+      console.log('🛑 Clearing auto-save interval');
       clearInterval(autoSaveInterval);
     };
     // Only restart interval if battle context changes, NOT on every answer
@@ -505,10 +518,28 @@ const QuizGame = ({
 
   // Initial save when battle starts (save the question set immediately)
   useEffect(() => {
-    if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) return;
-    if (!questions || questions.length === 0) return; // Wait for questions to load
-    if (initialSaveDoneRef.current) return; // Already did initial save
+    console.log('🎬 Initial save useEffect triggered:', {
+      mode,
+      gamePin: quiz?.gamePin,
+      userId: quiz?.currentUserId,
+      questionsCount: questions?.length,
+      alreadyDone: initialSaveDoneRef.current
+    });
 
+    if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) {
+      console.log('⏸️ Initial save SKIPPED - mode/gamePin/userId check failed');
+      return;
+    }
+    if (!questions || questions.length === 0) {
+      console.log('⏸️ Initial save SKIPPED - no questions yet');
+      return;
+    }
+    if (initialSaveDoneRef.current) {
+      console.log('⏸️ Initial save SKIPPED - already done');
+      return;
+    }
+
+    console.log('✅ Running initial save NOW');
     // Do initial save on mount to capture the selected questions
     const initialGameState = {
       score: 0,
