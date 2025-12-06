@@ -52,6 +52,12 @@ const Question = sequelize.define('Question', {
     defaultValue: 'medium',
     allowNull: false
   },
+  is_copy: {
+    type: DataTypes.TINYINT,
+    defaultValue: 0,
+    allowNull: false,
+    comment: 'Indicates if question is a copy from question bank (1) or original (0)'
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
