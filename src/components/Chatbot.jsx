@@ -131,11 +131,12 @@ const Chatbot = ({ currentNote, onBack }) => {
     try {
       const { data } = await aiUsageApi.getToday();
       const limit = data?.limits?.chatbotTokens ?? 5000;
-      const remaining = data?.remaining?.chatbotTokens ?? limit;
+      const used = data?.usage?.chatbotTokens ?? 0;
+      const remaining = data?.remaining?.chatbotTokens ?? (limit - used);
       setTokenUsage({
         limit,
         remaining,
-        used: Math.max(limit - remaining, 0)
+        used
       });
     } catch (error) {
       console.error('❌ [Chatbot] Failed to fetch AI usage snapshot:', error);
@@ -257,17 +258,20 @@ IMPORTANT RULES:
       );
 
       const limitsFromResponse = response.data?.limits || response.data?.usage?.limits;
-      const remainingTokensFromResponse = response.data?.remainingTokens ?? response.data?.usage?.remaining?.chatbotTokens;
-      if (remainingTokensFromResponse !== undefined || limitsFromResponse?.chatbotTokens) {
+      const usedTokensFromResponse = response.data?.usage?.chatbotTokens;
+      const remainingTokensFromResponse = response.data?.remainingTokens ?? response.data?.usage?.remaining?.chatbotTokens ?? response.data?.remaining?.chatbotTokens;
+      
+      if (remainingTokensFromResponse !== undefined || limitsFromResponse?.chatbotTokens || usedTokensFromResponse !== undefined) {
         setTokenUsage((prev) => {
           const limit = limitsFromResponse?.chatbotTokens ?? prev.limit;
+          const used = usedTokensFromResponse ?? prev.used;
           const remaining = remainingTokensFromResponse !== undefined
             ? Math.max(remainingTokensFromResponse, 0)
-            : Math.max(prev.remaining, 0);
+            : Math.max(limit - used, 0);
           return {
             limit,
             remaining,
-            used: Math.max(limit - remaining, 0)
+            used
           };
         });
       } else {
