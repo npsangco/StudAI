@@ -36,7 +36,6 @@ export default function StudySessions() {
     useEffect(() => {
         fetchSessions();
         
-        // Poll for updates every 30 seconds to catch status changes
         const interval = setInterval(() => {
             fetchSessions();
         }, 30000);
@@ -64,7 +63,6 @@ export default function StudySessions() {
                 { withCredentials: true }
             );
             
-            // Remove session from local state immediately for better UX
             setSessions(prev => prev.filter(s => s.session_id !== selectedSession.session_id));
             
             closeEndModal();
@@ -77,7 +75,6 @@ export default function StudySessions() {
         }
     };
 
-    // Helper function to check if session has expired
     const isSessionExpired = (session) => {
         if (!session.start_time || !session.duration) return false;
         const startTime = new Date(session.start_time);
@@ -85,7 +82,6 @@ export default function StudySessions() {
         return new Date() > endTime;
     };
 
-    // Helper function to get actual session status
     const getActualStatus = (session) => {
         const isExpired = isSessionExpired(session);
         if (isExpired && (session.status?.toLowerCase() === "active" || session.status?.toLowerCase() === "scheduled")) {

@@ -85,7 +85,6 @@ router.post("/users/:userId/lock", async (req, res) => {
         const { userId } = req.params;
         const { reason } = req.body;
 
-        // Get user details before locking
         const user = await User.findByPk(userId);
         if (!user) {
             return res.status(404).json({ error: "User not found" });
@@ -118,7 +117,6 @@ router.post("/users/:userId/unlock", async (req, res) => {
         const { userId } = req.params;
         const { reason } = req.body;
 
-        // Get user details before unlocking
         const user = await User.findByPk(userId);
         if (!user) {
             return res.status(404).json({ error: "User not found" });
@@ -135,7 +133,6 @@ router.post("/users/:userId/unlock", async (req, res) => {
             await sendAccountStatusEmail(user.email, user.username, "unlocked", reason || "No reason provided");
         } catch (emailError) {
             console.error("Failed to send unlock notification email:", emailError);
-            // Continue even if email fails
         }
 
         res.json({ message: "User unlocked successfully" });
@@ -163,7 +160,6 @@ router.get("/quizzes", async (req, res) => {
         const formattedQuizzes = quizzes.map(quiz => {
             const quizData = quiz.toJSON();
 
-            // Format created date
             const createdDate = new Date(quizData.created_at);
             const formattedDate = createdDate.toLocaleDateString('en-US', {
                 year: 'numeric',
@@ -214,7 +210,7 @@ router.delete("/quizzes/:quizId", async (req, res) => {
         const creatorEmail = quiz.creator?.email;
         const creatorUsername = quiz.creator?.username;
 
-        // Delete the quiz (cascade should handle related records if configured)
+        // Delete the quiz 
         await Quiz.destroy({
             where: { quiz_id: quizId }
         });
@@ -231,7 +227,6 @@ router.delete("/quizzes/:quizId", async (req, res) => {
                 );
             } catch (emailError) {
                 console.error("Failed to send quiz deletion email:", emailError);
-                // Continue even if email fails
             }
         }
 
@@ -247,7 +242,6 @@ router.get("/quizzes/:quizId/questions", async (req, res) => {
     try {
         const { quizId } = req.params;
 
-        // First check if the quiz exists
         const quiz = await Quiz.findByPk(quizId, {
             attributes: ['quiz_id', 'title', 'original_quiz_id', 'shared_by_username', 'total_questions']
         });
@@ -283,7 +277,6 @@ router.delete("/questions/:questionId", async (req, res) => {
         const quizId = question.quiz_id;
         const questionText = question.question;
 
-        // Get quiz and creator info separately
         let quizTitle = "Unknown Quiz";
         let creatorEmail = null;
         let creatorUsername = null;
@@ -296,7 +289,6 @@ router.delete("/questions/:questionId", async (req, res) => {
             if (quiz) {
                 quizTitle = quiz.title;
                 
-                // Get creator info
                 const creator = await User.findByPk(quiz.created_by, {
                     attributes: ['email', 'username']
                 });
@@ -326,7 +318,6 @@ router.delete("/questions/:questionId", async (req, res) => {
                 );
             } catch (emailError) {
                 console.error("Failed to send question deletion email:", emailError);
-                // Continue even if email fails
             }
         }
 
@@ -351,16 +342,13 @@ router.get("/sessions", async (req, res) => {
             order: [["created_at", "DESC"]],
         });
 
-        // Get user info for each session
         const formattedSessions = await Promise.all(sessions.map(async (session) => {
             const sessionData = session.toJSON();
 
-            // Get creator info
             const creator = await User.findByPk(sessionData.user_id, {
                 attributes: ['username']
             });
 
-            // Calculate duration
             let duration = "N/A";
             if (sessionData.duration) {
                 const hours = Math.floor(sessionData.duration / 60);
@@ -373,7 +361,6 @@ router.get("/sessions", async (req, res) => {
                 }
             }
 
-            // Format status
             let status = "Scheduled";
             if (sessionData.status === "active") {
                 status = "Active";
@@ -437,14 +424,12 @@ router.put("/sessions/:sessionId/end", async (req, res) => {
                 );
             } catch (emailError) {
                 console.error("Failed to send session ended email:", emailError);
-                // Continue even if email fails
             }
         }
 
-        // Log the session ending in audit logs (optional - for record keeping)
         try {
             await AuditLog.create({
-                user_id: req.user?.user_id || null, // Admin who ended the session
+                user_id: req.user?.user_id || null, 
                 action: 'Admin End Session',
                 target: 'JitsiSession',
                 target_id: sessionId,
@@ -453,10 +438,8 @@ router.put("/sessions/:sessionId/end", async (req, res) => {
             });
         } catch (auditError) {
             console.error("Failed to log session end:", auditError);
-            // Continue even if audit logging fails
         }
 
-        // Delete the session from the database (removes it from both admin table and user sessions)
         await JitsiSession.destroy({
             where: { session_id: sessionId }
         });
@@ -468,7 +451,7 @@ router.put("/sessions/:sessionId/end", async (req, res) => {
     }
 });
 
-// Get dashboard overview stats
+// dashboard overview stats
 router.get("/stats", async (req, res) => {
     try {
         const totalUsers = await User.count();
@@ -494,7 +477,6 @@ router.get("/stats", async (req, res) => {
     }
 });
 
-// Get 5 most recently active users
 router.get("/recent-users", async (req, res) => {
     try {
         const { sortBy = 'lastActivity', order = 'desc' } = req.query;
@@ -574,7 +556,6 @@ router.get("/recent-sessions", async (req, res) => {
                 attributes: ['username']
             });
 
-            // Calculate duration
             let duration = "N/A";
             if (session.duration) {
                 const hours = Math.floor(session.duration / 60);
@@ -587,7 +568,6 @@ router.get("/recent-sessions", async (req, res) => {
                 }
             }
 
-            // Format status
             let status = "Scheduled";
             if (session.status === "active") {
                 status = "Active";

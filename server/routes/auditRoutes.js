@@ -4,7 +4,6 @@ import User from "../models/User.js";
 
 const router = express.Router();
 
-// Get all audit logs with user info (admins show as "Admin")
 router.get("/audit-logs", async (req, res) => {
     try {
         const logs = await AuditLog.findAll({
