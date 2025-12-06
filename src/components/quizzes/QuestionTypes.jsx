@@ -177,16 +177,30 @@ export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatching
     try {
       pairs = JSON.parse(pairs);
     } catch (e) {
+      console.error('Failed to parse matchingPairs:', e);
       pairs = [];
     }
   }
-  pairs = pairs || [];
+  
+  // Ensure pairs is an array
+  if (!Array.isArray(pairs)) {
+    console.warn('matchingPairs is not an array:', pairs);
+    pairs = [];
+  }
 
   const MAX_PAIRS = 7;
   const canAddMore = pairs.length < MAX_PAIRS;
 
   return (
     <div className="space-y-3 sm:space-y-4">
+      {pairs.length === 0 && (
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-sm text-yellow-800 font-medium">
+            No matching pairs added yet. Click "Add Matching Pair" below to create the first pair.
+          </p>
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
         <div className="space-y-2">
           <h4 className="text-xs sm:text-sm font-medium text-gray-700">Left Column</h4>
