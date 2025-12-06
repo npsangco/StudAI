@@ -398,8 +398,6 @@ IMPORTANT RULES:
           </div>
         </div>
         
-        </div>
-        
         {historyError && (
           <div className="text-xs sm:text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg shadow-sm relative z-10">
             {historyError}
