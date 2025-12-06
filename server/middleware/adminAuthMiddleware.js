@@ -15,11 +15,9 @@ export const requireAdmin = (req, res, next) => {
         });
     }
 
-    // User is authenticated and is an admin
     next();
 };
 
-// Optional: Middleware to check admin status and return user info
 export const checkAdminStatus = (req, res, next) => {
     if (req.session && req.session.userId) {
         req.isAdmin = req.session.role === "Admin" || req.session.role === "admin";
