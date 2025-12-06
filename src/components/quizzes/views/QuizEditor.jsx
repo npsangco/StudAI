@@ -1143,11 +1143,40 @@ export const QuizEditor = ({
   };
 
   const handleInsertFromBank = async (selectedQuestions) => {
-    if (!quiz || !quiz.id) {
-      toast.error('Please save the quiz first before inserting questions');
+    // For new unsaved quizzes, add questions directly to local state
+    if (!quiz || !quiz.id || quiz.isTemp) {
+      const maxOrder = questions.length > 0 
+        ? Math.max(...questions.map(q => q.question_order || 0))
+        : 0;
+
+      const newQuestions = selectedQuestions.map((sourceQ, index) => ({
+        question_id: `temp-${Date.now()}-${index}`,
+        quiz_id: quiz?.id || null,
+        type: sourceQ.type,
+        question: sourceQ.question,
+        question_order: maxOrder + index + 1,
+        choices: sourceQ.choices,
+        correctAnswer: sourceQ.correct_answer,
+        answer: sourceQ.answer,
+        matchingPairs: sourceQ.matchingPairs || [],
+        points: sourceQ.points || 1,
+        difficulty: sourceQ.difficulty || 'medium'
+      }));
+
+      // Add to existing questions
+      const updatedQuestions = [...questions, ...newQuestions];
+      
+      // Update via parent callback
+      if (onUpdateQuestions) {
+        onUpdateQuestions(updatedQuestions);
+      }
+
+      toast.success(`Added ${newQuestions.length} question${newQuestions.length !== 1 ? 's' : ''} from question bank. Save quiz to persist.`);
+      setShowQuestionBank(false);
       return;
     }
 
+    // For saved quizzes, use API
     try {
       const questionIds = selectedQuestions.map(q => q.question_id);
 

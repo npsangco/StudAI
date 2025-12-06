@@ -148,10 +148,10 @@ router.post('/insert', async (req, res) => {
         type: sourceQuestion.type,
         question: sourceQuestion.question,
         question_order: currentOrder,
-        choices: sourceQuestion.choices,
+        choices: choicesData,
         correct_answer: sourceQuestion.correct_answer,
         answer: sourceQuestion.answer,
-        matching_pairs: sourceQuestion.matching_pairs,
+        matching_pairs: matchingPairsData,
         points: sourceQuestion.points,
         difficulty: sourceQuestion.difficulty,
         is_copy: 1  // Mark as copy so it won't appear in question bank
