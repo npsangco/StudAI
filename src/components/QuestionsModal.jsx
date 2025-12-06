@@ -53,81 +53,57 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
     };
 
     const renderQuestionContent = (question) => {
-        console.log('DEBUG - Full question object:', question);
-        console.log('DEBUG - Question fields:', {
-            type: question.type,
-            choices: question.choices,
-            choices_type: typeof question.choices,
-            correct_answer: question.correct_answer,
-            correctAnswer: question.correctAnswer,
-            matching_pairs: question.matching_pairs,
-            matchingPairs: question.matchingPairs,
-            answer: question.answer
-        });
-
         let choices = null;
         let matchingPairs = null;
 
-        // Handle Multiple Choice questions
         try {
             const rawChoices = question.choices;
-            console.log('DEBUG - Raw choices:', rawChoices);
-            
             if (rawChoices !== null && rawChoices !== undefined) {
                 if (typeof rawChoices === 'string') {
                     try {
-                        choices = JSON.parse(rawChoices);
-                        console.log('DEBUG - Parsed choices from string:', choices);
+                        let parsed = JSON.parse(rawChoices);
+                        if (typeof parsed === 'string') {
+                            parsed = JSON.parse(parsed);
+                        }
+                        choices = Array.isArray(parsed) ? parsed : null;
                     } catch (parseError) {
-                        console.log('DEBUG - Failed to parse choices JSON:', parseError);
                         choices = null;
                     }
                 } else if (Array.isArray(rawChoices)) {
                     choices = rawChoices;
-                    console.log('DEBUG - Using array choices:', choices);
                 } else if (typeof rawChoices === 'object') {
-                    // Handle case where it's already an object but not an array
                     const values = Object.values(rawChoices);
                     choices = Array.isArray(values) ? values : null;
-                    console.log('DEBUG - Converted object to array choices:', choices);
                 }
             }
         } catch (e) {
-            console.log('DEBUG - Error processing choices:', e);
             choices = null;
         }
 
-        // Handle Matching questions
         try {
             const rawPairs = question.matchingPairs || question.matching_pairs;
-            console.log('DEBUG - Raw pairs:', rawPairs);
-            
             if (rawPairs !== null && rawPairs !== undefined) {
                 if (typeof rawPairs === 'string') {
                     try {
-                        matchingPairs = JSON.parse(rawPairs);
-                        console.log('DEBUG - Parsed pairs from string:', matchingPairs);
+                        let parsed = JSON.parse(rawPairs);
+                        if (typeof parsed === 'string') {
+                            parsed = JSON.parse(parsed);
+                        }
+                        matchingPairs = Array.isArray(parsed) ? parsed : null;
                     } catch (parseError) {
-                        console.log('DEBUG - Failed to parse pairs JSON:', parseError);
                         matchingPairs = null;
                     }
                 } else if (Array.isArray(rawPairs)) {
                     matchingPairs = rawPairs;
-                    console.log('DEBUG - Using array pairs:', matchingPairs);
                 } else if (typeof rawPairs === 'object') {
-                    // Handle case where it's an object with key-value pairs
                     if (Object.keys(rawPairs).length > 0) {
                         matchingPairs = Object.entries(rawPairs).map(([left, right]) => ({ left, right }));
-                        console.log('DEBUG - Converted object to array pairs:', matchingPairs);
                     }
                 }
             }
         } catch (e) {
-            console.log('DEBUG - Error processing matching pairs:', e);
             matchingPairs = null;
         }
-
-        console.log('DEBUG - Final processed data:', { choices, matchingPairs });
 
         switch (question.type) {
             case 'Multiple Choice':
