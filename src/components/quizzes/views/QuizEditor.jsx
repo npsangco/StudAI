@@ -1189,16 +1189,6 @@ export const QuizEditor = ({
           </div>
         ) : (
           <>
-            {/* Settings Bar - Only shows when there are questions */}
-            <div className="mb-4">
-              <CompactSettingsBar
-                quiz={quiz}
-                onPublicStatusChange={onUpdatePublicStatus}
-                onTimerChange={onUpdateTimer}
-                toast={toast}
-              />
-            </div>
-
             {/* Questions List */}
             <div className="space-y-4">
               {questions.map((question, index) => (

@@ -16,8 +16,9 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
     : Math.min(totalQuestions, 100);
   
   const [questionCount, setQuestionCount] = React.useState(maxSelectableQuestions);
-  const [selectedMode, setSelectedMode] = React.useState(null); // 'solo-casual', 'solo-adaptive', or 'battle'
+  const [selectedMode, setSelectedMode] = React.useState(null);
   const [showModeSelection, setShowModeSelection] = React.useState(false);
+  const [showBattleModeSelection, setShowBattleModeSelection] = React.useState(false);
   const [showModesInfoModal, setShowModesInfoModal] = React.useState(false);
 
   // Reset question count and mode when quiz changes
@@ -26,6 +27,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
       setQuestionCount(maxSelectableQuestions);
       setSelectedMode(null);
       setShowModeSelection(false);
+      setShowBattleModeSelection(false);
     }
   }, [quiz?.id, maxSelectableQuestions]);
 
@@ -40,21 +42,30 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
 
   const handleSoloClick = () => {
     setShowModeSelection(true);
+    setShowBattleModeSelection(false);
   };
 
   const handleModeSelect = (mode) => {
-    if (mode === 'casual' || mode === 'adaptive') {
+    if (mode === 'normal' || mode === 'casual' || mode === 'adaptive') {
       onSoloQuiz(questionCount, mode);
     }
   };
 
   const handleBackToMain = () => {
     setShowModeSelection(false);
+    setShowBattleModeSelection(false);
     setSelectedMode(null);
   };
 
-  const handleQuizBattle = () => {
-    onQuizBattle(questionCount);
+  const handleQuizBattleClick = () => {
+    setShowBattleModeSelection(true);
+    setShowModeSelection(false);
+  };
+
+  const handleBattleModeSelect = (mode) => {
+    if (mode === 'normal' || mode === 'casual' || mode === 'adaptive') {
+      onQuizBattle(questionCount, mode);
+    }
   };
 
   return (
@@ -84,16 +95,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
             <div className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl mb-1.5 sm:mb-2 shadow-lg">
               <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div className="flex items-center justify-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-bold text-white mb-0.5 sm:mb-1">Ready to Quiz?</h2>
-              <button
-                onClick={() => setShowModesInfoModal(true)}
-                className="p-1 hover:bg-white/20 rounded-full transition-colors"
-                title="Learn about quiz modes"
-              >
-                <AlertCircle className="w-4 h-4 text-white/90" />
-              </button>
-            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-0.5 sm:mb-1">Ready to Quiz?</h2>
             <p className="text-white/90 text-[10px] sm:text-xs font-medium">Choose your challenge mode</p>
           </div>
         </div>
@@ -174,6 +176,29 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                 Back to modes
               </button>
 
+              {/* Normal Mode */}
+              <button
+                onClick={() => handleModeSelect('normal')}
+                className="group w-full bg-gradient-to-br from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 border-2 border-gray-200 hover:border-gray-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-gray-500 to-slate-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                      Normal Mode
+                      <span className="text-[10px] bg-gray-200 text-gray-800 px-1.5 py-0.5 rounded-full font-semibold">Original Order</span>
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
+                      Questions in their original order - study as designed by the creator
+                    </p>
+                  </div>
+                </div>
+              </button>
+
               {/* Casual Mode */}
               <button
                 onClick={() => handleModeSelect('casual')}
@@ -223,9 +248,9 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
           )}
 
           {/* Battle Mode */}
-          {!showModeSelection && (
+          {!showModeSelection && !showBattleModeSelection && (
             <button
-              onClick={handleQuizBattle}
+              onClick={handleQuizBattleClick}
               className="group w-full bg-gradient-to-br from-orange-50 to-red-50 hover:from-orange-100 hover:to-red-100 border-2 border-orange-200 hover:border-orange-400 rounded-lg sm:rounded-xl p-3.5 sm:p-5 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
             >
               <div className="flex items-start gap-3 sm:gap-4">
@@ -246,6 +271,91 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                 </div>
               </div>
             </button>
+          )}
+
+          {/* Battle Mode Selection */}
+          {showBattleModeSelection && (
+            <>
+              {/* Back Button */}
+              <button
+                onClick={handleBackToMain}
+                className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1 mb-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to modes
+              </button>
+
+              {/* Normal Mode for Battle */}
+              <button
+                onClick={() => handleBattleModeSelect('normal')}
+                className="group w-full bg-gradient-to-br from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 border-2 border-gray-200 hover:border-gray-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-gray-500 to-slate-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                      Normal Mode
+                      <span className="text-[10px] bg-gray-200 text-gray-800 px-1.5 py-0.5 rounded-full font-semibold">Original Order</span>
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
+                      All players get questions in the same original order
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Casual Mode for Battle */}
+              <button
+                onClick={() => handleBattleModeSelect('casual')}
+                className="group w-full bg-gradient-to-br from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 border-2 border-blue-200 hover:border-blue-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                      Casual Mode
+                      <span className="text-[10px] bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded-full font-semibold">Shuffled</span>
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
+                      All players get the same shuffled order
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Adaptive Mode for Battle */}
+              <button
+                onClick={() => handleBattleModeSelect('adaptive')}
+                className="group w-full bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-2 border-purple-200 hover:border-purple-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                      Adaptive Mode
+                      <span className="text-[10px] bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-full font-semibold">Smart</span>
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
+                      Each player's difficulty adjusts independently based on performance
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -268,6 +378,23 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
             </div>
 
             <div className="p-4 space-y-2">
+              {/* Normal Mode */}
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div className="flex items-start gap-2">
+                  <div className="w-7 h-7 bg-gray-500 rounded flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-gray-900 text-sm mb-1">Normal Mode</h4>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Questions appear in their original order, exactly as designed by the quiz creator. No shuffling or difficulty adjustment.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Casual Mode */}
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                 <div className="flex items-start gap-2">
