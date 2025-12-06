@@ -131,11 +131,15 @@ const Chatbot = ({ currentNote, onBack }) => {
     try {
       const { data } = await aiUsageApi.getToday();
       const limit = data?.limits?.chatbotTokens ?? 5000;
-      const used = data?.usage?.chatbotTokens ?? 0;
-      const remaining = data?.remaining?.chatbotTokens ?? (limit - used);
+      const used = Math.min(data?.usage?.chatbotTokens ?? 0, limit); // Clamp used to limit
+      const remaining = Math.max(Math.min(data?.remaining?.chatbotTokens ?? (limit - used), limit), 0); // Clamp remaining
+      
+      // Ensure consistency: if used >= limit, remaining must be 0
+      const finalRemaining = used >= limit ? 0 : remaining;
+      
       setTokenUsage({
         limit,
-        remaining,
+        remaining: finalRemaining,
         used
       });
     } catch (error) {
@@ -173,8 +177,18 @@ const Chatbot = ({ currentNote, onBack }) => {
       return;
     }
 
-    if (tokenLimitReached) {
-      setHistoryError('AI chatbot token limit reached. Try again tomorrow.');
+    // Estimate tokens for this request (rough: 4 chars = 1 token)
+    const estimatedTokens = Math.ceil(inputMessage.length / 4) + 500; // +500 for response
+    
+    if (tokenLimitReached || tokenUsage.remaining < estimatedTokens) {
+      setHistoryError(`Insufficient tokens remaining. You need approximately ${estimatedTokens} tokens, but only have ${tokenUsage.remaining} left. Try again tomorrow.`);
+      const errorMessage = {
+        id: Date.now() + Math.random(),
+        type: 'bot',
+        content: `Insufficient tokens remaining. You need approximately ${estimatedTokens} tokens, but only have ${tokenUsage.remaining} left. Try again tomorrow.`,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
       return;
     }
 
@@ -264,13 +278,17 @@ IMPORTANT RULES:
       if (remainingTokensFromResponse !== undefined || limitsFromResponse?.chatbotTokens || usedTokensFromResponse !== undefined) {
         setTokenUsage((prev) => {
           const limit = limitsFromResponse?.chatbotTokens ?? prev.limit;
-          const used = usedTokensFromResponse ?? prev.used;
+          const used = Math.min(usedTokensFromResponse ?? prev.used, limit); // Clamp to limit
           const remaining = remainingTokensFromResponse !== undefined
-            ? Math.max(remainingTokensFromResponse, 0)
+            ? Math.max(Math.min(remainingTokensFromResponse, limit), 0)
             : Math.max(limit - used, 0);
+          
+          // Ensure consistency
+          const finalRemaining = used >= limit ? 0 : remaining;
+          
           return {
             limit,
-            remaining,
+            remaining: finalRemaining,
             used
           };
         });
@@ -308,8 +326,9 @@ IMPORTANT RULES:
           setMessages(prev => [...prev, moderationReply]);
         } else if (error.response.status === 429) {
           handledError = true;
-          setTokenUsage((prev) => ({ ...prev, remaining: 0, used: prev.limit }));
-          const quotaMessage = error.response.data?.error || 'Daily AI chatbot token limit reached. Try again tomorrow.';
+          // Refresh token usage to get accurate count
+          await fetchTokenUsage();
+          const quotaMessage = error.response.data?.error || 'Daily AI chatbot token limit reached. Please try again tomorrow.';
           setHistoryError(quotaMessage);
           const quotaReply = {
             id: Date.now() + Math.random(),
