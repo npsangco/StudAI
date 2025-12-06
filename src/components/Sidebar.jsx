@@ -183,17 +183,16 @@ export default function Sidebar({ isOpen, onClose }) {
                     <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 mb-3">
                         <div className="flex items-center gap-3 mb-3">
                             <div className="relative">
-                                {userPhoto ? (
-                                    <img
-                                        src={userPhoto}
-                                        alt="Profile"
-                                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"
-                                    />
-                                ) : (
-                                    <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center border-2 border-white shadow-md">
-                                        <User className="w-6 h-6 text-white" />
-                                    </div>
-                                )}
+                                <img
+                                    src={userPhoto || "/default-avatar.png"}
+                                    alt="Profile"
+                                    className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"
+                                    onError={(e) => {
+                                        if (e.target.src !== "/default-avatar.png") {
+                                            e.target.src = "/default-avatar.png";
+                                        }
+                                    }}
+                                />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-gray-900 truncate">
