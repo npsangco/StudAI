@@ -218,7 +218,7 @@ export const QuestionBankBrowser = ({ onSelectQuestions, onClose, toast }) => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   <option value="">All Sources</option>
-                  {stats?.topSources.map(source => (
+                  {(stats?.topSources && Array.isArray(stats.topSources) ? stats.topSources : []).map(source => (
                     <option key={source.quizId} value={source.quizId}>
                       {source.quizTitle} ({source.count})
                     </option>
@@ -267,7 +267,7 @@ export const QuestionBankBrowser = ({ onSelectQuestions, onClose, toast }) => {
             </div>
           ) : (
             <div className="space-y-3">
-              {questions.map((question) => (
+              {(Array.isArray(questions) ? questions : []).map((question) => (
                 <QuestionBankItem
                   key={question.question_id}
                   question={question}
