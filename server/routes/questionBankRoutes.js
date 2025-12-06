@@ -29,9 +29,6 @@ router.get('/', async (req, res) => {
     // Build question filter conditions
     const questionWhere = {};
 
-    // Filter out copied questions - only show originals
-    questionWhere.is_copy = 0;
-
     if (type) {
       questionWhere.type = type;
     }
@@ -153,8 +150,7 @@ router.post('/insert', async (req, res) => {
         answer: sourceQuestion.answer,
         matching_pairs: sourceQuestion.matching_pairs,
         points: sourceQuestion.points,
-        difficulty: sourceQuestion.difficulty,
-        is_copy: 1  // Mark as a copy from question bank
+        difficulty: sourceQuestion.difficulty
       });
 
       insertedQuestions.push(newQuestion);

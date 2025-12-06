@@ -48,16 +48,14 @@ export const QuestionBankBrowser = ({ onSelectQuestions, onClose, toast }) => {
       const data = await response.json();
 
       if (response.ok) {
-        setQuestions(Array.isArray(data.questions) ? data.questions : []);
-        setPagination(data.pagination || { total: 0, page: 1, limit: 50, pages: 0 });
+        setQuestions(data.questions);
+        setPagination(data.pagination);
       } else {
         toast.error(data.error || 'Failed to load question bank');
-        setQuestions([]);
       }
     } catch (error) {
       console.error('Error fetching questions:', error);
       toast.error('Failed to load question bank');
-      setQuestions([]);
     } finally {
       setLoading(false);
     }
@@ -218,7 +216,7 @@ export const QuestionBankBrowser = ({ onSelectQuestions, onClose, toast }) => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   <option value="">All Sources</option>
-                  {(stats?.topSources && Array.isArray(stats.topSources) ? stats.topSources : []).map(source => (
+                  {stats?.topSources.map(source => (
                     <option key={source.quizId} value={source.quizId}>
                       {source.quizTitle} ({source.count})
                     </option>
@@ -267,7 +265,7 @@ export const QuestionBankBrowser = ({ onSelectQuestions, onClose, toast }) => {
             </div>
           ) : (
             <div className="space-y-3">
-              {(Array.isArray(questions) ? questions : []).map((question) => (
+              {questions.map((question) => (
                 <QuestionBankItem
                   key={question.question_id}
                   question={question}
