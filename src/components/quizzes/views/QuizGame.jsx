@@ -503,6 +503,8 @@ const QuizGame = ({
   // ============================================
   
   const handleReconnection = async () => {
+    console.log('🚀 HANDLE RECONNECTION CALLED', { mode, gamePin: quiz?.gamePin, userId: quiz?.currentUserId });
+    
     // 🔥 NEW: Set isReconnecting flag in Firebase so leaderboard shows "Reconnecting"
     if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
       try {
@@ -517,7 +519,11 @@ const QuizGame = ({
 
     const result = await reconnection.attemptReconnection();
 
+    console.log('🔄 RECONNECTION ATTEMPT RESULT:', result);
+
     if (result.success) {
+
+      console.log('✅ RECONNECTION SUCCESS - Starting state restoration');
 
       // 1. Restore score and answers (but NOT currentQuestionIndex yet - we'll determine that below based on battle state)
       const restoredScore = result.savedState?.score ?? result.playerData.score ?? 0;

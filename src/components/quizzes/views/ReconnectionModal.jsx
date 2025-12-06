@@ -17,6 +17,8 @@ export const ReconnectionModal = ({
 }) => {
   const [error, setError] = useState(null);
   
+  console.log('🎭 ReconnectionModal render:', { isOpen, isReconnecting, inGracePeriod, gamePin });
+  
   if (!isOpen) return null;
   
   // Format time remaining
@@ -27,8 +29,10 @@ export const ReconnectionModal = ({
   };
   
   const handleReconnect = async () => {
+    console.log('🔘 RECONNECT BUTTON CLICKED - Calling onReconnect...');
     setError(null);
     const result = await onReconnect();
+    console.log('📥 onReconnect result:', result);
     
     if (!result.success) {
       setError(result.error || 'Failed to reconnect');
