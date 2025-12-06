@@ -59,11 +59,16 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
 
         try {
             // Handle both naming conventions: choices from QuizEditor, choices from database
+            // Database stores choices as JSON, QuizEditor uses array
             const rawChoices = question.choices;
             if (rawChoices) {
-                choices = typeof rawChoices === 'string'
-                    ? JSON.parse(rawChoices)
-                    : rawChoices;
+                if (typeof rawChoices === 'string') {
+                    choices = JSON.parse(rawChoices);
+                } else if (Array.isArray(rawChoices)) {
+                    choices = rawChoices;
+                } else {
+                    choices = rawChoices;
+                }
             }
         } catch (e) {
             console.error('Error parsing choices:', e);
@@ -72,11 +77,16 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
 
         try {
             // Handle both naming conventions: matchingPairs from QuizEditor, matching_pairs from database
+            // Database stores matching_pairs as JSON string, QuizEditor uses array
             const rawPairs = question.matchingPairs || question.matching_pairs;
             if (rawPairs) {
-                matchingPairs = typeof rawPairs === 'string'
-                    ? JSON.parse(rawPairs)
-                    : rawPairs;
+                if (typeof rawPairs === 'string') {
+                    matchingPairs = JSON.parse(rawPairs);
+                } else if (Array.isArray(rawPairs)) {
+                    matchingPairs = rawPairs;
+                } else {
+                    matchingPairs = rawPairs;
+                }
             }
         } catch (e) {
             console.error('Error parsing matching pairs:', e);
