@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Video, Clock, Copy, Check, Lock, Globe, Trash2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Calendar, Video, Clock, Copy, Check, Lock, Globe, Trash2, Eye, EyeOff, AlertCircle, Search } from 'lucide-react';
 import ToastContainer from '../components/ToastContainer';
 import AppLoader from '../components/AppLoader';
 import { useToast } from '../hooks/useToast';
@@ -29,6 +29,7 @@ const JitsiSessions = () => {
   const [hasConsented, setHasConsented] = useState(false);
   const [showConsentForm, setShowConsentForm] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const sessionsPerPage = 6;
   
@@ -730,22 +731,41 @@ const JitsiSessions = () => {
           </button>
         </div>
 
+        {/* Search Bar */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Search sessions..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border-2 border-gray-300 bg-gray-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors"
+          />
+        </div>
+
         {/* Sessions List */}
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-tutorial="session-cards">
             {activeTab === 'my-sessions' && (() => {
-              // Pagination logic for my sessions
-              const indexOfLastSession = currentPage * sessionsPerPage;
-              const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
-              const currentSessions = mySessions.slice(indexOfFirstSession, indexOfLastSession);
-
-              if (mySessions.length === 0) {
+              // Filter sessions based on search term
+              const filteredSessions = mySessions
+                .filter(session =>
+                  session.topic.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                .sort((a, b) => new Date(b.created_at || b.start_time) - new Date(a.created_at || a.start_time));
+              
+              if (filteredSessions.length === 0) {
                 return (
                   <div className="col-span-full text-center py-12 text-gray-500">
-                    No sessions yet. Create your first study session above!
+                    {searchTerm ? 'No sessions found.' : 'No sessions yet. Create your first study session above!'}
                   </div>
                 );
               }
+              
+              // Pagination logic for filtered my sessions
+              const indexOfLastSession = currentPage * sessionsPerPage;
+              const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
+              const currentSessions = filteredSessions.slice(indexOfFirstSession, indexOfLastSession);
 
               return currentSessions.map(session => (
                 <SessionCard key={session.session_id} session={session} isMine={true} />
@@ -753,25 +773,31 @@ const JitsiSessions = () => {
             })()}
 
             {activeTab === 'public' && (() => {
-              // Filter non-expired sessions
+              // Filter non-expired sessions and apply search
               const activePublicSessions = publicSessions.filter(session => {
                 const startTime = new Date(session.start_time);
                 const endTime = new Date(startTime.getTime() + session.duration * 60000);
                 return new Date() <= endTime;
               });
+              
+              const filteredSessions = activePublicSessions
+                .filter(session =>
+                  session.topic.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                .sort((a, b) => new Date(b.created_at || b.start_time) - new Date(a.created_at || a.start_time));
 
-              // Pagination logic
-              const indexOfLastSession = currentPage * sessionsPerPage;
-              const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
-              const currentSessions = activePublicSessions.slice(indexOfFirstSession, indexOfLastSession);
-
-              if (activePublicSessions.length === 0) {
+              if (filteredSessions.length === 0) {
                 return (
                   <div className="col-span-full text-center py-12 text-gray-500">
-                    No public sessions available at the moment.
+                    {searchTerm ? 'No sessions found.' : 'No public sessions available at the moment.'}
                   </div>
                 );
               }
+
+              // Pagination logic for filtered sessions
+              const indexOfLastSession = currentPage * sessionsPerPage;
+              const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
+              const currentSessions = filteredSessions.slice(indexOfFirstSession, indexOfLastSession);
 
               return currentSessions.map(session => (
                 <SessionCard key={session.session_id} session={session} isMine={false} />

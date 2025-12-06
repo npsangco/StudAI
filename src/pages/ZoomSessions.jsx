@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Video, LogOut, Clock, Copy, Check, RefreshCw, Lock, Globe, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Calendar, Video, LogOut, Clock, Copy, Check, RefreshCw, Lock, Globe, Trash2, Eye, EyeOff, Search } from 'lucide-react';
 import ToastContainer from '../components/ToastContainer';
 import AppLoader from '../components/AppLoader';
 import { useToast } from '../hooks/useToast';
@@ -30,6 +30,7 @@ const Sessions = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [unlockedSession, setUnlockedSession] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const sessionsPerPage = 6;
   
@@ -679,36 +680,114 @@ const Sessions = () => {
             </div>
 
             <div className="space-y-4 max-h-[600px] overflow-y-auto">
-              {activeTab === 'my-sessions' ? (
-                mySessions.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500 mb-4">No study sessions yet.</p>
-                    {!zoomConnected && (
-                      <p className="text-sm text-gray-400">Connect Zoom to create your first session!</p>
+              {activeTab === 'my-sessions' ? (() => {
+                // Filter sessions based on search term
+                const filteredSessions = mySessions
+                  .filter(session =>
+                    session.topic.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .sort((a, b) => new Date(b.created_at || b.start_time) - new Date(a.created_at || a.start_time));
+                
+                if (filteredSessions.length === 0) {
+                  return (
+                    <div className="text-center py-12">
+                      <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 mb-4">
+                        {searchTerm ? 'No sessions found.' : 'No study sessions yet.'}
+                      </p>
+                      {!zoomConnected && !searchTerm && (
+                        <p className="text-sm text-gray-400">Connect Zoom to create your first session!</p>
+                      )}
+                    </div>
+                  );
+                }
+                
+                // Pagination logic for filtered my sessions
+                const indexOfLastSession = currentPage * sessionsPerPage;
+                const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
+                const currentSessions = filteredSessions.slice(indexOfFirstSession, indexOfLastSession);
+                const totalPages = Math.ceil(filteredSessions.length / sessionsPerPage);
+                
+                return (
+                  <>
+                    {currentSessions.map((session) => renderSessionCard(session, true))}
+                    
+                    {totalPages > 1 && (
+                      <div className="flex justify-center items-center gap-2 mt-6 pt-6 border-t">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Previous
+                        </button>
+                        <span className="text-sm text-gray-600">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                          className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Next
+                        </button>
+                      </div>
                     )}
-                  </div>
-                ) : (() => {
-                  // Pagination logic for my sessions
-                  const indexOfLastSession = currentPage * sessionsPerPage;
-                  const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
-                  const currentSessions = mySessions.slice(indexOfFirstSession, indexOfLastSession);
-                  return currentSessions.map((session) => renderSessionCard(session, true));
-                })()
-              ) : (
-                publicSessions.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No public sessions available.</p>
-                  </div>
-                ) : (() => {
-                  // Pagination logic for public sessions
-                  const indexOfLastSession = currentPage * sessionsPerPage;
-                  const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
-                  const currentSessions = publicSessions.slice(indexOfFirstSession, indexOfLastSession);
-                  return currentSessions.map((session) => renderSessionCard(session, false));
-                })()
-              )}
+                  </>
+                );
+              })() : (() => {
+                // Filter public sessions based on search term
+                const filteredSessions = publicSessions
+                  .filter(session =>
+                    session.topic.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .sort((a, b) => new Date(b.created_at || b.start_time) - new Date(a.created_at || a.start_time));
+                
+                if (filteredSessions.length === 0) {
+                  return (
+                    <div className="text-center py-12">
+                      <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500">
+                        {searchTerm ? 'No sessions found.' : 'No public sessions available yet.'}
+                      </p>
+                    </div>
+                  );
+                }
+                
+                // Pagination logic for filtered public sessions
+                const indexOfLastSession = currentPage * sessionsPerPage;
+                const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
+                const currentSessions = filteredSessions.slice(indexOfFirstSession, indexOfLastSession);
+                const totalPages = Math.ceil(filteredSessions.length / sessionsPerPage);
+                
+                return (
+                  <>
+                    {currentSessions.map((session) => renderSessionCard(session, false))}
+                    
+                    {totalPages > 1 && (
+                      <div className="flex justify-center items-center gap-2 mt-6 pt-6 border-t">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Previous
+                        </button>
+                        <span className="text-sm text-gray-600">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                          className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {/* Pagination Controls */}
