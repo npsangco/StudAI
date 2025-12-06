@@ -218,14 +218,19 @@ export function useQuizAPI(quizDataHook, toast) {
         }
       }
 
-      await loadQuizzesFromAPI();
-      
-      const refreshedQuizResponse = await quizApi.getById(quizId);
-      setQuestions(refreshedQuizResponse.data.questions);
+      // Quiz saved successfully - refresh data (non-critical operations)
+      try {
+        await loadQuizzesFromAPI();
+        const refreshedQuizResponse = await quizApi.getById(quizId);
+        setQuestions(refreshedQuizResponse.data.questions);
+      } catch (refreshErr) {
+        console.warn('Failed to refresh quiz data after save:', refreshErr);
+        // Continue anyway - save was successful
+      }
       
       return true;
     } catch (err) {
-
+      console.error('Failed to save quiz:', err);
       setError(err.response?.data?.error || 'Failed to save quiz');
       return false;
     } finally {
