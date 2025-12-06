@@ -515,7 +515,7 @@ router.get("/recent-users", async (req, res) => {
                 ]
             ],
             order: sortBy === 'lastActivity' 
-                ? [[sequelize.literal('lastActivityTimestamp'), order === 'desc' ? 'DESC NULLS LAST' : 'ASC NULLS FIRST']]
+                ? [[sequelize.literal('COALESCE(lastActivityTimestamp, \'1900-01-01\')'), order === 'desc' ? 'DESC' : 'ASC']]
                 : [["createdAt", order === 'desc' ? 'DESC' : 'ASC']],
             limit: 5
         });
@@ -525,8 +525,24 @@ router.get("/recent-users", async (req, res) => {
 
             let activity = "Never";
             if (data.lastActivityTimestamp) {
-                const date = new Date(data.lastActivityTimestamp);
-                activity = date.toLocaleString();
+                const activityDate = new Date(data.lastActivityTimestamp);
+                const now = new Date();
+                const diffMs = now - activityDate;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / 86400000);
+
+                if (diffMins < 1) {
+                    activity = "Just now";
+                } else if (diffMins < 60) {
+                    activity = `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+                } else if (diffHours < 24) {
+                    activity = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                } else if (diffDays < 7) {
+                    activity = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+                } else {
+                    activity = activityDate.toLocaleDateString();
+                }
             }
 
             return {
