@@ -1,24 +1,13 @@
 import { ref, onValue, onDisconnect, set, get, update, serverTimestamp } from 'firebase/database';
 import { realtimeDb } from './config';
 
-/**
- * Connection Manager - Handles heartbeats, disconnections, and reconnections
- */
+// Handles heartbeats, disconnections, and reconnections
 
-// ============================================
-// 🔌 CONNECTION STATE TRACKING
-// ============================================
-
-/**
- * Initialize connection tracking for a player
- * Sets up heartbeat and disconnect handlers with 90-second grace period
- */
 export const initializeConnectionTracking = async (gamePin, userId) => {
   try {
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
     const connectionRef = ref(realtimeDb, `battles/${gamePin}/connections/user_${userId}`);
 
-    // Set initial connection state
     await set(connectionRef, {
       userId,
       isOnline: true,
@@ -28,32 +17,29 @@ export const initializeConnectionTracking = async (gamePin, userId) => {
       gracePeriodActive: false
     });
 
-    // IMPORTANT: Also update player's isOnline status so leaderboard shows correctly
+    // Update player's isOnline status
     await update(playerRef, {
       isOnline: true,
       inGracePeriod: false,
-      disconnectedAt: null // Clear any previous disconnect
+      disconnectedAt: null
     });
 
-    // Setup disconnect handler - auto-mark as offline with grace period
+    // Auto-mark as offline with grace period on disconnect
     const disconnectRef = onDisconnect(connectionRef);
 
-    // Calculate timestamp at DISCONNECT time, not initialization time
-    // We use a Firebase transaction to get server timestamp when disconnect actually happens
     await disconnectRef.update({
       isOnline: false,
-      disconnectedAt: serverTimestamp(), // Server timestamp at disconnect
+      disconnectedAt: serverTimestamp(),
       gracePeriodActive: true,
-      gracePeriodExpiresAt: null // Will be calculated by checkGracePeriod using disconnectedAt
+      gracePeriodExpiresAt: null
     });
 
-    // Also update player's isOnline status (but keep in grace period)
     const playerDisconnectRef = onDisconnect(playerRef);
     await playerDisconnectRef.update({
       isOnline: false,
       inGracePeriod: true,
-      disconnectedAt: serverTimestamp(), // Server timestamp at disconnect
-      gracePeriodExpiresAt: null // Will be calculated by checkGracePeriod using disconnectedAt
+      disconnectedAt: serverTimestamp(),
+      gracePeriodExpiresAt: null
     });
 
     return {
@@ -67,11 +53,6 @@ export const initializeConnectionTracking = async (gamePin, userId) => {
   }
 };
 
-/**
- * Send heartbeat to keep connection alive
- * Should be called every 5 seconds
- * Clears grace period if player reconnects
- */
 export const sendHeartbeat = async (gamePin, userId) => {
   try {
     const connectionRef = ref(realtimeDb, `battles/${gamePin}/connections/user_${userId}`);
@@ -84,7 +65,7 @@ export const sendHeartbeat = async (gamePin, userId) => {
       gracePeriodActive: false
     });
 
-    // Also update player status (clear grace period)
+    // Also update player status
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
     await update(playerRef, {
       isOnline: true,
@@ -93,15 +74,11 @@ export const sendHeartbeat = async (gamePin, userId) => {
     });
 
   } catch (error) {
-    console.error('❌ Heartbeat failed:', error);
-    // Don't throw - heartbeat failures shouldn't crash the app
+    console.error('❤️ Heartbeat failed:', error);
   }
 };
 
-/**
- * Monitor connection state changes
- * Callback receives: { isOnline, lastHeartbeat }
- */
+// Monitor connection state changes
 export const listenToConnectionState = (gamePin, userId, callback) => {
   const connectionRef = ref(realtimeDb, `battles/${gamePin}/connections/user_${userId}`);
   
@@ -311,13 +288,6 @@ export const cleanupConnectionTracking = async (gamePin, userId) => {
   }
 };
 
-// ============================================
-// 🔄 RECONNECTION HELPERS
-// ============================================
-
-/**
- * Check if battle is still active (can rejoin)
- */
 export const canRejoinBattle = async (gamePin) => {
   try {
     const metadataRef = ref(realtimeDb, `battles/${gamePin}/metadata`);
@@ -353,10 +323,6 @@ export const canRejoinBattle = async (gamePin) => {
   }
 };
 
-/**
- * Attempt to rejoin a battle
- * Returns player's saved state (score, currentQuestion, etc.) + battle metadata
- */
 export const rejoinBattle = async (gamePin, userId) => {
   try {
 
@@ -528,10 +494,6 @@ export const savePlayerState = async (gamePin, userId, state) => {
   }
 };
 
-/**
- * Restore player's saved game state
- * Called when player reconnects during grace period
- */
 export const restorePlayerState = async (gamePin, userId) => {
   try {
     const stateRef = ref(realtimeDb, `battles/${gamePin}/savedStates/user_${userId}`);
@@ -568,10 +530,6 @@ export const restorePlayerState = async (gamePin, userId) => {
   }
 };
 
-/**
- * Clear saved player state
- * Called after successful reconnection or when state expires
- */
 export const clearSavedState = async (gamePin, userId) => {
   try {
     const stateRef = ref(realtimeDb, `battles/${gamePin}/savedStates/user_${userId}`);

@@ -1,16 +1,12 @@
 import React from 'react';
 import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy, FileText } from 'lucide-react';
 
-// ============================================
-// QUIZ MODE SELECTION MODAL
-// ============================================
 export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) => {
   const totalQuestions = quiz?.questionCount || 10;
-  const minQuestionsInBank = 10; // Minimum total questions required in quiz
-  const minSelectableQuestions = 5; // Minimum user can select per session
-  const reserveQuestions = 5; // Always keep 5 in reserve for variety
+  const minQuestionsInBank = 10;
+  const minSelectableQuestions = 5;
+  const reserveQuestions = 5;
   
-  // Calculate max questions user can take while keeping reserve
   const maxSelectableQuestions = totalQuestions > minQuestionsInBank 
     ? Math.min(totalQuestions - reserveQuestions, 100) 
     : Math.min(totalQuestions, 100);
@@ -21,7 +17,6 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   const [showBattleModeSelection, setShowBattleModeSelection] = React.useState(false);
   const [showModesInfoModal, setShowModesInfoModal] = React.useState(false);
 
-  // Reset question count and mode when quiz changes
   React.useEffect(() => {
     if (quiz) {
       setQuestionCount(maxSelectableQuestions);
@@ -77,7 +72,6 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
         className="bg-white rounded-xl sm:rounded-2xl max-w-lg w-full mx-auto relative shadow-2xl animate-scale-in overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 p-1.5 sm:p-2 hover:bg-white/20 hover:backdrop-blur-sm rounded-full transition-colors group"
@@ -472,9 +466,6 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   );
 };
 
-// ============================================
-// DELETE CONFIRMATION MODAL
-// ============================================
 export const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, itemName, itemType = "quiz" }) => {
   if (!isOpen) return null;
 
@@ -555,9 +546,6 @@ export const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, itemName, 
   );
 };
 
-// ============================================
-// VALIDATION ERROR MODAL
-// ============================================
 export const ValidationErrorModal = ({ isOpen, onClose, errors }) => {
   if (!isOpen) return null;
 

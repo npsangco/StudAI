@@ -1,19 +1,8 @@
 import { ref, push, set, get, update, onValue, serverTimestamp, query, orderByChild, limitToLast } from 'firebase/database';
 import { realtimeDb } from './config';
 
-/**
- * Emoji Reaction Operations for Quiz Battles
- */
+// Emoji reaction operations for quiz battles
 
-// ============================================
-// SEND REACTION
-// ============================================
-
-/**
- * Send an emoji reaction during battle
- * @param {string} gamePin - Battle PIN
- * @param {object} reactionData - { userId, userName, emoji }
- */
 export const sendReaction = async (gamePin, reactionData) => {
   try {
     const reactionsRef = ref(realtimeDb, `battles/${gamePin}/reactions`);
@@ -28,7 +17,7 @@ export const sendReaction = async (gamePin, reactionData) => {
       userName: reactionData.userName,
       emoji: reactionData.emoji,
       timestamp: now,
-      expiresAt: now + 5000 // 5 seconds TTL
+      expiresAt: now + 5000
     });
 
     return { success: true, reactionId };
@@ -39,15 +28,6 @@ export const sendReaction = async (gamePin, reactionData) => {
   }
 };
 
-// ============================================
-// LISTEN TO REACTIONS
-// ============================================
-
-/**
- * Listen to reactions in real-time
- * @param {string} gamePin - Battle PIN
- * @param {function} callback - Called with array of recent reactions
- */
 export const listenToReactions = (gamePin, callback) => {
   const reactionsRef = ref(realtimeDb, `battles/${gamePin}/reactions`);
   const recentReactionsQuery = query(reactionsRef, orderByChild('timestamp'), limitToLast(20));
@@ -59,7 +39,6 @@ export const listenToReactions = (gamePin, callback) => {
     snapshot.forEach((childSnapshot) => {
       const reaction = childSnapshot.val();
 
-      // Filter out expired reactions (older than 5 seconds)
       if (reaction.expiresAt > now) {
         reactions.push({
           ...reaction,
@@ -75,14 +54,6 @@ export const listenToReactions = (gamePin, callback) => {
   });
 };
 
-// ============================================
-// CLEANUP EXPIRED REACTIONS
-// ============================================
-
-/**
- * Cleanup expired reactions (called periodically)
- * @param {string} gamePin - Battle PIN
- */
 export const cleanupExpiredReactions = async (gamePin) => {
   try {
     const reactionsRef = ref(realtimeDb, `battles/${gamePin}/reactions`);

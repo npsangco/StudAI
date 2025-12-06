@@ -11,10 +11,7 @@ import NodeCache from "node-cache";
 
 const router = express.Router();
 
-// ============================================
-// CONFIGURATION (Pet Buddy v2.1)
-// ============================================
-
+// Pet Buddy configuration
 const CONFIG = {
   stats: {
     hunger: { decay: 10, interval: 180, max: 100 },      // 10 decay per 180 minutes (3 hours)
@@ -33,11 +30,7 @@ const CONFIG = {
   }
 };
 
-// ============================================
-// MIDDLEWARE & CACHING
-// ============================================
-
-// Hybrid authentication middleware - supports both session cookies and JWT tokens
+// Hybrid auth middleware
 const requireAuth = (req, res, next) => {
   // Method 1: Check session cookie (primary)
   if (req.session && req.session.userId) {

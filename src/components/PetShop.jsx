@@ -22,7 +22,6 @@ export default function PetShop({ onClose, onItemPurchase }) {
       const itemsRes = await petApi.getShopItems();
       setItems(itemsRes.data.items || []);
 
-      // Initialize quantities to 1
       const initialQuantities = {};
       itemsRes.data.items.forEach(item => {
         initialQuantities[item.item_id] = 1;

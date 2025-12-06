@@ -72,7 +72,6 @@ export default function Dashboard() {
     
     const fetchUser = async () => {
       try {
-        // Debug: Check if token exists
         const token = localStorage.getItem('authToken');
         console.log('🔑 Auth token present:', !!token);
         

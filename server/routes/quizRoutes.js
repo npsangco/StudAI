@@ -35,10 +35,7 @@ const EXAMPLE_QUESTION_TEXTS = {
   'Matching': 'Match each scientist to their discovery'
 };
 
-// ============================================
-// CONFIGURATION (Pet Buddy)
-// ============================================
-
+// Pet Buddy configuration
 const QUIZ_CONFIG = {
   points: {
     formula: (score, total) => {
@@ -463,11 +460,7 @@ async function buildAiQuizQuestions({
   return normalizedQuestions;
 }
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
-
-// Hybrid authentication middleware - supports both session cookies and JWT tokens
+// Hybrid auth middleware
 const requireAuth = (req, res, next) => {
   // Method 1: Check session cookie (primary)
   if (req.session && req.session.userId) {
@@ -642,9 +635,7 @@ async function awardPetExp(userId, expAmount) {
   }
 }
 
-// ============================================
-// HELPER: Generate unique share code
-// ============================================
+// Generate unique share code
 const generateUniqueShareCode = async () => {
   let shareCode;
   let isUnique = false;
@@ -1358,10 +1349,6 @@ router.delete('/:quizId/questions/:questionId', requireAuth, async (req, res) =>
     res.status(500).json({ error: 'Failed to delete question' });
   }
 });
-
-// ============================================
-// QUIZ ATTEMPT ROUTES (WITH DAILY CAPS)
-// ============================================
 
 router.post('/:id/attempt', requireAuth, async (req, res) => {
   try {

@@ -1,4 +1,4 @@
-// syncService.js – Separate services for Notes and Planner
+// Sync services for Notes and Planner with offline support
 
 import axios from 'axios';
 import { API_URL } from '../config/api.config';
@@ -17,10 +17,6 @@ import {
   getCachedPlans,
   deleteCachedPlan,
 } from './indexedDB';
-
-// ============================================
-// NOTES SERVICE
-// ============================================
 
 class NotesService {
   constructor() {
@@ -44,7 +40,6 @@ class NotesService {
     console.info('[Notes] Offline mode');
   }
 
-  // Get all notes (online: MySQL, offline: IndexedDB)
   async getAllNotes() {
     if (!this.isOnline) {
       console.info('[Notes] Loading from cache (offline)');
@@ -222,10 +217,6 @@ class NotesService {
   }
 }
 
-// ============================================
-// PLANNER SERVICE
-// ============================================
-
 class PlannerService {
   constructor() {
     this.isOnline = navigator.onLine;
@@ -248,7 +239,6 @@ class PlannerService {
     console.info('[Planner] Offline mode');
   }
 
-  // Get all plans (online: MySQL, offline: IndexedDB)
   async getAllPlans() {
     if (!this.isOnline) {
       console.info('[Planner] Loading from cache (offline)');

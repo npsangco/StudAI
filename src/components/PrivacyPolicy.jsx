@@ -32,8 +32,6 @@ export default function PrivacyPolicyModal() {
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto max-h-[70vh]">
               <div className="text-sm text-gray-700 space-y-6">
-                <p className="text-gray-500 italic">Last updated: {new Date().toLocaleDateString()}</p>
-                
                 <p>
                   Welcome to StudAI. This Privacy Policy explains how we collect, use, and protect your personal information 
                   when you use our website and related services. By using the Service, you agree to the practices described in this policy.
@@ -142,7 +140,7 @@ export default function PrivacyPolicyModal() {
                   <h3 className="font-bold text-gray-900 mb-2">9. Changes to This Privacy Policy</h3>
                   <p>
                     We may update this Privacy Policy from time to time. We will notify you of any changes by posting 
-                    the new Privacy Policy on this page and updating the "Last updated" date at the top.
+                    the new Privacy Policy on this page.
                   </p>
                 </div>
 

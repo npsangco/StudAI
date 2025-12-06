@@ -194,7 +194,7 @@ export default function ZoomDocumentationPage() {
           {/* Version Info */}
           <div className="border-t pt-6">
             <p className="text-sm text-gray-500">
-              Last updated: {new Date().toLocaleDateString()} | Version 1.0
+              Version 1.0
             </p>
           </div>
         </div>

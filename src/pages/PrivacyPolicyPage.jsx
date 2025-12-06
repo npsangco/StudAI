@@ -9,8 +9,6 @@ export default function PrivacyPolicyPage() {
 
         {/* Content */}
         <div className="p-8 space-y-8">
-          <p className="text-gray-500 italic">Last updated: {new Date().toLocaleDateString()}</p>
-          
           <p className="text-gray-700">
             Welcome to StudAI. This Privacy Policy explains how we collect, use, and protect your personal information 
             when you use our website and related services. By using the Service, you agree to the practices described in this policy.
@@ -119,7 +117,7 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-3">9. Changes to This Privacy Policy</h2>
             <p className="text-gray-700">
               We may update this Privacy Policy from time to time. We will notify you of any changes by posting 
-              the new Privacy Policy on this page and updating the "Last updated" date at the top.
+              the new Privacy Policy on this page.
             </p>
           </div>
 

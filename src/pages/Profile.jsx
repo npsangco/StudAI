@@ -74,7 +74,6 @@ export default function Profile() {
                     setMemberSince(formattedDate);
                 }
                 
-                // Set last updated to current date
                 setLastUpdated("Recently");
 
                 let bMonth = "";
@@ -284,10 +283,6 @@ export default function Profile() {
                                             <div className="flex justify-between">
                                                 <span>Member since</span>
                                                 <span className="font-medium">{memberSince || "Recently"}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Last updated</span>
-                                                <span className="font-medium">{lastUpdated}</span>
                                             </div>
                                         </div>
                                     </div>

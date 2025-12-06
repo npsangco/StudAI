@@ -7,10 +7,7 @@ import { checkAndUnlockAchievements } from '../services/achievementServices.js';
 
 const router = express.Router();
 
-// ============================================
-// CONFIGURATION (Consistent with Quiz Routes)
-// ============================================
-
+// Plan configuration
 const PLAN_CONFIG = {
   points: {
     perTask: 30,
@@ -23,11 +20,7 @@ const PLAN_CONFIG = {
   }
 };
 
-// ============================================
-// HELPER FUNCTIONS (Consistent with Quiz Routes)
-// ============================================
-
-// Hybrid authentication middleware - supports both session cookies and JWT tokens
+// Hybrid auth middleware
 const requireAuth = (req, res, next) => {
   // Method 1: Check session cookie (primary)
   if (req.session && req.session.userId) {

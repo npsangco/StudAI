@@ -2,14 +2,6 @@ import { ref, set, update, remove, onValue, get, serverTimestamp, runTransaction
 import { realtimeDb } from './config';
 import { API_URL } from '../config/api.config';
 
-// ============================================
-// BATTLE ROOM OPERATIONS
-// ============================================
-
-/**
- * Create a new battle room in Firebase
- * Called by HOST after MySQL battle creation
- */
 export const createBattleRoom = async (gamePin, battleData) => {
   try {
     const battleRef = ref(realtimeDb, `battles/${gamePin}`);
@@ -26,7 +18,7 @@ export const createBattleRoom = async (gamePin, battleData) => {
         viewers: 0,
         createdAt: Date.now()
       },
-      players: {}, // Empty at start
+      players: {},
       answers: {}
     });
 
@@ -37,10 +29,6 @@ export const createBattleRoom = async (gamePin, battleData) => {
   }
 };
 
-/**
- * Add a player to the battle room
- * Called when player joins via MySQL API
- */
 export const addPlayerToBattle = async (gamePin, playerData) => {
   try {
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${playerData.userId}`);
@@ -63,9 +51,6 @@ export const addPlayerToBattle = async (gamePin, playerData) => {
   }
 };
 
-/**
- * Mark player as ready
- */
 export const markPlayerReady = async (gamePin, userId) => {
   try {
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
@@ -77,9 +62,6 @@ export const markPlayerReady = async (gamePin, userId) => {
   }
 };
 
-/**
- * Mark player as unready
- */
 export const markPlayerUnready = async (gamePin, userId) => {
   try {
     const playerRef = ref(realtimeDb, `battles/${gamePin}/players/user_${userId}`);
@@ -91,9 +73,6 @@ export const markPlayerUnready = async (gamePin, userId) => {
   }
 };
 
-/**
- * Update battle status (waiting → in_progress → completed)
- */
 export const updateBattleStatus = async (gamePin, status) => {
   try {
     const statusRef = ref(realtimeDb, `battles/${gamePin}/metadata/status`);

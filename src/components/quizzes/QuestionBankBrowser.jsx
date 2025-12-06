@@ -2,10 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, Database, X, Plus, CheckCircle, Loader, ChevronDown, ChevronUp } from 'lucide-react';
 import { API_URL } from '../../config/api.config';
 
-// ============================================
-// QUESTION BANK BROWSER COMPONENT
-// ============================================
-
 export const QuestionBankBrowser = ({ onSelectQuestions, onClose, toast }) => {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -302,10 +298,6 @@ export const QuestionBankBrowser = ({ onSelectQuestions, onClose, toast }) => {
     </div>
   );
 };
-
-// ============================================
-// QUESTION BANK ITEM COMPONENT
-// ============================================
 
 const QuestionBankItem = ({ question, isSelected, onToggle, getDifficultyColor, getTypeIcon }) => {
   const [expanded, setExpanded] = useState(false);

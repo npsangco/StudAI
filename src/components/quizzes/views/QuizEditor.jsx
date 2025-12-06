@@ -7,10 +7,7 @@ import { canUseAdaptiveMode } from '../utils/adaptiveDifficultyEngine';
 import { TEXT_LIMITS } from '../utils/constants';
 import { QuestionBankBrowser } from '../QuestionBankBrowser';
 
-// ============================================
-// COMPACT SETTINGS BAR COMPONENT
-// ============================================
-
+// Settings bar for privacy & timer controls
 const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }) => {
   const initialIsPublic = quiz.isPublic ?? quiz.is_public ?? false;
   const [isPublic, setIsPublic] = useState(initialIsPublic);
@@ -23,7 +20,6 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
 
   const isTempQuiz = quiz.isTemp || quiz.id?.toString().startsWith('temp-');
 
-  // Update state when quiz prop changes
   React.useEffect(() => {
     const updatedIsPublic = quiz.isPublic ?? quiz.is_public ?? false;
     const updatedShareCode = quiz.share_code || null;
@@ -109,7 +105,6 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
   };
 
   const handleTimerBlur = () => {
-    // Set default if empty on blur
     if (timerValue === '' || timerValue < 0) {
       const defaultTimer = 30;
       setTimerValue(defaultTimer);
@@ -124,10 +119,9 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
   return (
     <div className="bg-gray-50 border-b border-gray-200">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-3">
-        {/* Desktop: Same row | Mobile: Stacked */}
         <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
 
-          {/* Privacy Section */}
+          {/* Privacy toggle & share code */}
           <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
             <span className="text-xs md:text-sm font-medium text-gray-700 flex-shrink-0">Privacy:</span>
             <button
@@ -172,7 +166,7 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
             )}
           </div>
 
-          {/* Timer Section */}
+          {/* Timer per question */}
           <div className="flex items-center gap-2 md:gap-3">
             <span className="text-xs md:text-sm font-medium text-gray-700 flex-shrink-0">Timer:</span>
             <div className="flex items-center gap-2">
@@ -206,15 +200,11 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
   );
 };
 
-// ============================================
-// VALIDATION SYSTEM
-// ============================================
-
+// Validation system for quiz questions
 export const validateQuestions = (questions) => {
   const errors = [];
 
-  // Question Bank validation: Minimum 15 questions required
-  const MIN_QUESTIONS_FOR_BANK = 15;
+  const MIN_QUESTIONS_FOR_BANK = 15; // Question Bank minimum
   if (questions.length < MIN_QUESTIONS_FOR_BANK) {
     errors.push({
       questionNumber: null,
@@ -227,7 +217,6 @@ export const validateQuestions = (questions) => {
   questions.forEach((question, index) => {
     const questionNumber = index + 1;
 
-    // Validate question text
     if (!question.question || question.question.trim() === '') {
       errors.push({
         questionNumber,
@@ -493,14 +482,10 @@ const findDuplicates = (arr) => {
   return Array.from(duplicates);
 };
 
-// ============================================
-// QUIZ MODES INFO MODAL
-// ============================================
-
+// Modal explaining quiz modes
 const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
   if (!isOpen) return null;
 
-  // Get current quiz stats
   const adaptiveCheck = canUseAdaptiveMode(currentQuiz);
   const isAdaptive = adaptiveCheck.enabled;
   const distribution = adaptiveCheck.distribution;
@@ -508,17 +493,14 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-[rgba(107,114,128,0.6)] z-[999] flex items-center justify-center p-3"
         onClick={onClose}
       >
-        {/* Modal - Minified */}
         <div
           className="bg-white rounded-xl shadow-2xl max-w-xl w-full max-h-[85vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header - Compact */}
           <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between rounded-t-xl">
             <h2 className="text-base font-bold text-gray-900 flex items-center gap-1.5">
               <Info className="w-4 h-4 text-gray-600" />
@@ -532,9 +514,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
             </button>
           </div>
 
-          {/* Content - 4 Tiles */}
           <div className="p-4 space-y-2">
-            {/* Question Bank Tile */}
             <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
               <div className="flex items-start gap-2">
                 <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center flex-shrink-0">
@@ -549,7 +529,6 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
               </div>
             </div>
 
-            {/* Classic Tile */}
             <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
               <div className="flex items-start gap-2">
                 <div className="w-6 h-6 bg-amber-500 rounded flex items-center justify-center flex-shrink-0">
@@ -564,7 +543,6 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
               </div>
             </div>
 
-            {/* Adaptive Tile */}
             <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
               <div className="flex items-start gap-2">
                 <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center flex-shrink-0">
@@ -579,7 +557,6 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
               </div>
             </div>
 
-            {/* Your Quiz Status Tile */}
             {questionCount > 0 && (
               <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                 <div className="flex items-start gap-2">
@@ -605,7 +582,6 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
             )}
           </div>
 
-          {/* Footer - Compact */}
           <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-4 py-2.5 flex justify-end rounded-b-xl">
             <button
               onClick={onClose}
@@ -620,10 +596,7 @@ const QuizModesInfoModal = ({ isOpen, onClose, currentQuiz }) => {
   );
 };
 
-// ============================================
-// POLISHED HEADER COMPONENT
-// ============================================
-
+// Quiz editor header with title, actions & validation status
 const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, questions, isDirty, onOpenQuestionBank, isSaving }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempTitle, setTempTitle] = useState(quiz.title);
@@ -660,9 +633,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
   const questionCount = questions.length;
 
   const handleSaveClick = () => {
-    // Allow saving even with errors (work-in-progress quizzes)
-    // Users just won't be able to play them until errors are fixed
-    onSave();
+    onSave(); // Allow saving WIP quizzes with errors
   };
 
   const handleTitleClick = () => {
@@ -693,9 +664,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
     <>
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-4">
-          {/* Desktop Layout */}
           <div className="hidden md:flex items-center justify-between gap-4">
-            {/* Left: Back + Title */}
             <div className="flex items-center gap-4 flex-1 min-w-0">
               <button
                 onClick={onBack}
@@ -736,9 +705,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               )}
             </div>
 
-            {/* Right: Badges + Actions */}
             <div className="flex items-center gap-4">
-              {/* Status Badges Group */}
               <div className="flex items-center gap-2.5">
                 {/* Question Count Badge */}
                 <span className={`px-3 py-1.5 text-sm rounded-full font-medium ${
@@ -749,7 +716,6 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                   {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
                 </span>
 
-                {/* Error Badge */}
                 {hasErrors && (
                   <button
                     onClick={() => setShowErrorModal(true)}
@@ -762,12 +728,9 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 )}
               </div>
 
-              {/* Divider */}
               <div className="h-8 w-px bg-gray-300"></div>
 
-              {/* Action Buttons Group */}
               <div className="flex items-center gap-2.5">
-                {/* Question Bank Button */}
                 <button
                   onClick={onOpenQuestionBank}
                   disabled={isSaving}
@@ -782,7 +745,6 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                   <span className="hidden lg:inline">Question Bank</span>
                 </button>
 
-                {/* Add Question Button */}
                 <button
                   onClick={onAddQuestion}
                   disabled={isSaving}
@@ -796,7 +758,6 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                   + Add Question
                 </button>
 
-                {/* Save Button - Yellow Primary */}
                 <button
                   onClick={handleSaveClick}
                   disabled={!isDirty || isSaving}
@@ -828,9 +789,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
             </div>
           </div>
 
-          {/* Mobile Layout */}
           <div className="flex md:hidden flex-col gap-3">
-            {/* Title Row */}
             <div className="flex items-center gap-2">
               <button
                 onClick={onBack}
@@ -864,7 +823,6 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               )}
             </div>
 
-            {/* Badges */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`px-2 py-1 text-xs rounded-full font-medium ${
                 questionCount === 0
@@ -874,7 +832,6 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 {questionCount} Q
               </span>
 
-              {/* Adaptive Mode Badge - Mobile with Info Icon */}
               {(() => {
                 const adaptiveCheck = canUseAdaptiveMode(questions);
                 
@@ -917,7 +874,6 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
               )}
             </div>
 
-            {/* Actions */}
             <div className="flex gap-2">
               <button
                 onClick={onOpenQuestionBank}
@@ -952,14 +908,12 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
         </div>
       </div>
 
-      {/* Error Modal */}
       <ValidationErrorModal
         isOpen={showErrorModal}
         onClose={() => setShowErrorModal(false)}
         errors={errors}
       />
 
-      {/* Quiz Modes Info Modal */}
       <QuizModesInfoModal
         isOpen={showModesInfoModal}
         onClose={() => setShowModesInfoModal(false)}
@@ -969,10 +923,7 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
   );
 };
 
-// ============================================
-// QUIZ EDITOR COMPONENT
-// ============================================
-
+// Main quiz editor component
 export const QuizEditor = ({
   quiz,
   questions,
@@ -1057,13 +1008,11 @@ export const QuizEditor = ({
   const handleTouchMove = (e, currentIndex) => {
     if (draggedQuestionIndex === null || touchStartY === null) return;
 
-    // Prevent scrolling while dragging
     e.preventDefault();
 
     const touch = e.touches[0];
     const currentY = touch.clientY;
 
-    // Find which question card we're over
     const elements = document.querySelectorAll('[data-question-wrapper]');
     let targetIndex = null;
 
@@ -1105,7 +1054,6 @@ export const QuizEditor = ({
   };
 
   const handleInsertFromBank = async (selectedQuestions) => {
-    // For new unsaved quizzes, use batch add handler
     if (!quiz || !quiz.id || quiz.isTemp) {
       if (onBatchAddQuestions) {
         onBatchAddQuestions(selectedQuestions);
@@ -1117,7 +1065,6 @@ export const QuizEditor = ({
       return;
     }
 
-    // For saved quizzes, use API
     try {
       const questionIds = selectedQuestions.map(q => q.question_id);
 
@@ -1137,7 +1084,6 @@ export const QuizEditor = ({
         toast.success(`Inserted ${data.inserted} question${data.inserted !== 1 ? 's' : ''} from question bank.`);
         setShowQuestionBank(false);
         
-        // Reload the quiz to get updated questions
         if (onReloadQuiz) {
           await onReloadQuiz(quiz.id);
         }
@@ -1152,8 +1098,8 @@ export const QuizEditor = ({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sticky Header Container - Minimal */}
-      <div className="sticky top-16 z-10 bg-white shadow-md" style={{ position: 'sticky', top: '64px', zIndex: 10 }}>
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10 bg-white shadow-md">
         <PolishedHeader
           quiz={quiz}
           questions={questions}
@@ -1167,7 +1113,6 @@ export const QuizEditor = ({
         />
       </div>
 
-      {/* Question Bank Browser Modal */}
       {showQuestionBank && (
         <QuestionBankBrowser
           onSelectQuestions={handleInsertFromBank}
@@ -1189,7 +1134,15 @@ export const QuizEditor = ({
           </div>
         ) : (
           <>
-            {/* Questions List */}
+            <div className="mb-4">
+              <CompactSettingsBar
+                quiz={quiz}
+                onPublicStatusChange={onUpdatePublicStatus}
+                onTimerChange={onUpdateTimer}
+                toast={toast}
+              />
+            </div>
+
             <div className="space-y-4">
               {questions.map((question, index) => (
                 <div

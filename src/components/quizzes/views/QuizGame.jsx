@@ -265,7 +265,6 @@ const QuizGame = ({
       }
     }, 5000);
 
-    // Cleanup on unmount or question change
     return () => {
       if (encouragementTimerRef.current) {
         clearTimeout(encouragementTimerRef.current);
@@ -673,10 +672,6 @@ const QuizGame = ({
     onBack();
   };
 
-  // ============================================
-  // CLEANUP ON UNMOUNT & BROWSER CLOSE
-  // ============================================
-
   useEffect(() => {
     // Track if this is an intentional exit
     let isIntentionalExit = false;
@@ -755,7 +750,6 @@ const QuizGame = ({
       window.addEventListener('beforeunload', handleBeforeUnload);
     }
 
-    // Cleanup on unmount (when user intentionally exits via button)
     return () => {
       if (mode === 'battle') {
 
@@ -1565,10 +1559,8 @@ const QuizGame = ({
     
       {/* MAIN CONTENT */}
       {mode === 'battle' ? (
-        // BATTLE MODE - Responsive leaderboard
         <>
           {leaderboardMode === 'desktop' ? (
-            // Desktop: Side-by-side
             <div className="flex gap-4 max-w-[1800px] mx-auto px-4 pt-24 pb-4 min-h-screen">
               <div className="flex-1 px-2 sm:px-4">
                 <QuizQuestion
@@ -1646,7 +1638,6 @@ const QuizGame = ({
               </div>
             </div>
           ) : (
-            // Mobile: Floating mini
             <div className="px-4 pt-24 pb-8">
               <QuizQuestion
                 question={currentQ}

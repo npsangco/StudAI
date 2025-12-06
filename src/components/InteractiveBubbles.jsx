@@ -7,7 +7,6 @@ export default function InteractiveBubbles() {
   const bubblesRef = useRef([]);
   const animationFrameRef = useRef(null);
 
-  // Initialize bubbles
   useEffect(() => {
     const icons = [BookOpen, FileText, Brain, Lightbulb, GraduationCap, Trophy];
     const colors = [

@@ -1,4 +1,4 @@
-// noteRoutes.js - Updated with Pet Buddy v2.1 Points System
+// Note routes with Pet Buddy points system
 import express from 'express';
 import fs from 'fs';
 import Note from '../models/Note.js';
@@ -11,10 +11,7 @@ import { validateNoteRequest, validateTitle, validateNumericId } from '../middle
 
 const router = express.Router();
 
-// ============================================
-// CONFIGURATION (Pet Buddy v2.1)
-// ============================================
-
+// Pet Buddy configuration
 const NOTE_CONFIG = {
   points: {
     amount: 50,
@@ -28,11 +25,7 @@ const NOTE_CONFIG = {
   }
 };
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
-
-// Hybrid authentication middleware - supports both session cookies and JWT tokens
+// Hybrid auth middleware
 const requireAuth = (req, res, next) => {
   // Method 1: Check session cookie (primary)
   if (req.session && req.session.userId) {

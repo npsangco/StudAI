@@ -701,7 +701,6 @@ function Signup() {
                         </div>
                         <div className="p-6 overflow-y-auto flex-1">
                             <div className="text-sm text-gray-700 space-y-6">
-                                <p className="text-gray-500 italic">Last updated: {new Date().toLocaleDateString()}</p>
                                 <p>
                                     Welcome to StudAI. These Terms and Conditions govern your use of our website, and related services.
                                     By accessing, or using the Service, you agree to be bound by these Terms. If you do not agree, please do not use our Service.
@@ -832,7 +831,6 @@ function Signup() {
                         </div>
                         <div className="p-6 overflow-y-auto flex-1">
                             <div className="text-sm text-gray-700 space-y-6">
-                                <p className="text-gray-500 italic">Last updated: {new Date().toLocaleDateString()}</p>
                                 <p>
                                     Welcome to StudAI. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Service.
                                     Please read this policy carefully. If you do not agree with the terms, please do not access the Service.

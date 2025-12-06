@@ -9,8 +9,6 @@ export default function TermsOfUsePage() {
 
         {/* Content */}
         <div className="p-8 space-y-8">
-          <p className="text-gray-500 italic">Last updated: {new Date().toLocaleDateString()}</p>
-          
           <p className="text-gray-700">
             Welcome to StudAI. These Terms of Use govern your access to and use of our website, services, and applications. 
             By accessing or using StudAI, you agree to be bound by these Terms.

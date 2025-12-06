@@ -149,7 +149,6 @@ export const LiveLeaderboard = ({
     };
   }, [isDragging, dragOffset]);
 
-  // Desktop - Yellow Glass Theme
   if (mode === 'desktop') {
     return (
       <div className="w-full bg-white/20 backdrop-blur-xl rounded-xl border-2 border-white/40 shadow-2xl overflow-hidden">
@@ -290,7 +289,6 @@ export const LiveLeaderboard = ({
     );
   }
 
-  // Mobile - Draggable mini with updated full view
   if (mode === 'mobile') {
     const topPlayers = sortedPlayers.slice(0, 3);
     const remainingCount = Math.max(0, players.length - 3);

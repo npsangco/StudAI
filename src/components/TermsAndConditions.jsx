@@ -32,8 +32,6 @@ export default function TermsModal() {
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto max-h-[70vh]">
               <div className="text-sm text-gray-700 space-y-6">
-                <p className="text-gray-500 italic">Last updated: {new Date().toLocaleDateString()}</p>
-                
                 <p>
                   Welcome to StudAI. These Terms and Conditions govern your use of our website, and related services.  
                   By accessing, or using the Service, you agree to be bound by these Terms. If you do not agree, please do not use our Service.

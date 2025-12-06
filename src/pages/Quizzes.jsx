@@ -368,9 +368,7 @@ function QuizzesPage() {
     return () => document.body.classList.remove('hide-navbar');
   }, [quizDataHook.uiState.currentView]);
 
-  // SYNC QUESTIONS: Listen for questions from Firebase (NON-HOST players)
-  // NOTE: Only runs in LOBBY and LOADING_BATTLE, NOT during active BATTLE
-  // This prevents overriding questions that were restored from savedState on reconnect
+  // Sync questions from Firebase (non-host players, lobby only)
   useEffect(() => {
     const preGameViews = [VIEWS.LOBBY, VIEWS.LOADING_BATTLE]; // NOT VIEWS.BATTLE!
 

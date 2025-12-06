@@ -6,13 +6,6 @@ import { realtimeDb } from './config';
  * Secure tokens stored in localStorage + Firebase for reconnection validation
  */
 
-// ============================================
-// 🎟️ TOKEN GENERATION & STORAGE
-// ============================================
-
-/**
- * Generate a secure reconnection token
- */
 const generateToken = () => {
   return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
 };
