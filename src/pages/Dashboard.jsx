@@ -246,7 +246,7 @@ export default function Dashboard() {
     setIsExtracting(true);
   };
 
-  // AI Summarization using OpenAI (via backend)
+  // Generate AI summary from extracted content
   const generateAISummary = async (content, title) => {
     try {
 
@@ -442,7 +442,7 @@ Please format the summary in a clear, organized manner with proper headings and 
     return date.toLocaleDateString();
   };
 
-  // Get user title based on equipped achievement
+  // Get display title from equipped achievement
   const getUserTitle = () => {
     if (equippedAchievement) {
       return equippedAchievement.title;

@@ -43,7 +43,7 @@ const JitsiSessions = () => {
   const API_BASE_URL = `${API_URL}/api`;
 
   useEffect(() => {
-    // Check if user has already consented
+    // Check if user already accepted Jitsi terms
     const consent = localStorage.getItem('jitsiConsent');
     if (consent === 'true') {
       setHasConsented(true);
@@ -556,7 +556,6 @@ const JitsiSessions = () => {
         />
       )}
 
-      {/* Tutorial Overlay */}
       {showTutorial && (
         <TutorialOverlay
           steps={jitsiTutorialSteps}
@@ -565,15 +564,16 @@ const JitsiSessions = () => {
         />
       )}
 
-      {/* Tutorial Button */}
       <TutorialButton onClick={startTutorial} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800">Study Sessions</h1>
+        </div>
+        
         <div className="mb-8" data-tutorial="jitsi-header">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Study Sessions</h1>
               <p className="text-gray-600">Create and join video study sessions powered by Jitsi Meet</p>
               <a href="/zoom-sessions" className="text-sm text-blue-600 hover:underline">
                 Looking for Zoom sessions? Click here

@@ -24,7 +24,12 @@ export const QuizLandingView = ({
     <div className="bg-gray-50 min-h-screen">
 
       {/* DESKTOP VIEW (lg and up) - 2 Column Grid (70/30 Split) */}
-      <div className="hidden lg:flex items-start justify-center p-4 lg:p-6 min-h-screen overflow-x-hidden">
+      <div className="hidden lg:flex flex-col items-start justify-start p-4 lg:p-6 min-h-screen overflow-x-hidden">
+        {/* Page Title */}
+        <div className="w-full max-w-[1400px] mx-auto mb-4 lg:mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800">Quizzes</h1>
+        </div>
+        
         <div className="w-full max-w-[1400px] mx-auto grid grid-cols-[minmax(0,2.3fr)_minmax(0,1fr)] gap-4 lg:gap-6">
           {/* Left Container - Quiz List (70%) */}
           <div className="min-w-0 overflow-hidden">
@@ -56,6 +61,13 @@ export const QuizLandingView = ({
 
       {/* TABLET VIEW (md to lg) - Single View with Top Pill Navigation */}
       <div className="hidden md:flex lg:hidden flex-col min-h-screen bg-gray-50">
+        {/* Page Title */}
+        <div className="bg-gray-50 px-4 pt-6 pb-3">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800">Quizzes</h1>
+          </div>
+        </div>
+        
         {/* Sticky Top Navigation Pills - Fixed Height */}
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
           <div className="max-w-4xl mx-auto flex gap-2">

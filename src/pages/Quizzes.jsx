@@ -95,7 +95,7 @@ const styles = `
     animation: fadeIn 0.3s ease-out;
   }
 
-  /* Bottom Tab Bar (Mobile) */
+  /* Bottom tab bar styling */
   .bottom-tab-bar {
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
@@ -115,7 +115,7 @@ const styles = `
     color: #6366f1;
   }
 
-  /* Safe area for iOS devices */
+  /* iOS safe area padding */
   .safe-area-inset-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -142,7 +142,7 @@ const styles = `
 `;
 
 function QuizzesPage() {
-  // INITIALIZE HOOKS
+  // Initialize hooks
   const { toasts, toast, removeToast } = useToast();
   const [currentUser, setCurrentUser] = useState(null);
   const quizDataHook = useQuizData();
@@ -156,7 +156,7 @@ function QuizzesPage() {
 
   const { showTutorial, completeTutorial, skipTutorial, startTutorial } = useTutorial('quizzes');
 
-  // RECONNECTION STATE
+  // Reconnection state for quiz battles
   const [reconnectionOpportunity, setReconnectionOpportunity] = useState(null);
 
   // Fetch current user on mount
@@ -297,8 +297,6 @@ function QuizzesPage() {
     setReconnectionOpportunity(null);
   };
 
-  // EFFECTS
-
   // Load quizzes on mount
   useEffect(() => {
     quizAPI.loadQuizzesFromAPI();
@@ -420,7 +418,7 @@ function QuizzesPage() {
     quizDataHook.gameState.gamePin
   ]);
 
-  // RENDER: Loading Screens
+  // Loading screens
   if (quizDataHook.uiState.currentView === VIEWS.LOADING || quizDataHook.uiState.currentView === VIEWS.LOADING_BATTLE) {
     const rawQuestions = quizDataHook.questions || [];
     const isSoloMode = quizDataHook.uiState.currentView === VIEWS.LOADING;
@@ -453,7 +451,7 @@ function QuizzesPage() {
     );
   }
 
-  // RENDER: Solo Game
+  // Solo quiz game
   if (quizDataHook.uiState.currentView === VIEWS.SOLO && quizDataHook.quizData.selected) {
     return (
       <>
@@ -478,7 +476,7 @@ function QuizzesPage() {
     );
   }
 
-  // RENDER: Battle Game
+  // Quiz battle game
   if (quizDataHook.uiState.currentView === VIEWS.BATTLE && quizDataHook.quizData.selected) {
     return (
       <>
@@ -513,12 +511,12 @@ function QuizzesPage() {
     );
   }
 
-  // RENDER: Initial Loading State
+  // Initial loading state
   if (quizDataHook.loading && quizDataHook.uiState.currentView === VIEWS.LIST) {
-    return <AppLoader message="Loading Quizzes..." />;
+    return <AppLoader message="Loading quizzes..." />;
   }
 
-  // RENDER: Error State
+  // Error state
   if (quizDataHook.error && quizDataHook.uiState.currentView === VIEWS.LIST) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">

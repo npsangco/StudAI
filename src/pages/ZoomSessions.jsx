@@ -474,7 +474,10 @@ const Sessions = () => {
       )}
 
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800">Study Sessions</h1>
+        </div>
+        
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">

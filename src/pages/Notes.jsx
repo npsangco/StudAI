@@ -100,7 +100,7 @@ const Notes = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Add/remove body class when chatbot is active
+  // Toggle body class when chatbot is active
   useEffect(() => {
     if (currentView === 'chatbot') {
       document.body.classList.add('chatbot-active');
@@ -494,7 +494,7 @@ const Notes = () => {
     }
   };
 
-  // PDF Export Functions
+  // PDF export functions
   const startExportMode = (noteId) => {
     setExportMode(true);
     setSelectedNotes(new Set([noteId]));

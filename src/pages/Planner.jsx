@@ -275,7 +275,7 @@ export default function Planner() {
     }
   };
 
-  // Mark as done function
+  // Mark task as completed
   const markAsDone = async (planner_id) => {
     if (!planner_id) return;
     
@@ -340,6 +340,10 @@ export default function Planner() {
   const renderYearSelection = () => (
     <div className="min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800">Planner</h1>
+        </div>
+        
         <div className="text-center mb-8 sm:mb-12" data-tutorial="calendar-view">
           <Calendar className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-indigo-600" />
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-2">Select Year</h1>
@@ -375,6 +379,10 @@ export default function Planner() {
   const renderMonthSelection = () => (
     <div className="min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800">Planner</h1>
+        </div>
+        
         <div className="flex items-center justify-between mb-8 sm:mb-12">
           <button
             onClick={handleYearChange}
@@ -496,6 +504,10 @@ export default function Planner() {
     return (
       <div className="min-h-screen p-4 sm:p-6 md:p-8">
         <div className="max-w-6xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800">Planner</h1>
+          </div>
+          
           <div className="flex items-center justify-between mb-8 sm:mb-12 gap-2">
             <button
               onClick={() => setSelectedMonth(null)}
@@ -572,6 +584,10 @@ export default function Planner() {
     return (
       <div className="min-h-screen p-4 sm:p-6 md:p-8">
         <div className="max-w-4xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800">Planner</h1>
+          </div>
+          
           <div className="flex items-center justify-between mb-6 sm:mb-8 gap-2 cursor-pointer">
             <button
               onClick={() => setSelectedDate(null)}
