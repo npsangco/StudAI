@@ -785,6 +785,14 @@ router.get('/:id', requireAuth, async (req, res) => {
           matchingPairs = null;
         }
       }
+      
+      // Convert matching_pairs from object format to array format if needed
+      if (matchingPairs && typeof matchingPairs === 'object' && !Array.isArray(matchingPairs)) {
+        matchingPairs = Object.entries(matchingPairs).map(([left, right]) => ({ left, right }));
+      } else if (!matchingPairs || !Array.isArray(matchingPairs)) {
+        // Ensure matchingPairs is always an array (empty if null/undefined)
+        matchingPairs = [];
+      }
 
       return {
         question_id: questionJson.question_id,
@@ -1050,6 +1058,14 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
           } catch (e) {
             qData.matching_pairs = null;
           }
+        }
+        
+        // Convert matching_pairs from object format to array format if needed
+        if (qData.matching_pairs && typeof qData.matching_pairs === 'object' && !Array.isArray(qData.matching_pairs)) {
+          qData.matching_pairs = Object.entries(qData.matching_pairs).map(([left, right]) => ({ left, right }));
+        } else if (!qData.matching_pairs || !Array.isArray(qData.matching_pairs)) {
+          // Ensure matching_pairs is always an array (empty if null/undefined)
+          qData.matching_pairs = [];
         }
         
         // Convert to camelCase

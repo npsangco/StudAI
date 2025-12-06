@@ -56,7 +56,7 @@ const Question = sequelize.define('Question', {
     type: DataTypes.TINYINT,
     defaultValue: 0,
     allowNull: false,
-    comment: 'Indicates if question is a copy from question bank (1) or original (0)'
+    comment: 'Flag to indicate if question is copied from question bank (0=original, 1=copy)'
   },
   created_at: {
     type: DataTypes.DATE,
