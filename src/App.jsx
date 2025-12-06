@@ -69,12 +69,12 @@ function App() {
   const shouldHideFooter = noFooterRoutes.includes(location.pathname);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Only show navigation if not on login/signup pages and not hidden by quiz game */}
       {!shouldHideNav && !hideNavbar && isLandingPage && <LandingNavigation />}
       {!shouldHideNav && !hideNavbar && requiresAuth && <Navigation />}
 
-      <div className={`flex-1 ${(!shouldHideNav && !hideNavbar && (isLandingPage || requiresAuth)) ? "pt-16" : ""} ${requiresAuth ? "bg-gray-100" : ""}`}>
+      <div className={`flex-1 overflow-y-auto ${(!shouldHideNav && !hideNavbar && (isLandingPage || requiresAuth)) ? "pt-16" : ""} ${requiresAuth ? "bg-gray-100" : ""}`}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />

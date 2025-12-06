@@ -29,6 +29,8 @@ const JitsiSessions = () => {
   const [hasConsented, setHasConsented] = useState(false);
   const [showConsentForm, setShowConsentForm] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const sessionsPerPage = 6;
   
   const [sessionForm, setSessionForm] = useState({
     topic: '',
@@ -700,7 +702,10 @@ const JitsiSessions = () => {
         {/* Tabs */}
         <div className="flex gap-4 mb-6 border-b" data-tutorial="session-tabs">
           <button
-            onClick={() => setActiveTab('my-sessions')}
+            onClick={() => {
+              setActiveTab('my-sessions');
+              setCurrentPage(1);
+            }}
             className={`pb-3 px-2 font-medium transition-colors ${
               activeTab === 'my-sessions'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -710,7 +715,10 @@ const JitsiSessions = () => {
             My Sessions
           </button>
           <button
-            onClick={() => setActiveTab('public')}
+            onClick={() => {
+              setActiveTab('public');
+              setCurrentPage(1);
+            }}
             className={`pb-3 px-2 font-medium transition-colors ${
               activeTab === 'public'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -722,34 +730,104 @@ const JitsiSessions = () => {
         </div>
 
         {/* Sessions List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-tutorial="session-cards">
-          {activeTab === 'my-sessions' && mySessions.length === 0 && (
-            <div className="col-span-full text-center py-12 text-gray-500">
-              No sessions yet. Create your first study session above!
-            </div>
-          )}
-          {activeTab === 'my-sessions' && mySessions.map(session => (
-            <SessionCard key={session.session_id} session={session} isMine={true} />
-          ))}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-tutorial="session-cards">
+            {activeTab === 'my-sessions' && mySessions.length === 0 && (
+              <div className="col-span-full text-center py-12 text-gray-500">
+                No sessions yet. Create your first study session above!
+              </div>
+            )}
+            {activeTab === 'my-sessions' && mySessions.map(session => (
+              <SessionCard key={session.session_id} session={session} isMine={true} />
+            ))}
 
-          {activeTab === 'public' && publicSessions.filter(session => {
-            const startTime = new Date(session.start_time);
-            const endTime = new Date(startTime.getTime() + session.duration * 60000);
-            return new Date() <= endTime;
-          }).length === 0 && (
-            <div className="col-span-full text-center py-12 text-gray-500">
-              No public sessions available at the moment.
-            </div>
-          )}
-          {activeTab === 'public' && publicSessions
-            .filter(session => {
+            {activeTab === 'public' && (() => {
+              // Filter non-expired sessions
+              const activePublicSessions = publicSessions.filter(session => {
+                const startTime = new Date(session.start_time);
+                const endTime = new Date(startTime.getTime() + session.duration * 60000);
+                return new Date() <= endTime;
+              });
+
+              // Pagination logic
+              const indexOfLastSession = currentPage * sessionsPerPage;
+              const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
+              const currentSessions = activePublicSessions.slice(indexOfFirstSession, indexOfLastSession);
+
+              if (activePublicSessions.length === 0) {
+                return (
+                  <div className="col-span-full text-center py-12 text-gray-500">
+                    No public sessions available at the moment.
+                  </div>
+                );
+              }
+
+              return currentSessions.map(session => (
+                <SessionCard key={session.session_id} session={session} isMine={false} />
+              ));
+            })()}
+          </div>
+
+          {/* Pagination Controls - Only for Public Sessions */}
+          {activeTab === 'public' && (() => {
+            const activePublicSessions = publicSessions.filter(session => {
               const startTime = new Date(session.start_time);
               const endTime = new Date(startTime.getTime() + session.duration * 60000);
               return new Date() <= endTime;
-            })
-            .map(session => (
-              <SessionCard key={session.session_id} session={session} isMine={false} />
-            ))}
+            });
+
+            const totalPages = Math.ceil(activePublicSessions.length / sessionsPerPage);
+
+            if (totalPages <= 1) return null;
+
+            return (
+              <div className="flex justify-center items-center gap-2 mt-8">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                    currentPage === 1
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer'
+                  }`}
+                >
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-10 h-10 rounded-md font-medium transition-colors cursor-pointer ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                    currentPage === totalPages
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer'
+                  }`}
+                >
+                  Next
+                </button>
+
+                <span className="ml-4 text-sm text-gray-600">
+                  Showing {indexOfFirstSession + 1}-{Math.min(indexOfLastSession, activePublicSessions.length)} of {activePublicSessions.length}
+                </span>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
