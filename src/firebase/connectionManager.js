@@ -505,7 +505,6 @@ export const listenToPlayerConnections = (gamePin, callback) => {
  */
 export const savePlayerState = async (gamePin, userId, state) => {
   try {
-    console.log('💾 savePlayerState CALLED:', { gamePin, userId, state });
     const stateRef = ref(realtimeDb, `battles/${gamePin}/savedStates/user_${userId}`);
 
     // Convert Set to Array for Firebase (Firebase doesn't support Set type)
@@ -513,20 +512,16 @@ export const savePlayerState = async (gamePin, userId, state) => {
       ? Array.from(state.answeredQuestions)
       : (Array.isArray(state.answeredQuestions) ? state.answeredQuestions : []);
 
-    const dataToSave = {
+    await set(stateRef, {
       userId,
       score: state.score || 0,
       currentQuestionIndex: state.currentQuestionIndex || 0,
       userAnswers: state.userAnswers || [],
       answeredQuestions: answeredQuestionsArray,
-      questions: state.questions || [], // Save the selected questions (e.g., 15 out of 20)
+      questions: state.questions || [],
       savedAt: Date.now(),
-      expiresAt: Date.now() + 300000 // Expires after 5 minutes (increased from 90 seconds)
-    };
-
-    console.log('💾 Saving to Firebase:', { path: `savedStates/user_${userId}`, data: dataToSave });
-    await set(stateRef, dataToSave);
-    console.log('✅ Save successful!');
+      expiresAt: Date.now() + 300000
+    });
 
   } catch (error) {
     console.error('❌ Error saving player state:', error);

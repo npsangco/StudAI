@@ -480,21 +480,9 @@ const QuizGame = ({
   
   // Auto-save game state every 3 seconds for reliable reconnection
   useEffect(() => {
-    console.log('🔄 Auto-save useEffect triggered:', {
-      mode,
-      gamePin: quiz?.gamePin,
-      userId: quiz?.currentUserId,
-      willSetupInterval: mode === 'battle' && !!quiz?.gamePin && !!quiz?.currentUserId
-    });
+    if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) return;
 
-    if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) {
-      console.log('⏸️ Auto-save SKIPPED - conditions not met');
-      return;
-    }
-
-    console.log('✅ Setting up auto-save interval (every 3s)');
     const autoSaveInterval = setInterval(() => {
-      // Capture current state at save time (not at interval creation time)
       const currentGameState = {
         score: game.scoreRef.current,
         currentQuestionIndex: game.currentQuestionIndex,
@@ -503,54 +491,29 @@ const QuizGame = ({
         questions: questions
       };
 
-      console.log('⏰ Auto-save interval fired!', currentGameState);
-      // Save to Firebase savedStates node
       savePlayerState(quiz.gamePin, quiz.currentUserId, currentGameState);
-    }, 3000); // Every 3 seconds
+    }, 3000);
 
-    return () => {
-      console.log('🛑 Clearing auto-save interval');
-      clearInterval(autoSaveInterval);
-    };
-    // Only restart interval if battle context changes, NOT on every answer
+    return () => clearInterval(autoSaveInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, quiz?.gamePin, quiz?.currentUserId]);
 
   // Initial save when battle starts (save the question set immediately)
   useEffect(() => {
-    console.log('🎬 Initial save useEffect triggered:', {
-      mode,
-      gamePin: quiz?.gamePin,
-      userId: quiz?.currentUserId,
-      questionsCount: questions?.length,
-      alreadyDone: initialSaveDoneRef.current
-    });
+    if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) return;
+    if (!questions || questions.length === 0) return;
+    if (initialSaveDoneRef.current) return;
 
-    if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) {
-      console.log('⏸️ Initial save SKIPPED - mode/gamePin/userId check failed');
-      return;
-    }
-    if (!questions || questions.length === 0) {
-      console.log('⏸️ Initial save SKIPPED - no questions yet');
-      return;
-    }
-    if (initialSaveDoneRef.current) {
-      console.log('⏸️ Initial save SKIPPED - already done');
-      return;
-    }
-
-    console.log('✅ Running initial save NOW');
-    // Do initial save on mount to capture the selected questions
     const initialGameState = {
       score: 0,
       currentQuestionIndex: 0,
       userAnswers: [],
       answeredQuestions: [],
-      questions: questions // Save initial question set (e.g., 15 out of 20)
+      questions: questions
     };
 
     savePlayerState(quiz.gamePin, quiz.currentUserId, initialGameState);
-    initialSaveDoneRef.current = true; // Mark as done
+    initialSaveDoneRef.current = true;
   }, [mode, quiz?.gamePin, quiz?.currentUserId, questions]);
 
   // ============================================
@@ -579,6 +542,9 @@ const QuizGame = ({
       game.scoreRef.current = restoredScore;
       game.updateScore(0); // This will sync scoreRef to displayScore without adding points
       
+      // Use restored questions for validation (not stale local state)
+      const restoredQuestions = result.savedState?.questions || questions;
+
       if (result.savedState) {
         game.setUserAnswers(result.savedState.userAnswers || []);
         // Convert array back to Set for answeredQuestions
@@ -586,7 +552,7 @@ const QuizGame = ({
           ? new Set(result.savedState.answeredQuestions)
           : new Set();
         game.setAnsweredQuestions(answeredSet);
-        
+
         // Restore the SAME questions (e.g., 15 out of 20)
         // Without this, player gets all 20 questions instead of the 15 they started with
         if (result.savedState.questions && Array.isArray(result.savedState.questions)) {
@@ -640,10 +606,10 @@ const QuizGame = ({
                 shouldWait = true;
               }
 
-              // Validate target question is within valid range
-              const validTargetQuestion = Math.max(0, Math.min(targetQuestion, questions.length - 1));
+              // FIX: Use restoredQuestions (not stale local questions state)
+              const validTargetQuestion = Math.max(0, Math.min(targetQuestion, restoredQuestions.length - 1));
 
-              if (validTargetQuestion >= 0 && validTargetQuestion < questions.length) {
+              if (validTargetQuestion >= 0 && validTargetQuestion < restoredQuestions.length) {
 
 
                 // USE SETTER to trigger re-render!
@@ -690,25 +656,25 @@ const QuizGame = ({
                   }, 100); // 100ms delay to ensure state is synced
                 }
 
-              } else if (targetQuestion >= questions.length) {
+              } else if (targetQuestion >= restoredQuestions.length) {
                 const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
-                game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
+                game.setCurrentQuestionIndex(Math.min(savedQuestion, restoredQuestions.length - 1));
               }
             } else {
               // No other active players online, use SAVED progress (not question 0!)
               const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
-              game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
+              game.setCurrentQuestionIndex(Math.min(savedQuestion, restoredQuestions.length - 1));
             }
           } else {
             // Battle doesn't exist, use saved progress
             const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
-            game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
+            game.setCurrentQuestionIndex(Math.min(savedQuestion, restoredQuestions.length - 1));
           }
         } catch (error) {
           console.error('❌ Error checking other players:', error);
           // Fallback to SAVED progress (not question 0!)
           const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
-          game.setCurrentQuestionIndex(Math.min(savedQuestion, questions.length - 1));
+          game.setCurrentQuestionIndex(Math.min(savedQuestion, restoredQuestions.length - 1));
         }
       }
 
