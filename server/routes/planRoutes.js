@@ -7,7 +7,7 @@ import { checkAndUnlockAchievements } from '../services/achievementServices.js';
 
 const router = express.Router();
 
-// Plan configuration
+// Task completion rewards configuration
 const PLAN_CONFIG = {
   points: {
     perTask: 30,
@@ -15,31 +15,28 @@ const PLAN_CONFIG = {
     capMessage: "Daily task points limit reached (3/3). You can still complete tasks but won't earn points until tomorrow!"
   },
   exp: {
-    perTask: 15,  // EXP for completing a task (unlimited)
+    perTask: 15,
     unlimited: true
   }
 };
 
-// Hybrid auth middleware
+// Auth check: session cookie or parent middleware
 const requireAuth = (req, res, next) => {
-  // Method 1: Check session cookie (primary)
   if (req.session && req.session.userId) {
     return next();
   }
   
-  // Method 2: Check if already authenticated by parent middleware (e.g., sessionLockCheck)
   if (req.user && req.user.userId) {
     return next();
   }
   
-  // No valid authentication found
   return res.status(401).json({ 
     error: 'Authentication required. Please log in.',
     authRequired: true 
   });
 };
 
-// Check and reset daily caps (same as quiz routes)
+// Get or create daily stats for user
 async function getDailyStats(userId) {
   const today = new Date().toISOString().split('T')[0];
   
@@ -63,7 +60,7 @@ async function getDailyStats(userId) {
   return dailyStat;
 }
 
-// Log daily stats (consistent with quiz routes)
+// Log activity and update daily stats
 async function logDailyStats(userId, activityType, points, exp = 0) {
   const today = new Date().toISOString().split('T')[0];
   
@@ -99,7 +96,7 @@ async function logDailyStats(userId, activityType, points, exp = 0) {
   return dailyStat;
 }
 
-// Update user streak (same as quiz routes)
+// Update user's study streak
 async function updateUserStreak(userId) {
   const user = await User.findByPk(userId);
   const today = new Date().toISOString().split('T')[0];
@@ -136,10 +133,10 @@ async function updateUserStreak(userId) {
     return 1;
   }
   
-  // Same day, return current streak
   return user.study_streak;
 }
 
+// Award EXP to pet companion
 async function awardPetExp(userId, expAmount) {
   try {
     // Load PetCompanion model dynamically (default export)
@@ -208,11 +205,7 @@ async function awardPetExp(userId, expAmount) {
   }
 }
 
-// ============================================
-// PLAN ROUTES (Updated with Daily Points Limit)
-// ============================================
-
-// Get all plans for current user
+// Get all plans for user
 router.get('/', requireAuth, async (req, res) => {
   try {
     const plans = await Plan.findAll({
@@ -227,7 +220,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// Create a new plan - Count towards daily quest but award smaller rewards
+// Create new plan (counts toward daily quest)
 router.post('/', requireAuth, async (req, res) => {
   try {
     const { title, description, due_date, completed } = req.body;
@@ -286,7 +279,7 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// Update a plan - Handle marking as done WITH DAILY POINTS LIMIT
+// Update plan (mark as done awards points with daily cap)
 router.put('/:id', requireAuth, async (req, res) => {
   const transaction = await sequelize.transaction();
   
@@ -412,7 +405,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Mark as completed (DELETE route) WITH DAILY POINTS LIMIT
+// Mark plan as completed (awards points with daily cap)
 router.delete('/:id', requireAuth, async (req, res) => {
   const transaction = await sequelize.transaction();
   
@@ -536,7 +529,7 @@ router.get('/range', requireAuth, async (req, res) => {
   }
 });
 
-// Get plans by specific date
+// Get plans for specific date
 router.get('/date/:date', requireAuth, async (req, res) => {
   try {
     const { date } = req.params;

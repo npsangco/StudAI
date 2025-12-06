@@ -4,25 +4,23 @@ import Note from '../models/Note.js';
 
 const router = express.Router();
 
-// Hybrid authentication middleware - supports both session cookies and JWT tokens
+// Auth check: session cookie or parent middleware
 const requireAuth = (req, res, next) => {
-  // Method 1: Check session cookie (primary)
   if (req.session && req.session.userId) {
     return next();
   }
   
-  // Method 2: Check if already authenticated by parent middleware (e.g., sessionLockCheck)
   if (req.user && req.user.userId) {
     return next();
   }
   
-  // No valid authentication found
   return res.status(401).json({ 
     error: 'Authentication required. Please log in.',
     authRequired: true 
   });
 };
 
+// Get chat history for a note (by noteId or fileId)
 router.get('/history', requireAuth, async (req, res) => {
   try {
     const { noteId, fileId } = req.query;

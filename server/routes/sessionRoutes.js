@@ -1,4 +1,3 @@
-// routes/sessionRoutes.js
 import express from 'express';
 import bcrypt from 'bcrypt';
 import { zoomOAuth } from '../zoomOAuth.js';
@@ -29,7 +28,7 @@ router.get('/zoom/connect', async (req, res) => {
   }
 });
 
-// OAuth callback
+// Handle Zoom OAuth callback
 router.get('/zoom/callback', async (req, res) => {
   try {
     const { code, error: zoomError } = req.query;
@@ -70,7 +69,7 @@ router.get('/zoom/callback', async (req, res) => {
   }
 });
 
-// Create meeting with user-specific tokens
+// Create Zoom meeting session
 router.post('/create', async (req, res) => {
   console.log('🎯 Creating session for user:', req.session.userId);
   
@@ -167,7 +166,7 @@ router.post('/create', async (req, res) => {
   }
 });
 
-// Get user's own sessions (both public and private)
+// Get user's own sessions (public and private)
 router.get('/my-sessions', async (req, res) => {
   console.log('📋 Fetching my sessions for user:', req.session.userId);
   
@@ -205,7 +204,7 @@ router.get('/my-sessions', async (req, res) => {
   }
 });
 
-// Get all sessions for browsing (both public and private, but hide URLs for private)
+// Get all browsable public sessions
 router.get('/public', async (req, res) => {
   console.log('🌍 Fetching all browsable sessions');
   
@@ -317,7 +316,7 @@ router.post('/verify-password', async (req, res) => {
   }
 });
 
-// Check Zoom connection status for current user
+// Check user's Zoom connection status
 router.get('/zoom/status', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Not logged in' });
@@ -327,7 +326,7 @@ router.get('/zoom/status', async (req, res) => {
   res.json(status);
 });
 
-// Disconnect Zoom for current user
+// Disconnect Zoom for user
 router.delete('/zoom/disconnect', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Not logged in' });
@@ -341,7 +340,7 @@ router.delete('/zoom/disconnect', async (req, res) => {
   }
 });
 
-// Delete a session
+// Delete a session (owner only)
 router.delete('/:session_id', async (req, res) => {
   console.log('🗑️ Deleting session:', req.params.session_id);
   
@@ -487,7 +486,7 @@ router.get('/:session_id/metrics', async (req, res) => {
   }
 });
 
-// Zoom webhook endpoint for meeting events
+// Zoom webhook for meeting events
 router.post('/zoom/webhook', express.json(), async (req, res) => {
   console.log('🔔 Zoom webhook received:', req.body.event);
 
@@ -537,7 +536,7 @@ router.post('/zoom/webhook', express.json(), async (req, res) => {
   }
 });
 
-// Webhook handlers
+// Webhook handler: meeting started
 async function handleMeetingStarted(payload) {
   console.log('🟢 Meeting started:', payload.object.id);
   
@@ -556,6 +555,7 @@ async function handleMeetingStarted(payload) {
   }
 }
 
+// Webhook handler: meeting ended
 async function handleMeetingEnded(payload) {
   console.log('🔴 Meeting ended:', payload.object.id);
   
@@ -574,6 +574,7 @@ async function handleMeetingEnded(payload) {
   }
 }
 
+// Webhook handler: participant joined
 async function handleParticipantJoined(payload) {
   console.log('👤 Participant joined:', payload.object.participant.user_name);
   
@@ -597,6 +598,7 @@ async function handleParticipantJoined(payload) {
   }
 }
 
+// Webhook handler: participant left
 async function handleParticipantLeft(payload) {
   console.log('👋 Participant left:', payload.object.participant.user_name);
   

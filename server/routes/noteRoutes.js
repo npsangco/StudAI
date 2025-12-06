@@ -37,13 +37,13 @@ const requireAuth = (req, res, next) => {
     return next();
   }
   
-  // No valid authentication found
   return res.status(401).json({ 
     error: 'Authentication required. Please log in.',
     authRequired: true 
   });
 };
 
+// Format note data for frontend
 const formatNoteForFrontend = (note) => {
   const noteData = note.toJSON ? note.toJSON() : note;
   return {
@@ -66,6 +66,7 @@ function generateShareCode() {
   return code;
 }
 
+// Get or create daily stats for user
 async function getDailyStats(userId) {
   const today = new Date().toISOString().split('T')[0];
   
@@ -89,6 +90,7 @@ async function getDailyStats(userId) {
   return dailyStat;
 }
 
+// Log activity and update daily stats
 async function logDailyStats(userId, activityType, points, exp = 0) {
   console.log('📊 Logging daily stats:', { userId, activityType, points, exp });
   const today = new Date().toISOString().split('T')[0];
@@ -136,6 +138,7 @@ async function logDailyStats(userId, activityType, points, exp = 0) {
   return dailyStat;
 }
 
+// Trigger achievement check
 async function checkAchievements(userId) {
   try {
     const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
@@ -146,6 +149,7 @@ async function checkAchievements(userId) {
   }
 }
 
+// Award EXP to pet companion with level-up handling
 async function awardPetExp(userId, expAmount) {
   try {
     const PetCompanion = (await import('../models/PetCompanion.js')).default;
@@ -193,10 +197,7 @@ async function awardPetExp(userId, expAmount) {
   }
 }
 
-// ============================================
-// CATEGORY ROUTES
-// ============================================
-
+// Get all note categories for user
 router.get('/categories', requireAuth, async (req, res) => {
   try {
     const categories = await NoteCategory.findAll({
@@ -211,6 +212,7 @@ router.get('/categories', requireAuth, async (req, res) => {
   }
 });
 
+// Create new note category
 router.post('/categories', requireAuth, async (req, res) => {
   try {
     const { name, color } = req.body;
@@ -243,10 +245,7 @@ router.post('/categories', requireAuth, async (req, res) => {
   }
 });
 
-// ============================================
-// NOTES ROUTES (WITH DAILY CAPS)
-// ============================================
-
+// Get all notes for user (with filters)
 router.get('/', requireAuth, async (req, res) => {
   try {
     const status = (req.query.status || 'all').toLowerCase();
@@ -297,6 +296,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
+// Create new note with rewards (daily cap applies)
 router.post('/create', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -420,6 +420,7 @@ router.post('/create', requireAuth, async (req, res) => {
   }
 });
 
+// Archive all notes for user
 router.post('/archive-all', requireAuth, async (req, res) => {
   try {
     const [archivedCount] = await Note.update(
@@ -444,6 +445,7 @@ router.post('/archive-all', requireAuth, async (req, res) => {
   }
 });
 
+// Archive a single note
 router.post('/:id/archive', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;
@@ -477,6 +479,7 @@ router.post('/:id/archive', requireAuth, async (req, res) => {
   }
 });
 
+// Restore archived note
 router.post('/:id/restore', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;
@@ -509,6 +512,7 @@ router.post('/:id/restore', requireAuth, async (req, res) => {
   }
 });
 
+// Update note content or metadata
 router.put('/:id', requireAuth, async (req, res) => {
   try {
     const { title, content, category_id } = req.body;
@@ -582,6 +586,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Delete note permanently
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;
@@ -631,10 +636,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// ============================================
-// SHARED NOTES ROUTES
-// ============================================
-
+// Share note with generated code
 router.post('/:id/share', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;
@@ -692,6 +694,7 @@ router.post('/:id/share', requireAuth, async (req, res) => {
   }
 });
 
+// Retrieve shared note by code
 router.post('/shared/retrieve', requireAuth, async (req, res) => {
   try {
     const { shareCode } = req.body;
@@ -751,6 +754,7 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
   }
 });
 
+// Get all notes shared by user
 router.get('/shared/my-shares', requireAuth, async (req, res) => {
   try {
     const sharedNotes = await SharedNote.findAll({
@@ -780,6 +784,7 @@ router.get('/shared/my-shares', requireAuth, async (req, res) => {
   }
 });
 
+// Remove share for a note
 router.delete('/:id/share', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;
@@ -806,6 +811,7 @@ router.delete('/:id/share', requireAuth, async (req, res) => {
   }
 });
 
+// Pin note to top
 router.post('/:id/pin', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;
@@ -838,6 +844,7 @@ router.post('/:id/pin', requireAuth, async (req, res) => {
   }
 });
 
+// Unpin note
 router.post('/:id/unpin', requireAuth, async (req, res) => {
   try {
     const noteId = req.params.id;

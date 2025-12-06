@@ -6,42 +6,37 @@ import { Op } from 'sequelize';
 
 const router = express.Router();
 
-// Helper function to generate Jitsi URL with user information
+// Generate Jitsi URL with username pre-filled
 const generateJitsiUrl = (roomId, user) => {
   const baseUrl = `https://meet.jit.si/${roomId}`;
   
   if (!user || !user.username) return baseUrl;
   
-  // Auto-fill username and skip the name entry page
   const displayName = encodeURIComponent(user.username);
   return `${baseUrl}#config.prejoinPageEnabled=false&userInfo.displayName=${displayName}`;
 };
 
-// Hybrid authentication middleware - supports both session cookies and JWT tokens
+// Auth check: session cookie or parent middleware
 const requireAuth = (req, res, next) => {
-  // Method 1: Check session cookie (primary)
   if (req.session && req.session.userId) {
     return next();
   }
   
-  // Method 2: Check if already authenticated by parent middleware (e.g., sessionLockCheck)
   if (req.user && req.user.userId) {
     return next();
   }
   
-  // No valid authentication found
   return res.status(401).json({ 
     error: 'Authentication required. Please log in.',
     authRequired: true 
   });
 };
 
-// Generate secure room ID
 const generateRoomId = () => {
   return `studai-${uuidv4()}`;
 };
 
-// Create a new Jitsi session
+// Create new Jitsi session (published after 1 min delay)
 router.post('/sessions', requireAuth, async (req, res) => {
   try {
     const { topic, duration, start_time, is_private, session_password } = req.body;
@@ -96,7 +91,7 @@ router.post('/sessions', requireAuth, async (req, res) => {
   }
 });
 
-// Get user's sessions
+// Get user's own sessions
 router.get('/sessions/my', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -131,7 +126,7 @@ router.get('/sessions/my', requireAuth, async (req, res) => {
   }
 });
 
-// Get public sessions
+// Get all published public sessions
 router.get('/sessions/public', requireAuth, async (req, res) => {
   try {
     console.log('Fetching public sessions...');
@@ -179,7 +174,7 @@ router.get('/sessions/public', requireAuth, async (req, res) => {
   }
 });
 
-// Verify session password
+// Verify password for private session
 router.post('/sessions/:id/verify', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -211,7 +206,7 @@ router.post('/sessions/:id/verify', requireAuth, async (req, res) => {
   }
 });
 
-// Delete session
+// Delete session (owner only)
 router.delete('/sessions/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -235,7 +230,7 @@ router.delete('/sessions/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Update session status
+// Update session status (owner only)
 router.patch('/sessions/:id/status', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;

@@ -166,6 +166,7 @@ const JitsiSessions = () => {
 
         // Switch to My Sessions tab and reload
         setActiveTab('my-sessions');
+        setCurrentPage(1);
         await loadMySessions();
         
         // Show publishing delay message
@@ -732,14 +733,24 @@ const JitsiSessions = () => {
         {/* Sessions List */}
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-tutorial="session-cards">
-            {activeTab === 'my-sessions' && mySessions.length === 0 && (
-              <div className="col-span-full text-center py-12 text-gray-500">
-                No sessions yet. Create your first study session above!
-              </div>
-            )}
-            {activeTab === 'my-sessions' && mySessions.map(session => (
-              <SessionCard key={session.session_id} session={session} isMine={true} />
-            ))}
+            {activeTab === 'my-sessions' && (() => {
+              // Pagination logic for my sessions
+              const indexOfLastSession = currentPage * sessionsPerPage;
+              const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
+              const currentSessions = mySessions.slice(indexOfFirstSession, indexOfLastSession);
+
+              if (mySessions.length === 0) {
+                return (
+                  <div className="col-span-full text-center py-12 text-gray-500">
+                    No sessions yet. Create your first study session above!
+                  </div>
+                );
+              }
+
+              return currentSessions.map(session => (
+                <SessionCard key={session.session_id} session={session} isMine={true} />
+              ));
+            })()}
 
             {activeTab === 'public' && (() => {
               // Filter non-expired sessions
@@ -768,17 +779,22 @@ const JitsiSessions = () => {
             })()}
           </div>
 
-          {/* Pagination Controls - Only for Public Sessions */}
-          {activeTab === 'public' && (() => {
-            const activePublicSessions = publicSessions.filter(session => {
-              const startTime = new Date(session.start_time);
-              const endTime = new Date(startTime.getTime() + session.duration * 60000);
-              return new Date() <= endTime;
-            });
+          {/* Pagination Controls */}
+          {(() => {
+            const sessions = activeTab === 'my-sessions' 
+              ? mySessions 
+              : publicSessions.filter(session => {
+                  const startTime = new Date(session.start_time);
+                  const endTime = new Date(startTime.getTime() + session.duration * 60000);
+                  return new Date() <= endTime;
+                });
 
-            const totalPages = Math.ceil(activePublicSessions.length / sessionsPerPage);
+            const totalPages = Math.ceil(sessions.length / sessionsPerPage);
 
-            if (totalPages <= 1) return null;
+            if (sessions.length === 0 || totalPages <= 1) return null;
+
+            const indexOfLastSession = currentPage * sessionsPerPage;
+            const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
 
             return (
               <div className="flex justify-center items-center gap-2 mt-8">
@@ -823,7 +839,7 @@ const JitsiSessions = () => {
                 </button>
 
                 <span className="ml-4 text-sm text-gray-600">
-                  Showing {indexOfFirstSession + 1}-{Math.min(indexOfLastSession, activePublicSessions.length)} of {activePublicSessions.length}
+                  Showing {indexOfFirstSession + 1}-{Math.min(indexOfLastSession, sessions.length)} of {sessions.length}
                 </span>
               </div>
             );

@@ -30,6 +30,8 @@ const Sessions = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [unlockedSession, setUnlockedSession] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const sessionsPerPage = 6;
   
   const [sessionForm, setSessionForm] = useState({
     topic: '',
@@ -637,7 +639,10 @@ const Sessions = () => {
             <div className="flex items-center justify-between mb-4">
               <div className="flex gap-2" data-tutorial="my-sessions">
                 <button
-                  onClick={() => setActiveTab('my-sessions')}
+                  onClick={() => {
+                    setActiveTab('my-sessions');
+                    setCurrentPage(1);
+                  }}
                   className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
                     activeTab === 'my-sessions'
                       ? 'bg-blue-600 text-white'
@@ -647,7 +652,10 @@ const Sessions = () => {
                   My Sessions ({mySessions.length})
                 </button>
                 <button
-                  onClick={() => setActiveTab('browse')}
+                  onClick={() => {
+                    setActiveTab('browse');
+                    setCurrentPage(1);
+                  }}
                   className={`px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
                     activeTab === 'browse'
                       ? 'bg-blue-600 text-white'
@@ -677,20 +685,87 @@ const Sessions = () => {
                       <p className="text-sm text-gray-400">Connect Zoom to create your first session!</p>
                     )}
                   </div>
-                ) : (
-                  mySessions.map((session) => renderSessionCard(session, true))
-                )
+                ) : (() => {
+                  // Pagination logic for my sessions
+                  const indexOfLastSession = currentPage * sessionsPerPage;
+                  const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
+                  const currentSessions = mySessions.slice(indexOfFirstSession, indexOfLastSession);
+                  return currentSessions.map((session) => renderSessionCard(session, true));
+                })()
               ) : (
                 publicSessions.length === 0 ? (
                   <div className="text-center py-12">
                     <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500">No public sessions available.</p>
                   </div>
-                ) : (
-                  publicSessions.map((session) => renderSessionCard(session, false))
-                )
+                ) : (() => {
+                  // Pagination logic for public sessions
+                  const indexOfLastSession = currentPage * sessionsPerPage;
+                  const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
+                  const currentSessions = publicSessions.slice(indexOfFirstSession, indexOfLastSession);
+                  return currentSessions.map((session) => renderSessionCard(session, false));
+                })()
               )}
             </div>
+
+            {/* Pagination Controls */}
+            {(() => {
+              const sessions = activeTab === 'my-sessions' ? mySessions : publicSessions;
+              const totalPages = Math.ceil(sessions.length / sessionsPerPage);
+              
+              if (sessions.length === 0 || totalPages <= 1) return null;
+
+              const indexOfLastSession = currentPage * sessionsPerPage;
+              const indexOfFirstSession = indexOfLastSession - sessionsPerPage;
+
+              return (
+                <div className="flex justify-center items-center gap-2 mt-6 pt-6 border-t border-gray-200">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                      currentPage === 1
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer'
+                    }`}
+                  >
+                    Previous
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-10 h-10 rounded-md font-medium transition-colors cursor-pointer ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                      currentPage === totalPages
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer'
+                    }`}
+                  >
+                    Next
+                  </button>
+
+                  <span className="ml-4 text-sm text-gray-600">
+                    Showing {indexOfFirstSession + 1}-{Math.min(indexOfLastSession, sessions.length)} of {sessions.length}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>

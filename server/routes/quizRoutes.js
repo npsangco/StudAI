@@ -15,6 +15,7 @@ import { jsonrepair } from 'jsonrepair';
 
 const router = express.Router();
 
+// AI quiz generation rules
 const AI_QUIZ_RULES = {
   requiredQuestionCount: 15,
   batchSize: 10,
@@ -35,7 +36,7 @@ const EXAMPLE_QUESTION_TEXTS = {
   'Matching': 'Match each scientist to their discovery'
 };
 
-// Pet Buddy configuration
+// Quiz completion rewards configuration
 const QUIZ_CONFIG = {
   points: {
     formula: (score, total) => {
@@ -59,6 +60,7 @@ const QUIZ_CONFIG = {
   }
 };
 
+// Normalize AI-generated question format
 function normalizeAiQuestion(rawQuestion, index, allowedTypes = AI_QUIZ_RULES.validTypes) {
   if (!rawQuestion || typeof rawQuestion !== 'object') {
     throw new Error(`Question ${index + 1} is not valid JSON data.`);
@@ -145,6 +147,7 @@ function normalizeAiQuestion(rawQuestion, index, allowedTypes = AI_QUIZ_RULES.va
   return normalized;
 }
 
+// Extract JSON objects from AI response
 function extractTopLevelJsonObjects(rawText) {
   const objects = [];
   let depth = 0;
@@ -191,6 +194,7 @@ function extractTopLevelJsonObjects(rawText) {
   return objects;
 }
 
+// Try parsing JSON with basic repairs
 function tryParseWithRepair(jsonString) {
   try {
     return JSON.parse(jsonString);
@@ -203,6 +207,7 @@ function tryParseWithRepair(jsonString) {
   }
 }
 
+// Salvage partial question arrays from AI response
 function salvageQuestionArray(rawText, expectedCount) {
   const objectStrings = extractTopLevelJsonObjects(rawText);
   if (!objectStrings.length) {
@@ -220,6 +225,7 @@ function salvageQuestionArray(rawText, expectedCount) {
   return null;
 }
 
+// Generate a batch of AI questions
 async function generateAiQuestionBatch({ batchCount, truncatedContent, openAiApiKey, allowedTypes }) {
   const typeWhitelist = Array.isArray(allowedTypes) && allowedTypes.length
     ? allowedTypes
@@ -406,6 +412,7 @@ ${exampleBlock}`;
   return normalizedQuestions;
 }
 
+// Build full AI quiz with multiple batches
 async function buildAiQuizQuestions({
   targetQuestionCount,
   truncatedContent,
@@ -460,7 +467,7 @@ async function buildAiQuizQuestions({
   return normalizedQuestions;
 }
 
-// Hybrid auth middleware
+// Auth check: session cookie or parent middleware
 const requireAuth = (req, res, next) => {
   // Method 1: Check session cookie (primary)
   if (req.session && req.session.userId) {
@@ -479,6 +486,7 @@ const requireAuth = (req, res, next) => {
   });
 };
 
+// Log activity to daily stats
 async function logDailyStats(userId, activityType, points, exp) {
   const today = new Date().toISOString().split('T')[0];
   
@@ -513,6 +521,7 @@ async function logDailyStats(userId, activityType, points, exp) {
   return dailyStat;
 }
 
+// Update user's study streak
 async function updateUserStreak(userId) {
   const user = await User.findByPk(userId);
   const today = new Date().toISOString().split('T')[0];
@@ -553,6 +562,7 @@ async function updateUserStreak(userId) {
   return user.study_streak;
 }
 
+// Trigger achievement checks
 async function checkAchievements(userId) {
   try {
     const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
@@ -567,6 +577,7 @@ async function checkAchievements(userId) {
   }
 }
 
+// Award EXP to pet companion
 async function awardPetExp(userId, expAmount) {
   try {
     // Load PetCompanion model dynamically (default export)
@@ -635,7 +646,7 @@ async function awardPetExp(userId, expAmount) {
   }
 }
 
-// Generate unique share code
+// Generate unique share code for quiz
 const generateUniqueShareCode = async () => {
   let shareCode;
   let isUnique = false;
@@ -1104,7 +1115,7 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
   }
 });
 
-// Update quiz
+// Update quiz metadata
 router.put('/:id', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -1147,7 +1158,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Delete quiz
+// Delete quiz and all questions
 router.delete('/:id', requireAuth, async (req, res) => {
   const transaction = await sequelize.transaction(); // Add transaction
   
@@ -1218,10 +1229,6 @@ router.delete('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// ============================================
-// QUESTION ROUTES
-// ============================================
-
 // Add question to quiz
 router.post('/:id/questions', requireAuth, async (req, res) => {
   try {
@@ -1284,7 +1291,7 @@ router.post('/:id/questions', requireAuth, async (req, res) => {
   }
 });
 
-// Update question
+// Update existing question
 router.put('/:quizId/questions/:questionId', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -1315,7 +1322,7 @@ router.put('/:quizId/questions/:questionId', requireAuth, async (req, res) => {
   }
 });
 
-// Delete question
+// Delete question from quiz
 router.delete('/:quizId/questions/:questionId', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -1350,6 +1357,7 @@ router.delete('/:quizId/questions/:questionId', requireAuth, async (req, res) =>
   }
 });
 
+// Submit quiz attempt and calculate score
 router.post('/:id/attempt', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -1503,6 +1511,7 @@ router.post('/:id/attempt', requireAuth, async (req, res) => {
   }
 });
 
+// Get user's attempts for a quiz
 router.get('/:id/attempts', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -1520,6 +1529,7 @@ router.get('/:id/attempts', requireAuth, async (req, res) => {
   }
 });
 
+// Get quiz leaderboard
 router.get('/:id/leaderboard', requireAuth, async (req, res) => {
   try {
     const quizId = parseInt(req.params.id);
@@ -1578,11 +1588,7 @@ router.get('/:id/leaderboard', requireAuth, async (req, res) => {
   }
 });
 
-// ============================================
-// QUIZ BATTLE ROUTES
-// ============================================
-
-// 1. Create new battle (HOST)
+// Create new quiz battle (host)
 router.post('/:id/battle/create', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -1651,7 +1657,7 @@ router.post('/:id/battle/create', requireAuth, async (req, res) => {
   }
 });
 
-// 2. Join battle (PLAYER)
+// Join existing battle (player)
 router.post('/battle/join', requireAuth, async (req, res) => {
   try {
     const { gamePin } = req.body;
@@ -1739,7 +1745,7 @@ router.post('/battle/join', requireAuth, async (req, res) => {
   }
 });
 
-// 3. Get battle lobby info
+// Get battle lobby info
 router.get('/battle/:gamePin', requireAuth, async (req, res) => {
   try {
     const gamePin = req.params.gamePin;
@@ -1809,7 +1815,7 @@ router.get('/battle/:gamePin', requireAuth, async (req, res) => {
   }
 });
 
-// 4. Mark player as ready
+// Mark player as ready
 router.post('/battle/:gamePin/ready', requireAuth, async (req, res) => {
   try {
     const gamePin = req.params.gamePin;
@@ -1840,7 +1846,7 @@ router.post('/battle/:gamePin/ready', requireAuth, async (req, res) => {
   }
 });
 
-// 4.5. Mark player as unready
+// Mark player as unready
 router.post('/battle/:gamePin/unready', requireAuth, async (req, res) => {
   try {
     const gamePin = req.params.gamePin;
@@ -1871,7 +1877,7 @@ router.post('/battle/:gamePin/unready', requireAuth, async (req, res) => {
   }
 });
 
-// 5. Start battle (HOST only) - WITH COMPREHENSIVE VALIDATIONS
+// Start battle (host only, with validations)
 router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
   const transaction = await sequelize.transaction();
   
@@ -2088,8 +2094,7 @@ router.post('/battle/:gamePin/start', requireAuth, async (req, res) => {
   }
 });
 
-// 🔍 DIAGNOSTIC ENDPOINT - Check battle readiness before starting
-// NOTE: No requireAuth - this is a debugging tool that should always work
+// Diagnostic endpoint: check battle readiness
 router.get('/battle/:gamePin/diagnostic', async (req, res) => {
   try {
     const gamePin = req.params.gamePin;
@@ -2214,7 +2219,7 @@ router.get('/battle/:gamePin/diagnostic', async (req, res) => {
   }
 });
 
-// 6. Submit battle score
+// Submit battle score
 router.post('/battle/:gamePin/submit', requireAuth, async (req, res) => {
   try {
     const gamePin = req.params.gamePin;
@@ -2252,7 +2257,7 @@ router.post('/battle/:gamePin/submit', requireAuth, async (req, res) => {
   }
 });
 
-// 7. Get battle results
+// Get battle results
 router.get('/battle/:gamePin/results', requireAuth, async (req, res) => {
   try {
     const gamePin = req.params.gamePin;

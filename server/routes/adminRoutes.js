@@ -13,6 +13,7 @@ import nodemailer from "nodemailer";
 
 const router = express.Router();
 
+// Get all users with last activity
 router.get("/users", async (req, res) => {
     try {
         const users = await User.findAll({
@@ -78,7 +79,7 @@ router.get("/users", async (req, res) => {
     }
 });
 
-// Lock a user
+// Lock user account and send notification email
 router.post("/users/:userId/lock", async (req, res) => {
     try {
         const { userId } = req.params;
@@ -111,7 +112,7 @@ router.post("/users/:userId/lock", async (req, res) => {
     }
 });
 
-// Unlock a user
+// Unlock user account and send notification email
 router.post("/users/:userId/unlock", async (req, res) => {
     try {
         const { userId } = req.params;
@@ -144,7 +145,7 @@ router.post("/users/:userId/unlock", async (req, res) => {
     }
 });
 
-// Get all quizzes for admin
+// Get all quizzes with creator info
 router.get("/quizzes", async (req, res) => {
     try {
         const quizzes = await Quiz.findAll({
@@ -190,7 +191,7 @@ router.get("/quizzes", async (req, res) => {
     }
 });
 
-// Delete a quiz
+// Delete quiz and notify creator
 router.delete("/quizzes/:quizId", async (req, res) => {
     try {
         const { quizId } = req.params;
@@ -241,7 +242,7 @@ router.delete("/quizzes/:quizId", async (req, res) => {
     }
 });
 
-// Get all questions for a specific quiz
+// Get questions for a specific quiz
 router.get("/quizzes/:quizId/questions", async (req, res) => {
     try {
         const { quizId } = req.params;
@@ -258,7 +259,7 @@ router.get("/quizzes/:quizId/questions", async (req, res) => {
     }
 });
 
-// Delete a specific question
+// Delete question and reorder remaining
 router.delete("/questions/:questionId", async (req, res) => {
     try {
         const { questionId } = req.params;
@@ -334,7 +335,7 @@ router.delete("/questions/:questionId", async (req, res) => {
     }
 });
 
-// Get all Jitsi study sessions for admin
+// Get all Jitsi sessions with creator info
 router.get("/sessions", async (req, res) => {
     try {
         const sessions = await JitsiSession.findAll({
@@ -392,7 +393,7 @@ router.get("/sessions", async (req, res) => {
     }
 });
 
-// End a Jitsi study session
+// End Jitsi session and notify creator
 router.put("/sessions/:sessionId/end", async (req, res) => {
     try {
         const { sessionId } = req.params;
@@ -458,7 +459,7 @@ router.put("/sessions/:sessionId/end", async (req, res) => {
     }
 });
 
-// Dashboard Stats
+// Get dashboard overview stats
 router.get("/stats", async (req, res) => {
     try {
         const totalUsers = await User.count();
@@ -484,7 +485,7 @@ router.get("/stats", async (req, res) => {
     }
 });
 
-// Recent 5 Active Users with Last Activity
+// Get 5 most recently active users
 router.get("/recent-users", async (req, res) => {
     try {
         const users = await User.findAll({
@@ -531,7 +532,7 @@ router.get("/recent-users", async (req, res) => {
     }
 });
 
-// Recent Jitsi Study Sessions
+// Get recent Jitsi sessions
 router.get("/recent-sessions", async (req, res) => {
     try {
         const sessions = await JitsiSession.findAll({

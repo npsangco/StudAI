@@ -68,10 +68,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * POST /api/achievements/equip
- * Equip an achievement for display
- */
+// Equip an achievement for display
 router.post('/equip', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -121,10 +118,7 @@ router.post('/equip', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * POST /api/achievements/check
- * Manually trigger achievement check (useful after bulk operations)
- */
+// Manually trigger achievement check (useful after bulk operations)
 router.post('/check', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -146,10 +140,7 @@ router.post('/check', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * GET /api/achievements/unlocked
- * Get only unlocked achievements
- */
+// Get only unlocked achievements
 router.get('/unlocked', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -172,10 +163,7 @@ router.get('/unlocked', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * GET /api/achievements/locked
- * Get only locked achievements (with progress)
- */
+// Get locked achievements with progress (excludes hidden)
 router.get('/locked', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -200,10 +188,7 @@ router.get('/locked', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * GET /api/achievements/stats
- * Get achievement statistics for the user
- */
+// Get achievement statistics (total, unlocked, completion %)
 router.get('/stats', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;

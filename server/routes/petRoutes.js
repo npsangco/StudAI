@@ -42,7 +42,6 @@ const requireAuth = (req, res, next) => {
     return next();
   }
   
-  // No valid authentication found
   return res.status(401).json({ 
     error: 'Authentication required. Please log in.',
     authRequired: true 
@@ -54,6 +53,7 @@ const cache = new NodeCache({
   checkperiod: 60 
 });
 
+// Rate limiters to prevent spam
 const actionLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 15,
@@ -62,7 +62,7 @@ const actionLimiter = rateLimit({
 
 const purchaseLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30, // Limit button spam, not purchase quantity
+  max: 30,
   message: { error: "Too many purchase requests, please slow down." }
 });
 
@@ -72,10 +72,7 @@ const generalLimiter = rateLimit({
   message: { error: "Too many requests, please try again later." }
 });
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
-
+// Calculate stat decay based on time elapsed
 function calculateDecay(lastActionTime, currentTime, statType) {
   if (!lastActionTime) return 0;
   
@@ -98,6 +95,7 @@ function calculateDecay(lastActionTime, currentTime, statType) {
   return decayPeriods * config.decay;
 }
 
+// Apply stat decay and energy regen to pet
 async function applyStatDecay(pet) {
   // Use UTC time for consistency (database stores in UTC)
   const now = new Date();
@@ -178,11 +176,13 @@ async function applyStatDecay(pet) {
   return pet;
 }
 
+// Calculate EXP needed for level (formula: 100 * 1.08^(level-1))
 function getExpNeeded(level) {
   // Formula: 100 × 1.08^(level-1)
   return Math.floor(100 * Math.pow(1.08, level - 1));
 }
 
+// Get user's equipped items by effect type
 async function getEquippedItems(userId, effectType) {
   return await UserPetItem.findAll({
     where: { 
@@ -198,6 +198,7 @@ async function getEquippedItems(userId, effectType) {
   });
 }
 
+// Smart item selection based on level and efficiency
 function selectItemsToUse(equippedItems, currentLevel, maxLevel = 100) {
   const itemsToUse = [];
   let remainingNeeded = maxLevel - currentLevel;
@@ -247,6 +248,7 @@ function selectItemsToUse(equippedItems, currentLevel, maxLevel = 100) {
   return itemsToUse;
 }
 
+// Auto-equip first available item of each type
 async function autoEquipFirstItems(userId, transaction = null) {
   const inventoryItems = await UserPetItem.findAll({
     where: { user_id: userId },
@@ -278,6 +280,7 @@ async function autoEquipFirstItems(userId, transaction = null) {
   return true;
 }
 
+// Clear cached pet data for user
 function clearUserCache(userId) {
   cache.del(`pet:${userId}`);
   cache.del(`inventory:${userId}`);
@@ -328,6 +331,7 @@ async function logDailyStats(userId, activityType, points, exp) {
   return dailyStat;
 }
 
+// Trigger pet-related achievement checks
 async function checkPetAchievements(userId) {
   // Import achievement checker if available
   // This should be implemented in a separate achievementService.js
@@ -340,10 +344,7 @@ async function checkPetAchievements(userId) {
   }
 }
 
-// ============================================
-// PET ROUTES
-// ============================================
-
+// Get pet companion data with stat updates
 router.get("/", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
 
@@ -368,6 +369,7 @@ router.get("/", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
+// Create new pet companion
 router.post("/", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { petType, petName } = req.body;
@@ -429,6 +431,7 @@ router.post("/", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
+// Rename pet companion
 router.put("/name", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { petName } = req.body;
@@ -460,6 +463,7 @@ router.put("/name", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
+// Perform pet action (feed, play, clean, sleep)
 router.post("/action", actionLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { actionType } = req.body;
@@ -607,10 +611,7 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// ============================================
-// INVENTORY ROUTES
-// ============================================
-
+// Equip/unequip item from inventory
 router.post("/inventory/equip", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { inventoryId, isEquipped } = req.body;
@@ -639,6 +640,7 @@ router.post("/inventory/equip", generalLimiter, requireAuth, async (req, res) =>
   }
 });
 
+// Auto-equip first available items
 router.post("/inventory/auto-equip", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
 
@@ -653,6 +655,7 @@ router.post("/inventory/auto-equip", generalLimiter, requireAuth, async (req, re
   }
 });
 
+// Get user's inventory with equipped status
 router.get("/inventory", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
 
@@ -693,10 +696,7 @@ router.get("/inventory", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// ============================================
-// SHOP ROUTES
-// ============================================
-
+// Get all available shop items
 router.get("/shop/items", generalLimiter, async (req, res) => {
   try {
     const cacheKey = 'shop:items';
@@ -716,6 +716,7 @@ router.get("/shop/items", generalLimiter, async (req, res) => {
   }
 });
 
+// Purchase items from shop
 router.post("/shop/purchase", purchaseLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { itemId, quantity = 1 } = req.body;

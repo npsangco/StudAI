@@ -6,9 +6,7 @@ import User from '../models/User.js';
 
 const router = express.Router();
 
-// ──────────────────────────────────────────────────────
-// GET ALL QUESTIONS FROM USER'S QUIZZES
-// ──────────────────────────────────────────────────────
+// Get all questions from user's quizzes (with filters)
 router.get('/', async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -83,11 +81,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-
-
-// ──────────────────────────────────────────────────────
-// INSERT QUESTIONS FROM BANK TO A QUIZ (Copy questions)
-// ──────────────────────────────────────────────────────
+// Copy questions from bank to a quiz
 router.post('/insert', async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -176,9 +170,7 @@ router.post('/insert', async (req, res) => {
   }
 });
 
-// ──────────────────────────────────────────────────────
-// GET STATISTICS ABOUT USER'S QUESTIONS
-// ──────────────────────────────────────────────────────
+// Get statistics about user's questions
 router.get('/stats', async (req, res) => {
   try {
     const userId = req.session.userId;
