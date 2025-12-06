@@ -156,20 +156,24 @@ export function useQuizAPI(quizDataHook, toast) {
       }
 
       // Get existing questions from server (skip if temp quiz)
-      let existingQuestionIds = [];
+      let existingQuestions = [];
       if (!quizData.editing.isTemp) {
         const currentQuizResponse = await quizApi.getById(quizId);
-        existingQuestionIds = currentQuizResponse.data.questions.map(q => q.question_id);
-        
-        // Delete ALL existing questions first to avoid order conflicts
-        for (const existingId of existingQuestionIds) {
-          await quizApi.deleteQuestion(quizId, existingId);
-        }
+        existingQuestions = currentQuizResponse.data.questions;
       }
 
-      // Now insert all questions in the correct order
+      // Build a map of existing questions by order for quick lookup
+      const existingByOrder = new Map();
+      existingQuestions.forEach(q => {
+        existingByOrder.set(q.question_order, q);
+      });
+
+      // Process all questions: update existing, add new
+      const processedIds = new Set();
+      
       for (let i = 0; i < questions.length; i++) {
         const question = questions[i];
+        const newOrder = i + 1;
 
         // Ensure choices and matchingPairs are properly formatted
         let choicesData = question.choices;
@@ -193,7 +197,7 @@ export function useQuizAPI(quizDataHook, toast) {
         const questionData = {
           type: question.type,
           question: question.question,
-          question_order: i + 1,
+          question_order: newOrder,
           choices: choicesData || null,
           correct_answer: question.correctAnswer || null,
           answer: question.answer || null,
@@ -202,8 +206,24 @@ export function useQuizAPI(quizDataHook, toast) {
           difficulty: question.difficulty || 'medium'
         };
 
-        // Always add as new question (since we deleted all existing ones)
-        await quizApi.addQuestion(quizId, questionData);
+        // Check if question exists at this position
+        const existingQuestion = existingByOrder.get(newOrder);
+        
+        if (existingQuestion) {
+          // Update existing question
+          await quizApi.updateQuestion(quizId, existingQuestion.question_id, questionData);
+          processedIds.add(existingQuestion.question_id);
+        } else {
+          // Add new question
+          await quizApi.addQuestion(quizId, questionData);
+        }
+      }
+
+      // Delete questions that were removed (exist in DB but not in current list)
+      for (const existingQ of existingQuestions) {
+        if (!processedIds.has(existingQ.question_id)) {
+          await quizApi.deleteQuestion(quizId, existingQ.question_id);
+        }
       }
 
       // Reload quizzes
