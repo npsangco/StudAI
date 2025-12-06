@@ -40,30 +40,6 @@ export default function PetBuddy() {
     loadPet();
   }, [loadPet]);
 
-  // Refreshes pet stats every 30 seconds
-  useEffect(() => {
-    if (!pet) return;
-
-    const timeout = setTimeout(() => {
-      refreshPetStats();
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearTimeout(timeout);
-  }, [pet?.pet_id, refreshPetStats]);
-
-  // Refreshes when user completes quizzes or activities
-  useEffect(() => {
-    const handleActivityEvent = () => {
-      refreshPetStats();
-    };
-
-    window.addEventListener('questActivity', handleActivityEvent);
-
-    return () => {
-      window.removeEventListener('questActivity', handleActivityEvent);
-    };
-  }, []);
-
   const refreshPetStats = useCallback(async () => {
     try {
       const res = await petApi.getPet();
@@ -86,6 +62,30 @@ export default function PetBuddy() {
       console.error("Failed to refresh pet stats:", err);
     }
   }, []);
+
+  // Refreshes pet stats every 30 seconds
+  useEffect(() => {
+    if (!pet) return;
+
+    const timeout = setTimeout(() => {
+      refreshPetStats();
+    }, 30000);
+
+    return () => clearTimeout(timeout);
+  }, [pet?.pet_id, refreshPetStats]);
+
+  // Refreshes when user completes quizzes or activities
+  useEffect(() => {
+    const handleActivityEvent = () => {
+      refreshPetStats();
+    };
+
+    window.addEventListener('questActivity', handleActivityEvent);
+
+    return () => {
+      window.removeEventListener('questActivity', handleActivityEvent);
+    };
+  }, [refreshPetStats]);
 
   const handlePetSelection = (type) => {
     setSelectedPetType(type);
