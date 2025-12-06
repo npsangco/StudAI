@@ -48,14 +48,16 @@ export const QuestionBankBrowser = ({ onSelectQuestions, onClose, toast }) => {
       const data = await response.json();
 
       if (response.ok) {
-        setQuestions(data.questions);
-        setPagination(data.pagination);
+        setQuestions(Array.isArray(data.questions) ? data.questions : []);
+        setPagination(data.pagination || { total: 0, page: 1, limit: 50, pages: 0 });
       } else {
         toast.error(data.error || 'Failed to load question bank');
+        setQuestions([]);
       }
     } catch (error) {
       console.error('Error fetching questions:', error);
       toast.error('Failed to load question bank');
+      setQuestions([]);
     } finally {
       setLoading(false);
     }
