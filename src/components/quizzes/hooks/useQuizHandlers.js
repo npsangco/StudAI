@@ -550,25 +550,63 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   };
 
   const handleBatchAddQuestions = (questionsToAdd) => {
+    // Validate input
+    if (!questionsToAdd || !Array.isArray(questionsToAdd) || questionsToAdd.length === 0) {
+      console.error('handleBatchAddQuestions: Invalid input', questionsToAdd);
+      return;
+    }
+
     // Convert question bank questions to quiz questions format
-    const maxOrder = questions.length > 0 
-      ? Math.max(...questions.map(q => q.question_order || 0))
+    const currentQuestions = Array.isArray(questions) ? questions : [];
+    const maxOrder = currentQuestions.length > 0 
+      ? Math.max(...currentQuestions.map(q => q.question_order || 0))
       : 0;
 
-    const newQuestions = questionsToAdd.map((sourceQ, index) => ({
-      id: `question-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
-      type: sourceQ.type,
-      question: sourceQ.question,
-      question_order: maxOrder + index + 1,
-      choices: sourceQ.choices || [],
-      correctAnswer: sourceQ.correct_answer || '',
-      answer: sourceQ.answer || '',
-      matchingPairs: sourceQ.matchingPairs || sourceQ.matching_pairs || [],
-      points: sourceQ.points || 1,
-      difficulty: sourceQ.difficulty || 'medium'
-    }));
+    const newQuestions = questionsToAdd.map((sourceQ, index) => {
+      // Ensure choices is always an array
+      let choices = [];
+      if (sourceQ.choices) {
+        if (Array.isArray(sourceQ.choices)) {
+          choices = sourceQ.choices;
+        } else if (typeof sourceQ.choices === 'string') {
+          try {
+            choices = JSON.parse(sourceQ.choices);
+          } catch (e) {
+            choices = [];
+          }
+        }
+      }
 
-    setQuestions([...questions, ...newQuestions]);
+      // Ensure matchingPairs is always an array
+      let matchingPairs = [];
+      if (sourceQ.matchingPairs || sourceQ.matching_pairs) {
+        const pairs = sourceQ.matchingPairs || sourceQ.matching_pairs;
+        if (Array.isArray(pairs)) {
+          matchingPairs = pairs;
+        } else if (typeof pairs === 'string') {
+          try {
+            matchingPairs = JSON.parse(pairs);
+          } catch (e) {
+            matchingPairs = [];
+          }
+        }
+      }
+
+      return {
+        id: `question-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+        type: sourceQ.type,
+        question: sourceQ.question,
+        question_order: maxOrder + index + 1,
+        choices: choices,
+        correctAnswer: sourceQ.correct_answer || sourceQ.correctAnswer || '',
+        answer: sourceQ.answer || '',
+        matchingPairs: matchingPairs,
+        points: sourceQ.points || 1,
+        difficulty: sourceQ.difficulty || 'medium'
+      };
+    });
+
+    setQuestions([...currentQuestions, ...newQuestions]);
     setIsDirty(true); // Mark as dirty when questions added
   };
 

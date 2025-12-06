@@ -660,10 +660,8 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
   const questionCount = questions.length;
 
   const handleSaveClick = () => {
-    if (hasErrors) {
-      setShowErrorModal(true);
-      return;
-    }
+    // Allow saving even with errors (work-in-progress quizzes)
+    // Users just won't be able to play them until errors are fixed
     onSave();
   };
 
@@ -801,16 +799,16 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
                 {/* Save Button - Yellow Primary */}
                 <button
                   onClick={handleSaveClick}
-                  disabled={hasErrors || !isDirty || isSaving}
+                  disabled={!isDirty || isSaving}
                   className={`flex items-center gap-2 px-5 py-2 text-sm rounded-lg font-medium transition-all ${
-                    hasErrors || !isDirty || isSaving
+                    !isDirty || isSaving
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-yellow-500 text-white hover:bg-yellow-600 shadow-md hover:shadow-lg'
                   }`}
                   title={
                     isSaving ? `Saving ${questionCount} questions... Please wait` :
-                    hasErrors ? 'Fix errors before saving' :
                     !isDirty ? 'No changes to save' :
+                    hasErrors ? 'Save quiz (has validation errors - fix before playing)' :
                     'Save quiz'
                   }
                 >
@@ -939,9 +937,9 @@ const PolishedHeader = ({ quiz, onBack, onAddQuestion, onSave, onUpdateTitle, qu
 
               <button
                 onClick={handleSaveClick}
-                disabled={hasErrors || !isDirty}
+                disabled={!isDirty}
                 className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs rounded-lg font-medium flex-1 ${
-                  hasErrors || !isDirty
+                  !isDirty
                     ? 'bg-gray-300 text-gray-500'
                     : 'bg-yellow-500 text-white'
                 }`}
