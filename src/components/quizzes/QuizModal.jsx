@@ -7,8 +7,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   const minSelectableQuestions = 5;
   const reserveQuestions = 5;
   
-  // Max is either 5 or total available (whichever is lower)
-  const maxSelectableQuestions = Math.min(totalQuestions, 5);
+  const maxSelectableQuestions = Math.max(minSelectableQuestions, totalQuestions - reserveQuestions);
   
   const [questionCount, setQuestionCount] = React.useState(maxSelectableQuestions);
   const [selectedMode, setSelectedMode] = React.useState(null);
