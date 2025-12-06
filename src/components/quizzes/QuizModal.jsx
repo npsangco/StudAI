@@ -7,9 +7,8 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   const minSelectableQuestions = 5;
   const reserveQuestions = 5;
   
-  const maxSelectableQuestions = totalQuestions > minQuestionsInBank 
-    ? Math.min(totalQuestions - reserveQuestions, 100) 
-    : Math.min(totalQuestions, 100);
+  // Max is either 5 or total available (whichever is lower)
+  const maxSelectableQuestions = Math.min(totalQuestions, 5);
   
   const [questionCount, setQuestionCount] = React.useState(maxSelectableQuestions);
   const [selectedMode, setSelectedMode] = React.useState(null);
@@ -29,9 +28,28 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   if (!isOpen || !quiz) return null;
 
   const handleQuestionCountChange = (e) => {
-    const value = parseInt(e.target.value);
-    if (!isNaN(value) && value >= minSelectableQuestions && value <= maxSelectableQuestions) {
-      setQuestionCount(value);
+    const value = e.target.value;
+    
+    // Allow empty input for easier editing
+    if (value === '') {
+      setQuestionCount('');
+      return;
+    }
+    
+    const numValue = parseInt(value);
+    
+    // Allow typing any number, but clamp on blur
+    if (!isNaN(numValue)) {
+      setQuestionCount(numValue);
+    }
+  };
+  
+  const handleQuestionCountBlur = () => {
+    // Validate and clamp the value when user leaves the field
+    if (questionCount === '' || questionCount < minSelectableQuestions) {
+      setQuestionCount(minSelectableQuestions);
+    } else if (questionCount > maxSelectableQuestions) {
+      setQuestionCount(maxSelectableQuestions);
     }
   };
 
@@ -42,7 +60,9 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
 
   const handleModeSelect = (mode) => {
     if (mode === 'normal' || mode === 'casual' || mode === 'adaptive') {
-      onSoloQuiz(questionCount, mode);
+      // Ensure valid question count before starting
+      const validCount = Math.max(minSelectableQuestions, Math.min(maxSelectableQuestions, questionCount || minSelectableQuestions));
+      onSoloQuiz(validCount, mode);
     }
   };
 
@@ -59,7 +79,9 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
 
   const handleBattleModeSelect = (mode) => {
     if (mode === 'normal' || mode === 'casual' || mode === 'adaptive') {
-      onQuizBattle(questionCount, mode);
+      // Ensure valid question count before starting
+      const validCount = Math.max(minSelectableQuestions, Math.min(maxSelectableQuestions, questionCount || minSelectableQuestions));
+      onQuizBattle(validCount, mode);
     }
   };
 
@@ -109,7 +131,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
           </div>
 
           {/* Question Count Selector */}
-          {totalQuestions > minQuestionsInBank && (
+          {totalQuestions >= minSelectableQuestions && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
               <label className="block text-xs font-medium text-gray-700 mb-2">
                 How many questions do you want?
@@ -121,14 +143,15 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                   max={maxSelectableQuestions}
                   value={questionCount}
                   onChange={handleQuestionCountChange}
+                  onBlur={handleQuestionCountBlur}
                   className="w-20 px-2 py-1.5 text-sm border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                 />
                 <span className="text-xs text-gray-600">
-                  (Max: 100 questions per session)
+                  (Min: {minSelectableQuestions}, Max: {Math.min(totalQuestions, 5)})
                 </span>
               </div>
               <p className="text-[10px] text-gray-500 mt-1.5">
-                We keep at least 5 questions in reserve for variety
+                Enter a number between {minSelectableQuestions} and {maxSelectableQuestions}
               </p>
             </div>
           )}

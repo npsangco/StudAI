@@ -791,11 +791,10 @@ router.get('/:id', requireAuth, async (req, res) => {
         }
       }
       
-      // Convert matching_pairs from object format to array format if needed
+      // Convert object format {key: value} to array format [{left, right}]
       if (matchingPairs && typeof matchingPairs === 'object' && !Array.isArray(matchingPairs)) {
         matchingPairs = Object.entries(matchingPairs).map(([left, right]) => ({ left, right }));
       } else if (!matchingPairs || !Array.isArray(matchingPairs)) {
-        // Ensure matchingPairs is always an array (empty if null/undefined)
         matchingPairs = [];
       }
 
@@ -1020,8 +1019,9 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
         }
 
         const correctAnswer = questionData.correctAnswer || null;
-        const choicesData = questionData.choices ? JSON.stringify(questionData.choices) : null;
-        const matchingPairsData = questionData.matchingPairs ? JSON.stringify(questionData.matchingPairs) : null;
+        // Sequelize auto-handles JSON serialization for JSON fields
+        const choicesData = questionData.choices || null;
+        const matchingPairsData = questionData.matchingPairs || null;
 
         const questionRecord = await Question.create({
           quiz_id: newQuiz.quiz_id,

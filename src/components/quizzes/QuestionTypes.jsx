@@ -171,20 +171,17 @@ export const TrueFalseQuestion = ({ question, onUpdateQuestion }) => (
 
 // Matching Question Component
 export const MatchingQuestion = ({ question, onAddMatchingPair, onUpdateMatchingPair, onRemoveMatchingPair }) => {
-  // Parse matchingPairs if it's a JSON string
   let pairs = question.matchingPairs;
+  
   if (typeof pairs === 'string') {
     try {
       pairs = JSON.parse(pairs);
     } catch (e) {
-      console.error('Failed to parse matchingPairs:', e);
       pairs = [];
     }
   }
   
-  // Ensure pairs is an array
   if (!Array.isArray(pairs)) {
-    console.warn('matchingPairs is not an array:', pairs);
     pairs = [];
   }
 
