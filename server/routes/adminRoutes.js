@@ -247,6 +247,15 @@ router.get("/quizzes/:quizId/questions", async (req, res) => {
     try {
         const { quizId } = req.params;
 
+        // First check if the quiz exists
+        const quiz = await Quiz.findByPk(quizId, {
+            attributes: ['quiz_id', 'title', 'original_quiz_id', 'shared_by_username', 'total_questions']
+        });
+
+        if (!quiz) {
+            return res.status(404).json({ error: "Quiz not found" });
+        }
+
         const questions = await Question.findAll({
             where: { quiz_id: quizId },
             order: [['question_order', 'ASC']]
