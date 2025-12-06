@@ -1019,7 +1019,6 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
         }
 
         const correctAnswer = questionData.correctAnswer || null;
-        // Sequelize auto-handles JSON serialization for JSON fields
         const choicesData = questionData.choices || null;
         const matchingPairsData = questionData.matchingPairs || null;
 

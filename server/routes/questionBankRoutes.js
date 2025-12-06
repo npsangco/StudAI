@@ -130,14 +130,12 @@ router.post('/insert', async (req, res) => {
       where: { quiz_id: quizId }
     }) || 0;
 
-    // Copy questions into target quiz
     const insertedQuestions = [];
     let currentOrder = maxOrder;
 
     for (const sourceQuestion of sourceQuestions) {
       currentOrder++;
 
-      // Parse JSON fields if they're strings (from database)
       let choicesData = sourceQuestion.choices;
       if (typeof choicesData === 'string') {
         try {
@@ -167,7 +165,7 @@ router.post('/insert', async (req, res) => {
         matching_pairs: matchingPairsData,
         points: sourceQuestion.points,
         difficulty: sourceQuestion.difficulty,
-        is_copy: 1  // Mark as copy so it won't appear in question bank
+        is_copy: 1
       });
 
       insertedQuestions.push(newQuestion);

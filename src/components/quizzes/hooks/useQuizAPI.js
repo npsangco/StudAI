@@ -155,27 +155,23 @@ export function useQuizAPI(quizDataHook, toast) {
         
       }
 
-      // Get existing questions from server (skip if temp quiz)
       let existingQuestions = [];
       if (!quizData.editing.isTemp) {
         const currentQuizResponse = await quizApi.getById(quizId);
         existingQuestions = currentQuizResponse.data.questions;
       }
 
-      // Build a map of existing questions by order for quick lookup
       const existingByOrder = new Map();
       existingQuestions.forEach(q => {
         existingByOrder.set(q.question_order, q);
       });
 
-      // Process all questions: update existing, add new
       const processedIds = new Set();
       
       for (let i = 0; i < questions.length; i++) {
         const question = questions[i];
         const newOrder = i + 1;
 
-        // Ensure choices and matchingPairs are properly formatted
         let choicesData = question.choices;
         if (typeof choicesData === 'string') {
           try {
@@ -206,28 +202,26 @@ export function useQuizAPI(quizDataHook, toast) {
           difficulty: question.difficulty || 'medium'
         };
 
-        // Check if question exists at this position
         const existingQuestion = existingByOrder.get(newOrder);
         
         if (existingQuestion) {
-          // Update existing question
           await quizApi.updateQuestion(quizId, existingQuestion.question_id, questionData);
           processedIds.add(existingQuestion.question_id);
         } else {
-          // Add new question
           await quizApi.addQuestion(quizId, questionData);
         }
       }
 
-      // Delete questions that were removed (exist in DB but not in current list)
       for (const existingQ of existingQuestions) {
         if (!processedIds.has(existingQ.question_id)) {
           await quizApi.deleteQuestion(quizId, existingQ.question_id);
         }
       }
 
-      // Reload quizzes
       await loadQuizzesFromAPI();
+      
+      const refreshedQuizResponse = await quizApi.getById(quizId);
+      setQuestions(refreshedQuizResponse.data.questions);
       
       return true;
     } catch (err) {
