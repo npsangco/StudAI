@@ -177,15 +177,13 @@ const Chatbot = ({ currentNote, onBack }) => {
       return;
     }
 
-    // Estimate tokens for this request (rough: 4 chars = 1 token)
-    const estimatedTokens = Math.ceil(inputMessage.length / 4) + 500; // +500 for response
-    
-    if (tokenLimitReached || tokenUsage.remaining < estimatedTokens) {
-      setHistoryError(`Insufficient tokens remaining. You need approximately ${estimatedTokens} tokens, but only have ${tokenUsage.remaining} left. Try again tomorrow.`);
+    // Only block if completely out of tokens
+    if (tokenLimitReached || tokenUsage.remaining <= 0) {
+      setHistoryError('Daily token limit reached. Try again tomorrow.');
       const errorMessage = {
         id: Date.now() + Math.random(),
         type: 'bot',
-        content: `Insufficient tokens remaining. You need approximately ${estimatedTokens} tokens, but only have ${tokenUsage.remaining} left. Try again tomorrow.`,
+        content: 'Daily token limit reached. Try again tomorrow.',
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);

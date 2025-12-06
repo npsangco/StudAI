@@ -257,10 +257,8 @@ export async function ensureChatbotTokensAvailable(userId, requestedTokens = 0) 
     return { allowed: false, remaining: 0 };
   }
 
-  if (requestedTokens > 0 && requestedTokens > remaining) {
-    return { allowed: false, remaining };
-  }
-
+  // Allow request even if requestedTokens > remaining
+  // We'll use whatever tokens are available up to the limit
   return { allowed: true, remaining };
 }
 

@@ -786,14 +786,6 @@ app.post("/api/openai/chat", sessionLockCheck, async (req, res) => {
         const totalTokens = data.usage?.total_tokens || approxTokens;
         const usageResult = await recordChatbotUsage(userId, totalTokens);
 
-        if (!usageResult.allowed) {
-            return res.status(429).json({
-                error: "Chatbot daily token limit reached",
-                limits: DAILY_AI_LIMITS,
-                remainingTokens: 0
-            });
-        }
-
         const snapshot = await getUsageSnapshot(userId);
 
         res.json({
