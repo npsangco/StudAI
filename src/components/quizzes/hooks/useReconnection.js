@@ -264,10 +264,11 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
       gracePeriodTimeRemaining: 90 // 90 seconds
     }));
 
-    // Save current game state for reconnection
-    if (gamePin && userId && gameState) {
-      await savePlayerState(gamePin, userId, gameState);
-    }
+    // NOTE: We DON'T save state here because:
+    // 1. Auto-save in QuizGame.jsx runs every 3s with LATEST values
+    // 2. The gameState parameter is STALE (captured at hook initialization)
+    // 3. Saving stale data would OVERWRITE the good auto-saved data
+    // The auto-save ensures we have recent state (within 3 seconds)
 
     // Stop heartbeat
     stopHeartbeat();
@@ -277,7 +278,7 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
 
     // Show reconnection opportunity
     // (UI will detect reconnectionAvailable flag)
-  }, [stopHeartbeat, gamePin, userId, gameState, startGracePeriodMonitoring]);
+  }, [stopHeartbeat, gamePin, userId, startGracePeriodMonitoring]);
 
   // ============================================
   // RECONNECTION LOGIC

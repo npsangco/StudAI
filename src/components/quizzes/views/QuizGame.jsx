@@ -179,6 +179,9 @@ const QuizGame = ({
   // 🔒 SUBMISSION MUTEX: Prevent race condition between timer and manual submission
   const submissionLockRef = useRef({ locked: false, timestamp: 0 });
 
+  // Track if initial save has been done (prevent re-running on reconnection)
+  const initialSaveDoneRef = useRef(false);
+
   // 🔒 Helper function to acquire submission lock
   const acquireSubmissionLock = () => {
     const now = Date.now();
@@ -453,7 +456,7 @@ const QuizGame = ({
     { name: 'You', userId: quiz?.currentUserId },
     mode === 'battle', // Only active in battle mode
     {
-      score: game.score,
+      score: game.scoreRef.current, // FIX: Use scoreRef.current
       currentQuestionIndex: game.currentQuestionIndex,
       userAnswers: game.userAnswers,
       answeredQuestions: game.answeredQuestions
@@ -478,29 +481,34 @@ const QuizGame = ({
   // Auto-save game state every 3 seconds for reliable reconnection
   useEffect(() => {
     if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) return;
-    
+
     const autoSaveInterval = setInterval(() => {
+      // Capture current state at save time (not at interval creation time)
       const currentGameState = {
-        score: game.score,
+        score: game.scoreRef.current,
         currentQuestionIndex: game.currentQuestionIndex,
         userAnswers: game.userAnswers,
         answeredQuestions: game.answeredQuestions,
-        questions: questions // 🔥 SAVE THE SELECTED QUESTIONS (e.g., 15 out of 20)
+        questions: questions
       };
-      
+
       // Save to Firebase savedStates node
       savePlayerState(quiz.gamePin, quiz.currentUserId, currentGameState);
     }, 3000); // Every 3 seconds
-    
+
     return () => {
       clearInterval(autoSaveInterval);
     };
-  }, [mode, quiz?.gamePin, quiz?.currentUserId, game.score, game.currentQuestionIndex, game.userAnswers, game.answeredQuestions, questions]);
+    // Only restart interval if battle context changes, NOT on every answer
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, quiz?.gamePin, quiz?.currentUserId]);
 
   // Initial save when battle starts (save the question set immediately)
   useEffect(() => {
     if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) return;
-    
+    if (!questions || questions.length === 0) return; // Wait for questions to load
+    if (initialSaveDoneRef.current) return; // Already did initial save
+
     // Do initial save on mount to capture the selected questions
     const initialGameState = {
       score: 0,
@@ -509,9 +517,10 @@ const QuizGame = ({
       answeredQuestions: [],
       questions: questions // Save initial question set (e.g., 15 out of 20)
     };
-    
+
     savePlayerState(quiz.gamePin, quiz.currentUserId, initialGameState);
-  }, [mode, quiz?.gamePin, quiz?.currentUserId]); // Only run once on mount
+    initialSaveDoneRef.current = true; // Mark as done
+  }, [mode, quiz?.gamePin, quiz?.currentUserId, questions]);
 
   // ============================================
   // RECONNECTION HANDLERS 
@@ -782,10 +791,25 @@ const QuizGame = ({
     const handleBeforeUnload = (e) => {
       if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
 
+        // CRITICAL: Save final game state before disconnect
+        const finalGameState = {
+          score: game.scoreRef.current,
+          currentQuestionIndex: game.currentQuestionIndex,
+          userAnswers: game.userAnswers,
+          answeredQuestions: Array.from(game.answeredQuestions), // Convert Set to Array
+          questions: questions
+        };
+        const savedStateUrl = `https://studai-quiz-battles-default-rtdb.asia-southeast1.firebasedatabase.app/battles/${quiz.gamePin}/savedStates/user_${quiz.currentUserId}.json`;
+        const savedStateBlob = new Blob([JSON.stringify({
+          ...finalGameState,
+          savedAt: Date.now(),
+          expiresAt: Date.now() + 300000 // 5 minutes
+        })], { type: 'application/json' });
+
         // DON'T delete player data - just mark as disconnected
         // This allows reconnection to work!
         const connectionUrl = `https://studai-quiz-battles-default-rtdb.asia-southeast1.firebasedatabase.app/battles/${quiz.gamePin}/connections/user_${quiz.currentUserId}.json`;
-        
+
         // Mark as disconnected but keep player data intact
         const disconnectData = {
           userId: quiz.currentUserId,
@@ -793,12 +817,13 @@ const QuizGame = ({
           disconnectedAt: Date.now(),
           reason: 'beforeunload'
         };
-        
+
         // Use PATCH for partial updates (Firebase REST API requirement)
         if (navigator.sendBeacon) {
-          // sendBeacon uses POST by default, but we need PATCH for Firebase
-          // For Firebase REST API, we can use PUT but only if we include all fields
-          // Better approach: Use the full object structure
+          // Save state FIRST (most critical)
+          navigator.sendBeacon(savedStateUrl, savedStateBlob);
+
+          // Then mark as disconnected
           const fullDisconnectData = {
             userId: quiz.currentUserId,
             isOnline: false,
@@ -821,7 +846,7 @@ const QuizGame = ({
 
           }
         }
-        
+
         // Also mark player as offline in players node
         const playerOnlineUrl = `https://studai-quiz-battles-default-rtdb.asia-southeast1.firebasedatabase.app/battles/${quiz.gamePin}/players/user_${quiz.currentUserId}/isOnline.json`;
         if (navigator.sendBeacon) {
