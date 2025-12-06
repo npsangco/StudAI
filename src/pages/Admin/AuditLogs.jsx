@@ -93,56 +93,52 @@ export default function AuditLogs() {
 
                 <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 py-6 sm:py-8">
                     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-6">
-                        <div className="flex flex-col gap-4 mb-4">
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                                    System Audit Logs
-                                </h2>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                                System Audit Logs
+                            </h2>
 
+                            {/* Search and Date Filters */}
+                            <div className="flex flex-col lg:flex-row gap-2 w-full sm:w-auto">
                                 {/* Search */}
-                                <div className="relative w-full sm:w-auto">
+                                <div className="relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                                     <input
                                         type="text"
                                         placeholder="Search logs..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full sm:w-64"
+                                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full lg:w-48"
                                     />
                                 </div>
-                            </div>
-                            
-                            {/* Date Filters */}
-                            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                                <span className="text-sm font-medium text-gray-700 min-w-fit">Filter by date:</span>
-                                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                                    <div className="flex flex-col">
-                                        <label className="text-xs text-gray-600 mb-1">From:</label>
-                                        <input
-                                            type="date"
-                                            value={startDate}
-                                            onChange={(e) => setStartDate(e.target.value)}
-                                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full sm:w-auto"
-                                        />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <label className="text-xs text-gray-600 mb-1">To:</label>
-                                        <input
-                                            type="date"
-                                            value={endDate}
-                                            onChange={(e) => setEndDate(e.target.value)}
-                                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-full sm:w-auto"
-                                        />
-                                    </div>
+                                
+                                {/* Date Filters */}
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        placeholder="From date"
+                                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-32"
+                                    />
+                                    <span className="text-gray-500 text-sm">to</span>
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        placeholder="To date"
+                                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent w-32"
+                                    />
                                     {(startDate || endDate) && (
                                         <button
                                             onClick={() => {
                                                 setStartDate("");
                                                 setEndDate("");
                                             }}
-                                            className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors self-end"
+                                            className="px-2 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                            title="Clear date filters"
                                         >
-                                            Clear
+                                            ✕
                                         </button>
                                     )}
                                 </div>
