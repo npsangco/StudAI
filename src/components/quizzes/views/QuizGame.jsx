@@ -484,27 +484,40 @@ const QuizGame = ({
         score: game.score,
         currentQuestionIndex: game.currentQuestionIndex,
         userAnswers: game.userAnswers,
-        answeredQuestions: game.answeredQuestions
+        answeredQuestions: game.answeredQuestions,
+        questions: questions // 🔥 SAVE THE SELECTED QUESTIONS (e.g., 15 out of 20)
       };
       
       // Save to Firebase savedStates node
-      savePlayerState(quiz.gamePin, quiz.currentUserId, currentGameState).catch(err => {
-        console.warn('⚠️ Auto-save failed:', err);
-      });
+      savePlayerState(quiz.gamePin, quiz.currentUserId, currentGameState);
     }, 3000); // Every 3 seconds
     
     return () => {
       clearInterval(autoSaveInterval);
     };
-  }, [mode, quiz?.gamePin, quiz?.currentUserId, game.score, game.currentQuestionIndex, game.userAnswers, game.answeredQuestions]);
+  }, [mode, quiz?.gamePin, quiz?.currentUserId, game.score, game.currentQuestionIndex, game.userAnswers, game.answeredQuestions, questions]);
+
+  // Initial save when battle starts (save the question set immediately)
+  useEffect(() => {
+    if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) return;
+    
+    // Do initial save on mount to capture the selected questions
+    const initialGameState = {
+      score: 0,
+      currentQuestionIndex: 0,
+      userAnswers: [],
+      answeredQuestions: [],
+      questions: questions // Save initial question set (e.g., 15 out of 20)
+    };
+    
+    savePlayerState(quiz.gamePin, quiz.currentUserId, initialGameState);
+  }, [mode, quiz?.gamePin, quiz?.currentUserId]); // Only run once on mount
 
   // ============================================
   // RECONNECTION HANDLERS 
   // ============================================
   
   const handleReconnection = async () => {
-    console.log('🚀 HANDLE RECONNECTION CALLED', { mode, gamePin: quiz?.gamePin, userId: quiz?.currentUserId });
-    
     // 🔥 NEW: Set isReconnecting flag in Firebase so leaderboard shows "Reconnecting"
     if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
       try {
@@ -519,11 +532,7 @@ const QuizGame = ({
 
     const result = await reconnection.attemptReconnection();
 
-    console.log('🔄 RECONNECTION ATTEMPT RESULT:', result);
-
     if (result.success) {
-
-      console.log('✅ RECONNECTION SUCCESS - Starting state restoration');
 
       // 1. Restore score and answers (but NOT currentQuestionIndex yet - we'll determine that below based on battle state)
       const restoredScore = result.savedState?.score ?? result.playerData.score ?? 0;
@@ -537,6 +546,12 @@ const QuizGame = ({
           ? new Set(result.savedState.answeredQuestions)
           : new Set();
         game.setAnsweredQuestions(answeredSet);
+        
+        // Restore the SAME questions (e.g., 15 out of 20)
+        // Without this, player gets all 20 questions instead of the 15 they started with
+        if (result.savedState.questions && Array.isArray(result.savedState.questions)) {
+          setQuestions(result.savedState.questions);
+        }
       }
 
       // 2. Check current question of OTHER players (not disconnected player)
@@ -576,13 +591,6 @@ const QuizGame = ({
               // Fixed priority: playerData (instant) > savedState (delayed 3s) > 0
               const myProgress = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
 
-              console.log('🔍 RECONNECT DEBUG:', {
-                'playerData.currentQuestion': result.playerData.currentQuestion,
-                'savedState.currentQuestionIndex': result.savedState?.currentQuestionIndex,
-                'resolved myProgress': myProgress,
-                'minCurrentQuestion': minCurrentQuestion
-              });
-
               // Always use saved progress - ensures fairness regardless of other players' positions
               let targetQuestion = myProgress;
               let shouldWait = false;
@@ -594,12 +602,6 @@ const QuizGame = ({
 
               // Validate target question is within valid range
               const validTargetQuestion = Math.max(0, Math.min(targetQuestion, questions.length - 1));
-
-              if (validTargetQuestion !== targetQuestion) {
-                console.warn(`⚠️ Target question ${targetQuestion} out of bounds, clamping to ${validTargetQuestion}`);
-              }
-
-              console.log('🎯 SETTING QUESTION INDEX TO:', validTargetQuestion);
 
               if (validTargetQuestion >= 0 && validTargetQuestion < questions.length) {
 

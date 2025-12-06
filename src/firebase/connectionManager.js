@@ -518,6 +518,7 @@ export const savePlayerState = async (gamePin, userId, state) => {
       currentQuestionIndex: state.currentQuestionIndex || 0,
       userAnswers: state.userAnswers || [],
       answeredQuestions: answeredQuestionsArray,
+      questions: state.questions || [], // Save the selected questions (e.g., 15 out of 20)
       savedAt: Date.now(),
       expiresAt: Date.now() + 300000 // Expires after 5 minutes (increased from 90 seconds)
     });
@@ -556,7 +557,8 @@ export const restorePlayerState = async (gamePin, userId) => {
         score: savedState.score,
         currentQuestionIndex: savedState.currentQuestionIndex,
         userAnswers: savedState.userAnswers || [],
-        answeredQuestions: new Set(savedState.answeredQuestions || [])
+        answeredQuestions: new Set(savedState.answeredQuestions || []),
+        questions: savedState.questions || [] // 🔥 Restore the selected questions
       }
     };
     
