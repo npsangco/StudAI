@@ -520,12 +520,17 @@ const QuizGame = ({
     if (result.success) {
 
       // 1. Restore score and answers (but NOT currentQuestionIndex yet - we'll determine that below based on battle state)
+      const restoredScore = result.savedState?.score ?? result.playerData.score ?? 0;
+      game.scoreRef.current = restoredScore;
+      game.updateScore(0); // This will sync scoreRef to displayScore without adding points
+      
       if (result.savedState) {
-        game.scoreRef.current = result.savedState.score;
         game.setUserAnswers(result.savedState.userAnswers || []);
-        game.setAnsweredQuestions(result.savedState.answeredQuestions || new Set());
-      } else if (result.playerData.score !== undefined) {
-        game.scoreRef.current = result.playerData.score;
+        // Convert array back to Set for answeredQuestions
+        const answeredSet = Array.isArray(result.savedState.answeredQuestions)
+          ? new Set(result.savedState.answeredQuestions)
+          : new Set();
+        game.setAnsweredQuestions(answeredSet);
       }
 
       // 2. Check current question of OTHER players (not disconnected player)
@@ -565,6 +570,13 @@ const QuizGame = ({
               // Fixed priority: playerData (instant) > savedState (delayed 3s) > 0
               const myProgress = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
 
+              console.log('🔍 RECONNECT DEBUG:', {
+                'playerData.currentQuestion': result.playerData.currentQuestion,
+                'savedState.currentQuestionIndex': result.savedState?.currentQuestionIndex,
+                'resolved myProgress': myProgress,
+                'minCurrentQuestion': minCurrentQuestion
+              });
+
               // Always use saved progress - ensures fairness regardless of other players' positions
               let targetQuestion = myProgress;
               let shouldWait = false;
@@ -580,6 +592,8 @@ const QuizGame = ({
               if (validTargetQuestion !== targetQuestion) {
                 console.warn(`⚠️ Target question ${targetQuestion} out of bounds, clamping to ${validTargetQuestion}`);
               }
+
+              console.log('🎯 SETTING QUESTION INDEX TO:', validTargetQuestion);
 
               if (validTargetQuestion >= 0 && validTargetQuestion < questions.length) {
 
