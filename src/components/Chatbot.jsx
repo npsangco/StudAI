@@ -393,8 +393,11 @@ IMPORTANT RULES:
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 min-h-0 relative">
         {/* Watermark */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
-          <div className="text-slate-300 font-bold text-6xl sm:text-7xl md:text-8xl lg:text-9xl opacity-[0.08] transform rotate-[-30deg]">
-            StudAI
+          <div className="flex flex-col items-center gap-4 opacity-[0.08] transform rotate-[-30deg]">
+            <img src="/StudAI_Logo.svg" alt="" className="w-24 sm:w-32 md:w-40 lg:w-48" />
+            <div className="text-black font-bold text-6xl sm:text-7xl md:text-8xl lg:text-9xl">
+              StudAI
+            </div>
           </div>
         </div>
         
