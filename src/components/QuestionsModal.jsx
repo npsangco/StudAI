@@ -56,17 +56,31 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
         let choices = null;
         let matchingPairs = null;
 
+        // Debug logging
+        console.log('=== QUESTION DEBUG ===');
+        console.log('Question ID:', question.question_id);
+        console.log('Question Type:', question.type);
+        console.log('Raw choices:', question.choices);
+        console.log('Raw matching_pairs:', question.matching_pairs);
+
+        // Handle Multiple Choice questions
         try {
             const rawChoices = question.choices;
             if (rawChoices !== null && rawChoices !== undefined) {
+                console.log('Processing choices, type:', typeof rawChoices);
                 if (typeof rawChoices === 'string') {
                     try {
+                        // Handle double-encoded JSON strings
                         let parsed = JSON.parse(rawChoices);
+                        console.log('First parse result:', parsed, 'type:', typeof parsed);
                         if (typeof parsed === 'string') {
                             parsed = JSON.parse(parsed);
+                            console.log('Second parse result:', parsed);
                         }
                         choices = Array.isArray(parsed) ? parsed : null;
+                        console.log('Final choices:', choices);
                     } catch (parseError) {
+                        console.log('Parse error:', parseError);
                         choices = null;
                     }
                 } else if (Array.isArray(rawChoices)) {
@@ -77,20 +91,28 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                 }
             }
         } catch (e) {
+            console.log('Choices processing error:', e);
             choices = null;
         }
 
+        // Handle Matching questions
         try {
             const rawPairs = question.matchingPairs || question.matching_pairs;
             if (rawPairs !== null && rawPairs !== undefined) {
+                console.log('Processing pairs, type:', typeof rawPairs);
                 if (typeof rawPairs === 'string') {
                     try {
+                        // Handle double-encoded JSON strings
                         let parsed = JSON.parse(rawPairs);
+                        console.log('First pairs parse result:', parsed, 'type:', typeof parsed);
                         if (typeof parsed === 'string') {
                             parsed = JSON.parse(parsed);
+                            console.log('Second pairs parse result:', parsed);
                         }
                         matchingPairs = Array.isArray(parsed) ? parsed : null;
+                        console.log('Final pairs:', matchingPairs);
                     } catch (parseError) {
+                        console.log('Pairs parse error:', parseError);
                         matchingPairs = null;
                     }
                 } else if (Array.isArray(rawPairs)) {
@@ -102,8 +124,11 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                 }
             }
         } catch (e) {
+            console.log('Pairs processing error:', e);
             matchingPairs = null;
         }
+
+        console.log('=== END DEBUG ===');
 
         switch (question.type) {
             case 'Multiple Choice':
