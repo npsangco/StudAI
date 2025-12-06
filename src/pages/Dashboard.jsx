@@ -223,26 +223,48 @@ export default function Dashboard() {
     setError('');
     setExtractedContent(null);
 
+    const validFiles = [];
+    const invalidFiles = [];
+
     for (let file of files) {
       const fileType = file.type;
       const fileName = file.name.toLowerCase();
 
-      if (!fileType.includes('pdf') &&
-        !fileType.includes('presentation') &&
-        !fileName.endsWith('.pdf') &&
-        !fileName.endsWith('.ppt') &&
-        !fileName.endsWith('.pptx')) {
-        setError('Only PDF and PowerPoint files are allowed');
-        return;
+      // Check file size first
+      if (file.size > 25 * 1024 * 1024) {
+        toast.error(`${file.name} exceeds 25MB limit and was removed`);
+        continue;
       }
 
-      if (file.size > 25 * 1024 * 1024) {
-        setError('File size exceeds 25MB limit');
-        return;
+      // Check for old PPT format
+      if (fileName.endsWith('.ppt') && !fileName.endsWith('.pptx')) {
+        toast.error(`${file.name} is an old PowerPoint format. Please convert it to .pptx first`);
+        invalidFiles.push({ name: file.name, reason: 'old PPT format' });
+        continue;
       }
+
+      // Check for valid file types (PDF and PPTX only)
+      const isValidPDF = fileType.includes('pdf') || fileName.endsWith('.pdf');
+      const isValidPPTX = (fileType.includes('presentation') || fileType.includes('officedocument.presentation')) && fileName.endsWith('.pptx');
+
+      if (!isValidPDF && !isValidPPTX) {
+        toast.error(`${file.name} is not a valid file type. Only PDF and PPTX files are supported`);
+        invalidFiles.push({ name: file.name, reason: 'invalid file type' });
+        continue;
+      }
+
+      validFiles.push(file);
     }
 
-    setUploadedFiles(prev => [...prev, ...files]);
+    if (validFiles.length === 0) {
+      if (invalidFiles.length > 0) {
+        setError('No valid files to upload. Only PDF and PPTX files are supported.');
+      }
+      return;
+    }
+
+    // Add only valid files
+    setUploadedFiles(prev => [...prev, ...validFiles]);
     setIsExtracting(true);
   };
 
