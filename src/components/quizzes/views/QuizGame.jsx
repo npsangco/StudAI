@@ -543,150 +543,8 @@ const QuizGame = ({
 
     const result = await reconnection.attemptReconnection();
 
-    if (result.success) {
-
-      // 1. Restore score and answers (but NOT currentQuestionIndex yet - we'll determine that below based on battle state)
-      const restoredScore = result.savedState?.score ?? result.playerData.score ?? 0;
-      game.scoreRef.current = restoredScore;
-      game.updateScore(0); // This will sync scoreRef to displayScore without adding points
-      
-      // Use restored questions for validation (not stale local state)
-      const restoredQuestions = result.savedState?.questions || questions;
-
-      if (result.savedState) {
-        game.setUserAnswers(result.savedState.userAnswers || []);
-        // Convert array back to Set for answeredQuestions
-        const answeredSet = Array.isArray(result.savedState.answeredQuestions)
-          ? new Set(result.savedState.answeredQuestions)
-          : new Set();
-        game.setAnsweredQuestions(answeredSet);
-
-        // Restore the SAME questions (e.g., 15 out of 20)
-        // Without this, player gets all 20 questions instead of the 15 they started with
-        if (result.savedState.questions && Array.isArray(result.savedState.questions)) {
-          setQuestions(result.savedState.questions);
-        }
-      }
-
-      // 2. Check current question of OTHER players (not disconnected player)
-      if (mode === 'battle' && quiz?.gamePin) {
-        try {
-          const battleRef = ref(realtimeDb, `battles/${quiz.gamePin}/players`);
-          const snapshot = await get(battleRef);
-
-          if (snapshot.exists()) {
-            const playersData = snapshot.val();
-            const allPlayers = Object.values(playersData);
-
-            // Simplified player filtering - Firebase stores userId as NUMBER, not with 'user_' prefix
-            const currentUserIdNum = Number(quiz.currentUserId);
-            const activePlayersData = allPlayers.filter(p => {
-              const isNotSelf = Number(p.userId) !== currentUserIdNum;
-              const isOnline = p.isOnline !== false; // Treat undefined as online
-              const notForfeited = p.forfeited !== true;
-
-              return isNotSelf && isOnline && notForfeited;
-            });
-
-            // Everyone moves together (sabay-sabay)
-            // currentQuestion in Firebase = next question index they should answer
-            // If currentQuestion = 3, they're ON question index 3 (Q4)
-
-            const activePlayersQuestions = activePlayersData.map(p => p.currentQuestion || 0);
-
-
-            if (activePlayersData.length > 0) {
-              // For STRICT SYNC: Find the MINIMUM currentQuestion (slowest player)
-              // Everyone waits for the slowest, so sync to that question
-              const minCurrentQuestion = Math.min(...activePlayersQuestions);
-              const maxCurrentQuestion = Math.max(...activePlayersQuestions);
-
-              // Resume at NEXT question after last submission
-              // Fixed priority: playerData (instant) > savedState (delayed 3s) > 0
-              const myProgress = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
-
-              // Always use saved progress - ensures fairness regardless of other players' positions
-              let targetQuestion = myProgress;
-              let shouldWait = false;
-
-              // Only check if we need to wait for others (if we're ahead)
-              if (myProgress > minCurrentQuestion) {
-                shouldWait = true;
-              }
-
-              // FIX: Use restoredQuestions (not stale local questions state)
-              const validTargetQuestion = Math.max(0, Math.min(targetQuestion, restoredQuestions.length - 1));
-
-              if (validTargetQuestion >= 0 && validTargetQuestion < restoredQuestions.length) {
-
-
-                // USE SETTER to trigger re-render!
-                game.setCurrentQuestionIndex(validTargetQuestion);
-
-                // Don't update progress here - it's already correct in Firebase!
-                // The player's currentQuestion in Firebase is their saved progress (where they were)
-                // Only update if we're syncing them forward/backward to match the group
-                // We'll let the natural game flow update progress when they answer
-
-                // Reset timer for this question
-                resetTimer(quizTimer);
-
-                // Check if we should enter waiting state immediately after reconnection
-                // If I was ahead (shouldWait = true), enter waiting immediately
-                if (shouldWait) {
-
-                  setIsWaitingForPlayers(true);
-                } else {
-                  // Small delay to ensure state is properly set before checking
-                  setTimeout(async () => {
-                    // Re-fetch latest player states to ensure accuracy
-                    const latestSnapshot = await get(battleRef);
-                    if (latestSnapshot.exists()) {
-                      const latestPlayersData = Object.values(latestSnapshot.val());
-                      const latestActivePlayers = latestPlayersData.filter(p =>
-                        Number(p.userId) !== currentUserIdNum &&
-                        p.isOnline !== false &&
-                        p.forfeited !== true
-                      );
-
-                      const playersWhoAnsweredTarget = latestActivePlayers.filter(
-                        p => (p.currentQuestion || 0) >= validTargetQuestion + 1
-                      ).length;
-
-                      if (playersWhoAnsweredTarget === latestActivePlayers.length && latestActivePlayers.length > 0) {
-
-                        setIsWaitingForPlayers(true);
-                        // The auto-advance logic will handle moving to next question
-                      } else {
-
-                      }
-                    }
-                  }, 100); // 100ms delay to ensure state is synced
-                }
-
-              } else if (targetQuestion >= restoredQuestions.length) {
-                const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
-                game.setCurrentQuestionIndex(Math.min(savedQuestion, restoredQuestions.length - 1));
-              }
-            } else {
-              // No other active players online, use SAVED progress (not question 0!)
-              const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
-              game.setCurrentQuestionIndex(Math.min(savedQuestion, restoredQuestions.length - 1));
-            }
-          } else {
-            // Battle doesn't exist, use saved progress
-            const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
-            game.setCurrentQuestionIndex(Math.min(savedQuestion, restoredQuestions.length - 1));
-          }
-        } catch (error) {
-          console.error('❌ Error checking other players:', error);
-          // Fallback to SAVED progress (not question 0!)
-          const savedQuestion = result.playerData.currentQuestion ?? result.savedState?.currentQuestionIndex ?? 0;
-          game.setCurrentQuestionIndex(Math.min(savedQuestion, restoredQuestions.length - 1));
-        }
-      }
-
-      // 3. Clear isReconnecting flag
+    if (!result.success) {
+      // Clear isReconnecting flag on failure
       if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
         try {
           const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
@@ -697,26 +555,52 @@ const QuizGame = ({
           console.error('❌ Failed to clear isReconnecting flag:', error);
         }
       }
-
-      // 4. Resume game
-      game.setIsPaused(false);
-
-      return result;
-    } else {
-      // Clear isReconnecting flag on failure too
-      if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
-        try {
-          const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
-          await update(playerRef, {
-            isReconnecting: false
-          });
-        } catch (error) {
-          console.error('❌ Failed to clear isReconnecting flag:', error);
-        }
-      }
-
       return result;
     }
+
+    if (result.savedState) {
+      // SIMPLE APPROACH: Restore everything from savedState (ONE source of truth)
+      const saved = result.savedState;
+
+      // Set questions FIRST (synchronously in memory)
+      const restoredQuestions = saved.questions || questions;
+      setQuestions(restoredQuestions);
+
+      // Set score
+      game.scoreRef.current = saved.score || 0;
+      game.updateScore(0); // Sync to display
+
+      // Set answers
+      game.setUserAnswers(saved.userAnswers || []);
+      game.setAnsweredQuestions(new Set(saved.answeredQuestions || []));
+
+      // Set position - use MIN to ensure within bounds
+      const targetIndex = Math.min(
+        saved.currentQuestionIndex || 0,
+        restoredQuestions.length - 1
+      );
+      game.setCurrentQuestionIndex(Math.max(0, targetIndex));
+
+      // Reset timer for current question
+      resetTimer(quizTimer);
+
+      // Resume
+      game.setIsPaused(false);
+    }
+
+    // Clear isReconnecting flag
+    if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
+      try {
+        const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
+        await update(playerRef, {
+          isReconnecting: false
+        });
+      } catch (error) {
+        console.error('❌ Failed to clear isReconnecting flag:', error);
+      }
+    }
+
+    return result;
   };
   
   const handleGiveUpReconnection = () => {
