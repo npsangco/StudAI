@@ -53,43 +53,50 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
     };
 
     const renderQuestionContent = (question) => {
-        // Parse JSON fields if they're strings, with null checks
         let choices = null;
         let matchingPairs = null;
 
+        // Handle Multiple Choice questions
         try {
-            // Handle both naming conventions: choices from QuizEditor, choices from database
-            // Database stores choices as JSON, QuizEditor uses array
             const rawChoices = question.choices;
-            if (rawChoices) {
+            if (rawChoices !== null && rawChoices !== undefined) {
                 if (typeof rawChoices === 'string') {
-                    choices = JSON.parse(rawChoices);
+                    try {
+                        choices = JSON.parse(rawChoices);
+                    } catch (parseError) {
+                        choices = null;
+                    }
                 } else if (Array.isArray(rawChoices)) {
                     choices = rawChoices;
-                } else {
-                    choices = rawChoices;
+                } else if (typeof rawChoices === 'object') {
+                    // Handle case where it's already an object but not an array
+                    choices = Array.isArray(Object.values(rawChoices)) ? Object.values(rawChoices) : null;
                 }
             }
         } catch (e) {
-            console.error('Error parsing choices:', e);
             choices = null;
         }
 
+        // Handle Matching questions
         try {
-            // Handle both naming conventions: matchingPairs from QuizEditor, matching_pairs from database
-            // Database stores matching_pairs as JSON string, QuizEditor uses array
             const rawPairs = question.matchingPairs || question.matching_pairs;
-            if (rawPairs) {
+            if (rawPairs !== null && rawPairs !== undefined) {
                 if (typeof rawPairs === 'string') {
-                    matchingPairs = JSON.parse(rawPairs);
+                    try {
+                        matchingPairs = JSON.parse(rawPairs);
+                    } catch (parseError) {
+                        matchingPairs = null;
+                    }
                 } else if (Array.isArray(rawPairs)) {
                     matchingPairs = rawPairs;
-                } else {
-                    matchingPairs = rawPairs;
+                } else if (typeof rawPairs === 'object') {
+                    // Handle case where it's an object with key-value pairs
+                    if (Object.keys(rawPairs).length > 0) {
+                        matchingPairs = Object.entries(rawPairs).map(([left, right]) => ({ left, right }));
+                    }
                 }
             }
         } catch (e) {
-            console.error('Error parsing matching pairs:', e);
             matchingPairs = null;
         }
 
@@ -106,7 +113,6 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                 return (
                     <div className="mt-3 space-y-2">
                         {choices.map((choice, idx) => {
-                            // Handle both naming conventions: correctAnswer from QuizEditor, correct_answer from database
                             const correctAnswer = question.correctAnswer || question.correct_answer;
                             const isCorrect = choice === correctAnswer;
                             return (
