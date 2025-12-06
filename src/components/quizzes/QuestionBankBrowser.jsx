@@ -365,11 +365,38 @@ const QuestionBankItem = ({ question, isSelected, onToggle, getDifficultyColor, 
               )}
               {question.type === 'Matching' && question.matching_pairs && (
                 <div className="space-y-1">
-                  {Object.entries(question.matching_pairs).map(([left, right]) => (
-                    <p key={left} className="text-sm text-gray-700">
-                      {left} → {right}
-                    </p>
-                  ))}
+                  {(() => {
+                    // Parse matching_pairs if it's a string
+                    let pairs = question.matching_pairs;
+                    if (typeof pairs === 'string') {
+                      try {
+                        pairs = JSON.parse(pairs);
+                      } catch (e) {
+                        console.error('Failed to parse matching_pairs:', e);
+                        return <p className="text-sm text-gray-500">Invalid matching pairs format</p>;
+                      }
+                    }
+                    
+                    // Handle array format [{left: "...", right: "..."}]
+                    if (Array.isArray(pairs)) {
+                      return pairs.map((pair, idx) => (
+                        <p key={idx} className="text-sm text-gray-700">
+                          {pair.left || 'N/A'} → {pair.right || 'N/A'}
+                        </p>
+                      ));
+                    }
+                    
+                    // Handle object format {"key": "value"}
+                    if (typeof pairs === 'object' && pairs !== null) {
+                      return Object.entries(pairs).map(([left, right]) => (
+                        <p key={left} className="text-sm text-gray-700">
+                          {left} → {right}
+                        </p>
+                      ));
+                    }
+                    
+                    return <p className="text-sm text-gray-500">No matching pairs</p>;
+                  })()}
                 </div>
               )}
             </div>

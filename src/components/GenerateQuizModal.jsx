@@ -100,6 +100,22 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
       return;
     }
 
+    // Validate note content has meaningful text
+    const cleanedContent = note.content.trim();
+    const wordCount = cleanedContent.split(/\s+/).filter(word => word.length > 0).length;
+    const letterCount = (cleanedContent.match(/[a-zA-Z]/g) || []).length;
+    const letterRatio = letterCount / cleanedContent.length;
+    
+    if (wordCount < 10) {
+      setError('Your note must contain at least 10 words to generate a meaningful quiz.');
+      return;
+    }
+    
+    if (letterRatio < 0.3) {
+      setError('Your note must contain meaningful text (not just numbers or symbols) to generate a quiz.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 

@@ -239,7 +239,7 @@ async function generateAiQuestionBatch({ batchCount, truncatedContent, openAiApi
 
   const exampleBlock = `Example format ONLY (structure reference — never copy text or answers):\n[\n${exampleSnippets}\n]`;
 
-  const prompt = `Generate EXACTLY ${batchCount} valid JSON quiz questions. CRITICAL RULES:
+  const prompt = `Generate EXACTLY ${batchCount} valid JSON quiz questions based STRICTLY on the content provided below. CRITICAL RULES:
 1. Return ONLY JSON array in brackets [], nothing else
 2. NO markdown, NO code blocks, NO text outside JSON
 3. NO escaped quotes (\"), NO newlines in strings
@@ -249,11 +249,14 @@ async function generateAiQuestionBatch({ batchCount, truncatedContent, openAiApi
 7. For Fill blanks: ALWAYS use "answer" key with a single word or short phrase matching that blank
 8. Each question must have all required fields for its type
 9. You MUST use ONLY these question types (spellings must match exactly): ${typeWhitelist.join(', ')}
+10. ALL questions MUST be directly based on information from the content below - DO NOT make up questions about topics not in the content
+11. DO NOT create questions about general knowledge or random topics - ONLY use facts, concepts, and information explicitly stated in the content
 
 CRITICAL: If you generate any field with underscore or blank numbers, the entire response fails!
 CRITICAL: DO NOT reuse the sample questions below. They are format guides only and copying them will be rejected.
+CRITICAL: Every question MUST test knowledge of the actual content provided - not external knowledge or unrelated topics!
 
-Content: "${truncatedContent}"
+Content to create questions from: "${truncatedContent}"
 
 Generate EXACTLY in this format - no variations:
 ${exampleBlock}`;
@@ -277,7 +280,7 @@ ${exampleBlock}`;
         messages: [
           {
             role: 'system',
-            content: 'You are an expert educator that creates well-structured quiz questions. Return only valid JSON.'
+            content: 'You are an expert educator that creates well-structured quiz questions based strictly on provided content. Generate questions that test understanding of the actual material given, not general knowledge. All questions must be directly answerable from the content provided. Return only valid JSON.'
           },
           {
             role: 'user',
@@ -911,6 +914,25 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
     if (!noteContent || noteContent.trim().length < 50) {
       return res.status(400).json({ 
         error: 'Note content must be at least 50 characters long for AI generation' 
+      });
+    }
+
+    // Validate that content has meaningful text, not just numbers/symbols
+    const cleanedContent = noteContent.trim();
+    const wordCount = cleanedContent.split(/\s+/).filter(word => word.length > 0).length;
+    const letterCount = (cleanedContent.match(/[a-zA-Z]/g) || []).length;
+    const letterRatio = letterCount / cleanedContent.length;
+    
+    // Check if content has at least 10 words and at least 30% letters
+    if (wordCount < 10) {
+      return res.status(400).json({ 
+        error: 'Note content must contain at least 10 words to generate a meaningful quiz' 
+      });
+    }
+    
+    if (letterRatio < 0.3) {
+      return res.status(400).json({ 
+        error: 'Note content must contain meaningful text (not just numbers or symbols) to generate a quiz' 
       });
     }
 
