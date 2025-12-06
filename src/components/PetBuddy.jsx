@@ -1,4 +1,3 @@
-// PetBuddy.jsx - With Toast Notifications and Pet Dialog
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { petApi } from "../api/api";
 import PetShop from "./PetShop";
@@ -13,7 +12,6 @@ export default function PetBuddy() {
   const [activeView, setActiveView] = useState("pet");
   const [actionLoading, setActionLoading] = useState(null);
   
-  // Adoption states
   const [choosePet, setChoosePet] = useState(false);
   const [namingPet, setNamingPet] = useState(false);
   const [selectedPetType, setSelectedPetType] = useState(null);
@@ -21,7 +19,6 @@ export default function PetBuddy() {
   
   const { toasts, removeToast, toast } = useToast();
 
-  // Load user pet
   const loadPet = useCallback(async () => {
     try {
       setLoading(true);
@@ -43,7 +40,7 @@ export default function PetBuddy() {
     loadPet();
   }, [loadPet]);
 
-  // Smart auto-refresh
+  // Refreshes pet stats every 30 seconds
   useEffect(() => {
     if (!pet) return;
 
@@ -52,12 +49,11 @@ export default function PetBuddy() {
     }, 30000); // Refresh every 30 seconds
 
     return () => clearTimeout(timeout);
-  }, [pet]);
+  }, [pet?.pet_id, refreshPetStats]);
 
-  // Listen for quest/activity events to refresh pet (includes quiz completion)
+  // Refreshes when user completes quizzes or activities
   useEffect(() => {
     const handleActivityEvent = () => {
-      console.log('🐾 PetBuddy: Received questActivity event, refreshing stats...');
       refreshPetStats();
     };
 
@@ -68,7 +64,7 @@ export default function PetBuddy() {
     };
   }, []);
 
-  const refreshPetStats = async () => {
+  const refreshPetStats = useCallback(async () => {
     try {
       const res = await petApi.getPet();
       if (!res.data.choosePet && res.data) {
@@ -89,7 +85,7 @@ export default function PetBuddy() {
     } catch (err) {
       console.error("Failed to refresh pet stats:", err);
     }
-  };
+  }, []);
 
   const handlePetSelection = (type) => {
     setSelectedPetType(type);
@@ -127,7 +123,6 @@ export default function PetBuddy() {
     }
   };
 
-  // Update pet name
   const updatePetName = async (newName) => {
     if (!newName.trim()) {
       toast.warning("Please enter a name for your pet!");
@@ -162,10 +157,8 @@ export default function PetBuddy() {
     setActionLoading(type);
     try {
       const res = await petApi.doAction({ actionType: type });
-      // Force complete state replacement to avoid stale data
       setPet(() => res.data);
       
-      // Show success message based on action type
       const actionMessages = {
         feed: "Fed your pet!",
         play: "Played with your pet!",
@@ -223,6 +216,65 @@ export default function PetBuddy() {
   }
 
   if (!pet) return (
+    <div className="p-4 text-center">
+      <p className="text-sm text-gray-600">No pet data found.</p>
+    </div>
+  );
+
+  const showShop = activeView === "shop";
+  const showInventory = activeView === "inventory";
+
+  // Changes background color based on pet health
+  const criticalStats = [pet.hunger_level, pet.happiness_level, pet.cleanliness_level].filter(stat => stat < 20);
+  const lowStats = [pet.hunger_level, pet.happiness_level, pet.cleanliness_level].filter(stat => stat < 40);
+  
+  let containerClass = "";
+  if (criticalStats.length >= 2) {
+    containerClass = "bg-red-50 border-2 border-red-400 shadow-red-200 shadow-lg";
+  } else if (criticalStats.length === 1 || lowStats.length >= 1) {
+    containerClass = "bg-yellow-50 border-2 border-yellow-400 shadow-yellow-200 shadow-lg";
+  } else {
+    containerClass = "bg-white";
+  }
+
+  return (
+    <>
+      <div className={`rounded-lg p-4 transition-all duration-300 ${containerClass}`}>
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
+        
+        <CompactPetHeader 
+          pet={pet} 
+          onUpdateName={updatePetName}
+          onShop={() => setActiveView("shop")}
+          onInventory={() => setActiveView("inventory")}
+        />
+        
+        <div className="min-h-[60px] flex items-end justify-center mb-2">
+          <PetBubbleDialog pet={pet} />
+        </div>
+        
+        <CompactPetImage pet={pet} />
+
+        <CompactPetStats pet={pet} />
+        
+        <CompactPetActions 
+          onAction={handleAction}
+          actionLoading={actionLoading}
+        />
+      </div>
+
+      {showShop && <PetShop onClose={() => setActiveView("pet")} />}
+      {showInventory && (
+        <PetInventory 
+          onClose={() => setActiveView("pet")}
+          onUseItem={handleItemUse}
+        />
+      )}
+    </>
+  );
+}
+
+const CompactPetSelection = ({ onSelectPet }) => (
     <div className="p-4 text-center">
       <p className="text-sm text-gray-600">No pet data found.</p>
     </div>
@@ -419,34 +471,29 @@ const CompactPetHeader = ({ pet, onUpdateName, onShop, onInventory }) => {
   );
 };
 
-// Get cat sprite based on level (age)
 const getCatSprite = (level) => {
   if (level >= 1 && level <= 16) {
-    return "/cat-kitten.gif"; // Kitten (levels 1-16)
+    return "/cat-kitten.gif";
   } else if (level >= 17 && level <= 33) {
-    return "/cat-teen.gif"; // Teen/Middle (levels 17-33)
+    return "/cat-teen.gif";
   } else {
-    return "/cat-adult.gif"; // Adult (levels 34-50)
+    return "/cat-adult.gif";
   }
 };
 
-// Get dog sprite based on level (age)
 const getDogSprite = (level) => {
   if (level >= 1 && level <= 16) {
-    return "/dog-puppy.gif"; // Puppy (levels 1-16)
+    return "/dog-puppy.gif";
   } else {
-    return "/dog.gif"; // Adult (levels 17-50)
+    return "/dog.gif";
   }
 };
 
-// Pet Bubble Dialog Component
 const PetBubbleDialog = ({ pet }) => {
   const [currentDialog, setCurrentDialog] = useState(null);
   const [dialogKey, setDialogKey] = useState(0);
 
-  // Dialog messages categorized by type
   const dialogMessages = useMemo(() => ({
-    // Critical needs (red stats < 20)
     critical_hunger: [
       "I'm so hungry! Feed me please!",
       "My tummy is rumbling...",
@@ -465,7 +512,6 @@ const PetBubbleDialog = ({ pet }) => {
       "Please help me get clean!",
       "*covered in dirt* I need cleaning!",
     ],
-    // Low needs (20-40)
     low_hunger: [
       "I could use a snack!",
       "Getting a bit hungry here...",
@@ -481,7 +527,6 @@ const PetBubbleDialog = ({ pet }) => {
       "I'm getting a bit messy...",
       "A bath would be nice soon!",
     ],
-    // Motivational messages (good stats 70+)
     motivated: [
       "You're doing amazing! Keep it up!",
       "I'm so proud of you!",
@@ -494,14 +539,12 @@ const PetBubbleDialog = ({ pet }) => {
       "You're unstoppable!",
       "Focus and conquer!",
     ],
-    // Level milestone messages
     level_milestone: [
       `Wow! We're level ${pet.level}!`,
       "We're growing stronger together!",
       "Look how far we've come!",
       "This is exciting progress!",
     ],
-    // General happy messages
     happy: [
       "I'm feeling great!",
       "Life is good!",
@@ -511,12 +554,10 @@ const PetBubbleDialog = ({ pet }) => {
     ],
   }), [pet.level]);
 
-  // Determine which dialog to show based on pet stats
   useEffect(() => {
     const getDialogMessage = () => {
       const { hunger_level, happiness_level, cleanliness_level } = pet;
       
-      // Priority 1: Critical needs (< 20)
       if (hunger_level < 20) {
         const messages = dialogMessages.critical_hunger;
         return messages[Math.floor(Math.random() * messages.length)];
@@ -530,7 +571,6 @@ const PetBubbleDialog = ({ pet }) => {
         return messages[Math.floor(Math.random() * messages.length)];
       }
       
-      // Priority 2: Low needs (20-40)
       if (hunger_level < 40) {
         const messages = dialogMessages.low_hunger;
         return messages[Math.floor(Math.random() * messages.length)];
@@ -544,23 +584,20 @@ const PetBubbleDialog = ({ pet }) => {
         return messages[Math.floor(Math.random() * messages.length)];
       }
       
-      // Priority 3: Level milestones (every 5 levels)
       if (pet.level % 5 === 0 && pet.level > 1 && Math.random() < 0.3) {
         const messages = dialogMessages.level_milestone;
         return messages[Math.floor(Math.random() * messages.length)];
       }
       
-      // Priority 4: Motivational messages (all stats 70+)
       if (hunger_level >= 70 && happiness_level >= 70 && cleanliness_level >= 70) {
-        if (Math.random() < 0.4) { // 40% chance to show motivational
+        if (Math.random() < 0.4) {
           const messages = dialogMessages.motivated;
           return messages[Math.floor(Math.random() * messages.length)];
         }
       }
       
-      // Priority 5: Happy messages (all stats 50+)
       if (hunger_level >= 50 && happiness_level >= 50 && cleanliness_level >= 50) {
-        if (Math.random() < 0.3) { // 30% chance to show happy message
+        if (Math.random() < 0.3) {
           const messages = dialogMessages.happy;
           return messages[Math.floor(Math.random() * messages.length)];
         }
@@ -571,9 +608,8 @@ const PetBubbleDialog = ({ pet }) => {
 
     const message = getDialogMessage();
     setCurrentDialog(message);
-    setDialogKey(prev => prev + 1); // Force re-render for animation
+    setDialogKey(prev => prev + 1);
 
-    // Change dialog every 8 seconds
     const interval = setInterval(() => {
       const newMessage = getDialogMessage();
       setCurrentDialog(newMessage);
@@ -592,7 +628,6 @@ const PetBubbleDialog = ({ pet }) => {
           <p className="text-xs sm:text-sm text-gray-800 font-medium text-center">
             {currentDialog}
           </p>
-          {/* Speech bubble tail */}
           <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-300"></div>
           <div className="absolute -bottom-1.5 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-7 border-r-7 border-t-7 border-l-transparent border-r-transparent border-t-white"></div>
         </div>

@@ -11,33 +11,31 @@ import NodeCache from "node-cache";
 
 const router = express.Router();
 
-// Pet Buddy configuration
+// Pet decay: stats go from 100→0 in 36 hours, energy replenishes 0→100 in 24 hours
 const CONFIG = {
   stats: {
-    hunger: { decay: 10, interval: 180, max: 100 },      // 10 decay per 180 minutes (3 hours)
-    happiness: { decay: 10, interval: 240, max: 100 },   // 10 decay per 240 minutes (4 hours)
-    cleanliness: { decay: 5, interval: 240, max: 100 },  // 5 decay per 240 minutes (4 hours)
-    energy: { replenish: 10, interval: 60, max: 100 }    // 10 energy per 60 minutes (1 hour)
+    hunger: { decay: 10, interval: 216, max: 100 },        // ~2.78/hour → 0 in 36h
+    happiness: { decay: 10, interval: 216, max: 100 },     // ~2.78/hour → 0 in 36h
+    cleanliness: { decay: 10, interval: 216, max: 100 },   // ~2.78/hour → 0 in 36h
+    energy: { replenish: 10, interval: 144, max: 100 }      // ~4.17/hour → 100 in 24h
   },
   exp: {
-    perItem: 4,  // EXP per item used
-    maxLevel: 50, // Max level changed from 100
-    depletionRate: 10, // EXP lost per hour when all stats are 0
-    depletionInterval: 60 // Check every 60 minutes
+    perItem: 4,
+    maxLevel: 50,
+    depletionRate: 10,
+    depletionInterval: 60
   },
   shop: {
-    energy: { cost: 40, effect: 35 } // Reduced from 70
+    energy: { cost: 40, effect: 35 }
   }
 };
 
-// Hybrid auth middleware
+// Checks if user is logged in via session or parent middleware
 const requireAuth = (req, res, next) => {
-  // Method 1: Check session cookie (primary)
   if (req.session && req.session.userId) {
     return next();
   }
   
-  // Method 2: Check if already authenticated by parent middleware (e.g., sessionLockCheck)
   if (req.user && req.user.userId) {
     return next();
   }
@@ -53,7 +51,6 @@ const cache = new NodeCache({
   checkperiod: 60 
 });
 
-// Rate limiters to prevent spam
 const actionLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 15,
@@ -72,45 +69,37 @@ const generalLimiter = rateLimit({
   message: { error: "Too many requests, please try again later." }
 });
 
-// Calculate stat decay based on time elapsed
+// Calculates how much a stat should decay based on time passed
 function calculateDecay(lastActionTime, currentTime, statType) {
   if (!lastActionTime) return 0;
   
   const config = CONFIG.stats[statType];
-  
-  // Ensure both times are Date objects for proper comparison
   const lastTime = new Date(lastActionTime);
   const now = new Date(currentTime);
-  
   const minutesElapsed = (now - lastTime) / (1000 * 60);
   
-  // Prevent negative decay if timestamps are in the future (timezone issues)
   if (minutesElapsed < 0) {
     console.warn(`[Pet Decay] Negative time for ${statType}: ${minutesElapsed.toFixed(1)} min (lastTime: ${lastTime.toISOString()}, now: ${now.toISOString()})`);
     return 0;
   }
   
   const decayPeriods = Math.floor(minutesElapsed / config.interval);
-  
   return decayPeriods * config.decay;
 }
 
-// Apply stat decay and energy regen to pet
+// Updates pet stats based on time passed - handles decay and energy regeneration
 async function applyStatDecay(pet) {
-  // Use UTC time for consistency (database stores in UTC)
   const now = new Date();
 
   const hungerDecay = calculateDecay(pet.last_fed, now, 'hunger');
   const happinessDecay = calculateDecay(pet.last_played, now, 'happiness');
   const cleanlinessDecay = calculateDecay(pet.last_cleaned, now, 'cleanliness');
 
-  // Energy replenishment (same calculation as decay - uses minutes)
   let energyReplenish = 0;
   if (pet.last_updated) {
     const lastUpdated = new Date(pet.last_updated);
     const minutesElapsed = (now - lastUpdated) / (1000 * 60);
     
-    // Prevent negative replenishment if timestamps are in the future
     if (minutesElapsed < 0) {
       console.warn(`[Pet Energy] User ${pet.user_id}: Negative time elapsed: ${minutesElapsed.toFixed(1)} minutes`);
       energyReplenish = 0;
@@ -127,23 +116,22 @@ async function applyStatDecay(pet) {
     energy_level: Math.max(0, Math.min(100, pet.energy_level + energyReplenish)),
   };
   
-  // Update timestamps when stats reach 0 to prevent infinite decay accumulation
-  if (updatedStats.hunger_level === 0 && hungerDecay > 0) {
+  // Reset timestamp only when stat first hits zero (prevents continuous decay)
+  if (updatedStats.hunger_level === 0 && pet.hunger_level > 0) {
     updatedStats.last_fed = now;
   }
-  if (updatedStats.happiness_level === 0 && happinessDecay > 0) {
+  if (updatedStats.happiness_level === 0 && pet.happiness_level > 0) {
     updatedStats.last_played = now;
   }
-  if (updatedStats.cleanliness_level === 0 && cleanlinessDecay > 0) {
+  if (updatedStats.cleanliness_level === 0 && pet.cleanliness_level > 0) {
     updatedStats.last_cleaned = now;
   }
   
-  // Only update last_updated if energy actually replenished
   if (energyReplenish > 0) {
     updatedStats.last_updated = now;
   }
 
-  // EXP depletion when all stats reach 0
+  // Pet loses XP when neglected (all stats at zero)
   if (updatedStats.hunger_level === 0 && 
       updatedStats.happiness_level === 0 && 
       updatedStats.cleanliness_level === 0) {
@@ -171,8 +159,19 @@ async function applyStatDecay(pet) {
     }
   }
 
-  await pet.update(updatedStats);
-  await pet.reload(); // Reload the pet to get updated values
+  // Only update if there are actual changes to avoid unnecessary DB writes
+  const hasChanges = Object.keys(updatedStats).some(key => {
+    if (updatedStats[key] instanceof Date) {
+      return updatedStats[key].getTime() !== new Date(pet[key]).getTime();
+    }
+    return updatedStats[key] !== pet[key];
+  });
+
+  if (hasChanges) {
+    await pet.update(updatedStats);
+    await pet.reload(); // Reload the pet to get updated values
+  }
+  
   return pet;
 }
 
@@ -182,7 +181,6 @@ function getExpNeeded(level) {
   return Math.floor(100 * Math.pow(1.08, level - 1));
 }
 
-// Get user's equipped items by effect type
 async function getEquippedItems(userId, effectType) {
   return await UserPetItem.findAll({
     where: { 
@@ -198,7 +196,7 @@ async function getEquippedItems(userId, effectType) {
   });
 }
 
-// Smart item selection based on level and efficiency
+// Picks which items to use to reach max stat efficiently (minimizes waste)
 function selectItemsToUse(equippedItems, currentLevel, maxLevel = 100) {
   const itemsToUse = [];
   let remainingNeeded = maxLevel - currentLevel;
@@ -248,7 +246,7 @@ function selectItemsToUse(equippedItems, currentLevel, maxLevel = 100) {
   return itemsToUse;
 }
 
-// Auto-equip first available item of each type
+// Equips the first item of each type when user has nothing equipped
 async function autoEquipFirstItems(userId, transaction = null) {
   const inventoryItems = await UserPetItem.findAll({
     where: { user_id: userId },
@@ -280,21 +278,16 @@ async function autoEquipFirstItems(userId, transaction = null) {
   return true;
 }
 
-// Clear cached pet data for user
 function clearUserCache(userId) {
   cache.del(`pet:${userId}`);
   cache.del(`inventory:${userId}`);
   cache.del(`user:${userId}`);
 }
 
-// ============================================
-// DAILY STATS & ACHIEVEMENT TRACKING
-// ============================================
-
+// Tracks daily activity for achievements and stats
 async function logDailyStats(userId, activityType, points, exp) {
   const today = new Date().toISOString().split('T')[0];
   
-  // Use findOrCreate to ensure we only have one record per user per day
   const [dailyStat, created] = await UserDailyStat.findOrCreate({
     where: { 
       user_id: userId, 
@@ -331,10 +324,7 @@ async function logDailyStats(userId, activityType, points, exp) {
   return dailyStat;
 }
 
-// Trigger pet-related achievement checks
 async function checkPetAchievements(userId) {
-  // Import achievement checker if available
-  // This should be implemented in a separate achievementService.js
   try {
     const { checkAndUnlockAchievements } = await import('../services/achievementServices.js');
     return await checkAndUnlockAchievements(userId);
@@ -344,7 +334,6 @@ async function checkPetAchievements(userId) {
   }
 }
 
-// Get pet companion data with stat updates
 router.get("/", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
 
@@ -359,7 +348,6 @@ router.get("/", generalLimiter, requireAuth, async (req, res) => {
       return res.json({ choosePet: true });
     }
 
-    // Always apply decay calculation (no caching to ensure accurate stats)
     pet = await applyStatDecay(pet);
     
     res.json(pet);
@@ -369,7 +357,6 @@ router.get("/", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// Create new pet companion
 router.post("/", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { petType, petName } = req.body;
@@ -420,7 +407,6 @@ router.post("/", generalLimiter, requireAuth, async (req, res) => {
       last_updated: now,
     });
 
-    // Check achievement: Pet Parent
     await checkPetAchievements(userId);
     
     clearUserCache(userId);
@@ -431,7 +417,6 @@ router.post("/", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// Rename pet companion
 router.put("/name", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { petName } = req.body;
@@ -463,7 +448,6 @@ router.put("/name", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// Perform pet action (feed, play, clean, sleep)
 router.post("/action", actionLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { actionType } = req.body;
@@ -493,7 +477,6 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
 
     const { effectType, statKey, timestampKey } = actionEffectMap[actionType];
 
-    // Check if pet has enough energy for playing
     if (actionType === 'play' && pet.energy_level < 10) {
       return res.status(400).json({ 
         error: "Your pet doesn't have enough energy to play! Energy recharges over time." 
@@ -519,7 +502,7 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
     let totalEffect = 0;
     for (const item of itemsToUse) {
       totalEffect += item.PetItem.effect_value;
-      totalExpGain += CONFIG.exp.perItem; // 4 EXP per item
+      totalExpGain += CONFIG.exp.perItem;
       itemsUsed.push({
         name: item.PetItem.item_name,
         effect: item.PetItem.effect_value
@@ -533,7 +516,6 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
       updates.energy_level = Math.max(0, pet.energy_level - 10);
     }
 
-    // Level up calculation with MAX LEVEL 50
     let newExp = pet.experience_points + totalExpGain;
     let newLevel = pet.level;
     let expNeeded = getExpNeeded(newLevel);
@@ -549,7 +531,6 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
     updates.experience_points = newExp;
     updates.level = newLevel;
 
-    // Track pet action count
     const actionCountKey = `times_${actionType === 'feed' ? 'fed' : actionType === 'play' ? 'played' : 'cleaned'}`;
     if (pet[actionCountKey] !== undefined) {
       updates[actionCountKey] = pet[actionCountKey] + 1;
@@ -611,7 +592,6 @@ router.post("/action", actionLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// Equip/unequip item from inventory
 router.post("/inventory/equip", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { inventoryId, isEquipped } = req.body;
@@ -640,7 +620,6 @@ router.post("/inventory/equip", generalLimiter, requireAuth, async (req, res) =>
   }
 });
 
-// Auto-equip first available items
 router.post("/inventory/auto-equip", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
 
@@ -655,7 +634,6 @@ router.post("/inventory/auto-equip", generalLimiter, requireAuth, async (req, re
   }
 });
 
-// Get user's inventory with equipped status
 router.get("/inventory", generalLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
 
@@ -696,7 +674,6 @@ router.get("/inventory", generalLimiter, requireAuth, async (req, res) => {
   }
 });
 
-// Get all available shop items
 router.get("/shop/items", generalLimiter, async (req, res) => {
   try {
     const cacheKey = 'shop:items';
@@ -716,7 +693,6 @@ router.get("/shop/items", generalLimiter, async (req, res) => {
   }
 });
 
-// Purchase items from shop
 router.post("/shop/purchase", purchaseLimiter, requireAuth, async (req, res) => {
   const userId = req.session.userId;
   const { itemId, quantity = 1 } = req.body;
@@ -763,13 +739,11 @@ router.post("/shop/purchase", purchaseLimiter, requireAuth, async (req, res) => 
         }, { transaction });
       }
 
-      // Auto-equip if first purchase
       await autoEquipFirstItems(userId, transaction);
 
       await transaction.commit();
       clearUserCache(userId);
 
-      // Check Shopping Spree achievement after transaction commit
       checkPetAchievements(userId).catch(err => {
         console.error('Error checking achievements:', err);
       });
