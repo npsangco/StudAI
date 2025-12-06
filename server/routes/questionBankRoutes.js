@@ -137,9 +137,24 @@ router.post('/insert', async (req, res) => {
     for (const sourceQuestion of sourceQuestions) {
       currentOrder++;
 
-      // Properly copy the data fields from source question
-      const choicesData = sourceQuestion.choices;
-      const matchingPairsData = sourceQuestion.matching_pairs;
+      // Parse JSON fields if they're strings (from database)
+      let choicesData = sourceQuestion.choices;
+      if (typeof choicesData === 'string') {
+        try {
+          choicesData = JSON.parse(choicesData);
+        } catch (e) {
+          choicesData = null;
+        }
+      }
+
+      let matchingPairsData = sourceQuestion.matching_pairs;
+      if (typeof matchingPairsData === 'string') {
+        try {
+          matchingPairsData = JSON.parse(matchingPairsData);
+        } catch (e) {
+          matchingPairsData = null;
+        }
+      }
 
       const newQuestion = await Question.create({
         quiz_id: quizId,
