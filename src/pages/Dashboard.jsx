@@ -134,11 +134,14 @@ export default function Dashboard() {
       try {
         const res = await api.get('/plans');
         if (Array.isArray(res.data.plans)) {
-          const withDueDate = res.data.plans
+          // Filter out completed plans
+          const incompletePlans = res.data.plans.filter(p => !p.completed);
+          
+          const withDueDate = incompletePlans
             .filter(p => p.due_date)
             .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
 
-          const noDueDate = res.data.plans.filter(p => !p.due_date);
+          const noDueDate = incompletePlans.filter(p => !p.due_date);
           setUpcomingPlans([...withDueDate, ...noDueDate].slice(0, 3));
         }
       } catch (err) {
