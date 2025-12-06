@@ -58,10 +58,12 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
         let matchingPairs = null;
 
         try {
-            if (question.choices) {
-                choices = typeof question.choices === 'string'
-                    ? JSON.parse(question.choices)
-                    : question.choices;
+            // Handle both naming conventions: choices from QuizEditor, choices from database
+            const rawChoices = question.choices;
+            if (rawChoices) {
+                choices = typeof rawChoices === 'string'
+                    ? JSON.parse(rawChoices)
+                    : rawChoices;
             }
         } catch (e) {
             console.error('Error parsing choices:', e);
@@ -69,10 +71,12 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
         }
 
         try {
-            if (question.matching_pairs) {
-                matchingPairs = typeof question.matching_pairs === 'string'
-                    ? JSON.parse(question.matching_pairs)
-                    : question.matching_pairs;
+            // Handle both naming conventions: matchingPairs from QuizEditor, matching_pairs from database
+            const rawPairs = question.matchingPairs || question.matching_pairs;
+            if (rawPairs) {
+                matchingPairs = typeof rawPairs === 'string'
+                    ? JSON.parse(rawPairs)
+                    : rawPairs;
             }
         } catch (e) {
             console.error('Error parsing matching pairs:', e);
@@ -92,7 +96,9 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                 return (
                     <div className="mt-3 space-y-2">
                         {choices.map((choice, idx) => {
-                            const isCorrect = choice === question.correct_answer;
+                            // Handle both naming conventions: correctAnswer from QuizEditor, correct_answer from database
+                            const correctAnswer = question.correctAnswer || question.correct_answer;
+                            const isCorrect = choice === correctAnswer;
                             return (
                                 <div
                                     key={idx}
@@ -134,7 +140,7 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                                         Correct Answer:
                                     </p>
                                     <p className="text-sm font-medium text-green-900">
-                                        {question.correct_answer || 'N/A'}
+                                        {question.correctAnswer || question.correct_answer || 'N/A'}
                                     </p>
                                 </div>
                             </div>
@@ -152,7 +158,7 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                                         Correct Answer:
                                     </p>
                                     <p className="text-sm font-medium text-blue-900">
-                                        {question.answer || question.correct_answer || 'N/A'}
+                                        {question.answer || question.correctAnswer || question.correct_answer || 'N/A'}
                                     </p>
                                 </div>
                             </div>
