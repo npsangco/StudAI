@@ -105,11 +105,11 @@ function App() {
           <Route path="/support" element={<SupportPage />} />
           <Route path="/documentation" element={<ZoomDocumentationPage />} />
         </Routes>
+
+        {/* Show footer on all pages except login/signup and during quiz games */}
+        {!shouldHideFooter && !hideNavbar && <Footer />}
         </div>
       </div>
-
-      {/* Show footer on all pages except login/signup and during quiz games */}
-      {!shouldHideFooter && !hideNavbar && <Footer />}
 
       {/* Developer Menu - only shows in development */}
       <DevMenu />
