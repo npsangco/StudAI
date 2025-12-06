@@ -499,10 +499,18 @@ const QuizGame = ({
   }, [mode, quiz?.gamePin, quiz?.currentUserId]);
 
   // Initial save when battle starts (save the question set immediately)
+  // NOTE: This should NOT run on reconnection - only on first battle join
   useEffect(() => {
     if (mode !== 'battle' || !quiz?.gamePin || !quiz?.currentUserId) return;
     if (!questions || questions.length === 0) return;
     if (initialSaveDoneRef.current) return;
+
+    // FIX: Don't run initial save if player is reconnecting
+    // Reconnecting players already have saved state, don't overwrite with zeros
+    if (reconnection.connectionState.isReconnecting || reconnection.connectionState.reconnectionAvailable) {
+      initialSaveDoneRef.current = true; // Mark as done to prevent future runs
+      return;
+    }
 
     const initialGameState = {
       score: 0,
@@ -514,7 +522,7 @@ const QuizGame = ({
 
     savePlayerState(quiz.gamePin, quiz.currentUserId, initialGameState);
     initialSaveDoneRef.current = true;
-  }, [mode, quiz?.gamePin, quiz?.currentUserId, questions]);
+  }, [mode, quiz?.gamePin, quiz?.currentUserId, questions, reconnection.connectionState.isReconnecting, reconnection.connectionState.reconnectionAvailable]);
 
   // ============================================
   // RECONNECTION HANDLERS 
