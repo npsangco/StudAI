@@ -32,7 +32,7 @@ export default function AdminDashboard() {
         const fetchRecentUsers = async () => {
             try {
                 const res = await axios.get(
-                    `${API_URL}/api/admin/recent-users`,
+                    `${API_URL}/api/admin/recent-users?sortBy=lastActivity&order=desc`,
                     {
                         withCredentials: true,
                     }

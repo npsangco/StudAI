@@ -497,6 +497,8 @@ router.get("/stats", async (req, res) => {
 // Get 5 most recently active users
 router.get("/recent-users", async (req, res) => {
     try {
+        const { sortBy = 'lastActivity', order = 'desc' } = req.query;
+        
         const users = await User.findAll({
             attributes: [
                 "user_id",
@@ -512,7 +514,9 @@ router.get("/recent-users", async (req, res) => {
                     "lastActivityTimestamp"
                 ]
             ],
-            order: [["createdAt", "DESC"]],
+            order: sortBy === 'lastActivity' 
+                ? [[sequelize.literal('lastActivityTimestamp'), order === 'desc' ? 'DESC NULLS LAST' : 'ASC NULLS FIRST']]
+                : [["createdAt", order === 'desc' ? 'DESC' : 'ASC']],
             limit: 5
         });
 
