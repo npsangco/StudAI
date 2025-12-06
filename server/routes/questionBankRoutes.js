@@ -29,6 +29,9 @@ router.get('/', async (req, res) => {
     // Build question filter conditions
     const questionWhere = {};
 
+    // IMPORTANT: Only show original questions (not copies) in question bank
+    questionWhere.is_copy = 0;
+
     if (type) {
       questionWhere.type = type;
     }
@@ -150,7 +153,8 @@ router.post('/insert', async (req, res) => {
         answer: sourceQuestion.answer,
         matching_pairs: sourceQuestion.matching_pairs,
         points: sourceQuestion.points,
-        difficulty: sourceQuestion.difficulty
+        difficulty: sourceQuestion.difficulty,
+        is_copy: 1  // Mark as copy so it won't appear in question bank
       });
 
       insertedQuestions.push(newQuestion);
@@ -201,31 +205,43 @@ router.get('/stats', async (req, res) => {
     }
 
     const [total, byType, byDifficulty, bySource] = await Promise.all([
-      // Total questions
+      // Total questions (only originals, not copies)
       Question.count({
-        where: { quiz_id: { [Op.in]: quizIds } }
+        where: { 
+          quiz_id: { [Op.in]: quizIds },
+          is_copy: 0
+        }
       }),
-      // Count by type
+      // Count by type (only originals)
       Question.findAll({
-        where: { quiz_id: { [Op.in]: quizIds } },
+        where: { 
+          quiz_id: { [Op.in]: quizIds },
+          is_copy: 0
+        },
         attributes: [
           'type',
           [Question.sequelize.fn('COUNT', Question.sequelize.col('question_id')), 'count']
         ],
         group: ['type']
       }),
-      // Count by difficulty
+      // Count by difficulty (only originals)
       Question.findAll({
-        where: { quiz_id: { [Op.in]: quizIds } },
+        where: { 
+          quiz_id: { [Op.in]: quizIds },
+          is_copy: 0
+        },
         attributes: [
           'difficulty',
           [Question.sequelize.fn('COUNT', Question.sequelize.col('question_id')), 'count']
         ],
         group: ['difficulty']
       }),
-      // Count by source quiz
+      // Count by source quiz (only originals)
       Question.findAll({
-        where: { quiz_id: { [Op.in]: quizIds } },
+        where: { 
+          quiz_id: { [Op.in]: quizIds },
+          is_copy: 0
+        },
         attributes: [
           'quiz_id',
           [Question.sequelize.fn('COUNT', Question.sequelize.col('question_id')), 'count']

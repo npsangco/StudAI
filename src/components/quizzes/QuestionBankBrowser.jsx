@@ -114,13 +114,8 @@ export const QuestionBankBrowser = ({ onSelectQuestions, onClose, toast }) => {
   };
 
   const getTypeIcon = (type) => {
-    switch (type) {
-      case 'Multiple Choice': return '📝';
-      case 'Fill in the blanks': return '✍️';
-      case 'True/False': return '✓✗';
-      case 'Matching': return '🔗';
-      default: return '❓';
-    }
+    // Icons removed - type is shown as text badge
+    return null;
   };
 
   return (
@@ -344,7 +339,6 @@ const QuestionBankItem = ({ question, isSelected, onToggle, getDifficultyColor, 
             <h3 className="font-medium text-gray-800 flex-1">
               {question.question}
             </h3>
-            <span className="text-xl flex-shrink-0">{getTypeIcon(question.type)}</span>
           </div>
 
           {/* Metadata */}
