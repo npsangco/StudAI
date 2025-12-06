@@ -518,7 +518,7 @@ const QuizGame = ({
   // ============================================
   
   const handleReconnection = async () => {
-    // 🔥 NEW: Set isReconnecting flag in Firebase so leaderboard shows "Reconnecting"
+    // Set isReconnecting flag in Firebase so leaderboard shows "Reconnecting"
     if (mode === 'battle' && quiz?.gamePin && quiz?.currentUserId) {
       try {
         const playerRef = ref(realtimeDb, `battles/${quiz.gamePin}/players/user_${quiz.currentUserId}`);
@@ -564,7 +564,7 @@ const QuizGame = ({
             const playersData = snapshot.val();
             const allPlayers = Object.values(playersData);
 
-            // 🔥 FIX: Simplified player filtering - Firebase stores userId as NUMBER, not with 'user_' prefix
+            // Simplified player filtering - Firebase stores userId as NUMBER, not with 'user_' prefix
             const currentUserIdNum = Number(quiz.currentUserId);
             const activePlayersData = allPlayers.filter(p => {
               const isNotSelf = Number(p.userId) !== currentUserIdNum;
@@ -574,7 +574,7 @@ const QuizGame = ({
               return isNotSelf && isOnline && notForfeited;
             });
 
-            // 🔥 STRICT SYNC FIX: Everyone moves together (sabay-sabay)
+            // Everyone moves together (sabay-sabay)
             // currentQuestion in Firebase = next question index they should answer
             // If currentQuestion = 3, they're ON question index 3 (Q4)
 
@@ -794,7 +794,7 @@ const QuizGame = ({
           reason: 'beforeunload'
         };
         
-        // 🔥 FIX: Use PATCH for partial updates (Firebase REST API requirement)
+        // Use PATCH for partial updates (Firebase REST API requirement)
         if (navigator.sendBeacon) {
           // sendBeacon uses POST by default, but we need PATCH for Firebase
           // For Firebase REST API, we can use PUT but only if we include all fields
@@ -813,7 +813,7 @@ const QuizGame = ({
           // Fallback: synchronous XHR with PATCH
           try {
             const xhr = new XMLHttpRequest();
-            xhr.open('PATCH', connectionUrl, false); // 🔥 CHANGED: synchronous PATCH
+            xhr.open('PATCH', connectionUrl, false); // synchronous PATCH
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.send(JSON.stringify(disconnectData));
 

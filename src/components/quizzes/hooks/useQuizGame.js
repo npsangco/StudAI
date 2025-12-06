@@ -8,7 +8,11 @@ export function useQuizGame(questions, timeLimit = 30) {
   const [userMatches, setUserMatches] = useState([]);
   const [isMatchingSubmitted, setIsMatchingSubmitted] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  
+
+  // Track user answers and answered questions for reconnection
+  const [userAnswers, setUserAnswers] = useState([]);
+  const [answeredQuestions, setAnsweredQuestions] = useState(new Set());
+
   const scoreRef = useRef(0);
   const [displayScore, setDisplayScore] = useState(0);
   const startTimeRef = useRef(Date.now());
@@ -60,6 +64,8 @@ export function useQuizGame(questions, timeLimit = 30) {
     startTimeRef.current = Date.now();
     setIsPaused(false);
     isProcessingRef.current = false;
+    setUserAnswers([]);              
+    setAnsweredQuestions(new Set()); 
   };
 
   return {
@@ -75,7 +81,9 @@ export function useQuizGame(questions, timeLimit = 30) {
     isLastQuestion,
     scoreRef,
     isProcessingRef,
-    
+    userAnswers,           
+    answeredQuestions,     
+
     // Setters
     setCurrentQuestionIndex,
     setSelectedAnswer,
@@ -83,7 +91,9 @@ export function useQuizGame(questions, timeLimit = 30) {
     setUserMatches,
     setIsMatchingSubmitted,
     setIsPaused,
-    
+    setUserAnswers,        
+    setAnsweredQuestions,  
+
     // Methods
     updateScore,
     nextQuestion,

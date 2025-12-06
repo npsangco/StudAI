@@ -229,11 +229,12 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
           gamePin: gamePin,
           battleId: battle.battle_id,
           isHost: true,
-          currentUserId: currentUser.id 
+          currentUserId: currentUser.id
         });
-        
+
         // 4️⃣ Store questions in Firebase
-        await storeQuizQuestions(gamePin, data.questions);
+        // Store the FILTERED questions (questionsToUse), not all questions (data.questions)
+        await storeQuizQuestions(gamePin, questionsToUse);
         
         // Host should manually click "Ready Up" button like other players
 
@@ -304,6 +305,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         gamePin: currentGamePin,
         questionCount: questions.length
       });
+
       
       await storeQuizQuestions(currentGamePin, questions);
       console.log('✅ Questions stored in Firebase');
