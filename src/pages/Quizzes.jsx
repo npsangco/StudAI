@@ -369,23 +369,21 @@ function QuizzesPage() {
   }, [quizDataHook.uiState.currentView]);
 
   // SYNC QUESTIONS: Listen for questions from Firebase (NON-HOST players)
-  // NOTE: This should NOT override questions when player reconnects with savedState
+  // NOTE: Only runs in LOBBY and LOADING_BATTLE, NOT during active BATTLE
+  // This prevents overriding questions that were restored from savedState on reconnect
   useEffect(() => {
-    const battleViews = [VIEWS.LOBBY, VIEWS.LOADING_BATTLE, VIEWS.BATTLE];
+    const preGameViews = [VIEWS.LOBBY, VIEWS.LOADING_BATTLE]; // NOT VIEWS.BATTLE!
 
     if (
-      battleViews.includes(quizDataHook.uiState.currentView) &&
+      preGameViews.includes(quizDataHook.uiState.currentView) &&
       !quizDataHook.gameState.isHost &&
       quizDataHook.gameState.gamePin
     ) {
       const unsubscribe = listenToQuizQuestions(
         quizDataHook.gameState.gamePin,
         (firebaseQuestions) => {
-          // ONLY set questions if we don't already have them (initial load)
-          // Don't override questions that were restored from savedState on reconnect
-          if (quizDataHook.questions.length === 0) {
-            quizDataHook.setQuestions(firebaseQuestions);
-          }
+          // Set questions on initial load (lobby/loading screens)
+          quizDataHook.setQuestions(firebaseQuestions);
         }
       );
 
