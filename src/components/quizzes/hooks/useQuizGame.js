@@ -3,6 +3,7 @@ import { checkAnswer, formatTime } from '../utils/questionHelpers';
 
 export function useQuizGame(questions, timeLimit = 30) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const currentQuestionIndexRef = useRef(0); // Track current index for auto-save closure
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [userAnswer, setUserAnswer] = useState('');
   const [userMatches, setUserMatches] = useState([]);
@@ -30,8 +31,9 @@ export function useQuizGame(questions, timeLimit = 30) {
     if (!isLastQuestion && currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => {
         const nextIndex = prev + 1;
-        // Ensure we don't go past the last question
-        return Math.min(nextIndex, questions.length - 1);
+        const finalIndex = Math.min(nextIndex, questions.length - 1);
+        currentQuestionIndexRef.current = finalIndex; // Keep ref in sync
+        return finalIndex;
       });
       setSelectedAnswer('');
       setUserAnswer('');
@@ -55,6 +57,7 @@ export function useQuizGame(questions, timeLimit = 30) {
 
   const reset = () => {
     setCurrentQuestionIndex(0);
+    currentQuestionIndexRef.current = 0; // Reset ref too
     setSelectedAnswer('');
     setUserAnswer('');
     setUserMatches([]);
@@ -64,14 +67,15 @@ export function useQuizGame(questions, timeLimit = 30) {
     startTimeRef.current = Date.now();
     setIsPaused(false);
     isProcessingRef.current = false;
-    setUserAnswers([]);              
-    setAnsweredQuestions(new Set()); 
+    setUserAnswers([]);
+    setAnsweredQuestions(new Set());
   };
 
   return {
     // State
     currentQuestion,
     currentQuestionIndex,
+    currentQuestionIndexRef,
     selectedAnswer,
     userAnswer,
     userMatches,
@@ -81,8 +85,8 @@ export function useQuizGame(questions, timeLimit = 30) {
     isLastQuestion,
     scoreRef,
     isProcessingRef,
-    userAnswers,           
-    answeredQuestions,     
+    userAnswers,
+    answeredQuestions,
 
     // Setters
     setCurrentQuestionIndex,
@@ -91,7 +95,7 @@ export function useQuizGame(questions, timeLimit = 30) {
     setUserMatches,
     setIsMatchingSubmitted,
     setIsPaused,
-    setUserAnswers,        
+    setUserAnswers,
     setAnsweredQuestions,  
 
     // Methods

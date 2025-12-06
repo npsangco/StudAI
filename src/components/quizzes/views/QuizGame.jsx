@@ -418,7 +418,9 @@ const QuizGame = ({
         totalQuestions: questions.length
       });
       // Reset to last valid question
-      game.setCurrentQuestionIndex(Math.max(0, questions.length - 1));
+      const validIndex = Math.max(0, questions.length - 1);
+      game.setCurrentQuestionIndex(validIndex);
+      game.currentQuestionIndexRef.current = validIndex; // Keep ref in sync
     }
   }, [currentQ, questions.length, game.currentQuestionIndex]);
 
@@ -485,7 +487,7 @@ const QuizGame = ({
     const autoSaveInterval = setInterval(() => {
       const currentGameState = {
         score: game.scoreRef.current,
-        currentQuestionIndex: game.currentQuestionIndex,
+        currentQuestionIndex: game.currentQuestionIndexRef.current, // FIX: Use ref to avoid closure
         userAnswers: game.userAnswers,
         answeredQuestions: game.answeredQuestions,
         questions: questions
@@ -579,7 +581,9 @@ const QuizGame = ({
         saved.currentQuestionIndex || 0,
         restoredQuestions.length - 1
       );
-      game.setCurrentQuestionIndex(Math.max(0, targetIndex));
+      const finalIndex = Math.max(0, targetIndex);
+      game.setCurrentQuestionIndex(finalIndex);
+      game.currentQuestionIndexRef.current = finalIndex; // Keep ref in sync
 
       // Reset timer for current question
       resetTimer(quizTimer);
