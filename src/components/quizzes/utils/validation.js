@@ -116,10 +116,12 @@ export function validateQuestion(question, index) {
 }
 
 export function validateAllQuestions(questions) {
+  // Allow empty quizzes (can be saved but not played)
   if (!questions || questions.length === 0) {
     return {
-      isValid: false,
-      errors: ['Quiz must have at least one question']
+      isValid: true,
+      errors: [],
+      isEmpty: true
     };
   }
 
@@ -132,7 +134,8 @@ export function validateAllQuestions(questions) {
 
   return {
     isValid: allErrors.length === 0,
-    errors: allErrors
+    errors: allErrors,
+    isEmpty: false
   };
 }
 

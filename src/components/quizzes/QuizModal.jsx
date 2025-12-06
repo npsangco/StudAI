@@ -6,14 +6,25 @@ import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy, FileTe
 // ============================================
 export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) => {
   const totalQuestions = quiz?.questionCount || 10;
-  const minQuestions = Math.min(5, totalQuestions);
-  const maxSelectableQuestions = Math.min(totalQuestions > 5 ? totalQuestions - 5 : totalQuestions, 100);
+  const minQuestionsInBank = 10; // Minimum total questions required in quiz
+  const minSelectableQuestions = 5; // Minimum user can select per session
+  const reserveQuestions = 5; // Always keep 5 in reserve for variety
+  
+  // Calculate max questions user can take while keeping reserve
+  const maxSelectableQuestions = totalQuestions > minQuestionsInBank 
+    ? Math.min(totalQuestions - reserveQuestions, 100) 
+    : Math.min(totalQuestions, 100);
+  
   const [questionCount, setQuestionCount] = React.useState(maxSelectableQuestions);
+  const [selectedMode, setSelectedMode] = React.useState(null); // 'solo-casual', 'solo-adaptive', or 'battle'
+  const [showModeSelection, setShowModeSelection] = React.useState(false);
 
-  // Reset question count when quiz changes
+  // Reset question count and mode when quiz changes
   React.useEffect(() => {
     if (quiz) {
       setQuestionCount(maxSelectableQuestions);
+      setSelectedMode(null);
+      setShowModeSelection(false);
     }
   }, [quiz?.id, maxSelectableQuestions]);
 
@@ -21,13 +32,24 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
 
   const handleQuestionCountChange = (e) => {
     const value = parseInt(e.target.value);
-    if (!isNaN(value) && value >= minQuestions && value <= maxSelectableQuestions) {
+    if (!isNaN(value) && value >= minSelectableQuestions && value <= maxSelectableQuestions) {
       setQuestionCount(value);
     }
   };
 
-  const handleSoloQuiz = () => {
-    onSoloQuiz(questionCount);
+  const handleSoloClick = () => {
+    setShowModeSelection(true);
+  };
+
+  const handleModeSelect = (mode) => {
+    if (mode === 'casual' || mode === 'adaptive') {
+      onSoloQuiz(questionCount, mode);
+    }
+  };
+
+  const handleBackToMain = () => {
+    setShowModeSelection(false);
+    setSelectedMode(null);
   };
 
   const handleQuizBattle = () => {
@@ -81,7 +103,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
           </div>
 
           {/* Question Count Selector */}
-          {totalQuestions > 5 && (
+          {totalQuestions > minQuestionsInBank && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
               <label className="block text-xs font-medium text-gray-700 mb-2">
                 How many questions do you want?
@@ -89,7 +111,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  min={minQuestions}
+                  min={minSelectableQuestions}
                   max={maxSelectableQuestions}
                   value={questionCount}
                   onChange={handleQuestionCountChange}
@@ -100,7 +122,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                 </span>
               </div>
               <p className="text-[10px] text-gray-500 mt-1.5">
-                We keep at least 5 questions in the quiz bank for variety
+                We keep at least 5 questions in reserve for variety
               </p>
             </div>
           )}
@@ -109,49 +131,112 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
         {/* Mode Selection */}
         <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-2.5 sm:space-y-3">
           {/* Solo Mode */}
-          <button
-            onClick={handleSoloQuiz}
-            className="group w-full bg-gradient-to-br from-yellow-50 to-orange-50 hover:from-yellow-100 hover:to-orange-100 border-2 border-yellow-200 hover:border-yellow-400 rounded-lg sm:rounded-xl p-3.5 sm:p-5 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
-          >
-            <div className="flex items-start gap-3 sm:gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
-                <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          {!showModeSelection ? (
+            <button
+              onClick={handleSoloClick}
+              className="group w-full bg-gradient-to-br from-yellow-50 to-orange-50 hover:from-yellow-100 hover:to-orange-100 border-2 border-yellow-200 hover:border-yellow-400 rounded-lg sm:rounded-xl p-3.5 sm:p-5 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+            >
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
+                  <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h3 className="font-bold text-gray-900 mb-0.5 sm:mb-1 flex items-center gap-2 flex-wrap text-sm sm:text-base">
+                    Solo Quiz
+                    <span className="text-[10px] sm:text-xs bg-yellow-200 text-yellow-800 px-1.5 sm:px-2 py-0.5 rounded-full font-semibold">Focus</span>
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-600 leading-tight sm:leading-relaxed">
+                    Challenge yourself at your own pace - perfect for focused practice and mastering concepts
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 text-left">
-                <h3 className="font-bold text-gray-900 mb-0.5 sm:mb-1 flex items-center gap-2 flex-wrap text-sm sm:text-base">
-                  Solo Quiz
-                  <span className="text-[10px] sm:text-xs bg-yellow-200 text-yellow-800 px-1.5 sm:px-2 py-0.5 rounded-full font-semibold">Focus</span>
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-600 leading-tight sm:leading-relaxed">
-                  Challenge yourself at your own pace - perfect for focused practice and mastering concepts
-                </p>
-              </div>
-            </div>
-          </button>
+            </button>
+          ) : (
+            <>
+              {/* Back Button */}
+              <button
+                onClick={handleBackToMain}
+                className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1 mb-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to modes
+              </button>
+
+              {/* Casual Mode */}
+              <button
+                onClick={() => handleModeSelect('casual')}
+                className="group w-full bg-gradient-to-br from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 border-2 border-blue-200 hover:border-blue-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                      Casual Mode
+                      <span className="text-[10px] bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded-full font-semibold">Shuffled</span>
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
+                      Questions shuffled randomly - straightforward practice session
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Adaptive Mode */}
+              <button
+                onClick={() => handleModeSelect('adaptive')}
+                className="group w-full bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-2 border-purple-200 hover:border-purple-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                      Adaptive Mode
+                      <span className="text-[10px] bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-full font-semibold">Smart</span>
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
+                      Difficulty adjusts based on your performance - personalized learning
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </>
+          )}
 
           {/* Battle Mode */}
-          <button
-            onClick={handleQuizBattle}
-            className="group w-full bg-gradient-to-br from-orange-50 to-red-50 hover:from-orange-100 hover:to-red-100 border-2 border-orange-200 hover:border-orange-400 rounded-lg sm:rounded-xl p-3.5 sm:p-5 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
-          >
-            <div className="flex items-start gap-3 sm:gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
-                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          {!showModeSelection && (
+            <button
+              onClick={handleQuizBattle}
+              className="group w-full bg-gradient-to-br from-orange-50 to-red-50 hover:from-orange-100 hover:to-red-100 border-2 border-orange-200 hover:border-orange-400 rounded-lg sm:rounded-xl p-3.5 sm:p-5 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+            >
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h3 className="font-bold text-gray-900 mb-0.5 sm:mb-1 flex items-center gap-2 flex-wrap text-sm sm:text-base">
+                    Quiz Battle
+                    <span className="text-[10px] sm:text-xs bg-orange-200 text-orange-800 px-1.5 sm:px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                      <Trophy className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                      Competitive
+                    </span>
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-600 leading-tight sm:leading-relaxed">
+                    Compete with up to 5 friends in real-time - race to the top of the leaderboard!
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 text-left">
-                <h3 className="font-bold text-gray-900 mb-0.5 sm:mb-1 flex items-center gap-2 flex-wrap text-sm sm:text-base">
-                  Quiz Battle
-                  <span className="text-[10px] sm:text-xs bg-orange-200 text-orange-800 px-1.5 sm:px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
-                    <Trophy className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                    Competitive
-                  </span>
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-600 leading-tight sm:leading-relaxed">
-                  Compete with up to 5 friends in real-time - race to the top of the leaderboard!
-                </p>
-              </div>
-            </div>
-          </button>
+            </button>
+          )}
         </div>
       </div>
 

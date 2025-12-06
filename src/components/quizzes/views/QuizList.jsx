@@ -210,6 +210,9 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
   const isPublic = quiz.isPublic || quiz.is_public;
   const shareCode = quiz.share_code;
   const accentColor = getQuizAccentColor(quiz.id);
+  const minQuestions = 10;
+  const isPlayable = quiz.questionCount >= minQuestions;
+  const questionsNeeded = isPlayable ? 0 : minQuestions - (quiz.questionCount || 0);
 
   // 🛡️ VALIDATION CHECK: Detect if quiz has errors
   const hasErrors = React.useMemo(() => {
@@ -307,19 +310,34 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
           </div>
         )}
 
+        {/* INCOMPLETE BADGE - Shows if quiz doesn't have enough questions */}
+        {!isEmpty && !isPlayable && !hasErrors && (
+          <div className="absolute top-3 right-3 z-10">
+            <div className="bg-amber-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>+{questionsNeeded} to play</span>
+            </div>
+          </div>
+        )}
+
         <div className="p-6">
           {/* Title Section */}
           <div className="mb-3">
             <h3
-              onClick={() => !isEmpty && onSelect(quiz)}
+              onClick={() => isPlayable && onSelect(quiz)}
               className={`font-semibold text-lg text-gray-900 mb-1 truncate ${
-                isEmpty ? 'cursor-not-allowed text-gray-400' : 'cursor-pointer hover:text-indigo-600 transition-colors'
+                !isPlayable ? 'cursor-not-allowed text-gray-400' : 'cursor-pointer hover:text-indigo-600 transition-colors'
               }`}
               title={quiz.title}
             >
               {quiz.title}
               {isEmpty && (
                 <span className="ml-2 text-sm text-red-500 font-normal">(Empty)</span>
+              )}
+              {!isEmpty && !isPlayable && (
+                <span className="ml-2 text-sm text-amber-600 font-normal">(Needs {questionsNeeded} more)</span>
               )}
             </h3>
             {isShared && (
@@ -355,17 +373,18 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isEmpty) onSelect(quiz);
+                if (isPlayable) onSelect(quiz);
               }}
-              disabled={isEmpty}
+              disabled={!isPlayable}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
-                isEmpty
+                !isPlayable
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-black text-white hover:bg-slate-800 shadow-md hover:shadow-lg cursor-pointer'
               }`}
+              title={!isPlayable ? `Add ${questionsNeeded} more question(s) to play` : 'Play Quiz'}
             >
               <Play className="w-4 h-4" />
-              {isEmpty ? 'Add Questions' : 'Play Quiz'}
+              {isEmpty ? 'Add Questions' : isPlayable ? 'Play Quiz' : `Need ${questionsNeeded} more`}
             </button>
 
             {/* Secondary Actions */}

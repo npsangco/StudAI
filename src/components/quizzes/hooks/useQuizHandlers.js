@@ -65,14 +65,22 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     updateQuizData({ selected: null });
   };
 
-  const handleSoloQuiz = async (requestedQuestionCount) => {
+  const handleSoloQuiz = async (requestedQuestionCount, quizMode = 'casual') => {
     // Load questions before starting
     const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
 
     if (!data || !data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
-      setError('This quiz has no questions yet. Please add questions before starting.');
+      setError('This quiz has no questions yet. Please add at least 10 questions before starting.');
       updateUiState({ showModal: false });
       toast?.error('Cannot start quiz: No questions available');
+      return;
+    }
+
+    // Check minimum question count requirement
+    if (data.questions.length < 10) {
+      setError(`This quiz needs at least 10 questions to be playable. Current count: ${data.questions.length}`);
+      updateUiState({ showModal: false });
+      toast?.error(`Add ${10 - data.questions.length} more question(s) to start this quiz`);
       return;
     }
 
@@ -111,18 +119,52 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       return;
     }
 
-    if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
-      // Shuffle questions randomly
+    // MODE-SPECIFIC QUESTION SELECTION
+    if (quizMode === 'casual') {
+      // CASUAL MODE: Always shuffle randomly
       questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
-      // Take only the requested number
-      questionsToUse = questionsToUse.slice(0, requestedQuestionCount);
+      
+      // Limit to requested count if specified
+      if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
+        questionsToUse = questionsToUse.slice(0, requestedQuestionCount);
+      }
+    } else if (quizMode === 'adaptive') {
+      // ADAPTIVE MODE: Select based on difficulty distribution
+      // Group questions by difficulty
+      const difficultyPools = {
+        easy: questionsToUse.filter(q => (q.difficulty || 'medium').toLowerCase() === 'easy'),
+        medium: questionsToUse.filter(q => (q.difficulty || 'medium').toLowerCase() === 'medium'),
+        hard: questionsToUse.filter(q => (q.difficulty || 'medium').toLowerCase() === 'hard')
+      };
+
+      // Build question queue: fill from available pools to reach target count
+      let selectedQuestions = [];
+      const targetCount = requestedQuestionCount || questionsToUse.length;
+      
+      // Try to get questions in balanced order: medium, easy, hard
+      const pullOrder = ['medium', 'easy', 'hard'];
+      
+      for (const difficulty of pullOrder) {
+        const available = difficultyPools[difficulty];
+        const needed = targetCount - selectedQuestions.length;
+        
+        if (available.length > 0 && needed > 0) {
+          const take = Math.min(available.length, needed);
+          selectedQuestions.push(...available.slice(0, take));
+        }
+        
+        if (selectedQuestions.length >= targetCount) break;
+      }
+      
+      questionsToUse = selectedQuestions;
     }
 
-    // Update selected quiz with fresh data including timer_per_question
+    // Update selected quiz with fresh data including timer_per_question and mode
     updateQuizData({
       selected: {
         ...quizData.selected,
-        ...data.quiz
+        ...data.quiz,
+        quizMode: quizMode // Pass mode to QuizGame
       }
     });
     setQuestions(questionsToUse);
@@ -135,9 +177,17 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
 
     if (!data || !data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
-      setError('This quiz has no questions yet. Please add questions before starting a battle.');
+      setError('This quiz has no questions yet. Please add at least 10 questions before starting a battle.');
       updateUiState({ showModal: false });
       toast?.error('Cannot start battle: No questions available');
+      return;
+    }
+
+    // Check minimum question count requirement
+    if (data.questions.length < 10) {
+      setError(`This quiz needs at least 10 questions to start a battle. Current count: ${data.questions.length}`);
+      updateUiState({ showModal: false });
+      toast?.error(`Add ${10 - data.questions.length} more question(s) to start a battle`);
       return;
     }
 
@@ -176,10 +226,11 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       return;
     }
 
+    // Always shuffle questions for variety
+    questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
+
+    // Limit to requested question count if specified
     if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
-      // Shuffle questions randomly
-      questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
-      // Take only the requested number
       questionsToUse = questionsToUse.slice(0, requestedQuestionCount);
     }
 

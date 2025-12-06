@@ -45,9 +45,10 @@ const QuizGame = ({
   // 🔒 SAFETY CHECK: Ensure questions is always an array
   const safeRawQuestions = Array.isArray(rawQuestions) ? rawQuestions : [];
 
-  // ADAPTIVE DIFFICULTY: Check if adaptive mode can be used
-  const adaptiveCheck = mode === 'solo' ? canUseAdaptiveMode(safeRawQuestions) : { enabled: false };
-  const useAdaptiveMode = adaptiveCheck.enabled;
+  // Get quiz mode from quiz object (set by handleSoloQuiz)
+  // 'casual' = shuffled random questions, 'adaptive' = difficulty-based with performance tracking
+  const quizMode = quiz?.quizMode || 'casual';
+  const useAdaptiveMode = mode === 'solo' && quizMode === 'adaptive';
 
   // 🔥 Question Bank: Use questions already shuffled and limited by handleSoloQuiz/handleQuizBattle
   const [questions, setQuestions] = useState(() => {
