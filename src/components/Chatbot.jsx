@@ -393,7 +393,7 @@ IMPORTANT RULES:
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 min-h-0 relative">
         {/* Watermark */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
-          <div className="text-slate-200 font-bold text-6xl sm:text-7xl md:text-8xl lg:text-9xl opacity-5 transform rotate-[-30deg]">
+          <div className="text-slate-300 font-bold text-6xl sm:text-7xl md:text-8xl lg:text-9xl opacity-[0.08] transform rotate-[-30deg]">
             StudAI
           </div>
         </div>
@@ -504,7 +504,7 @@ IMPORTANT RULES:
               <button
                 onClick={() => setDeepThinkingMode(!deepThinkingMode)}
                 disabled={!hasValidContent || tokenLimitReached}
-                className={`absolute right-12 sm:right-14 bottom-2 sm:bottom-3 p-2 rounded-full transition-all active:scale-95 touch-manipulation ${
+                className={`absolute right-12 sm:right-14 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all active:scale-95 touch-manipulation ${
                   deepThinkingMode
                     ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl'
                     : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
@@ -520,7 +520,7 @@ IMPORTANT RULES:
               <button
                 onClick={handleSendMessage}
                 disabled={!inputMessage.trim() || isTyping || tokenLimitReached || !hasValidContent}
-                className={`absolute right-2 sm:right-3 bottom-2 sm:bottom-3 p-2 rounded-full transition-all active:scale-95 touch-manipulation ${
+                className={`absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all active:scale-95 touch-manipulation ${
                   inputMessage.trim() && !isTyping && !tokenLimitReached && hasValidContent
                     ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-xl'
                     : 'bg-slate-100 text-slate-400 cursor-not-allowed'
