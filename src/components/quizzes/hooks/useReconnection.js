@@ -344,16 +344,15 @@ export function useReconnection(gamePin, userId, playerData, isActive = false, g
       
       // Restore saved game state
       const stateResult = await restorePlayerState(gamePin, userId);
-      
+
       // Success! Restart heartbeat and clear grace period
       startHeartbeat();
       setupConnectionListener();
       stopGracePeriodMonitoring();
-      
-      // Clear saved state after successful restore
-      if (stateResult.success) {
-        await clearSavedState(gamePin, userId);
-      }
+
+      // DON'T clear saved state - keep it for future disconnects
+      // Auto-save will continue updating it every 3s
+      // It will expire naturally after 5 minutes (expiresAt)
       
       setConnectionState({
         isOnline: true,
