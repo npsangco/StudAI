@@ -15,7 +15,6 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   const [showBattleModeSelection, setShowBattleModeSelection] = React.useState(false);
   const [showModesInfoModal, setShowModesInfoModal] = React.useState(false);
   const [showAdaptiveTooltip, setShowAdaptiveTooltip] = React.useState(false);
-  const [showBattleAdaptiveTooltip, setShowBattleAdaptiveTooltip] = React.useState(false);
   
   // Check if adaptive mode is available
   const canUseAdaptive = quiz?.canUseAdaptive || quiz?.can_use_adaptive || false;
@@ -131,50 +130,87 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
           <X className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
         </button>
 
-        {/* Header Section */}
-        <div className="relative bg-gradient-to-br from-yellow-400 to-yellow-500 pt-8 pb-6 px-6 text-center">
-          <div className="relative">
-            <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-2xl mb-3 shadow-lg">
-              <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+        {/* Header Section - Enhanced with shapes and animations */}
+        <div className="relative bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-500 pt-8 pb-6 px-6 text-center overflow-hidden">
+          {/* Decorative animated circles */}
+          <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full translate-x-1/3 -translate-y-1/3"></div>
+          <div className="absolute bottom-0 left-1/4 w-20 h-20 bg-white/10 rounded-full translate-y-1/2 animate-bounce" style={{ animationDuration: '3s' }}></div>
+          <div className="absolute bottom-0 right-1/4 w-16 h-16 bg-indigo-500/20 rounded-full translate-y-1/3"></div>
+          
+          {/* Floating stars/sparkles */}
+          <div className="absolute top-4 left-8 text-white/30 text-2xl animate-pulse">✨</div>
+          <div className="absolute top-6 right-12 text-white/40 text-xl animate-bounce" style={{ animationDelay: '0.5s', animationDuration: '2s' }}>⭐</div>
+          <div className="absolute bottom-4 left-16 text-indigo-600/30 text-lg animate-pulse" style={{ animationDelay: '1s' }}>💡</div>
+          
+          {/* Content */}
+          <div className="relative z-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-white/30 backdrop-blur-sm rounded-3xl mb-3 shadow-2xl border-2 border-white/40 transform hover:scale-110 transition-transform duration-300">
+              <Zap className="w-8 h-8 sm:w-10 sm:h-10 text-white drop-shadow-lg animate-pulse" />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Ready to Quiz?</h2>
-            <p className="text-gray-800 text-sm font-medium">Choose your challenge mode</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-2 drop-shadow-lg tracking-tight">Ready to Quiz?</h2>
+            <p className="text-white/90 text-sm sm:text-base font-semibold drop-shadow">Choose your challenge mode</p>
+          </div>
+          
+          {/* Bottom wave decoration */}
+          <div className="absolute bottom-0 left-0 right-0">
+            <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-full h-8 fill-gray-50">
+              <path d="M0,0 Q300,60 600,30 T1200,0 L1200,120 L0,120 Z"></path>
+            </svg>
           </div>
         </div>
 
         {/* Quiz Info */}
-        <div className="px-6 py-5 space-y-4 bg-gray-50">
-          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center flex-shrink-0">
-                <FileText className="w-5 h-5 text-gray-900" />
+        <div className="px-6 py-5 space-y-4 bg-gradient-to-b from-gray-50 to-white relative">
+          {/* Subtle dot pattern */}
+          <div className="absolute inset-0 opacity-30" style={{
+            backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
+            backgroundSize: '20px 20px'
+          }}></div>
+          
+          <div className="bg-white rounded-xl shadow-md p-4 border-2 border-yellow-200 relative overflow-hidden group hover:shadow-lg transition-shadow duration-300">
+            {/* Gradient overlay on hover */}
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-50/0 via-yellow-50/50 to-yellow-50/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            
+            <div className="flex items-center gap-3 relative z-10">
+              <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md group-hover:scale-110 transition-transform duration-300">
+                <FileText className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-gray-900 text-sm line-clamp-1" title={quiz.title}>{quiz.title}</h3>
-                <p className="text-xs text-gray-600 mt-0.5">{totalQuestions} questions available</p>
+                <p className="text-xs text-gray-600 mt-0.5 flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                  {totalQuestions} questions available
+                </p>
               </div>
             </div>
           </div>
 
           {/* Question Count Selector */}
           {totalQuestions >= minSelectableQuestions && (
-            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-              <label className="block text-sm font-semibold text-gray-900 mb-3">
-                How many questions?
-              </label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  min={minSelectableQuestions}
-                  max={maxSelectableQuestions}
-                  value={questionCount}
-                  onChange={handleQuestionCountChange}
-                  onBlur={handleQuestionCountBlur}
-                  className="w-20 px-3 py-2 text-sm font-semibold bg-gray-50 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none text-gray-900"
-                />
-                <span className="text-xs text-gray-600">
-                  Min: {minSelectableQuestions}, Max: {maxSelectableQuestions}
-                </span>
+            <div className="bg-white rounded-xl shadow-md p-4 border-2 border-indigo-200 relative overflow-hidden group hover:shadow-lg transition-shadow duration-300">
+              {/* Gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 opacity-50"></div>
+              
+              <div className="relative z-10">
+                <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="inline-block w-1 h-4 bg-indigo-500 rounded-full"></span>
+                  How many questions?
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min={minSelectableQuestions}
+                    max={maxSelectableQuestions}
+                    value={questionCount}
+                    onChange={handleQuestionCountChange}
+                    onBlur={handleQuestionCountBlur}
+                    className="w-20 px-3 py-2 text-sm font-bold bg-white border-2 border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900 shadow-sm hover:border-indigo-400 transition-colors"
+                  />
+                  <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-md">
+                    Min: {minSelectableQuestions}, Max: {maxSelectableQuestions}
+                  </span>
+                </div>
               </div>
             </div>
           )}
@@ -186,18 +222,25 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
           {!showModeSelection ? (
             <button
               onClick={handleSoloClick}
-              className="group w-full bg-gradient-to-br from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 rounded-xl p-4 transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98]"
+              className="group w-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-500 hover:from-yellow-500 hover:via-yellow-600 hover:to-amber-600 rounded-xl p-4 transition-all duration-300 shadow-lg hover:shadow-2xl active:scale-[0.98] relative overflow-hidden border-2 border-yellow-300"
             >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0">
+              {/* Animated shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              
+              {/* Decorative corner elements */}
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+              
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="w-12 h-12 bg-white/40 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300 border border-white/50">
                   <User className="w-6 h-6 text-gray-900" />
                 </div>
                 <div className="flex-1 text-left">
-                  <h3 className="font-bold text-gray-900 mb-1 flex items-center gap-2 text-base">
+                  <h3 className="font-bold text-white mb-1 flex items-center gap-2 text-base drop-shadow-md">
                     Solo Quiz
-                    <span className="text-[10px] bg-gray-900/20 text-gray-900 px-2 py-0.5 rounded-full font-semibold">Focus</span>
+                    <span className="text-[10px] bg-white/30 text-gray-900 px-2 py-0.5 rounded-full font-bold border border-white/40">Focus</span>
                   </h3>
-                  <p className="text-sm text-gray-800 leading-relaxed">
+                  <p className="text-sm text-white/90 leading-relaxed drop-shadow">
                     Challenge yourself at your own pace
                   </p>
                 </div>
@@ -312,21 +355,21 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                   </div>
                 </button>
                 
-                {/* Tooltip */}
+                {/* Tooltip - Positioned ABOVE button */}
                 {!canUseAdaptive && showAdaptiveTooltip && (
-                  <div className="absolute left-0 right-0 top-full mt-2 z-50 pointer-events-none animate-fade-in">
-                    <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl border border-gray-700">
+                  <div className="absolute left-0 right-0 bottom-full mb-2 z-50 pointer-events-none animate-fade-in">
+                    <div className="bg-white text-gray-900 text-xs rounded-lg p-3 shadow-2xl border-2 border-yellow-400">
                       <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-semibold mb-1">Adaptive Mode Unavailable</p>
-                          <p className="text-gray-300 leading-relaxed">
+                          <p className="font-semibold mb-1 text-gray-900">Adaptive Mode Unavailable</p>
+                          <p className="text-gray-600 leading-relaxed">
                             {getAdaptiveDisabledMessage()}
                           </p>
                         </div>
                       </div>
-                      {/* Arrow */}
-                      <div className="absolute -top-1.5 left-6 w-3 h-3 bg-gray-900 border-l border-t border-gray-700 transform rotate-45"></div>
+                      {/* Arrow pointing DOWN */}
+                      <div className="absolute -bottom-1.5 left-6 w-3 h-3 bg-white border-r-2 border-b-2 border-yellow-400 transform rotate-45"></div>
                     </div>
                   </div>
                 )}
@@ -338,21 +381,31 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
           {!showModeSelection && !showBattleModeSelection && (
             <button
               onClick={handleQuizBattleClick}
-              className="group w-full bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 rounded-xl p-4 transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98]"
+              className="group w-full bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 hover:from-indigo-600 hover:via-indigo-700 hover:to-purple-700 rounded-xl p-4 transition-all duration-300 shadow-lg hover:shadow-2xl active:scale-[0.98] relative overflow-hidden border-2 border-indigo-400"
             >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0">
+              {/* Animated shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              
+              {/* Decorative corner elements */}
+              <div className="absolute top-0 left-0 w-24 h-24 bg-purple-500/20 rounded-full -translate-y-1/2 -translate-x-1/2"></div>
+              <div className="absolute bottom-0 right-0 w-20 h-20 bg-yellow-400/20 rounded-full translate-y-1/2 translate-x-1/2"></div>
+              
+              {/* Trophy icon floating in background */}
+              <div className="absolute top-2 right-4 text-white/10 text-5xl transform group-hover:rotate-12 transition-transform duration-300">🏆</div>
+              
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300 border border-white/40">
                   <Users className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1 text-left">
-                  <h3 className="font-bold text-white mb-1 flex items-center gap-2 text-base">
+                  <h3 className="font-bold text-white mb-1 flex items-center gap-2 text-base drop-shadow-md">
                     Quiz Battle
-                    <span className="text-[10px] bg-yellow-400 text-gray-900 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                    <span className="text-[10px] bg-yellow-400 text-gray-900 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-md border border-yellow-300">
                       <Trophy className="w-3 h-3" />
                       Battle
                     </span>
                   </h3>
-                  <p className="text-sm text-indigo-100 leading-relaxed">
+                  <p className="text-sm text-indigo-100 leading-relaxed drop-shadow">
                     Compete with friends in real-time
                   </p>
                 </div>
@@ -419,76 +472,6 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                   </div>
                 </div>
               </button>
-
-              {/* Adaptive Mode for Battle */}
-              <div 
-                className="relative"
-                onMouseEnter={() => !canUseAdaptive && setShowBattleAdaptiveTooltip(true)}
-                onMouseLeave={() => !canUseAdaptive && setShowBattleAdaptiveTooltip(false)}
-              >
-                <button
-                  onClick={() => canUseAdaptive && handleBattleModeSelect('adaptive')}
-                  disabled={!canUseAdaptive}
-                  className={`group w-full rounded-xl p-4 transition-all duration-200 border-2 ${
-                    canUseAdaptive
-                      ? 'bg-gradient-to-br from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border-indigo-200 hover:border-indigo-300 shadow-sm hover:shadow-md active:scale-[0.98] cursor-pointer'
-                      : 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-60'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      canUseAdaptive
-                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600'
-                        : 'bg-gray-400'
-                    }`}>
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h3 className={`font-semibold mb-1 flex items-center gap-2 text-sm ${
-                        canUseAdaptive ? 'text-gray-900' : 'text-gray-500'
-                      }`}>
-                        Adaptive Mode
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                          canUseAdaptive
-                            ? 'bg-indigo-100 text-indigo-700'
-                            : 'bg-gray-200 text-gray-500'
-                        }`}>
-                          {canUseAdaptive ? 'Smart' : 'Locked'}
-                        </span>
-                      </h3>
-                      <p className={`text-xs leading-relaxed ${
-                        canUseAdaptive ? 'text-gray-600' : 'text-gray-400'
-                      }`}>
-                        {canUseAdaptive 
-                          ? "Each player's difficulty adjusts independently"
-                          : 'Requires varied difficulty levels'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                </button>
-                
-                {/* Tooltip */}
-                {!canUseAdaptive && showBattleAdaptiveTooltip && (
-                  <div className="absolute left-0 right-0 top-full mt-2 z-50 pointer-events-none animate-fade-in">
-                    <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-semibold mb-1 text-yellow-400">Adaptive Mode Unavailable</p>
-                          <p className="text-gray-300 leading-relaxed">
-                            {getAdaptiveDisabledMessage()}
-                          </p>
-                        </div>
-                      </div>
-                      {/* Arrow */}
-                      <div className="absolute -top-1.5 left-8 w-3 h-3 bg-gray-900 transform rotate-45"></div>
-                    </div>
-                  </div>
-                )}
-              </div>
             </>
           )}
         </div>

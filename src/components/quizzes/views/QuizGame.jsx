@@ -1384,10 +1384,8 @@ const QuizGame = ({
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
-      if (width < 640) {
+      if (width < 1024) {
         setLeaderboardMode('mobile');
-      } else if (width < 1024) {
-        setLeaderboardMode('tablet');
       } else {
         setLeaderboardMode('desktop');
       }
@@ -1603,38 +1601,6 @@ const QuizGame = ({
                     recentAnswers={recentAnsweredUsers}
                   />
                 </div>
-              </div>
-            </div>
-          ) : leaderboardMode === 'tablet' ? (
-            // Tablet: Bottom slide panel
-            <div className="relative pb-32 px-4 pt-24">
-              <QuizQuestion
-                question={currentQ}
-                selectedAnswer={game.selectedAnswer}
-                userAnswer={game.userAnswer}
-                userMatches={game.userMatches}
-                isMatchingSubmitted={game.isMatchingSubmitted}
-                mode={mode}
-                onAnswerSelect={handleAnswerSelect}
-                onFillInAnswer={handleFillInAnswer}
-                onMatchingSubmit={handleMatchingSubmit}
-                onUserAnswerChange={game.setUserAnswer}
-                onNextQuestion={handleManualNext}
-                timeLeft={timeLeft}
-                isPaused={game.isPaused || isProcessing}
-                isAnswerCorrect={game.isAnswerCorrect}
-                isWaiting={false}
-              />
-
-              <div className="fixed bottom-0 left-0 right-0 z-30">
-                <LiveLeaderboard
-                  players={allPlayers}
-                  currentPlayerName="You"
-                  currentUserId={quiz?.currentUserId}
-                  mode="tablet"
-                  totalQuestions={getTotalQuestions()}
-                  recentAnswers={recentAnsweredUsers}
-                />
               </div>
             </div>
           ) : (
