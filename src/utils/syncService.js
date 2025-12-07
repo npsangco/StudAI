@@ -340,6 +340,11 @@ class PlannerService {
     const cached = await getCachedPlan(planId);
     if (cached) await cacheSinglePlan({ ...cached, ...updates });
 
+    // Check if this is a completion update
+    if (updates.completed === true) {
+      return this.completePlan(planId);
+    }
+
     if (this.isOnline) {
       try {
         const res = await plansApi.update(planId, updates);
@@ -381,6 +386,50 @@ class PlannerService {
       }
     } else {
       await queueOperation({ entityType: 'plan', type: 'UPDATE', data: { planId, updates } });
+      return { success: true, queued: true };
+    }
+  }
+
+  async completePlan(planId) {
+    // Update cache immediately
+    const cached = await getCachedPlan(planId);
+    if (cached) {
+      await cacheSinglePlan({ ...cached, completed: true, completed_at: new Date().toISOString() });
+    }
+
+    if (this.isOnline) {
+      try {
+        const res = await plansApi.complete(planId);
+        const p = res.data.plan;
+        const plan = {
+          id: p.planner_id,
+          planner_id: p.planner_id,
+          title: p.title,
+          description: p.description || '',
+          due_date: p.due_date,
+          created_at: p.created_at,
+          completed: true,
+          completed_at: p.completed_at || new Date().toISOString()
+        };
+        await cacheSinglePlan(plan);
+        return { success: true, plan };
+      } catch (err) {
+        if (err.response) {
+          if (err.response.status === 400) {
+            return { success: false, error: err.response.data.error };
+          }
+          console.error('[Planner] Server error:', err.response.status);
+          return { success: false, error: 'Server error' };
+        } else if (err.request) {
+          await queueOperation({ entityType: 'plan', type: 'COMPLETE', data: { planId } });
+          return { success: true, queued: true };
+        } else {
+          console.error('[Planner] Unexpected error:', err);
+          return { success: false, error: 'Unexpected error' };
+        }
+      }
+    } else {
+      await queueOperation({ entityType: 'plan', type: 'COMPLETE', data: { planId } });
       return { success: true, queued: true };
     }
   }
@@ -476,6 +525,21 @@ class PlannerService {
           created_at: p.created_at,
           completed: p.completed || false,        // ADD THIS
           completed_at: p.completed_at || null   // ADD THIS
+        });
+        break;
+      }
+      case 'COMPLETE': {
+        const res = await plansApi.complete(op.data.planId);
+        const p = res.data.plan;
+        await cacheSinglePlan({
+          id: p.planner_id,
+          planner_id: p.planner_id,
+          title: p.title,
+          description: p.description || '',
+          due_date: p.due_date,
+          created_at: p.created_at,
+          completed: true,
+          completed_at: p.completed_at || new Date().toISOString()
         });
         break;
       }

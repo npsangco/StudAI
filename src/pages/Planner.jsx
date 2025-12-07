@@ -837,7 +837,7 @@ export default function Planner() {
                             }
                           >
                             <Pencil className="w-4 h-4" />
-                            Edit
+                            
                           </button>
                           <button
                             onClick={() => deletePlan(planId)}
@@ -856,7 +856,7 @@ export default function Planner() {
                             }
                           >
                             <Trash2 className="w-4 h-4" />
-                            Delete
+                            
                           </button>
                         </div>
                       </>
