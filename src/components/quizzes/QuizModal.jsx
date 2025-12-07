@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy, FileText, Info } from 'lucide-react';
+import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy, FileText } from 'lucide-react';
 
 export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) => {
   const totalQuestions = quiz?.questionCount || 10;
@@ -117,56 +117,62 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
 
   return (
     <div 
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in"
+      className="fixed inset-0 bg-gradient-to-br from-black/60 via-indigo-900/40 to-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in"
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-xl sm:rounded-2xl max-w-lg w-full mx-auto relative shadow-2xl animate-scale-in overflow-hidden"
+        className="bg-gradient-to-br from-gray-900 via-indigo-950 to-black rounded-2xl sm:rounded-3xl max-w-lg w-full mx-auto relative shadow-2xl animate-scale-in overflow-hidden border-2 border-yellow-500/30"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Animated glow effects */}
+        <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-transparent to-indigo-500/10 pointer-events-none"></div>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-yellow-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 p-1.5 sm:p-2 hover:bg-white/20 hover:backdrop-blur-sm rounded-full transition-colors group"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 p-1.5 sm:p-2 bg-black/40 hover:bg-yellow-500/20 backdrop-blur-sm rounded-full transition-all duration-200 group border border-yellow-500/20 hover:border-yellow-500/50"
         >
-          <X className="w-5 h-5 text-white/80 group-hover:text-white" />
+          <X className="w-5 h-5 text-yellow-400/80 group-hover:text-yellow-400" />
         </button>
 
-        {/* Header Section - Minified */}
-        <div className="relative bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 pt-5 sm:pt-6 pb-6 sm:pb-8 px-4 sm:px-6 text-center overflow-hidden">
-          {/* Decorative elements - smaller */}
-          <div className="absolute top-0 left-0 w-20 sm:w-24 h-20 sm:h-24 bg-white/10 rounded-full -translate-x-10 sm:-translate-x-12 -translate-y-10 sm:-translate-y-12"></div>
-          <div className="absolute bottom-0 right-0 w-24 sm:w-28 h-24 sm:h-28 bg-white/10 rounded-full translate-x-12 sm:translate-x-14 translate-y-12 sm:translate-y-14"></div>
+        {/* Header Section */}
+        <div className="relative bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 pt-6 sm:pt-7 pb-7 sm:pb-9 px-4 sm:px-6 text-center overflow-hidden border-b-2 border-yellow-600/50">
+          {/* Decorative elements */}
+          <div className="absolute top-0 left-0 w-24 sm:w-32 h-24 sm:h-32 bg-yellow-300/20 rounded-full -translate-x-12 sm:-translate-x-16 -translate-y-12 sm:-translate-y-16 blur-2xl"></div>
+          <div className="absolute bottom-0 right-0 w-32 sm:w-40 h-32 sm:h-40 bg-amber-500/20 rounded-full translate-x-16 sm:translate-x-20 translate-y-16 sm:translate-y-20 blur-2xl"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
 
           <div className="relative">
-            <div className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl mb-1.5 sm:mb-2 shadow-lg">
-              <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-black/20 backdrop-blur-sm rounded-xl sm:rounded-2xl mb-2 sm:mb-3 shadow-2xl border-2 border-yellow-300/30">
+              <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-lg" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-0.5 sm:mb-1">Ready to Quiz?</h2>
-            <p className="text-white/90 text-[10px] sm:text-xs font-medium">Choose your challenge mode</p>
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1 sm:mb-1.5 drop-shadow-md tracking-tight">Ready to Quiz?</h2>
+            <p className="text-gray-800 text-xs sm:text-sm font-semibold drop-shadow-sm">Choose your challenge mode</p>
           </div>
         </div>
 
-        {/* Quiz Info - Minified */}
-        <div className="px-4 sm:px-6 mt-3 mb-3 space-y-2">
-          <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg sm:rounded-xl shadow-lg p-2.5 sm:p-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 backdrop-blur-sm rounded-md flex items-center justify-center flex-shrink-0">
-                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+        {/* Quiz Info */}
+        <div className="px-4 sm:px-6 mt-4 mb-4 space-y-3 relative">
+          <div className="bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-4 border-2 border-yellow-400/50 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
+            <div className="flex items-center gap-3 relative">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-black/20 backdrop-blur-sm rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg border border-yellow-300/30">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white drop-shadow-lg" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-white text-[11px] sm:text-xs line-clamp-1" title={quiz.title}>{quiz.title}</h3>
-                <p className="text-[9px] sm:text-[10px] text-white/80">{totalQuestions} questions available</p>
+                <h3 className="font-bold text-gray-900 text-sm sm:text-base line-clamp-1 drop-shadow-sm" title={quiz.title}>{quiz.title}</h3>
+                <p className="text-xs sm:text-sm text-gray-800 font-medium">{totalQuestions} questions available</p>
               </div>
             </div>
           </div>
 
           {/* Question Count Selector */}
           {totalQuestions >= minSelectableQuestions && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <label className="block text-xs font-medium text-gray-700 mb-2">
+            <div className="bg-gradient-to-br from-indigo-950/80 to-black/80 backdrop-blur-xl border-2 border-indigo-500/30 rounded-xl p-3.5 shadow-lg">
+              <label className="block text-sm font-semibold text-yellow-400 mb-2.5">
                 How many questions do you want?
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-2">
                 <input
                   type="number"
                   min={minSelectableQuestions}
@@ -174,38 +180,39 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                   value={questionCount}
                   onChange={handleQuestionCountChange}
                   onBlur={handleQuestionCountBlur}
-                  className="w-20 px-2 py-1.5 text-sm border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                  className="w-24 px-3 py-2 text-sm font-semibold bg-black/50 border-2 border-yellow-500/40 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none text-yellow-400 placeholder-yellow-600/50"
                 />
-                <span className="text-xs text-gray-600">
-                  (Min: {minSelectableQuestions}, Max: {Math.min(totalQuestions, 5)})
+                <span className="text-xs text-indigo-300 font-medium">
+                  (Min: {minSelectableQuestions}, Max: {maxSelectableQuestions})
                 </span>
               </div>
-              <p className="text-[10px] text-gray-500 mt-1.5">
-                Enter a number between {minSelectableQuestions} and {maxSelectableQuestions}
+              <p className="text-[10px] text-indigo-400">
+                Select between {minSelectableQuestions} and {maxSelectableQuestions} questions
               </p>
             </div>
           )}
         </div>
 
         {/* Mode Selection */}
-        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-2.5 sm:space-y-3">
+        <div className="px-4 sm:px-6 pb-5 sm:pb-6 space-y-3 relative">
           {/* Solo Mode */}
           {!showModeSelection ? (
             <button
               onClick={handleSoloClick}
-              className="group w-full bg-gradient-to-br from-yellow-50 to-orange-50 hover:from-yellow-100 hover:to-orange-100 border-2 border-yellow-200 hover:border-yellow-400 rounded-lg sm:rounded-xl p-3.5 sm:p-5 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+              className="group w-full bg-gradient-to-br from-yellow-400/90 to-amber-500/90 hover:from-yellow-400 hover:to-amber-500 border-2 border-yellow-500/50 hover:border-yellow-400 rounded-xl sm:rounded-2xl p-4 sm:p-5 transition-all duration-200 shadow-xl hover:shadow-2xl active:scale-[0.98] relative overflow-hidden"
             >
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
-                  <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
+              <div className="flex items-start gap-3 sm:gap-4 relative">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 bg-black/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl transition-shadow border border-yellow-300/30">
+                  <User className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-lg" />
                 </div>
                 <div className="flex-1 text-left">
-                  <h3 className="font-bold text-gray-900 mb-0.5 sm:mb-1 flex items-center gap-2 flex-wrap text-sm sm:text-base">
+                  <h3 className="font-bold text-gray-900 mb-1 sm:mb-1.5 flex items-center gap-2 flex-wrap text-base sm:text-lg drop-shadow-sm">
                     Solo Quiz
-                    <span className="text-[10px] sm:text-xs bg-yellow-200 text-yellow-800 px-1.5 sm:px-2 py-0.5 rounded-full font-semibold">Focus</span>
+                    <span className="text-[10px] sm:text-xs bg-black/20 backdrop-blur-sm text-white px-2 sm:px-2.5 py-1 rounded-full font-bold border border-yellow-300/30">Focus</span>
                   </h3>
-                  <p className="text-xs sm:text-sm text-gray-600 leading-tight sm:leading-relaxed">
-                    Challenge yourself at your own pace - perfect for focused practice and mastering concepts
+                  <p className="text-xs sm:text-sm text-gray-800 leading-snug sm:leading-relaxed font-medium">
+                    Challenge yourself at your own pace - perfect for focused practice
                   </p>
                 </div>
               </div>
@@ -215,7 +222,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
               {/* Back Button */}
               <button
                 onClick={handleBackToMain}
-                className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1 mb-2"
+                className="text-sm text-yellow-400 hover:text-yellow-300 flex items-center gap-1.5 mb-3 font-semibold transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -226,21 +233,22 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
               {/* Normal Mode */}
               <button
                 onClick={() => handleModeSelect('normal')}
-                className="group w-full bg-gradient-to-br from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 border-2 border-gray-200 hover:border-gray-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+                className="group w-full bg-gradient-to-br from-indigo-900/60 to-indigo-950/60 hover:from-indigo-900/80 hover:to-indigo-950/80 border-2 border-indigo-500/30 hover:border-indigo-400/50 rounded-xl p-3.5 sm:p-4 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-[0.98] backdrop-blur-xl relative overflow-hidden"
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-gray-500 to-slate-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+                <div className="flex items-start gap-3 relative">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg border border-indigo-400/30">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                   </div>
                   <div className="flex-1 text-left">
-                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                    <h3 className="font-bold text-yellow-400 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
                       Normal Mode
-                      <span className="text-[10px] bg-gray-200 text-gray-800 px-1.5 py-0.5 rounded-full font-semibold">Original Order</span>
+                      <span className="text-[10px] bg-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded-full font-semibold border border-indigo-400/30">Original</span>
                     </h3>
-                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
-                      Questions in their original order - study as designed by the creator
+                    <p className="text-[11px] sm:text-xs text-indigo-300 leading-snug">
+                      Questions in their original order - study as designed
                     </p>
                   </div>
                 </div>
@@ -249,21 +257,22 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
               {/* Casual Mode */}
               <button
                 onClick={() => handleModeSelect('casual')}
-                className="group w-full bg-gradient-to-br from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 border-2 border-blue-200 hover:border-blue-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+                className="group w-full bg-gradient-to-br from-indigo-900/60 to-indigo-950/60 hover:from-indigo-900/80 hover:to-indigo-950/80 border-2 border-yellow-500/30 hover:border-yellow-400/50 rounded-xl p-3.5 sm:p-4 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-[0.98] backdrop-blur-xl relative overflow-hidden"
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-transparent pointer-events-none"></div>
+                <div className="flex items-start gap-3 relative">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg border border-yellow-400/30">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                   </div>
                   <div className="flex-1 text-left">
-                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                    <h3 className="font-bold text-yellow-400 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
                       Casual Mode
-                      <span className="text-[10px] bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded-full font-semibold">Shuffled</span>
+                      <span className="text-[10px] bg-yellow-500/30 text-yellow-200 px-2 py-0.5 rounded-full font-semibold border border-yellow-400/30">Shuffled</span>
                     </h3>
-                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
-                      Questions shuffled randomly - straightforward practice session
+                    <p className="text-[11px] sm:text-xs text-indigo-300 leading-snug">
+                      Questions shuffled randomly - straightforward practice
                     </p>
                   </div>
                 </div>
@@ -276,41 +285,41 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                   onMouseEnter={() => !canUseAdaptive && setShowAdaptiveTooltip(true)}
                   onMouseLeave={() => setShowAdaptiveTooltip(false)}
                   disabled={!canUseAdaptive}
-                  className={`group w-full rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 border-2 ${
+                  className={`group w-full rounded-xl p-3.5 sm:p-4 transition-all duration-200 border-2 shadow-lg relative overflow-hidden ${
                     canUseAdaptive
-                      ? 'bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-purple-200 hover:border-purple-400 hover:shadow-lg active:scale-[0.98] cursor-pointer'
-                      : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300 cursor-not-allowed opacity-60'
+                      ? 'bg-gradient-to-br from-yellow-500/80 to-amber-600/80 hover:from-yellow-500 hover:to-amber-600 border-yellow-400/50 hover:border-yellow-400 hover:shadow-xl active:scale-[0.98] cursor-pointer backdrop-blur-xl'
+                      : 'bg-gradient-to-br from-gray-800/40 to-gray-900/40 border-gray-600/30 cursor-not-allowed opacity-50 backdrop-blur-xl'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md ${
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
+                  <div className="flex items-start gap-3 relative">
+                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg border ${
                       canUseAdaptive
-                        ? 'bg-gradient-to-br from-purple-500 to-pink-600'
-                        : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                        ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 border-indigo-400/30'
+                        : 'bg-gradient-to-br from-gray-600 to-gray-700 border-gray-500/30'
                     }`}>
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
                     </div>
                     <div className="flex-1 text-left">
-                      <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                      <h3 className={`font-bold mb-0.5 flex items-center gap-2 text-sm sm:text-base ${
+                        canUseAdaptive ? 'text-gray-900' : 'text-gray-400'
+                      }`}>
                         Adaptive Mode
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
                           canUseAdaptive
-                            ? 'bg-purple-200 text-purple-800'
-                            : 'bg-gray-200 text-gray-600'
+                            ? 'bg-indigo-500/30 text-indigo-100 border-indigo-400/30'
+                            : 'bg-gray-700/30 text-gray-400 border-gray-600/30'
                         }`}>
                           {canUseAdaptive ? 'Smart' : 'Locked'}
                         </span>
-                        {!canUseAdaptive && (
-                          <Info className="w-4 h-4 text-gray-500" />
-                        )}
                       </h3>
                       <p className={`text-[11px] sm:text-xs leading-snug ${
-                        canUseAdaptive ? 'text-gray-600' : 'text-gray-500'
+                        canUseAdaptive ? 'text-gray-800' : 'text-gray-500'
                       }`}>
                         {canUseAdaptive 
-                          ? 'Difficulty adjusts based on your performance - personalized learning'
+                          ? 'Difficulty adjusts based on performance - personalized'
                           : 'Requires questions with varied difficulty levels'
                         }
                       </p>
@@ -321,18 +330,18 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                 {/* Tooltip */}
                 {!canUseAdaptive && showAdaptiveTooltip && (
                   <div className="absolute left-0 right-0 top-full mt-2 z-50 pointer-events-none animate-fade-in">
-                    <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-2xl border border-gray-700">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <div className="bg-gradient-to-br from-gray-900 to-black text-white text-xs rounded-xl p-3.5 shadow-2xl border-2 border-yellow-500/30">
+                      <div className="flex items-start gap-2.5">
+                        <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-semibold mb-1">Adaptive Mode Unavailable</p>
+                          <p className="font-bold mb-1.5 text-yellow-400">Adaptive Mode Unavailable</p>
                           <p className="text-gray-300 leading-relaxed">
                             {getAdaptiveDisabledMessage()}
                           </p>
                         </div>
                       </div>
                       {/* Arrow */}
-                      <div className="absolute -top-2 left-8 w-4 h-4 bg-gray-900 border-l border-t border-gray-700 transform rotate-45"></div>
+                      <div className="absolute -top-2 left-8 w-4 h-4 bg-gray-900 border-l border-t border-yellow-500/30 transform rotate-45"></div>
                     </div>
                   </div>
                 )}
@@ -344,22 +353,23 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
           {!showModeSelection && !showBattleModeSelection && (
             <button
               onClick={handleQuizBattleClick}
-              className="group w-full bg-gradient-to-br from-orange-50 to-red-50 hover:from-orange-100 hover:to-red-100 border-2 border-orange-200 hover:border-orange-400 rounded-lg sm:rounded-xl p-3.5 sm:p-5 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+              className="group w-full bg-gradient-to-br from-indigo-500/90 to-indigo-600/90 hover:from-indigo-500 hover:to-indigo-600 border-2 border-indigo-400/50 hover:border-indigo-400 rounded-xl sm:rounded-2xl p-4 sm:p-5 transition-all duration-200 shadow-xl hover:shadow-2xl active:scale-[0.98] relative overflow-hidden"
             >
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
-                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
+              <div className="flex items-start gap-3 sm:gap-4 relative">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 bg-black/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl transition-shadow border border-indigo-300/30">
+                  <Users className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-lg" />
                 </div>
                 <div className="flex-1 text-left">
-                  <h3 className="font-bold text-gray-900 mb-0.5 sm:mb-1 flex items-center gap-2 flex-wrap text-sm sm:text-base">
+                  <h3 className="font-bold text-white mb-1 sm:mb-1.5 flex items-center gap-2 flex-wrap text-base sm:text-lg drop-shadow-sm">
                     Quiz Battle
-                    <span className="text-[10px] sm:text-xs bg-orange-200 text-orange-800 px-1.5 sm:px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
-                      <Trophy className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                      Competitive
+                    <span className="text-[10px] sm:text-xs bg-yellow-400/90 text-gray-900 px-2 sm:px-2.5 py-1 rounded-full font-black flex items-center gap-1 border border-yellow-300/30">
+                      <Trophy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      Battle
                     </span>
                   </h3>
-                  <p className="text-xs sm:text-sm text-gray-600 leading-tight sm:leading-relaxed">
-                    Compete with up to 5 friends in real-time - race to the top of the leaderboard!
+                  <p className="text-xs sm:text-sm text-indigo-100 leading-snug sm:leading-relaxed font-medium">
+                    Compete with up to 5 friends in real-time - race to victory!
                   </p>
                 </div>
               </div>
@@ -372,7 +382,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
               {/* Back Button */}
               <button
                 onClick={handleBackToMain}
-                className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1 mb-2"
+                className="text-sm text-yellow-400 hover:text-yellow-300 flex items-center gap-1.5 mb-3 font-semibold transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -383,20 +393,21 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
               {/* Normal Mode for Battle */}
               <button
                 onClick={() => handleBattleModeSelect('normal')}
-                className="group w-full bg-gradient-to-br from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 border-2 border-gray-200 hover:border-gray-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+                className="group w-full bg-gradient-to-br from-indigo-900/60 to-indigo-950/60 hover:from-indigo-900/80 hover:to-indigo-950/80 border-2 border-indigo-500/30 hover:border-indigo-400/50 rounded-xl p-3.5 sm:p-4 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-[0.98] backdrop-blur-xl relative overflow-hidden"
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-gray-500 to-slate-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+                <div className="flex items-start gap-3 relative">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg border border-indigo-400/30">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                   </div>
                   <div className="flex-1 text-left">
-                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                    <h3 className="font-bold text-yellow-400 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
                       Normal Mode
-                      <span className="text-[10px] bg-gray-200 text-gray-800 px-1.5 py-0.5 rounded-full font-semibold">Original Order</span>
+                      <span className="text-[10px] bg-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded-full font-semibold border border-indigo-400/30">Original</span>
                     </h3>
-                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
+                    <p className="text-[11px] sm:text-xs text-indigo-300 leading-snug">
                       All players get questions in the same original order
                     </p>
                   </div>
@@ -406,20 +417,21 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
               {/* Casual Mode for Battle */}
               <button
                 onClick={() => handleBattleModeSelect('casual')}
-                className="group w-full bg-gradient-to-br from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 border-2 border-blue-200 hover:border-blue-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+                className="group w-full bg-gradient-to-br from-indigo-900/60 to-indigo-950/60 hover:from-indigo-900/80 hover:to-indigo-950/80 border-2 border-yellow-500/30 hover:border-yellow-400/50 rounded-xl p-3.5 sm:p-4 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-[0.98] backdrop-blur-xl relative overflow-hidden"
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-transparent pointer-events-none"></div>
+                <div className="flex items-start gap-3 relative">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg border border-yellow-400/30">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                   </div>
                   <div className="flex-1 text-left">
-                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                    <h3 className="font-bold text-yellow-400 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
                       Casual Mode
-                      <span className="text-[10px] bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded-full font-semibold">Shuffled</span>
+                      <span className="text-[10px] bg-yellow-500/30 text-yellow-200 px-2 py-0.5 rounded-full font-semibold border border-yellow-400/30">Shuffled</span>
                     </h3>
-                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
+                    <p className="text-[11px] sm:text-xs text-indigo-300 leading-snug">
                       All players get the same shuffled order
                     </p>
                   </div>
@@ -433,41 +445,41 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                   onMouseEnter={() => !canUseAdaptive && setShowBattleAdaptiveTooltip(true)}
                   onMouseLeave={() => setShowBattleAdaptiveTooltip(false)}
                   disabled={!canUseAdaptive}
-                  className={`group w-full rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 border-2 ${
+                  className={`group w-full rounded-xl p-3.5 sm:p-4 transition-all duration-200 border-2 shadow-lg relative overflow-hidden ${
                     canUseAdaptive
-                      ? 'bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-purple-200 hover:border-purple-400 hover:shadow-lg active:scale-[0.98] cursor-pointer'
-                      : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300 cursor-not-allowed opacity-60'
+                      ? 'bg-gradient-to-br from-yellow-500/80 to-amber-600/80 hover:from-yellow-500 hover:to-amber-600 border-yellow-400/50 hover:border-yellow-400 hover:shadow-xl active:scale-[0.98] cursor-pointer backdrop-blur-xl'
+                      : 'bg-gradient-to-br from-gray-800/40 to-gray-900/40 border-gray-600/30 cursor-not-allowed opacity-50 backdrop-blur-xl'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md ${
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
+                  <div className="flex items-start gap-3 relative">
+                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg border ${
                       canUseAdaptive
-                        ? 'bg-gradient-to-br from-purple-500 to-pink-600'
-                        : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                        ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 border-indigo-400/30'
+                        : 'bg-gradient-to-br from-gray-600 to-gray-700 border-gray-500/30'
                     }`}>
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
                     </div>
                     <div className="flex-1 text-left">
-                      <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                      <h3 className={`font-bold mb-0.5 flex items-center gap-2 text-sm sm:text-base ${
+                        canUseAdaptive ? 'text-gray-900' : 'text-gray-400'
+                      }`}>
                         Adaptive Mode
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
                           canUseAdaptive
-                            ? 'bg-purple-200 text-purple-800'
-                            : 'bg-gray-200 text-gray-600'
+                            ? 'bg-indigo-500/30 text-indigo-100 border-indigo-400/30'
+                            : 'bg-gray-700/30 text-gray-400 border-gray-600/30'
                         }`}>
                           {canUseAdaptive ? 'Smart' : 'Locked'}
                         </span>
-                        {!canUseAdaptive && (
-                          <Info className="w-4 h-4 text-gray-500" />
-                        )}
                       </h3>
                       <p className={`text-[11px] sm:text-xs leading-snug ${
-                        canUseAdaptive ? 'text-gray-600' : 'text-gray-500'
+                        canUseAdaptive ? 'text-gray-800' : 'text-gray-500'
                       }`}>
                         {canUseAdaptive 
-                          ? "Each player's difficulty adjusts independently based on performance"
+                          ? "Each player's difficulty adjusts independently"
                           : 'Requires questions with varied difficulty levels'
                         }
                       </p>
@@ -478,18 +490,18 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                 {/* Tooltip */}
                 {!canUseAdaptive && showBattleAdaptiveTooltip && (
                   <div className="absolute left-0 right-0 top-full mt-2 z-50 pointer-events-none animate-fade-in">
-                    <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-2xl border border-gray-700">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <div className="bg-gradient-to-br from-gray-900 to-black text-white text-xs rounded-xl p-3.5 shadow-2xl border-2 border-yellow-500/30">
+                      <div className="flex items-start gap-2.5">
+                        <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-semibold mb-1">Adaptive Mode Unavailable</p>
+                          <p className="font-bold mb-1.5 text-yellow-400">Adaptive Mode Unavailable</p>
                           <p className="text-gray-300 leading-relaxed">
                             {getAdaptiveDisabledMessage()}
                           </p>
                         </div>
                       </div>
                       {/* Arrow */}
-                      <div className="absolute -top-2 left-8 w-4 h-4 bg-gray-900 border-l border-t border-gray-700 transform rotate-45"></div>
+                      <div className="absolute -top-2 left-8 w-4 h-4 bg-gray-900 border-l border-t border-yellow-500/30 transform rotate-45"></div>
                     </div>
                   </div>
                 )}
