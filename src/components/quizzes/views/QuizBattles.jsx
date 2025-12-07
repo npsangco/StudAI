@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { quizApi } from '../../../api/api';
 import { API_URL } from '../../../config/api.config';
 import { addPlayerToBattle } from '../../../firebase/battleOperations';
-import { Crown, Lightbulb } from 'lucide-react';
+import { Crown, Lightbulb, Swords } from 'lucide-react';
 
 export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -129,30 +129,108 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
             </button>
           </div>
 
-          {/* How to Join Section */}
+          {/* How It Works Section */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
               <Lightbulb className="w-5 h-5 text-yellow-600" />
-              How to Join
+              How It Works
             </h3>
-            <ol className="text-sm text-gray-700 space-y-2 list-none">
+            
+            {/* Join a Battle */}
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-gray-900 mb-2">To Join a Battle:</p>
+              <ol className="text-sm text-gray-700 space-y-2 list-none">
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 font-semibold text-xs flex items-center justify-center">1</span>
+                  <span>Get the 6-digit PIN from the battle host</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 font-semibold text-xs flex items-center justify-center">2</span>
+                  <span>Enter the PIN code above and click "Join Battle"</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 font-semibold text-xs flex items-center justify-center">3</span>
+                  <span>Wait in the lobby for other players</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 font-semibold text-xs flex items-center justify-center">4</span>
+                  <span>Compete when the host starts the battle!</span>
+                </li>
+              </ol>
+            </div>
+
+            {/* Host a Battle */}
+            <div className="pt-4 border-t border-gray-200">
+              <p className="text-sm font-semibold text-gray-900 mb-2">To Host a Battle:</p>
+              <ol className="text-sm text-gray-700 space-y-2 list-none">
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 text-purple-600 font-semibold text-xs flex items-center justify-center">1</span>
+                  <span>Go to "My Quizzes" and select a quiz (10+ questions required)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 text-purple-600 font-semibold text-xs flex items-center justify-center">2</span>
+                  <span>Choose "Battle Mode" from the quiz options</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 text-purple-600 font-semibold text-xs flex items-center justify-center">3</span>
+                  <span>Share the 6-digit PIN with your friends</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 text-purple-600 font-semibold text-xs flex items-center justify-center">4</span>
+                  <span>Wait for players to join, then start the battle!</span>
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          {/* Battle Features Section */}
+          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <Swords className="w-5 h-5 text-indigo-600" />
+              Battle Features
+            </h3>
+            <ul className="text-sm text-gray-700 space-y-2">
               <li className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 font-semibold text-xs flex items-center justify-center">1</span>
-                <span>Get the 6-digit PIN from the battle host</span>
+                <span className="text-indigo-600 font-bold">•</span>
+                <span><strong>Real-time competition</strong> - Race against other players</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 font-semibold text-xs flex items-center justify-center">2</span>
-                <span>Enter the PIN code above</span>
+                <span className="text-indigo-600 font-bold">•</span>
+                <span><strong>Live leaderboard</strong> - See rankings update as you play</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 font-semibold text-xs flex items-center justify-center">3</span>
-                <span>Wait in the lobby for others</span>
+                <span className="text-indigo-600 font-bold">•</span>
+                <span><strong>Point-based scoring</strong> - Earn points for correct answers</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 font-semibold text-xs flex items-center justify-center">4</span>
-                <span>Compete when the host starts!</span>
+                <span className="text-indigo-600 font-bold">•</span>
+                <span><strong>Multiplayer fun</strong> - Play with friends or classmates</span>
               </li>
-            </ol>
+            </ul>
+          </div>
+
+          {/* Pro Tips Section */}
+          <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-6 border border-yellow-200">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+              Tips for Success
+            </h3>
+            <ul className="text-sm text-gray-700 space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="text-yellow-600 font-bold">💡</span>
+                <span>Make sure you have a stable internet connection</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-yellow-600 font-bold">💡</span>
+                <span>Stay focused - you can't pause during a battle</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-yellow-600 font-bold">💡</span>
+                <span>Read questions carefully before answering</span>
+              </li>
+            </ul>
           </div>
 
         </div>

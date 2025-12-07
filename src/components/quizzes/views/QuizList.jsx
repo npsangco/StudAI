@@ -289,21 +289,6 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
         {/* Accent Stripe */}
         <div className={`h-full w-1 absolute left-0 top-0 bottom-0 ${accentColor}`}></div>
 
-        {/* Drag Handle - Top Left Inside Card */}
-        <div
-          draggable
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          className={`absolute top-3 left-3 z-20 p-1.5 rounded-lg transition-all group/drag ${
-            isBeingDragged
-              ? 'cursor-grabbing bg-blue-100'
-              : 'cursor-grab hover:bg-gray-100'
-          }`}
-          title="Drag to reorder quiz"
-        >
-          <GripVertical className={`w-5 h-5 ${isBeingDragged ? 'text-blue-500' : 'text-gray-400 group-hover/drag:text-gray-600'}`} />
-        </div>
-
         {/* ERROR BADGE - Shows if quiz has validation errors */}
         {hasErrors && !isEmpty && (
           <div className="absolute top-3 right-3 z-10">
@@ -329,9 +314,25 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
         )}
 
         <div className="p-6">
-          {/* Title Section */}
+          {/* Title Section with Drag Handle */}
           <div className="mb-3">
             <div className="flex items-center gap-2 mb-1">
+              {/* Drag Handle - Inline with title */}
+              <div
+                draggable
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                className={`flex-shrink-0 p-1 rounded-lg transition-all cursor-grab active:cursor-grabbing ${
+                  isBeingDragged
+                    ? 'bg-blue-100'
+                    : 'hover:bg-gray-100'
+                }`}
+                title="Drag to reorder quiz"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GripVertical className={`w-4 h-4 ${isBeingDragged ? 'text-blue-500' : 'text-gray-400'}`} />
+              </div>
+              
               <h3
                 onClick={() => isPlayable && onSelect(quiz)}
                 className={`font-semibold text-lg text-gray-900 truncate ${
