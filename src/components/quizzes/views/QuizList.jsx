@@ -629,61 +629,61 @@ export const QuizList = ({
           </div>
 
           {/* Empty State Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-2">
+          <div className="flex-1 overflow-y-auto px-6 py-6">
             <div className="flex items-center justify-center min-h-full">
-              <div className="w-full max-w-2xl">
+              <div className="w-full max-w-3xl">
                 {/* Header & Subtext*/}
-                <div className="text-center mb-3">
-                  <h2 className="text-lg font-bold text-gray-900 mb-1">
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
                     Master Any Subject with Smart Quizzes
                   </h2>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-sm text-gray-600">
                     Create your first quiz and start learning smarter today.
                   </p>
                 </div>
 
                 {/* Feature Cards - 2x2 Grid */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-4">
                   {/* Card 1 - 3 Quiz Modes (Yellow) */}
-                  <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-2.5 border border-yellow-200 hover:shadow-md transition-all">
-                    <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
-                      <Target className="w-4 h-4 text-white" />
+                  <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-5 border border-yellow-200 hover:shadow-lg transition-all">
+                    <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                      <Target className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-xs mb-0.5">3 Quiz Modes</h3>
-                    <p className="text-[10px] text-gray-600 leading-tight">
+                    <h3 className="font-bold text-gray-900 text-base mb-2">3 Quiz Modes</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
                       Normal (original order), Casual (shuffled), and Adaptive (difficulty-based) - choose your style
                     </p>
                   </div>
 
                   {/* Card 2 - 4 Question Types (Purple) */}
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-2.5 border border-purple-200 hover:shadow-md transition-all">
-                    <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
-                      <FileText className="w-4 h-4 text-white" />
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200 hover:shadow-lg transition-all">
+                    <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                      <FileText className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-xs mb-0.5">4 Question Types</h3>
-                    <p className="text-[10px] text-gray-600 leading-tight">
+                    <h3 className="font-bold text-gray-900 text-base mb-2">4 Question Types</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
                       Multiple choice, fill-in-the-blanks with alternative answers, true/false, and matching pairs
                     </p>
                   </div>
 
                   {/* Card 3 - Live Quiz Battles (Blue) */}
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-2.5 border border-blue-200 hover:shadow-md transition-all">
-                    <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
-                      <Swords className="w-4 h-4 text-white" />
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200 hover:shadow-lg transition-all">
+                    <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                      <Swords className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-xs mb-0.5">Live Quiz Battles</h3>
-                    <p className="text-[10px] text-gray-600 leading-tight">
+                    <h3 className="font-bold text-gray-900 text-base mb-2">Live Quiz Battles</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
                       Challenge friends in real-time with multiplayer battles - instant leaderboards and live competition
                     </p>
                   </div>
 
                   {/* Card 4 - Smart Features (Green) */}
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-2.5 border border-green-200 hover:shadow-md transition-all">
-                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
-                      <Sparkles className="w-4 h-4 text-white" />
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200 hover:shadow-lg transition-all">
+                    <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                      <Sparkles className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-xs mb-0.5">Smart Features</h3>
-                    <p className="text-[10px] text-gray-600 leading-tight">
+                    <h3 className="font-bold text-gray-900 text-base mb-2">Smart Features</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
                       AI-generated quizzes, customizable timers, question reordering, and share codes for collaboration
                     </p>
                   </div>

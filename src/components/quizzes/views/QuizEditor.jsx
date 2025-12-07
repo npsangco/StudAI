@@ -1138,14 +1138,88 @@ export const QuizEditor = ({
 
       <div className="max-w-5xl mx-auto p-4 md:p-6">
         {questions.length === 0 ? (
-          <div className="text-center">
-            <button
-              onClick={onAddQuestion}
-              className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105 shadow-md mx-auto"
-            >
-              <Sparkles className="w-5 h-5" />
-              <span>Add First Question</span>
-            </button>
+          <div className="flex items-center justify-center min-h-[500px]">
+            <div className="w-full max-w-3xl">
+              {/* Header */}
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Build Your Quiz
+                </h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Start by adding your first question - mix and match question types for the best learning experience
+                </p>
+                <button
+                  onClick={onAddQuestion}
+                  className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105 shadow-lg mx-auto"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  <span>Add First Question</span>
+                </button>
+              </div>
+
+              {/* Feature Cards - 2x2 Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
+                {/* Card 1 - Multiple Choice (Yellow) */}
+                <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-4 border border-yellow-200 hover:shadow-lg transition-all">
+                  <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                    <Circle className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-sm mb-1">Multiple Choice</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Classic format with 2-6 options. Perfect for testing knowledge with clear alternatives.
+                  </p>
+                </div>
+
+                {/* Card 2 - Fill in the Blanks (Purple) */}
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200 hover:shadow-lg transition-all">
+                  <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                    <Zap className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-sm mb-1">Fill in the Blanks</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Test recall with up to 7 alternative answers and optional case sensitivity.
+                  </p>
+                </div>
+
+                {/* Card 3 - True/False (Blue) */}
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200 hover:shadow-lg transition-all">
+                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-sm mb-1">True or False</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Simple binary choice - quick to answer and great for fact-checking.
+                  </p>
+                </div>
+
+                {/* Card 4 - Matching (Green) */}
+                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200 hover:shadow-lg transition-all">
+                  <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mb-3 shadow-sm">
+                    <Target className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-sm mb-1">Matching Pairs</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Connect related items - ideal for terms, definitions, and relationships.
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Tips */}
+              <div className="mt-6 bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-gray-900 text-sm mb-1">Quick Tips</h4>
+                    <ul className="text-xs text-gray-600 space-y-1">
+                      <li>• Drag the grip handle to reorder questions anytime</li>
+                      <li>• Set difficulty levels (Easy/Medium/Hard) for each question</li>
+                      <li>• Use the Question Bank to import pre-made questions</li>
+                      <li>• Customize timer and privacy settings in the top bar</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <>
