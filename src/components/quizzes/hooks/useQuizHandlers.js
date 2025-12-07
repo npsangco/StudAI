@@ -289,11 +289,9 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     setQuestions(questionsToUse);
 
     // 1️⃣ Create battle in MySQL (existing API call)
-    console.log('🎮 Creating battle in MySQL for quiz:', quizData.selected.id);
     const battleData = await quizAPI.createBattle(quizData.selected.id);
 
     if (!battleData) {
-      console.error('🚨 Failed to create battle in MySQL - no battle data returned');
       const errorMsg = '❌ Database Error\n\nFailed to create battle in database.\n\nPossible causes:\n• Server connection issue\n• Database error\n• Quiz access permissions\n\n✅ Solution: Please refresh and try again. Contact support if issue persists.';
       setError(errorMsg);
       updateUiState({ showModal: false });
@@ -301,11 +299,9 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       return;
     }
 
-    console.log('✅ Battle created in MySQL:', battleData);
     const { battle, gamePin } = battleData;
 
     // 2️⃣ Create battle room in Firebase
-    console.log('🔥 Creating battle room in Firebase with PIN:', gamePin);
     try {
       await createBattleRoom(gamePin, {
           battleId: battle.battle_id,
@@ -352,19 +348,9 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       // Host should manually click "Ready Up" button like other players
 
       // Continue...
-      console.log('🎉 Battle setup complete! Opening lobby...');
       updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
 
       } catch (firebaseError) {
-        console.error('🚨 Firebase Error creating battle room:', firebaseError);
-        console.error('🚨 Error details:', {
-          message: firebaseError.message,
-          code: firebaseError.code,
-          stack: firebaseError.stack,
-          gamePin,
-          quizId: quizData.selected.id,
-          userId: currentUser.id
-        });
         
         // Detailed error message based on Firebase error code
         let errorMsg = '❌ Firebase Battle Room Error\n\n';

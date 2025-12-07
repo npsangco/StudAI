@@ -289,11 +289,9 @@ export function useQuizAPI(quizDataHook, toast) {
    */
   const createBattle = async (quizId) => {
     try {
-      console.log('🎮 API - createBattle called for quiz:', quizId);
       setLoading(true);
       
       const response = await quizApi.createBattle(quizId);
-      console.log('✅ API - createBattle response:', response.data);
       const { battle, gamePin } = response.data;
 
       updateGameState({ 

@@ -581,11 +581,6 @@ export const BattleLobbyScreen = ({
   const readyPlayers = lobbyPlayers.filter(p => p.isReady).length;
   const allReady = totalPlayers > 1 && lobbyPlayers.every(p => p.isReady);
   
-  // Debug: Log when ready state changes
-  useEffect(() => {
-    console.log(`🎮 BattleLobby: ${readyPlayers}/${totalPlayers} ready, allReady: ${allReady}, can start: ${totalPlayers >= 2 && allReady}`);
-  }, [readyPlayers, totalPlayers, allReady]);
-  
   return (
     <>
       <style>{styles}</style>
