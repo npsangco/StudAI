@@ -615,9 +615,9 @@ export const BattleLobbyScreen = ({
         }
 
         // 1.5. Chase/Avoid Logic - Ready players chase non-ready players!
-        const chaseStrength = 0.08; // Force strength for chasing
-        const avoidStrength = 0.12; // Stronger force for avoiding
-        const chaseRange = 35; // Max distance to chase (in percentage)
+        const chaseStrength = 0.04; // Gentle force for chasing (reduced for smoother movement)
+        const avoidStrength = 0.06; // Gentle force for avoiding (reduced to be easier on eyes)
+        const chaseRange = 30; // Max distance to chase (slightly reduced range)
         
         for (let i = 0; i < newPositions.length; i++) {
           const currentPlayer = lobbyPlayers[i];

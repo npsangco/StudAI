@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Clock, Target, Trophy, Zap, Star } from 'lucide-react';
 import { getPointsForDifficulty } from './utils/adaptiveDifficultyManager';
 import './QuizGameHeader.css';
@@ -197,11 +197,18 @@ export const QuizGameHeader = ({
   // currentQuestion = current question INDEX (0-based)
   // On Q1 (index 0): no questions completed yet, show 0%
   // On Q2 (index 1): 1 question completed, calculate correctAnswersCount / 1
-  const questionsCompleted = currentQuestion; // Questions BEFORE current one
-  const accuracy = questionsCompleted > 0
-    ? Math.min(100, Math.round((correctAnswersCount / questionsCompleted) * 100))
-    : 0;
-  const progress = ((currentQuestion + 1) / totalQuestions) * 100;
+  // Memoize to prevent flickering when props update
+  const accuracy = useMemo(() => {
+    const questionsCompleted = currentQuestion; // Questions BEFORE current one
+    return questionsCompleted > 0
+      ? Math.min(100, Math.round((correctAnswersCount / questionsCompleted) * 100))
+      : 0;
+  }, [currentQuestion, correctAnswersCount]);
+  
+  const progress = useMemo(() => 
+    ((currentQuestion + 1) / totalQuestions) * 100,
+    [currentQuestion, totalQuestions]
+  );
 
   const difficulty = currentQuestionData?.difficulty || 'medium';
   const points = getPointsForDifficulty(difficulty);
