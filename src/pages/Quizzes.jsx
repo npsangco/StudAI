@@ -654,7 +654,7 @@ function QuizzesPage() {
           onClick={() => quizDataHook.setError(null)}
         >
           <div 
-            className="bg-white rounded-xl shadow-lg max-w-md w-full p-5 sm:p-6 animate-fade-in"
+            className="bg-white rounded-xl shadow-lg max-w-lg w-full p-5 sm:p-6 animate-fade-in max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="text-center">
@@ -662,11 +662,11 @@ function QuizzesPage() {
                 <span className="text-3xl sm:text-4xl">⚠️</span>
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">
-                Oops!
+                {quizDataHook.error.includes('❌') ? '' : 'Oops!'}
               </h3>
-              <p className="text-sm sm:text-base text-gray-600 mb-6">
+              <div className="text-left sm:text-base text-gray-700 mb-6 whitespace-pre-line font-mono text-xs sm:text-sm bg-gray-50 p-4 rounded-lg border border-gray-200">
                 {quizDataHook.error}
-              </p>
+              </div>
               <button
                 onClick={() => quizDataHook.setError(null)}
                 className="w-full bg-black text-white py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-slate-800 transition-colors shadow-md hover:shadow-lg text-sm sm:text-base cursor-pointer"

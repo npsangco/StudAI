@@ -196,7 +196,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
 
     if (!data || !data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
       console.error('❌ No questions found');
-      setError('This quiz has no questions yet. Please add at least 10 questions before starting a battle.');
+      const errorMsg = '❌ Cannot Start Battle\n\nThis quiz has no questions yet.\n\n✅ Solution: Add at least 10 questions before starting a battle.';
+      setError(errorMsg);
       updateUiState({ showModal: false });
       toast?.error('Cannot start battle: No questions available');
       return;
@@ -205,7 +206,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     // Check minimum question count requirement
     if (data.questions.length < 10) {
       console.error('❌ Not enough questions:', data.questions.length);
-      setError(`This quiz needs at least 10 questions to start a battle. Current count: ${data.questions.length}`);
+      const errorMsg = `❌ Not Enough Questions\n\nCurrent: ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''}\nRequired: 10 questions minimum\n\n✅ Solution: Add ${10 - data.questions.length} more question${10 - data.questions.length !== 1 ? 's' : ''} to start a battle.`;
+      setError(errorMsg);
       updateUiState({ showModal: false });
       toast?.error(`Add ${10 - data.questions.length} more question(s) to start a battle`);
       return;
@@ -228,7 +230,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
 
     if (questionsToUse.length === 0) {
       console.error('❌ No valid questions after filtering');
-      setError('This quiz has no valid questions. Please check your questions.');
+      const errorMsg = '❌ Invalid Questions\n\nAll questions are missing required fields:\n• Question text\n• Question type\n• Answer options\n\n✅ Solution: Edit the quiz and complete all questions with proper content.';
+      setError(errorMsg);
       updateUiState({ showModal: false });
       toast?.error('Cannot start battle: No valid questions found');
       return;
@@ -247,7 +250,10 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         errors: validation.errors,
         userId: currentUser?.id
       });
-      setError(`This quiz has ${validation.errors.length} validation error(s). Please edit the quiz to fix them before creating a battle.`);
+      const errorDetails = validation.errors.slice(0, 3).map(e => `• ${e.message || e}`).join('\n');
+      const moreErrors = validation.errors.length > 3 ? `\n...and ${validation.errors.length - 3} more error(s)` : '';
+      const errorMsg = `❌ Validation Errors (${validation.errors.length})\n\nTop issues:\n${errorDetails}${moreErrors}\n\n✅ Solution: Edit the quiz to fix these errors before creating a battle.`;
+      setError(errorMsg);
       updateUiState({ showModal: false, showValidationError: true });
       quizDataHook.setValidationErrors(validation.errors);
       toast?.error('Cannot start battle: Validation errors found');
@@ -288,8 +294,10 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
 
     if (!battleData) {
       console.error('🚨 Failed to create battle in MySQL - no battle data returned');
-      setError('Failed to create battle. Please try again.');
+      const errorMsg = '❌ Database Error\n\nFailed to create battle in database.\n\nPossible causes:\n• Server connection issue\n• Database error\n• Quiz access permissions\n\n✅ Solution: Please refresh and try again. Contact support if issue persists.';
+      setError(errorMsg);
       updateUiState({ showModal: false });
+      toast?.error('Failed to create battle');
       return;
     }
 
@@ -357,7 +365,19 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
           quizId: quizData.selected.id,
           userId: currentUser.id
         });
-        setError('Failed to create battle room. Please try again.');
+        
+        // Detailed error message based on Firebase error code
+        let errorMsg = '❌ Firebase Battle Room Error\n\n';
+        if (firebaseError.code === 'PERMISSION_DENIED' || firebaseError.message?.includes('permission')) {
+          errorMsg += 'Error: Permission Denied\n\n⚠️ Firebase security rules are blocking this action.\n\n✅ Solution: Contact support immediately.\n\nTechnical Details:\n• Error Code: PERMISSION_DENIED\n• This is a server configuration issue';
+        } else if (firebaseError.message?.includes('network') || firebaseError.message?.includes('offline')) {
+          errorMsg += 'Error: Network Connection Lost\n\n⚠️ Cannot connect to Firebase servers.\n\n✅ Solution:\n• Check your internet connection\n• Try again in a moment\n• Refresh the page if problem persists';
+        } else {
+          errorMsg += `Error: ${firebaseError.message || 'Unknown Firebase error'}\n\n⚠️ Game PIN: ${gamePin}\n⚠️ Error Code: ${firebaseError.code || 'N/A'}\n\n✅ Solution:\n• Try refreshing the page\n• Contact support with the Game PIN above`;
+        }
+        
+        setError(errorMsg);
+        toast?.error('Failed to create battle room');
         // Optionally clean up the MySQL battle if Firebase fails
         // You might want to add a rollback API call here
       }
