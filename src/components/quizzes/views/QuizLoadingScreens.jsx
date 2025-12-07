@@ -685,17 +685,17 @@ export const BattleLobbyScreen = ({
                       )}
                     </div>
 
-                    {/* Subtle Ready Checkmark */}
+                    {/* Subtle Ready Checkmark - Fixed Position */}
                     {player.isReady && (
-                      <div className="absolute top-0 right-0 w-5 h-5 md:w-6 md:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                      <div className="absolute -top-1 -right-1 w-5 h-5 md:w-6 md:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
                         <span className="text-white text-[10px] md:text-xs font-bold">✓</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Username Label - Minimal */}
-                  <div className="mt-2 bg-white bg-opacity-80 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">
-                    <div className="font-semibold text-gray-800 text-xs md:text-sm whitespace-nowrap">
+                  {/* Username Label - Enhanced with Indigo Brand Color */}
+                  <div className="mt-2 bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-1.5 rounded-full shadow-lg border border-indigo-400">
+                    <div className="font-bold text-white text-xs md:text-sm whitespace-nowrap tracking-wide">
                       {player.name}
                     </div>
                   </div>
