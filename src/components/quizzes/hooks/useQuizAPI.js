@@ -161,9 +161,10 @@ export function useQuizAPI(quizDataHook, toast) {
         existingQuestions = currentQuizResponse.data.questions;
       }
 
-      const existingByOrder = new Map();
+      const existingById = new Map();
       existingQuestions.forEach(q => {
-        existingByOrder.set(q.question_order, q);
+        const questionId = q.question_id || q.questionId;
+        existingById.set(questionId, q);
       });
 
       const processedIds = new Set();
@@ -202,12 +203,16 @@ export function useQuizAPI(quizDataHook, toast) {
           difficulty: question.difficulty || 'medium'
         };
 
-        const existingQuestion = existingByOrder.get(newOrder);
+        // Match by question_id to update the correct database record
+        const questionId = question.id;
+        const existingQuestion = existingById.get(questionId);
         
         if (existingQuestion) {
-          await quizApi.updateQuestion(quizId, existingQuestion.question_id, questionData);
-          processedIds.add(existingQuestion.question_id);
+          // Update existing question with new order
+          await quizApi.updateQuestion(quizId, existingQuestion.question_id || existingQuestion.questionId, questionData);
+          processedIds.add(existingQuestion.question_id || existingQuestion.questionId);
         } else {
+          // New question - create it
           await quizApi.addQuestion(quizId, questionData);
         }
       }

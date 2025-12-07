@@ -349,7 +349,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                         canUseAdaptive ? 'text-gray-600' : 'text-gray-500'
                       }`}>
                         {canUseAdaptive 
-                          ? 'Gets harder or easier based on your answers'
+                          ? 'Gets harder or easier based on your performance'
                           : 'Requires questions with different difficulty levels'
                         }
                       </p>
