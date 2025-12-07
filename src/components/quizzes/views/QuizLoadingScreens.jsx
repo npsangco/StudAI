@@ -573,18 +573,45 @@ export const BattleLobbyScreen = ({
 
         const radius = PLAYER_RADIUS;
         const minDist = radius * 2;
-        const wallRestitution = 0.75; // Coefficient of restitution for walls (0-1, lower = less bouncy)
-        const playerRestitution = 0.85; // Coefficient of restitution between players
-        const friction = 0.992; // Air resistance (closer to 1 = less friction)
+        const wallRestitution = 0.8; // Coefficient of restitution for walls (0-1, lower = less bouncy)
+        const playerRestitution = 0.9; // Coefficient of restitution between players
+        const friction = 0.995; // Air resistance (closer to 1 = less friction, keeps them moving longer)
         const separationForce = 1.1; // Force to push overlapping players apart
+        const minSpeed = 0.35; // Minimum "walking" speed to keep players moving
+        const boostChance = 0.015; // 1.5% chance per frame to get a random direction change
 
         // Copy positions
         const newPositions = prev.map(pos => ({ ...pos }));
 
-        // 1. Apply friction (air resistance)
+        // 1. Apply friction (air resistance) but maintain minimum speed
         for (let i = 0; i < newPositions.length; i++) {
           newPositions[i].vx *= friction;
           newPositions[i].vy *= friction;
+          
+          // Calculate current speed
+          const speed = Math.sqrt(newPositions[i].vx ** 2 + newPositions[i].vy ** 2);
+          
+          // If too slow, boost to minimum speed in current direction or random
+          if (speed < minSpeed) {
+            if (speed > 0.01) {
+              // Maintain current direction but boost to min speed
+              const ratio = minSpeed / speed;
+              newPositions[i].vx *= ratio;
+              newPositions[i].vy *= ratio;
+            } else {
+              // Give random direction if nearly stopped
+              const angle = Math.random() * Math.PI * 2;
+              newPositions[i].vx = Math.cos(angle) * minSpeed;
+              newPositions[i].vy = Math.sin(angle) * minSpeed;
+            }
+          }
+          
+          // Random occasional boost for variety (like changing direction while walking)
+          if (Math.random() < boostChance) {
+            const angle = Math.random() * Math.PI * 2;
+            newPositions[i].vx += Math.cos(angle) * 0.4;
+            newPositions[i].vy += Math.sin(angle) * 0.4;
+          }
         }
 
         // 2. Detect and handle player-to-player collisions with realistic physics
@@ -680,8 +707,8 @@ export const BattleLobbyScreen = ({
           newPositions[i].x = Math.max(radius, Math.min(100 - radius, newPositions[i].x));
           newPositions[i].y = Math.max(10 + radius, Math.min(85 - radius, newPositions[i].y));
           
-          // Cap maximum velocity to prevent extreme speeds
-          const maxSpeed = 2.0;
+          // Cap maximum velocity to prevent extreme speeds (but allow faster than walking)
+          const maxSpeed = 1.5;
           const speed = Math.sqrt(newPositions[i].vx ** 2 + newPositions[i].vy ** 2);
           if (speed > maxSpeed) {
             newPositions[i].vx = (newPositions[i].vx / speed) * maxSpeed;
@@ -785,7 +812,7 @@ export const BattleLobbyScreen = ({
                   animationDelay: `${index * 0.1}s`
                 }}
               >
-                <div className="text-center pointer-events-auto transition-transform duration-300 hover:scale-110">
+                <div className="flex flex-col items-center pointer-events-auto transition-transform duration-300 hover:scale-110">
                   {/* Avatar Circle with Energy Rings */}
                   <div className="relative w-16 h-16 md:w-20 md:h-20">
                     {/* Energy Rings for Ready Players */}
@@ -829,10 +856,10 @@ export const BattleLobbyScreen = ({
                   </div>
 
                   {/* Username Label - Yellow Primary + Centered */}
-                  <div className="mt-2 bg-gradient-to-r from-yellow-400 to-amber-500 px-4 py-1.5 rounded-full shadow-lg border-2 border-yellow-300">
-                    <div className="font-black text-gray-900 text-xs md:text-sm whitespace-nowrap tracking-wide text-center">
+                  <div className="mt-2 bg-gradient-to-r from-yellow-400 to-amber-500 px-4 py-1.5 rounded-full shadow-lg border-2 border-yellow-300 text-center">
+                    <span className="font-black text-gray-900 text-xs md:text-sm whitespace-nowrap tracking-wide">
                       {player.name}
-                    </div>
+                    </span>
                   </div>
                 </div>
               </div>
