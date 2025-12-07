@@ -36,7 +36,51 @@ export function checkAnswer(question, answer) {
         console.error('Missing answer for fill-in-the-blanks question:', question);
         return false;
       }
-      return String(answer).toLowerCase().trim() === String(question.answer).toLowerCase().trim();
+      
+      // Parse answer field - support both old string format and new JSON format
+      let primaryAnswer = '';
+      let alternativeAnswers = [];
+      let caseSensitive = false;
+
+      try {
+        if (typeof question.answer === 'string' && (question.answer.trim().startsWith('{') || question.answer.trim().startsWith('['))) {
+          const parsed = JSON.parse(question.answer);
+          if (parsed && typeof parsed === 'object' && 'primary' in parsed) {
+            // New JSON format: { primary: "...", alternatives: [...], caseSensitive: true/false }
+            primaryAnswer = parsed.primary || '';
+            alternativeAnswers = Array.isArray(parsed.alternatives) ? parsed.alternatives : [];
+            caseSensitive = parsed.caseSensitive || false;
+          } else {
+            // Old string format
+            primaryAnswer = question.answer;
+          }
+        } else {
+          // Old string format
+          primaryAnswer = question.answer;
+        }
+      } catch (e) {
+        // If parsing fails, treat as old string format
+        primaryAnswer = question.answer;
+      }
+
+      // Prepare user answer
+      const userAnswer = String(answer).trim();
+      
+      // Filter out empty alternatives
+      alternativeAnswers = alternativeAnswers.filter(alt => alt && String(alt).trim() !== '');
+      
+      // Create array of all valid answers (primary + alternatives)
+      const allValidAnswers = [primaryAnswer.trim(), ...alternativeAnswers.map(alt => String(alt).trim())];
+      
+      // Check if user answer matches any valid answer
+      if (caseSensitive) {
+        // Case-sensitive comparison
+        return allValidAnswers.some(validAnswer => userAnswer === validAnswer);
+      } else {
+        // Case-insensitive comparison (default - backwards compatible)
+        const userAnswerLower = userAnswer.toLowerCase();
+        return allValidAnswers.some(validAnswer => userAnswerLower === validAnswer.toLowerCase());
+      }
 
     case QUESTION_TYPES.MATCHING:
       if (!Array.isArray(answer) || answer.length === 0) return false;

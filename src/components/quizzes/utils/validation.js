@@ -69,6 +69,53 @@ export function validateQuestion(question, index) {
       // Check if answer exists
       if (!question.answer || !question.answer.trim()) {
         errors.push(`Question ${questionNumber}: Answer is required for fill-in-the-blanks`);
+        break;
+      }
+      
+      // Parse answer field - support both old string format and new JSON format
+      try {
+        let primaryAnswer = question.answer;
+        let alternatives = [];
+        let caseSensitive = false;
+
+        if (typeof question.answer === 'string' && (question.answer.trim().startsWith('{') || question.answer.trim().startsWith('['))) {
+          const parsed = JSON.parse(question.answer);
+          if (parsed && typeof parsed === 'object' && 'primary' in parsed) {
+            primaryAnswer = parsed.primary || '';
+            alternatives = Array.isArray(parsed.alternatives) ? parsed.alternatives : [];
+            caseSensitive = parsed.caseSensitive || false;
+          }
+        }
+
+        // Validate primary answer
+        if (!primaryAnswer || !primaryAnswer.trim()) {
+          errors.push(`Question ${questionNumber}: Primary answer is required for fill-in-the-blanks`);
+        }
+        
+        // Validate alternative answers if they exist
+        if (alternatives.length > 0) {
+          const emptyAlternatives = alternatives.filter(alt => !alt || !String(alt).trim());
+          if (emptyAlternatives.length > 0) {
+            errors.push(`Question ${questionNumber}: Alternative answers cannot be empty. Please remove empty alternatives or fill them in.`);
+          }
+          
+          // Check for duplicate answers (including primary)
+          if (primaryAnswer && primaryAnswer.trim()) {
+            const allAnswers = [primaryAnswer.trim(), ...alternatives.filter(alt => alt && String(alt).trim())];
+            
+            // Create normalized set for duplicate checking
+            const normalizedAnswers = caseSensitive 
+              ? allAnswers 
+              : allAnswers.map(ans => String(ans).toLowerCase());
+            
+            const uniqueAnswers = new Set(normalizedAnswers);
+            if (uniqueAnswers.size < allAnswers.length) {
+              errors.push(`Question ${questionNumber}: Duplicate answers detected. ${caseSensitive ? 'Remove duplicate answers.' : 'Remove duplicate answers (case-insensitive check).'}`);
+            }
+          }
+        }
+      } catch (e) {
+        // If parsing fails, it's old format - already validated above
       }
       break;
 

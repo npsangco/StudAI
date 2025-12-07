@@ -358,7 +358,66 @@ const QuestionBankItem = ({ question, isSelected, onToggle, getDifficultyColor, 
                 <p className="text-sm text-gray-700">{question.correct_answer}</p>
               )}
               {question.type === 'Fill in the blanks' && (
-                <p className="text-sm text-gray-700">{question.answer}</p>
+                <div className="space-y-2">
+                  {(() => {
+                    // Parse answer field - support both old string format and new JSON format
+                    let primaryAnswer = question.answer || '';
+                    let alternatives = [];
+                    let caseSensitive = false;
+
+                    try {
+                      if (typeof question.answer === 'string' && (question.answer.trim().startsWith('{') || question.answer.trim().startsWith('['))) {
+                        const parsed = JSON.parse(question.answer);
+                        if (parsed && typeof parsed === 'object' && 'primary' in parsed) {
+                          primaryAnswer = parsed.primary || '';
+                          alternatives = Array.isArray(parsed.alternatives) ? parsed.alternatives : [];
+                          caseSensitive = parsed.caseSensitive || false;
+                        }
+                      }
+                    } catch (e) {
+                      // If parsing fails, use as is
+                    }
+
+                    return (
+                      <>
+                        <div>
+                          <span className="text-xs font-semibold text-gray-500">Primary:</span>
+                          <p className="text-sm text-gray-700 font-medium">{primaryAnswer}</p>
+                        </div>
+                        
+                        {/* Show case sensitivity */}
+                        <div className="flex items-center gap-1.5 text-xs">
+                          {caseSensitive ? (
+                            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                              Case Sensitive
+                            </span>
+                          ) : (
+                            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                              Case Insensitive
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Show alternative answers if they exist */}
+                        {alternatives.length > 0 && (
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500">Alternatives:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {alternatives.map((alt, idx) => (
+                                <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                                  {alt}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
               )}
               {question.type === 'True/False' && (
                 <p className="text-sm text-gray-700">{question.correct_answer}</p>

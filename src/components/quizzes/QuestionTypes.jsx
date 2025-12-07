@@ -129,17 +129,172 @@ export const MultipleChoiceQuestion = ({ question, onUpdateQuestion, onUpdateCho
 };
 
 // Fill in the Blanks Question Component
-export const FillInBlanksQuestion = ({ question, onUpdateQuestion }) => (
-  <div className="mt-3">
-    <input
-      type="text"
-      value={question.answer || ''}
-      onChange={(e) => onUpdateQuestion(question.id, 'answer', e.target.value)}
-      className="w-full px-2 sm:px-3 py-2 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-      placeholder="Correct answer"
-    />
-  </div>
-);
+export const FillInBlanksQuestion = ({ question, onUpdateQuestion }) => {
+  // Parse answer field - support both old string format and new JSON format
+  let primaryAnswer = '';
+  let alternativeAnswers = [];
+  let caseSensitive = false;
+
+  try {
+    if (question.answer) {
+      // Try to parse as JSON
+      if (typeof question.answer === 'string' && (question.answer.trim().startsWith('{') || question.answer.trim().startsWith('['))) {
+        const parsed = JSON.parse(question.answer);
+        if (parsed && typeof parsed === 'object' && 'primary' in parsed) {
+          // New JSON format
+          primaryAnswer = parsed.primary || '';
+          alternativeAnswers = Array.isArray(parsed.alternatives) ? parsed.alternatives : [];
+          caseSensitive = parsed.caseSensitive || false;
+        } else {
+          // Old string format
+          primaryAnswer = question.answer;
+        }
+      } else {
+        // Old string format
+        primaryAnswer = question.answer;
+      }
+    }
+  } catch (e) {
+    // If parsing fails, treat as old string format
+    primaryAnswer = question.answer || '';
+  }
+
+  const handleUpdatePrimaryAnswer = (value) => {
+    // Build JSON object to store in answer field
+    const answerData = {
+      primary: value,
+      alternatives: alternativeAnswers,
+      caseSensitive: caseSensitive
+    };
+    onUpdateQuestion(question.id, 'answer', JSON.stringify(answerData));
+  };
+
+  const handleAddAlternative = () => {
+    const newAlternatives = [...alternativeAnswers, ''];
+    const answerData = {
+      primary: primaryAnswer,
+      alternatives: newAlternatives,
+      caseSensitive: caseSensitive
+    };
+    onUpdateQuestion(question.id, 'answer', JSON.stringify(answerData));
+  };
+
+  const handleUpdateAlternative = (index, value) => {
+    const newAlternatives = [...alternativeAnswers];
+    newAlternatives[index] = value;
+    const answerData = {
+      primary: primaryAnswer,
+      alternatives: newAlternatives,
+      caseSensitive: caseSensitive
+    };
+    onUpdateQuestion(question.id, 'answer', JSON.stringify(answerData));
+  };
+
+  const handleRemoveAlternative = (index) => {
+    const newAlternatives = alternativeAnswers.filter((_, i) => i !== index);
+    const answerData = {
+      primary: primaryAnswer,
+      alternatives: newAlternatives,
+      caseSensitive: caseSensitive
+    };
+    onUpdateQuestion(question.id, 'answer', JSON.stringify(answerData));
+  };
+
+  const handleToggleCaseSensitive = () => {
+    const answerData = {
+      primary: primaryAnswer,
+      alternatives: alternativeAnswers,
+      caseSensitive: !caseSensitive
+    };
+    onUpdateQuestion(question.id, 'answer', JSON.stringify(answerData));
+  };
+
+  return (
+    <div className="mt-3 space-y-3">
+      {/* Primary Answer */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+          Primary Correct Answer <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={primaryAnswer}
+          onChange={(e) => handleUpdatePrimaryAnswer(e.target.value)}
+          className="w-full px-2 sm:px-3 py-2 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+          placeholder="Enter the main correct answer"
+        />
+      </div>
+
+      {/* Case Sensitivity Toggle */}
+      <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+        <input
+          type="checkbox"
+          id={`case-sensitive-${question.id}`}
+          checked={caseSensitive}
+          onChange={handleToggleCaseSensitive}
+          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+        />
+        <label 
+          htmlFor={`case-sensitive-${question.id}`}
+          className="text-xs sm:text-sm text-gray-700 cursor-pointer select-none flex items-center gap-1"
+        >
+          <span className="font-medium">Case Sensitive</span>
+          <span className="text-gray-500">(e.g., "USA" ≠ "usa")</span>
+        </label>
+      </div>
+
+      {/* Alternative Answers Section */}
+      <div className="border-t pt-3">
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-xs font-semibold text-gray-700">
+            Alternative Correct Answers
+            <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+          </label>
+          <button
+            type="button"
+            onClick={handleAddAlternative}
+            className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex items-center gap-1"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Alternative
+          </button>
+        </div>
+
+        {alternativeAnswers.length > 0 ? (
+          <div className="space-y-2">
+            {alternativeAnswers.map((alt, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={alt}
+                  onChange={(e) => handleUpdateAlternative(index, e.target.value)}
+                  className="flex-1 px-2 sm:px-3 py-2 border border-gray-200 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                  placeholder={`Alternative answer ${index + 1}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAlternative(index)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded transition-colors"
+                  title="Remove alternative"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
+            No alternative answers yet. Add alternatives to accept multiple correct answers (e.g., "USA", "United States", "U.S.A.")
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // True/False Question Component
 export const TrueFalseQuestion = ({ question, onUpdateQuestion }) => (
