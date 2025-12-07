@@ -420,15 +420,12 @@ function QuizzesPage() {
 
   // Loading screens
   if (quizDataHook.uiState.currentView === VIEWS.LOADING || quizDataHook.uiState.currentView === VIEWS.LOADING_BATTLE) {
-    const rawQuestions = quizDataHook.questions || [];
-    const isSoloMode = quizDataHook.uiState.currentView === VIEWS.LOADING;
-    const adaptiveCheck = isSoloMode ? canUseAdaptiveMode(rawQuestions) : { enabled: false };
-
     return (
       <SoloLoadingScreen
         countdown={countdown.countdown}
         quizTitle={quizDataHook.quizData.selected?.title}
-        isAdaptiveMode={adaptiveCheck.enabled}
+        quizMode={quizDataHook.quizData.selected?.quizMode || 'casual'}
+        timerPerQuestion={quizDataHook.quizData.selected?.timer_per_question || 30}
       />
     );
   }

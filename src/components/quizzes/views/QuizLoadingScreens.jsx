@@ -165,7 +165,7 @@ const FloatingBubblesPattern = () => {
 };
 
 // Solo Loading Screen Component
-export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false }) => {
+export const SoloLoadingScreen = ({ countdown, quizTitle, quizMode = 'casual', timerPerQuestion = 30 }) => {
   const proTips = [
     "💪 Read each question carefully!",
     "🎯 Trust your first instinct!",
@@ -175,6 +175,9 @@ export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false
   ];
 
   const [randomTip] = useState(() => proTips[Math.floor(Math.random() * proTips.length)]);
+  
+  // Determine if quiz is timed (not infinite)
+  const isTimed = timerPerQuestion > 0;
 
   // Memoize particle positions to prevent flickering on countdown changes
   const [particles] = useState(() =>
@@ -238,29 +241,41 @@ export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false
           {/* Mode Badge */}
           <div className="mb-8 flex justify-center">
             <div className={`backdrop-blur-xl border-2 rounded-2xl px-6 py-3 shadow-2xl ${
-              isAdaptiveMode
-                ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-orange-400'
+              quizMode === 'adaptive'
+                ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-indigo-400'
+                : quizMode === 'casual'
+                ? 'bg-gradient-to-r from-yellow-400/20 to-amber-500/20 border-yellow-400'
                 : 'bg-white/60 border-white'
             }`}>
               <div className="flex items-center gap-3">
-                {isAdaptiveMode ? (
+                {quizMode === 'adaptive' ? (
                   <>
-                    <svg className="w-6 h-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                     <div className="text-left">
-                      <div className="text-orange-700 font-bold text-sm">ADAPTIVE MODE</div>
-                      <div className="text-orange-600/80 text-xs">Difficulty adjusts to your performance</div>
+                      <div className="text-indigo-700 font-bold text-sm">ADAPTIVE MODE</div>
+                      <div className="text-indigo-600/80 text-xs">Difficulty adjusts to your performance</div>
+                    </div>
+                  </>
+                ) : quizMode === 'casual' ? (
+                  <>
+                    <svg className="w-6 h-6 text-yellow-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <div className="text-left">
+                      <div className="text-yellow-700 font-bold text-sm">CASUAL MODE</div>
+                      <div className="text-yellow-600/80 text-xs">Questions in random order</div>
                     </div>
                   </>
                 ) : (
                   <>
                     <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                     <div className="text-left">
-                      <div className="text-gray-900 font-bold text-sm">CLASSIC MODE</div>
-                      <div className="text-gray-700 text-xs">All questions in original order</div>
+                      <div className="text-gray-900 font-bold text-sm">NORMAL MODE</div>
+                      <div className="text-gray-700 text-xs">Questions in original order</div>
                     </div>
                   </>
                 )}
@@ -303,9 +318,13 @@ export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false
           <div className="flex justify-center gap-6 mb-8">
             <div className="backdrop-blur-lg bg-white/60 border-2 border-white/70 rounded-xl p-4 flex flex-col items-center gap-2 shadow-lg">
               <svg className="w-8 h-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                {isTimed ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                )}
               </svg>
-              <span className="text-gray-700 text-xs font-semibold">Timed</span>
+              <span className="text-gray-700 text-xs font-semibold">{isTimed ? 'Timed' : 'Untimed'}</span>
             </div>
             <div className="backdrop-blur-lg bg-white/60 border-2 border-white/70 rounded-xl p-4 flex flex-col items-center gap-2 shadow-lg">
               <svg className="w-8 h-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -313,14 +332,6 @@ export const SoloLoadingScreen = ({ countdown, quizTitle, isAdaptiveMode = false
               </svg>
               <span className="text-gray-700 text-xs font-semibold">Score</span>
             </div>
-            {isAdaptiveMode && (
-              <div className="backdrop-blur-lg bg-orange-100 border-2 border-orange-300 rounded-xl p-4 flex flex-col items-center gap-2 shadow-lg">
-                <svg className="w-8 h-8 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-                <span className="text-orange-700 text-xs font-semibold">Adaptive</span>
-              </div>
-            )}
           </div>
 
           {/* Pro Tip */}
