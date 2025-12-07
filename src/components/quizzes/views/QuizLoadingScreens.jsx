@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Users } from 'lucide-react';
+import { Loader2, Users, Check, Copy, Clock, Rocket, Sparkles } from 'lucide-react';
 import { PHYSICS_UPDATE_INTERVAL, PLAYER_RADIUS } from '../utils/constants';
 import { DefaultQuizPattern } from '../utils/QuizPatterns';
 
@@ -612,7 +612,11 @@ export const BattleLobbyScreen = ({
                           className="p-1 md:p-1.5 bg-amber-100 hover:bg-amber-200 rounded-md transition-all hover:scale-110 active:scale-95"
                           title="Copy PIN"
                         >
-                          <span className="text-xs md:text-sm">{copySuccess ? '✓' : '📋'}</span>
+                          {copySuccess ? (
+                            <Check className="w-3 h-3 md:w-4 md:h-4 text-green-600" />
+                          ) : (
+                            <Copy className="w-3 h-3 md:w-4 md:h-4 text-amber-700" />
+                          )}
                         </button>
                       </div>
                     </>
@@ -639,8 +643,9 @@ export const BattleLobbyScreen = ({
             {/* Lobby countdown banner (only show for host when alone) */}
             {isHost && totalPlayers === 1 && (
               <div className="mt-3 text-center animate-slide-up">
-                <div className="inline-block bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-2 rounded-full text-sm font-semibold shadow-md">
-                  ⏳ Lobby closes in: {Math.floor(lobbyCountdown / 60)}:{(lobbyCountdown % 60).toString().padStart(2, '0')}
+                <div className="inline-flex items-center gap-2 bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-2 rounded-full text-sm font-semibold shadow-md">
+                  <Clock className="w-4 h-4" />
+                  <span>Lobby closes in: {Math.floor(lobbyCountdown / 60)}:{(lobbyCountdown % 60).toString().padStart(2, '0')}</span>
                 </div>
                 <p className="text-white text-xs mt-1">Waiting for players to join...</p>
               </div>
@@ -666,9 +671,9 @@ export const BattleLobbyScreen = ({
               >
                 <div className="text-center pointer-events-auto">
                   {/* Avatar Circle */}
-                  <div className="relative">
+                  <div className="relative w-16 h-16 md:w-20 md:h-20">
                     <div
-                      className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-white font-bold text-xl md:text-2xl shadow-lg border-3 transition-all overflow-hidden ${
+                      className={`w-full h-full rounded-full flex items-center justify-center text-white font-bold text-xl md:text-2xl shadow-lg border-3 transition-all overflow-hidden ${
                         player.isReady
                           ? 'bg-gradient-to-br from-green-400 to-green-500 border-green-400 animate-pulse-glow'
                           : 'bg-gradient-to-br from-blue-400 to-blue-500 border-blue-400'
@@ -720,16 +725,17 @@ export const BattleLobbyScreen = ({
                   return !isHostReady ? (
                     <button
                       onClick={onUserReady}
-                      className="px-10 md:px-14 py-4 md:py-4.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-full font-bold text-lg md:text-xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg hover:shadow-2xl hover:shadow-indigo-500/30 hover:scale-105 active:scale-100 border-2 border-indigo-400"
+                      className="inline-flex items-center gap-2 px-10 md:px-14 py-4 md:py-4.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-full font-bold text-lg md:text-xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg hover:shadow-2xl hover:shadow-indigo-500/30 hover:scale-105 active:scale-100 border-2 border-indigo-400"
                     >
-                      ✨ Ready Up
+                      <Check className="w-5 h-5" />
+                      <span>Ready Up</span>
                     </button>
                   ) : (
                     <button
                       onClick={onUserUnready}
                       className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:from-green-600 hover:to-green-700 hover:scale-105 active:scale-100 transition-all border-2 border-green-400"
                     >
-                      <span className="text-xl">✓</span>
+                      <Check className="w-5 h-5" />
                       <span>Ready (Click to unready)</span>
                     </button>
                   );
@@ -739,7 +745,7 @@ export const BattleLobbyScreen = ({
                 <button
                   onClick={onStartBattle}
                   disabled={totalPlayers < 2 || !allReady}
-                  className={`px-8 md:px-12 py-3.5 md:py-4 rounded-full font-bold text-base md:text-lg transition-all shadow-lg ${
+                  className={`inline-flex items-center gap-2 px-8 md:px-12 py-3.5 md:py-4 rounded-full font-bold text-base md:text-lg transition-all shadow-lg ${
                     totalPlayers >= 2 && allReady
                       ? 'bg-green-500 text-white hover:bg-green-600 hover:shadow-xl hover:scale-105 active:scale-100'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -749,7 +755,12 @@ export const BattleLobbyScreen = ({
                     ? 'Waiting for players...'
                     : !allReady
                     ? `Waiting for ${totalPlayers - readyPlayers} player${totalPlayers - readyPlayers !== 1 ? 's' : ''}...`
-                    : '🚀 Start Battle'
+                    : (
+                      <>
+                        <Rocket className="w-5 h-5" />
+                        <span>Start Battle</span>
+                      </>
+                    )
                   }
                 </button>
               </>
@@ -765,9 +776,10 @@ export const BattleLobbyScreen = ({
                   return !isUserReady ? (
                     <button
                       onClick={onUserReady}
-                      className="px-10 md:px-14 py-4 md:py-4.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-full font-bold text-lg md:text-xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg hover:shadow-2xl hover:shadow-indigo-500/30 hover:scale-105 active:scale-100 border-2 border-indigo-400"
+                      className="inline-flex items-center gap-2 px-10 md:px-14 py-4 md:py-4.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-full font-bold text-lg md:text-xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg hover:shadow-2xl hover:shadow-indigo-500/30 hover:scale-105 active:scale-100 border-2 border-indigo-400"
                     >
-                      ✨ Ready Up
+                      <Check className="w-5 h-5" />
+                      <span>Ready Up</span>
                     </button>
                   ) : (
                     <div className="space-y-3">
@@ -775,7 +787,7 @@ export const BattleLobbyScreen = ({
                         onClick={onUserUnready}
                         className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:from-green-600 hover:to-green-700 hover:scale-105 active:scale-100 transition-all border-2 border-green-400"
                       >
-                        <span className="text-xl">✓</span>
+                        <Check className="w-5 h-5" />
                         <span>Ready (Click to unready)</span>
                       </button>
 
@@ -788,7 +800,7 @@ export const BattleLobbyScreen = ({
 
                       {readyPlayers === totalPlayers && totalPlayers > 1 && (
                         <div className="inline-flex items-center gap-2.5 px-6 md:px-8 py-2.5 md:py-3 bg-amber-500 text-white rounded-full font-bold text-sm md:text-base shadow-lg animate-pulse">
-                          <span className="text-lg">⏳</span>
+                          <Clock className="w-4 h-4 md:w-5 md:h-5" />
                           <span>Waiting for host to start...</span>
                         </div>
                       )}
