@@ -146,8 +146,11 @@ export const plansApi = {
   // Update a plan
   update: (id, planData) => api.put(`/plans/${id}`, planData),
   
-  // Delete a plan
-  delete: (id) => api.delete(`/plans/${id}`),
+  // Mark plan as completed 
+  complete: (id) => api.delete(`/plans/${id}`),
+  
+  // Delete a plan 
+  delete: (id) => api.delete(`/plans/remove/${id}`),
   
   // Get plans by date range
   getByRange: (startDate, endDate) => 

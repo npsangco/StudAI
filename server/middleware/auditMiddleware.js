@@ -23,10 +23,13 @@ const actionMap = {
     "POST /api/plans": { action: "Create Plan", target: "Plan" },
     "POST /api/plans/": { action: "Create Plan", target: "Plan" },
     "PUT /api/plans/:id": { action: "Update Plan", target: "Plan" },
-    "DELETE /api/plans/:id": { action: "Delete Plan", target: "Plan" },
+    "DELETE /api/plans/:id": { action: "Complete Plan", target: "Plan" },
+    "DELETE /api/plans/remove/:id": { action: "Delete Plan", target: "Plan" },
 
     // QUIZZES
     "POST /api/quizzes": { action: "Create Quiz", target: "Quiz" },
+    "POST /api/quizzes/generate-from-notes": { action: "Generate Quiz from Notes", target: "Quiz" },
+    "POST /api/quizzes/import": { action: "Import Quiz", target: "Quiz" },
     "PUT /api/quizzes/:id": { action: "Update Quiz", target: "Quiz" },
     "DELETE /api/quizzes/:id": { action: "Delete Quiz", target: "Quiz" },
 
@@ -35,16 +38,19 @@ const actionMap = {
     "PUT /api/quizzes/:id/questions/:questionId": { action: "Update Question", target: "Quiz Question" },
     "DELETE /api/quizzes/:id/questions/:questionId": { action: "Delete Question", target: "Quiz Question" },
 
+    // QUESTION BANK
+    "POST /api/question-bank/insert": { action: "Insert Questions from Bank", target: "Quiz Question" },
+
     // QUIZ ATTEMPTS
     "POST /api/quizzes/:id/attempt": { action: "Attempt Quiz", target: "Quiz Attempt" },
 
     // QUIZ BATTLES
     "POST /api/quizzes/:id/battle/create": { action: "Create Quiz Battle", target: "Quiz Battle" },
     "POST /api/quizzes/battle/join": { action: "Join Quiz Battle", target: "Quiz Battle" },
-    "POST /api/quizzes/battle/:gamePin/ready": { action: "Mark Ready in Battle", target: "Quiz Battle" },
     "POST /api/quizzes/battle/:gamePin/start": { action: "Start Quiz Battle", target: "Quiz Battle" },
     "POST /api/quizzes/battle/:gamePin/submit": { action: "Submit Battle Score", target: "Quiz Battle" },
     "POST /api/quizzes/battle/:gamePin/end": { action: "End Quiz Battle", target: "Quiz Battle" },
+    "POST /api/quizzes/battle/:gamePin/sync-results": { action: "Sync Battle Results", target: "Quiz Battle" },
 
     // PET SYSTEM
     "POST /api/pet": { action: "Adopt Pet", target: "Pet" },
@@ -76,9 +82,10 @@ const actionMap = {
 
     // STUDY SESSIONS (Jitsi)
     "POST /api/jitsi/sessions": { action: "Create Study Session", target: "Study Session" },
+    "POST /api/jitsi/sessions/:id/verify": { action: "Verify Session Password", target: "Study Session" },
     "DELETE /api/jitsi/sessions/:id": { action: "Delete Study Session", target: "Study Session" },
     "PATCH /api/jitsi/sessions/:id/status": { action: "Update Session Status", target: "Study Session" },
-    "POST /api/jitsi/sessions/:id/join": { action: "Join Study Session", target: "Study Session" },
+
 
     // AUTHENTICATION
     "POST /api/auth/signup": { action: "Sign Up", target: "User" },
@@ -112,10 +119,12 @@ export async function auditMiddleware(req, res, next) {
                     req.params?.questionId || 
                     req.params?.sessionId || 
                     req.params?.gamePin || 
+                    req.params?.session_id ||
                     req.body?.id || 
                     req.body?.note_id ||
                     req.body?.quiz_id ||
                     req.body?.file_id ||
+                    req.body?.game_pin ||
                     null;
 
                 await AuditLog.create({

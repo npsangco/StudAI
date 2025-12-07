@@ -557,4 +557,30 @@ router.get('/date/:date', requireAuth, async (req, res) => {
   }
 });
 
+// delete plan route
+router.delete('/remove/:id', requireAuth, async (req, res) => {
+  try {
+    const planId = req.params.id;
+    const userId = req.session.userId;
+
+    const plan = await Plan.findOne({
+      where: { 
+        planner_id: planId,
+        user_id: userId 
+      }
+    });
+
+    if (!plan) {
+      return res.status(404).json({ error: 'Plan not found' });
+    }
+
+    await plan.destroy();
+
+    res.json({ message: 'Plan deleted successfully' });
+  } catch (err) {
+    console.error('Failed to delete plan:', err);
+    res.status(500).json({ error: 'Failed to delete plan' });
+  }
+});
+
 export default router;
