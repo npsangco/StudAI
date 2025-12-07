@@ -101,7 +101,6 @@ router.post("/users/:userId/lock", async (req, res) => {
             await sendAccountStatusEmail(user.email, user.username, "locked", reason || "No reason provided");
         } catch (emailError) {
             console.error("Failed to send lock notification email:", emailError);
-            // Continue even if email fails
         }
 
         res.json({ message: "User locked successfully" });

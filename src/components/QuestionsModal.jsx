@@ -177,18 +177,15 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                         return <span className="text-gray-500 italic">No answer available</span>;
                     }
 
-                    // Try to parse the answer if it's a JSON string
                     let answerData = rawAnswer;
                     if (typeof rawAnswer === 'string') {
                         try {
                             answerData = JSON.parse(rawAnswer);
                         } catch (e) {
-                            // If it's not JSON, treat it as a simple string answer
                             return <span className="font-medium text-blue-900">{rawAnswer}</span>;
                         }
                     }
 
-                    // If it's an object with primary and alternatives
                     if (answerData && typeof answerData === 'object' && answerData.primary) {
                         const primary = answerData.primary;
                         const alternatives = answerData.alternatives || [];
@@ -225,7 +222,6 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                         );
                     }
 
-                    // Fallback for simple string answers
                     return <span className="font-medium text-blue-900">{String(answerData)}</span>;
                 };
 
