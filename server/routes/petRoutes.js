@@ -117,9 +117,14 @@ async function applyStatDecay(pet) {
     hunger_level: Math.max(0, Math.min(100, pet.hunger_level - hungerDecay)),
     happiness_level: Math.max(0, Math.min(100, pet.happiness_level - happinessDecay)),
     cleanliness_level: Math.max(0, Math.min(100, pet.cleanliness_level - cleanlinessDecay)),
-    energy_level: Math.max(0, Math.min(100, pet.energy_level + energyReplenish)),
-    last_updated: now
+    energy_level: Math.max(0, Math.min(100, pet.energy_level + energyReplenish))
   };
+  
+  // Only update last_updated if there was actual decay or regeneration
+  // This prevents database writes on every page reload when nothing changed
+  if (hungerDecay > 0 || happinessDecay > 0 || cleanlinessDecay > 0 || energyReplenish > 0) {
+    updatedStats.last_updated = now;
+  }
   
   // Reset timestamp only when stat first hits zero (prevents continuous decay)
   if (updatedStats.hunger_level === 0 && pet.hunger_level > 0) {
