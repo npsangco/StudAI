@@ -289,9 +289,11 @@ export function useQuizAPI(quizDataHook, toast) {
    */
   const createBattle = async (quizId) => {
     try {
+      console.log('🎮 API - createBattle called for quiz:', quizId);
       setLoading(true);
       
       const response = await quizApi.createBattle(quizId);
+      console.log('✅ API - createBattle response:', response.data);
       const { battle, gamePin } = response.data;
 
       updateGameState({ 
@@ -302,7 +304,9 @@ export function useQuizAPI(quizDataHook, toast) {
       
       return { battle, gamePin };
     } catch (err) {
-
+      console.error('🚨 API - createBattle error:', err);
+      console.error('🚨 Error response:', err.response?.data);
+      console.error('🚨 Error status:', err.response?.status);
       setError(err.response?.data?.error || 'Error creating battle');
       return null;
     } finally {

@@ -178,10 +178,24 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   };
 
   const handleQuizBattle = async (requestedQuestionCount, quizMode = 'casual') => {
+    console.log('🎮 handleQuizBattle called:', { 
+      quizId: quizData.selected.id,
+      quizTitle: quizData.selected.title,
+      requestedQuestionCount,
+      quizMode 
+    });
+
     // Load questions
     const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
+    console.log('📊 Loaded quiz data:', {
+      hasData: !!data,
+      hasQuestions: !!data?.questions,
+      questionCount: data?.questions?.length,
+      isArray: Array.isArray(data?.questions)
+    });
 
     if (!data || !data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
+      console.error('❌ No questions found');
       setError('This quiz has no questions yet. Please add at least 10 questions before starting a battle.');
       updateUiState({ showModal: false });
       toast?.error('Cannot start battle: No questions available');
@@ -190,24 +204,30 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
 
     // Check minimum question count requirement
     if (data.questions.length < 10) {
+      console.error('❌ Not enough questions:', data.questions.length);
       setError(`This quiz needs at least 10 questions to start a battle. Current count: ${data.questions.length}`);
       updateUiState({ showModal: false });
       toast?.error(`Add ${10 - data.questions.length} more question(s) to start a battle`);
       return;
     }
 
+    console.log('✅ Passed question count check');
+
     // Shuffle and limit questions based on user selection
     let questionsToUse = [...data.questions];
 
     // 🔒 SAFETY: Filter out any invalid questions
+    console.log('🔍 Filtering invalid questions from', questionsToUse.length, 'questions');
     questionsToUse = questionsToUse.filter(q =>
       q &&
       q.question &&
       q.type &&
       q.question.trim() !== ''
     );
+    console.log('✅ After filtering:', questionsToUse.length, 'valid questions');
 
     if (questionsToUse.length === 0) {
+      console.error('❌ No valid questions after filtering');
       setError('This quiz has no valid questions. Please check your questions.');
       updateUiState({ showModal: false });
       toast?.error('Cannot start battle: No valid questions found');
@@ -215,7 +235,10 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     }
 
     // PRE-FLIGHT VALIDATION: Check for errors before starting battle
+    console.log('🔍 Running validation on', questionsToUse.length, 'questions');
     const validation = validateAllQuestions(questionsToUse);
+    console.log('📋 Validation result:', validation);
+
     if (!validation.isValid) {
       console.error('🚨 QUIZ VALIDATION FAILED (Battle):', {
         quizId: quizData.selected.id,
@@ -230,6 +253,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       toast?.error('Cannot start battle: Validation errors found');
       return;
     }
+
+    console.log('✅ Passed validation check');
 
     // MODE-SPECIFIC QUESTION SELECTION FOR BATTLE
     if (quizMode === 'normal') {
@@ -258,23 +283,34 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     setQuestions(questionsToUse);
 
     // 1️⃣ Create battle in MySQL (existing API call)
+    console.log('🎮 Creating battle in MySQL for quiz:', quizData.selected.id);
     const battleData = await quizAPI.createBattle(quizData.selected.id);
 
-    if (battleData) {
-      const { battle, gamePin } = battleData;
+    if (!battleData) {
+      console.error('🚨 Failed to create battle in MySQL - no battle data returned');
+      setError('Failed to create battle. Please try again.');
+      updateUiState({ showModal: false });
+      return;
+    }
 
-      // 2️⃣ Create battle room in Firebase
-      try {
-        await createBattleRoom(gamePin, {
+    console.log('✅ Battle created in MySQL:', battleData);
+    const { battle, gamePin } = battleData;
+
+    // 2️⃣ Create battle room in Firebase
+    console.log('🔥 Creating battle room in Firebase with PIN:', gamePin);
+    try {
+      await createBattleRoom(gamePin, {
           battleId: battle.battle_id,
           quizId: quizData.selected.id,
           quizTitle: quizData.selected.title,
           hostId: currentUser.id,
           totalQuestions: questionsToUse.length
         });
+      console.log('✅ Battle room created in Firebase');
 
-        // 3️⃣ Add host as first player
-        // Convert relative profile picture path to full URL
+      // 3️⃣ Add host as first player
+      console.log('👤 Adding host as first player:', currentUser.id);
+      // Convert relative profile picture path to full URL
         let profilePictureUrl = null;
         if (currentUser.profile_picture) {
           profilePictureUrl = currentUser.profile_picture.startsWith('http') || currentUser.profile_picture.startsWith('/')
@@ -288,29 +324,43 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
           initial: currentUser.initial,
           profilePicture: profilePictureUrl
         });
+      console.log('✅ Host added to battle');
         
-        // Set game state for host
-        updateGameState({
-          gamePin: gamePin,
-          battleId: battle.battle_id,
-          isHost: true,
-          currentUserId: currentUser.id
-        });
+      // Set game state for host
+      updateGameState({
+        gamePin: gamePin,
+        battleId: battle.battle_id,
+        isHost: true,
+        currentUserId: currentUser.id
+      });
+      console.log('✅ Game state updated');
 
-        // 4️⃣ Store questions in Firebase
-        // Store the FILTERED questions (questionsToUse), not all questions (data.questions)
-        await storeQuizQuestions(gamePin, questionsToUse);
+      // 4️⃣ Store questions in Firebase
+      console.log('📝 Storing', questionsToUse.length, 'questions in Firebase');
+      // Store the FILTERED questions (questionsToUse), not all questions (data.questions)
+      await storeQuizQuestions(gamePin, questionsToUse);
+      console.log('✅ Questions stored in Firebase');
         
-        // Host should manually click "Ready Up" button like other players
+      // Host should manually click "Ready Up" button like other players
 
-        // Continue...
-        updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
+      // Continue...
+      console.log('🎉 Battle setup complete! Opening lobby...');
+      updateUiState({ showModal: false, currentView: VIEWS.LOBBY });
 
       } catch (firebaseError) {
-
+        console.error('🚨 Firebase Error creating battle room:', firebaseError);
+        console.error('🚨 Error details:', {
+          message: firebaseError.message,
+          code: firebaseError.code,
+          stack: firebaseError.stack,
+          gamePin,
+          quizId: quizData.selected.id,
+          userId: currentUser.id
+        });
         setError('Failed to create battle room. Please try again.');
+        // Optionally clean up the MySQL battle if Firebase fails
+        // You might want to add a rollback API call here
       }
-    }
   };
 
   const handleJoinSuccess = async (battle, participant) => {

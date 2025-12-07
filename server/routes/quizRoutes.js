@@ -1675,8 +1675,17 @@ router.post('/:id/battle/create', requireAuth, async (req, res) => {
       gamePin 
     });
   } catch (err) {
-    console.error('Γ¥î Create battle error:', err);
-    res.status(500).json({ error: 'Failed to create battle' });
+    console.error('🚨 Create battle error:', err);
+    console.error('🚨 Error details:', {
+      message: err.message,
+      stack: err.stack,
+      quizId: req.params.id,
+      userId: req.session.userId
+    });
+    res.status(500).json({ 
+      error: 'Failed to create battle',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 

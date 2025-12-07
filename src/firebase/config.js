@@ -1,6 +1,6 @@
 // src/firebase/config.js
 import { initializeApp } from 'firebase/app';
-import { getDatabase } from 'firebase/database';
+import { getDatabase, ref, onValue } from 'firebase/database';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -23,4 +23,14 @@ export const realtimeDb = getDatabase(app);
 export const isFirebaseConnected = () => {
   return realtimeDb && realtimeDb.app;
 };
+
+// Monitor Firebase connection status
+const connectedRef = ref(realtimeDb, '.info/connected');
+onValue(connectedRef, (snapshot) => {
+  if (snapshot.val() === true) {
+    console.log('✅ Firebase Realtime Database: Connected');
+  } else {
+    console.warn('⚠️ Firebase Realtime Database: Disconnected');
+  }
+});
 
