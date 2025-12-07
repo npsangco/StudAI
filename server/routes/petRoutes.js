@@ -118,6 +118,7 @@ async function applyStatDecay(pet) {
     happiness_level: Math.max(0, Math.min(100, pet.happiness_level - happinessDecay)),
     cleanliness_level: Math.max(0, Math.min(100, pet.cleanliness_level - cleanlinessDecay)),
     energy_level: Math.max(0, Math.min(100, pet.energy_level + energyReplenish)),
+    last_updated: now
   };
   
   // Reset timestamp only when stat first hits zero (prevents continuous decay)
@@ -129,10 +130,6 @@ async function applyStatDecay(pet) {
   }
   if (updatedStats.cleanliness_level === 0 && pet.cleanliness_level > 0) {
     updatedStats.last_cleaned = now;
-  }
-  
-  if (energyReplenish > 0) {
-    updatedStats.last_updated = now;
   }
 
   // Pet loses XP when neglected (all stats at zero)
