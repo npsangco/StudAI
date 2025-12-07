@@ -56,6 +56,74 @@ const styles = `
     }
   }
 
+  @keyframes bounceIn {
+    0% {
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 0;
+    }
+    50% {
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+    70% {
+      transform: translate(-50%, -50%) scale(0.9);
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes chargeUp {
+    0% {
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.3),
+                  0 0 40px rgba(34, 197, 94, 0.2),
+                  inset 0 0 20px rgba(34, 197, 94, 0.1);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow: 0 0 40px rgba(34, 197, 94, 0.6),
+                  0 0 80px rgba(34, 197, 94, 0.4),
+                  inset 0 0 30px rgba(34, 197, 94, 0.3);
+      transform: scale(1.05);
+    }
+    100% {
+      box-shadow: 0 0 30px rgba(34, 197, 94, 0.5),
+                  0 0 60px rgba(34, 197, 94, 0.3),
+                  inset 0 0 25px rgba(34, 197, 94, 0.2);
+      transform: scale(1);
+    }
+  }
+
+  @keyframes energyPulse {
+    0%, 100% {
+      opacity: 0.5;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.3);
+    }
+  }
+
+  @keyframes popupFade {
+    0% {
+      transform: translateY(0) scale(0.5);
+      opacity: 0;
+    }
+    20% {
+      transform: translateY(-10px) scale(1.2);
+      opacity: 1;
+    }
+    80% {
+      transform: translateY(-30px) scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-50px) scale(0.8);
+      opacity: 0;
+    }
+  }
+
   @keyframes floatUp {
     0% {
       transform: translateY(100vh) translateX(0) scale(0);
@@ -77,12 +145,28 @@ const styles = `
     animation: fadeIn 0.5s ease-out;
   }
 
+  .animate-bounce-in {
+    animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
 
   .animate-pulse-glow {
     animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .animate-charge-up {
+    animation: chargeUp 1.5s ease-in-out infinite;
+  }
+
+  .animate-energy-pulse {
+    animation: energyPulse 1s ease-in-out infinite;
+  }
+
+  .animate-popup-fade {
+    animation: popupFade 1.5s ease-out forwards;
   }
 
   .animate-slide-up {
@@ -656,21 +740,36 @@ export const BattleLobbyScreen = ({
             return (
               <div
                 key={player.id}
-                className="absolute animate-fade-in"
+                className="absolute animate-bounce-in"
                 style={{
                   left: `${pos.x}%`,
                   top: `${pos.y}%`,
                   transform: 'translate(-50%, -50%)',
-                  transition: 'left 0.05s linear, top 0.05s linear'
+                  transition: 'left 0.05s linear, top 0.05s linear',
+                  animationDelay: `${index * 0.1}s`
                 }}
               >
-                <div className="text-center pointer-events-auto">
-                  {/* Avatar Circle */}
+                <div className="text-center pointer-events-auto transition-transform duration-300 hover:scale-110">
+                  {/* Avatar Circle with Energy Rings */}
                   <div className="relative w-16 h-16 md:w-20 md:h-20">
+                    {/* Energy Rings for Ready Players */}
+                    {player.isReady && (
+                      <>
+                        <div className="absolute inset-0 rounded-full border-4 border-green-400 opacity-60 animate-energy-pulse" style={{ animationDelay: '0s' }}></div>
+                        <div className="absolute inset-0 rounded-full border-4 border-green-300 opacity-40 animate-energy-pulse" style={{ animationDelay: '0.3s' }}></div>
+                        <div className="absolute inset-0 rounded-full border-4 border-green-200 opacity-20 animate-energy-pulse" style={{ animationDelay: '0.6s' }}></div>
+                        
+                        {/* Sparkle particles */}
+                        <div className="absolute -top-2 -right-2 w-2 h-2 bg-yellow-300 rounded-full animate-popup-fade"></div>
+                        <div className="absolute -top-1 -left-2 w-1.5 h-1.5 bg-yellow-400 rounded-full animate-popup-fade" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="absolute -bottom-2 -right-1 w-1 h-1 bg-green-300 rounded-full animate-popup-fade" style={{ animationDelay: '0.4s' }}></div>
+                      </>
+                    )}
+
                     <div
-                      className={`w-full h-full rounded-full flex items-center justify-center text-white font-bold text-xl md:text-2xl shadow-lg border-3 transition-all overflow-hidden ${
+                      className={`w-full h-full rounded-full flex items-center justify-center text-white font-bold text-xl md:text-2xl shadow-lg border-3 transition-all overflow-hidden relative z-10 ${
                         player.isReady
-                          ? 'bg-gradient-to-br from-green-400 to-green-500 border-green-400 animate-pulse-glow'
+                          ? 'bg-gradient-to-br from-green-400 to-green-500 border-green-400 animate-charge-up'
                           : 'bg-gradient-to-br from-blue-400 to-blue-500 border-blue-400'
                       }`}
                     >
@@ -687,7 +786,7 @@ export const BattleLobbyScreen = ({
 
                     {/* Subtle Ready Checkmark - Badge Style Overlap */}
                     {player.isReady && (
-                      <div className="absolute -top-0.5 -right-0.5 w-5 h-5 md:w-6 md:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg z-10">
+                      <div className="absolute -top-0.5 -right-0.5 w-5 h-5 md:w-6 md:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg z-20 animate-bounce-in">
                         <span className="text-white text-[10px] md:text-xs font-bold">✓</span>
                       </div>
                     )}
