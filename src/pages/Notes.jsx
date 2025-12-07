@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Share2, Trash2, Copy, Search, Filter, Clock, FileText,
          MessageCircle, Edit3, ExternalLink, Pin, PinOff, FolderPlus,
          Tag, Wifi, WifiOff, RefreshCw, FileDown, X, Check, Brain,
-         Archive, ArchiveRestore, Inbox } from 'lucide-react';
+         Archive, ArchiveRestore, Inbox, AlertCircle, BookOpen } from 'lucide-react';
 import { notesService } from '../utils/syncService';
 import { cacheSingleNote } from '../utils/indexedDB';
 import NoteEditor from '../components/NoteEditor';
@@ -75,6 +75,12 @@ const Notes = () => {
   const { confirmState, confirm, closeConfirm } = useConfirm();
   const { showTutorial, completeTutorial, skipTutorial, startTutorial } = useTutorial('notes');
   const [initialLoading, setInitialLoading] = useState(true);
+  
+  // Academic Integrity states
+  const [showAcademicIntegrityModal, setShowAcademicIntegrityModal] = useState(false);
+  const [academicIntegrityChecked, setAcademicIntegrityChecked] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null); // 'share' or 'retrieve'
+  const [pendingNoteId, setPendingNoteId] = useState(null);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -377,6 +383,13 @@ const Notes = () => {
   };
 
   const shareNote = async (id) => {
+    // Show academic integrity modal first
+    setPendingAction('share');
+    setPendingNoteId(id);
+    setShowAcademicIntegrityModal(true);
+  };
+
+  const executePendingShare = async (id) => {
     try {
       const response = await notesApi.share(id);
 
@@ -427,6 +440,14 @@ const Notes = () => {
       return;
     }
 
+    // Show academic integrity modal first
+    setPendingAction('retrieve');
+    setShowAcademicIntegrityModal(true);
+  };
+
+  const executePendingRetrieve = async () => {
+    const code = shareLink.trim().toUpperCase();
+    
     try {
       await sharedNotesApi.retrieve(code);
       
@@ -1411,6 +1432,216 @@ const Notes = () => {
           }}
           toast={toast}
         />
+      )}
+
+      {/* Academic Integrity Modal */}
+      {showAcademicIntegrityModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div 
+            className="bg-white rounded-lg max-w-3xl w-full my-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-lg">
+              <div className="flex items-center gap-3">
+                <BookOpen className="w-8 h-8" />
+                <div>
+                  <h2 className="text-2xl font-bold">Academic Integrity Guidelines</h2>
+                  <p className="text-blue-100 text-sm mt-1">Please read carefully before sharing or using shared notes</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+              {/* What are Shared Notes Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-blue-600" />
+                  What are Shared Notes?
+                </h3>
+                <p className="text-gray-700 leading-relaxed">
+                  Shared Notes allow you to <strong>share your study materials with classmates</strong> using a unique 6-character code. 
+                  When you share a note, others can retrieve and add it to their own collection. This feature is designed to 
+                  facilitate <strong>collaborative learning and study group cooperation</strong>.
+                </p>
+              </div>
+
+              {/* Academic Integrity Principles */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-blue-600" />
+                  Academic Integrity Principles
+                </h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-1">1.</span>
+                    <span><strong>Proper Attribution:</strong> Always acknowledge when you use shared notes from others in your work</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-1">2.</span>
+                    <span><strong>Original Work:</strong> Use shared notes as study aids, not as a substitute for your own work</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-1">3.</span>
+                    <span><strong>Collaboration vs. Copying:</strong> Collaborate on understanding, but produce your own unique submissions</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-1">4.</span>
+                    <span><strong>Respect Copyright:</strong> Only share materials you created or have permission to distribute</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-1">5.</span>
+                    <span><strong>Exam Integrity:</strong> Do not share or use shared notes during exams unless explicitly permitted</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Responsible Use Guidelines */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-yellow-600" />
+                  Responsible Use Guidelines
+                </h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600">•</span>
+                    <span><strong>Understand, Don't Memorize:</strong> Use shared notes to enhance your understanding, not just copy information</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600">•</span>
+                    <span><strong>Verify Information:</strong> Cross-check shared notes with course materials and other reliable sources</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600">•</span>
+                    <span><strong>Give Credit:</strong> If you use someone's shared notes significantly, acknowledge them in your work</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600">•</span>
+                    <span><strong>Know Your Policies:</strong> Check your instructor's and institution's policies on collaborative study materials</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-yellow-600">•</span>
+                    <span><strong>Quality Control:</strong> Ensure the accuracy of notes before sharing them with others</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Warning Section */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  Academic Misconduct Warning
+                </h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600">•</span>
+                    <span><strong>Plagiarism:</strong> Submitting shared notes as your own original work is plagiarism and a serious violation</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600">•</span>
+                    <span><strong>Consequences:</strong> Academic dishonesty can result in failing grades, disciplinary action, or expulsion</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600">•</span>
+                    <span><strong>Your Responsibility:</strong> You are accountable for how you use shared materials in your academic work</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600">•</span>
+                    <span><strong>Honor Code:</strong> Follow your institution's academic honor code and integrity policies at all times</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Your Commitments Section */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Your Commitments</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>I will use shared notes ethically and in accordance with academic integrity policies</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>I will properly attribute and credit sources when using shared materials</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>I will not submit shared notes as my own original work without proper attribution</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>I will verify that my use of shared notes complies with my course and institutional policies</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>I understand that academic misconduct has serious consequences</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Consent Checkbox */}
+              <div className="bg-white border-2 border-blue-500 rounded-lg p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={academicIntegrityChecked}
+                    onChange={(e) => setAcademicIntegrityChecked(e.target.checked)}
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1 flex-shrink-0"
+                  />
+                  <span className="text-gray-900 font-medium">
+                    I understand and agree that:
+                    <ul className="mt-2 space-y-1 text-sm font-normal text-gray-700">
+                      <li>• I will use shared notes responsibly and ethically</li>
+                      <li>• I will follow all academic integrity policies when using shared materials</li>
+                      <li>• I am responsible for ensuring proper attribution in my work</li>
+                      <li>• I understand the consequences of academic misconduct</li>
+                      <li>• I have read and understand the guidelines above</li>
+                    </ul>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="border-t p-6 bg-gray-50 rounded-b-lg flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAcademicIntegrityModal(false);
+                  setAcademicIntegrityChecked(false);
+                  setPendingAction(null);
+                  setPendingNoteId(null);
+                }}
+                className="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-md hover:bg-gray-300 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (academicIntegrityChecked) {
+                    setShowAcademicIntegrityModal(false);
+                    if (pendingAction === 'share' && pendingNoteId) {
+                      executePendingShare(pendingNoteId);
+                    } else if (pendingAction === 'retrieve') {
+                      executePendingRetrieve();
+                    }
+                    setAcademicIntegrityChecked(false);
+                    setPendingAction(null);
+                    setPendingNoteId(null);
+                  }
+                }}
+                disabled={!academicIntegrityChecked}
+                className={`flex-1 py-3 px-6 rounded-md transition-colors font-medium ${
+                  academicIntegrityChecked
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                I Understand & Continue
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Tutorial Button */}

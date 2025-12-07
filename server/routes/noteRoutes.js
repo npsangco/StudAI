@@ -708,10 +708,17 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
         share_code: shareCode.toUpperCase(),
         isActive: true
       },
-      include: [{
-        model: Note,
-        as: 'sharedNote'
-      }]
+      include: [
+        {
+          model: Note,
+          as: 'sharedNote'
+        },
+        {
+          model: User,
+          as: 'sharer',
+          attributes: ['user_id', 'username', 'email']
+        }
+      ]
     });
 
     if (!sharedNote) {
@@ -719,6 +726,7 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
     }
 
     const originalNote = sharedNote.sharedNote;
+    const sharer = sharedNote.sharer;
 
     const existingNote = await Note.findOne({
       where: {
@@ -732,16 +740,23 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
       return res.status(409).json({ error: 'You already have this shared note' });
     }
 
+    // Add attribution to the content
+    const attributionText = `\n\n---\nShared by: ${sharer.username} (${sharer.email})\nAcademic Integrity Reminder: This note was shared for collaborative learning. Always provide proper attribution and use it ethically in accordance with your institution's academic integrity policies.`;
+
     const newNote = await Note.create({
       user_id: req.session.userId,
       file_id: null,
       category_id: null,
       title: `${originalNote.title} (Shared)`,
-      content: originalNote.content
+      content: originalNote.content + attributionText
     });
 
     const noteWithExtras = formatNoteForFrontend(newNote);
     noteWithExtras.is_shared = true;
+    noteWithExtras.shared_by = {
+      username: sharer.username,
+      email: sharer.email
+    };
 
     res.json({ 
       note: noteWithExtras,
