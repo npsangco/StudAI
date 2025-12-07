@@ -619,17 +619,17 @@ export const BattleLobbyScreen = ({
                   )}
                 </div>
 
-                {/* Center: Title */}
+                {/* Center: Title with Indigo Accent */}
                 <div className="text-center flex-1 hidden md:block">
-                  <h1 className="text-base md:text-lg font-black text-gray-800 tracking-tight">
+                  <h1 className="text-base md:text-lg font-black text-indigo-700 tracking-tight">
                     Battle Lobby
                   </h1>
                 </div>
 
-                {/* Right: Player Count */}
-                <div className="flex items-center gap-1.5 md:gap-2 bg-amber-50 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full">
+                {/* Right: Player Count - Keep Yellow Theme */}
+                <div className="flex items-center gap-1.5 md:gap-2 bg-amber-50 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border border-amber-200">
                   <Users className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-600" />
-                  <span className="font-bold text-gray-800 text-xs md:text-sm">
+                  <span className="font-bold text-amber-700 text-xs md:text-sm">
                     {readyPlayers}/{totalPlayers}
                   </span>
                 </div>
@@ -685,17 +685,17 @@ export const BattleLobbyScreen = ({
                       )}
                     </div>
 
-                    {/* Subtle Ready Checkmark - Fixed Position */}
+                    {/* Subtle Ready Checkmark - Badge Style Overlap */}
                     {player.isReady && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 md:w-6 md:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                      <div className="absolute -top-0.5 -right-0.5 w-5 h-5 md:w-6 md:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg z-10">
                         <span className="text-white text-[10px] md:text-xs font-bold">✓</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Username Label - Enhanced with Indigo Brand Color */}
-                  <div className="mt-2 bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-1.5 rounded-full shadow-lg border border-indigo-400">
-                    <div className="font-bold text-white text-xs md:text-sm whitespace-nowrap tracking-wide">
+                  {/* Username Label - Yellow Primary + Centered */}
+                  <div className="mt-2 bg-gradient-to-r from-yellow-400 to-amber-500 px-4 py-1.5 rounded-full shadow-lg border-2 border-yellow-300">
+                    <div className="font-black text-gray-900 text-xs md:text-sm whitespace-nowrap tracking-wide text-center">
                       {player.name}
                     </div>
                   </div>
@@ -720,14 +720,14 @@ export const BattleLobbyScreen = ({
                   return !isHostReady ? (
                     <button
                       onClick={onUserReady}
-                      className="px-10 md:px-14 py-4 md:py-4.5 bg-blue-500 text-white rounded-full font-bold text-lg md:text-xl hover:bg-blue-600 transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-100"
+                      className="px-10 md:px-14 py-4 md:py-4.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-full font-bold text-lg md:text-xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg hover:shadow-2xl hover:shadow-indigo-500/30 hover:scale-105 active:scale-100 border-2 border-indigo-400"
                     >
-                      Ready Up
+                      ✨ Ready Up
                     </button>
                   ) : (
                     <button
                       onClick={onUserUnready}
-                      className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-green-500 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:bg-green-600 hover:scale-105 active:scale-100 transition-all"
+                      className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:from-green-600 hover:to-green-700 hover:scale-105 active:scale-100 transition-all border-2 border-green-400"
                     >
                       <span className="text-xl">✓</span>
                       <span>Ready (Click to unready)</span>
@@ -765,23 +765,23 @@ export const BattleLobbyScreen = ({
                   return !isUserReady ? (
                     <button
                       onClick={onUserReady}
-                      className="px-10 md:px-14 py-4 md:py-4.5 bg-blue-500 text-white rounded-full font-bold text-lg md:text-xl hover:bg-blue-600 transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-100"
+                      className="px-10 md:px-14 py-4 md:py-4.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-full font-bold text-lg md:text-xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg hover:shadow-2xl hover:shadow-indigo-500/30 hover:scale-105 active:scale-100 border-2 border-indigo-400"
                     >
-                      Ready Up
+                      ✨ Ready Up
                     </button>
                   ) : (
                     <div className="space-y-3">
                       <button
                         onClick={onUserUnready}
-                        className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-green-500 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:bg-green-600 hover:scale-105 active:scale-100 transition-all"
+                        className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:from-green-600 hover:to-green-700 hover:scale-105 active:scale-100 transition-all border-2 border-green-400"
                       >
                         <span className="text-xl">✓</span>
                         <span>Ready (Click to unready)</span>
                       </button>
 
                       {totalPlayers > 1 && readyPlayers < totalPlayers && (
-                        <div className="inline-flex items-center gap-2 px-5 md:px-6 py-2 md:py-2.5 bg-white bg-opacity-90 backdrop-blur-sm text-gray-700 rounded-full font-medium text-sm md:text-base shadow-md">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <div className="inline-flex items-center gap-2 px-5 md:px-6 py-2 md:py-2.5 bg-yellow-50 backdrop-blur-sm text-amber-800 rounded-full font-semibold text-sm md:text-base shadow-md border border-yellow-200">
+                          <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
                           <span>Waiting for {totalPlayers - readyPlayers} more...</span>
                         </div>
                       )}
