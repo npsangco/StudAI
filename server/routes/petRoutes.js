@@ -83,8 +83,13 @@ function calculateDecay(lastActionTime, currentTime, statType) {
     return 0;
   }
   
-  const decayPeriods = Math.floor(minutesElapsed / config.interval);
-  return decayPeriods * config.decay;
+  const totalDecay = (minutesElapsed / config.interval) * config.decay;
+  
+  if (totalDecay > 0) {
+    console.log(`[Pet Decay] ${statType}: ${minutesElapsed.toFixed(1)} min elapsed (${(minutesElapsed / 60).toFixed(1)} hrs), decay: -${totalDecay.toFixed(2)} points`);
+  }
+  
+  return totalDecay;
 }
 
 // Updates pet stats based on time passed - handles decay and energy regeneration
@@ -104,8 +109,7 @@ async function applyStatDecay(pet) {
       console.warn(`[Pet Energy] User ${pet.user_id}: Negative time elapsed: ${minutesElapsed.toFixed(1)} minutes`);
       energyReplenish = 0;
     } else {
-      const replenishPeriods = Math.floor(minutesElapsed / CONFIG.stats.energy.interval);
-      energyReplenish = replenishPeriods * CONFIG.stats.energy.replenish;
+      energyReplenish = (minutesElapsed / CONFIG.stats.energy.interval) * CONFIG.stats.energy.replenish;
     }
   }
 
