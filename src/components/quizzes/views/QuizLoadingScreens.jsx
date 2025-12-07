@@ -589,8 +589,15 @@ export const BattleLobbyScreen = ({
   return (
     <>
       <style>{styles}</style>
-      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 overflow-hidden">
+      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 overflow-hidden relative">
         <DefaultQuizPattern />
+        
+        {/* Subtle Indigo Accent Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-indigo-600/10 pointer-events-none"></div>
+        
+        {/* Floating Orbs for Visual Interest */}
+        <div className="absolute top-20 left-10 w-32 h-32 bg-indigo-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-40 h-40 bg-purple-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
 
         {/* Compact Top Bar */}
         <div className="absolute top-5 left-0 right-0 z-10 px-4 md:px-6 animate-slide-up">
@@ -619,17 +626,17 @@ export const BattleLobbyScreen = ({
                   )}
                 </div>
 
-                {/* Center: Title */}
+                {/* Center: Title with Indigo Accent */}
                 <div className="text-center flex-1 hidden md:block">
-                  <h1 className="text-base md:text-lg font-black text-gray-800 tracking-tight">
+                  <h1 className="text-base md:text-lg font-black bg-gradient-to-r from-indigo-600 to-indigo-800 bg-clip-text text-transparent tracking-tight">
                     Battle Lobby
                   </h1>
                 </div>
 
-                {/* Right: Player Count */}
-                <div className="flex items-center gap-1.5 md:gap-2 bg-amber-50 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full">
-                  <Users className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-600" />
-                  <span className="font-bold text-gray-800 text-xs md:text-sm">
+                {/* Right: Player Count with Indigo Theme */}
+                <div className="flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-indigo-50 to-indigo-100 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border border-indigo-200">
+                  <Users className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-600" />
+                  <span className="font-bold text-indigo-700 text-xs md:text-sm">
                     {readyPlayers}/{totalPlayers}
                   </span>
                 </div>
@@ -687,18 +694,26 @@ export const BattleLobbyScreen = ({
 
                     {/* Subtle Ready Checkmark */}
                     {player.isReady && (
-                      <div className="absolute top-0 right-0 w-5 h-5 md:w-6 md:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                      <div className="absolute -top-1 -right-1 w-5 h-5 md:w-6 md:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
                         <span className="text-white text-[10px] md:text-xs font-bold">✓</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Username Label - Minimal */}
-                  <div className="mt-2 bg-white bg-opacity-80 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">
-                    <div className="font-semibold text-gray-800 text-xs md:text-sm whitespace-nowrap">
+                  {/* Username Label - Enhanced with Indigo Brand Color */}
+                  <div className="mt-2 bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-1.5 rounded-full shadow-lg border border-indigo-400">
+                    <div className="font-bold text-white text-xs md:text-sm whitespace-nowrap tracking-wide">
                       {player.name}
                     </div>
                   </div>
+                  
+                  {/* Player Status Badge */}
+                  {player.isReady && (
+                    <div className="mt-1.5 inline-flex items-center gap-1 bg-green-500 bg-opacity-90 px-2.5 py-0.5 rounded-full">
+                      <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                      <span className="text-white text-[10px] font-semibold tracking-wide">READY</span>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -720,14 +735,14 @@ export const BattleLobbyScreen = ({
                   return !isHostReady ? (
                     <button
                       onClick={onUserReady}
-                      className="px-10 md:px-14 py-4 md:py-4.5 bg-blue-500 text-white rounded-full font-bold text-lg md:text-xl hover:bg-blue-600 transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-100"
+                      className="px-10 md:px-14 py-4 md:py-4.5 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-full font-bold text-lg md:text-xl hover:from-indigo-600 hover:to-indigo-700 transition-all shadow-lg hover:shadow-2xl hover:shadow-indigo-500/50 hover:scale-105 active:scale-100 border-2 border-indigo-300"
                     >
-                      Ready Up
+                      ✨ Ready Up
                     </button>
                   ) : (
                     <button
                       onClick={onUserUnready}
-                      className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-green-500 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:bg-green-600 hover:scale-105 active:scale-100 transition-all"
+                      className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:from-green-600 hover:to-green-700 hover:scale-105 active:scale-100 transition-all border-2 border-green-300"
                     >
                       <span className="text-xl">✓</span>
                       <span>Ready (Click to unready)</span>
@@ -735,20 +750,20 @@ export const BattleLobbyScreen = ({
                   );
                 })()}
 
-                {/* Start Battle Button */}
+                {/* Start Battle Button - Enhanced */}
                 <button
                   onClick={onStartBattle}
                   disabled={totalPlayers < 2 || !allReady}
-                  className={`px-8 md:px-12 py-3.5 md:py-4 rounded-full font-bold text-base md:text-lg transition-all shadow-lg ${
+                  className={`px-8 md:px-12 py-3.5 md:py-4 rounded-full font-bold text-base md:text-lg transition-all shadow-lg border-2 ${
                     totalPlayers >= 2 && allReady
-                      ? 'bg-green-500 text-white hover:bg-green-600 hover:shadow-xl hover:scale-105 active:scale-100'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-2xl hover:shadow-green-500/50 hover:scale-105 active:scale-100 border-green-300 animate-pulse'
+                      : 'bg-gray-200 text-gray-500 cursor-not-allowed border-gray-300'
                   }`}
                 >
                   {totalPlayers < 2
-                    ? 'Waiting for players...'
+                    ? '⏳ Waiting for players...'
                     : !allReady
-                    ? `Waiting for ${totalPlayers - readyPlayers} player${totalPlayers - readyPlayers !== 1 ? 's' : ''}...`
+                    ? `⏳ Waiting for ${totalPlayers - readyPlayers} player${totalPlayers - readyPlayers !== 1 ? 's' : ''}...`
                     : '🚀 Start Battle'
                   }
                 </button>
@@ -765,29 +780,29 @@ export const BattleLobbyScreen = ({
                   return !isUserReady ? (
                     <button
                       onClick={onUserReady}
-                      className="px-10 md:px-14 py-4 md:py-4.5 bg-blue-500 text-white rounded-full font-bold text-lg md:text-xl hover:bg-blue-600 transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-100"
+                      className="px-10 md:px-14 py-4 md:py-4.5 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-full font-bold text-lg md:text-xl hover:from-indigo-600 hover:to-indigo-700 transition-all shadow-lg hover:shadow-2xl hover:shadow-indigo-500/50 hover:scale-105 active:scale-100 border-2 border-indigo-300"
                     >
-                      Ready Up
+                      ✨ Ready Up
                     </button>
                   ) : (
                     <div className="space-y-3">
                       <button
                         onClick={onUserUnready}
-                        className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-green-500 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:bg-green-600 hover:scale-105 active:scale-100 transition-all"
+                        className="inline-flex items-center gap-2.5 px-8 md:px-10 py-3.5 md:py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-bold text-base md:text-lg shadow-lg hover:from-green-600 hover:to-green-700 hover:scale-105 active:scale-100 transition-all border-2 border-green-300"
                       >
                         <span className="text-xl">✓</span>
                         <span>Ready (Click to unready)</span>
                       </button>
 
                       {totalPlayers > 1 && readyPlayers < totalPlayers && (
-                        <div className="inline-flex items-center gap-2 px-5 md:px-6 py-2 md:py-2.5 bg-white bg-opacity-90 backdrop-blur-sm text-gray-700 rounded-full font-medium text-sm md:text-base shadow-md">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <div className="inline-flex items-center gap-2 px-5 md:px-6 py-2 md:py-2.5 bg-indigo-50 backdrop-blur-sm text-indigo-700 rounded-full font-semibold text-sm md:text-base shadow-md border border-indigo-200">
+                          <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
                           <span>Waiting for {totalPlayers - readyPlayers} more...</span>
                         </div>
                       )}
 
                       {readyPlayers === totalPlayers && totalPlayers > 1 && (
-                        <div className="inline-flex items-center gap-2.5 px-6 md:px-8 py-2.5 md:py-3 bg-amber-500 text-white rounded-full font-bold text-sm md:text-base shadow-lg animate-pulse">
+                        <div className="inline-flex items-center gap-2.5 px-6 md:px-8 py-2.5 md:py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full font-bold text-sm md:text-base shadow-lg animate-pulse border-2 border-amber-300">
                           <span className="text-lg">⏳</span>
                           <span>Waiting for host to start...</span>
                         </div>
@@ -798,13 +813,14 @@ export const BattleLobbyScreen = ({
               </>
             )}
 
-            {/* Leave Button - Minimal */}
+            {/* Leave Button - Enhanced with Indigo Theme */}
             <div>
               <button
                 onClick={() => setShowLeaveModal(true)}
-                className="text-gray-600 hover:text-gray-800 font-medium text-sm md:text-base hover:underline transition-all"
+                className="inline-flex items-center gap-2 px-4 py-2 text-indigo-600 hover:text-indigo-800 font-semibold text-sm md:text-base hover:bg-indigo-50 rounded-full transition-all border border-transparent hover:border-indigo-200"
               >
-                Leave Lobby
+                <span>←</span>
+                <span>Leave Lobby</span>
               </button>
             </div>
           </div>
