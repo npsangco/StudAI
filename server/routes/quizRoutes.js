@@ -3011,18 +3011,38 @@ router.post('/import', requireAuth, async (req, res) => {
     console.log(`≡ƒô¥ Copying ${originalQuestions.length} questions...`);
 
     for (const originalQuestion of originalQuestions) {
-      await Question.create({
+      const originalData = originalQuestion.toJSON();
+      
+      let matchingPairs = originalData.matching_pairs;
+      if (typeof matchingPairs === 'string' && matchingPairs) {
+        try {
+          matchingPairs = JSON.parse(matchingPairs);
+        } catch (e) {
+          console.error('Failed to parse matching_pairs:', e);
+          matchingPairs = null;
+        }
+      }
+      
+      const questionData = {
         quiz_id: importedQuiz.quiz_id,
-        type: originalQuestion.type,
-        question: originalQuestion.question,
-        question_order: originalQuestion.question_order,
-        choices: originalQuestion.choices,
-        correct_answer: originalQuestion.correct_answer,
-        answer: originalQuestion.answer,
-        matching_pairs: originalQuestion.matching_pairs,
-        points: originalQuestion.points,
-        difficulty: originalQuestion.difficulty
-      }, { transaction });
+        type: originalData.type,
+        question: originalData.question,
+        question_order: originalData.question_order,
+        choices: originalData.choices,
+        correct_answer: originalData.correct_answer,
+        answer: originalData.answer,
+        matching_pairs: matchingPairs,
+        points: originalData.points || 1,
+        difficulty: originalData.difficulty || 'medium'
+      };
+      
+      if (originalData.type === 'Matching') {
+        console.log(`Copying Matching question #${originalData.question_order}:`);
+        console.log(`  - matching_pairs type: ${typeof matchingPairs}`);
+        console.log(`  - matching_pairs value:`, matchingPairs);
+      }
+      
+      await Question.create(questionData, { transaction });
     }
 
     // Update total_questions count
