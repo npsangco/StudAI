@@ -453,10 +453,36 @@ export const QuizQuestion = ({
               {userAnswer?.includes('_submitted') && !isAnswerCorrect(currentQ, userAnswer.replace('_submitted', '')) && (
                 <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-white/50 -mx-4 -mb-4 px-4 pb-4 rounded-b-xl sm:-mx-5 sm:-mb-5 sm:px-5 sm:pb-5 sm:rounded-b-2xl lg:-mx-6 lg:-mb-6 lg:px-6 lg:pb-6">
                   <p className="text-xs sm:text-sm font-semibold text-white/90 mb-1">Correct Answer:</p>
-                  <p className="text-base sm:text-lg lg:text-xl font-bold text-white break-words" style={{
-                    overflowWrap: 'break-word',
-                    wordWrap: 'break-word'
-                  }}>{currentQ.answer}</p>
+                  {(() => {
+                    // Parse answer if it's JSON format with alternatives
+                    try {
+                      const parsed = JSON.parse(currentQ.answer);
+                      if (parsed.primary !== undefined && parsed.alternatives !== undefined) {
+                        return (
+                          <div className="space-y-2">
+                            <p className="text-base sm:text-lg lg:text-xl font-bold text-white break-words" style={{
+                              overflowWrap: 'break-word',
+                              wordWrap: 'break-word'
+                            }}>{parsed.primary}</p>
+                            {parsed.alternatives.length > 0 && (
+                              <div className="text-xs sm:text-sm text-white/80">
+                                <span className="font-semibold">Also accepts: </span>
+                                {parsed.alternatives.join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                    } catch (e) {
+                      // Not JSON, display as-is
+                    }
+                    return (
+                      <p className="text-base sm:text-lg lg:text-xl font-bold text-white break-words" style={{
+                        overflowWrap: 'break-word',
+                        wordWrap: 'break-word'
+                      }}>{currentQ.answer}</p>
+                    );
+                  })()}
                 </div>
               )}
             </div>

@@ -279,7 +279,12 @@ export const FillInBlanksQuestion = ({ question, onUpdateQuestion }) => {
         <button
           type="button"
           onClick={handleAddAlternative}
-          className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-blue-600 bg-yellow-50 hover:bg-blue-100 border border-yellow-200 hover:border-blue-300 cursor-pointer shadow-sm hover:shadow"
+          disabled={alternativeAnswers.length >= 7}
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all shadow-sm ${
+            alternativeAnswers.length >= 7
+              ? 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed opacity-60'
+              : 'text-blue-600 bg-yellow-50 hover:bg-blue-100 border border-yellow-200 hover:border-blue-300 cursor-pointer hover:shadow'
+          }`}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

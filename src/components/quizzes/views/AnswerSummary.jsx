@@ -101,9 +101,34 @@ const AnswerSummary = ({ answers = [], onClose }) => {
                 {isCorrect ? 'Your Answer:' : 'Correct Answer:'}
               </div>
               <div className="text-sm">
-                <span className="font-medium text-green-600">
-                  {correctAnswer}
-                </span>
+                {(() => {
+                  // Parse answer if it's JSON format with alternatives
+                  try {
+                    const parsed = JSON.parse(correctAnswer);
+                    if (parsed.primary !== undefined && parsed.alternatives !== undefined) {
+                      return (
+                        <div className="space-y-1">
+                          <span className="font-medium text-green-600">
+                            {parsed.primary}
+                          </span>
+                          {parsed.alternatives.length > 0 && (
+                            <div className="text-xs text-gray-600">
+                              <span className="font-semibold">Also accepts: </span>
+                              {parsed.alternatives.join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                  } catch (e) {
+                    // Not JSON, display as-is
+                  }
+                  return (
+                    <span className="font-medium text-green-600">
+                      {correctAnswer}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>

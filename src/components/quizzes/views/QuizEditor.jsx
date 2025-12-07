@@ -346,11 +346,26 @@ const validateFillInBlanks = (question, questionNumber, errors) => {
       message: `Question ${questionNumber}: No answer provided`,
       details: 'Please enter the correct answer'
     });
-  } else if (question.answer.length > TEXT_LIMITS.FILL_ANSWER.maximum) {
+    return;
+  }
+  
+  // Check if answer is JSON format (with alternatives)
+  let primaryAnswer = question.answer;
+  try {
+    const parsed = JSON.parse(question.answer);
+    if (parsed.primary !== undefined) {
+      primaryAnswer = parsed.primary;
+    }
+  } catch (e) {
+    // Not JSON, use the whole answer as primary
+  }
+  
+  // Validate primary answer length only (not the full JSON string)
+  if (primaryAnswer.length > TEXT_LIMITS.FILL_ANSWER.maximum) {
     errors.push({
       questionNumber,
       message: `Question ${questionNumber}: Answer too long`,
-      details: `Answer is ${question.answer.length} characters (max ${TEXT_LIMITS.FILL_ANSWER.maximum})`
+      details: `Answer is ${primaryAnswer.length} characters (max ${TEXT_LIMITS.FILL_ANSWER.maximum})`
     });
   }
 };

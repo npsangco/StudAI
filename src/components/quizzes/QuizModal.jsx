@@ -245,7 +245,10 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                 </div>
               </div>
             </button>
-          ) : (
+          ) : null}
+
+          {/* Solo Mode Selection */}
+          {showModeSelection && !showBattleModeSelection && (
             <>
               {/* Back Button */}
               <button
@@ -272,7 +275,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                   <div className="flex-1 text-left">
                     <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2 text-sm">
                       Normal Mode
-                      <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">Original Order</span>
+                      <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">Original</span>
                     </h3>
                     <p className="text-xs text-gray-600 leading-relaxed">
                       Questions appear in original order
