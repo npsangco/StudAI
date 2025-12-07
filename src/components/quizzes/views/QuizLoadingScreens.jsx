@@ -573,13 +573,21 @@ export const BattleLobbyScreen = ({
 
         const radius = PLAYER_RADIUS;
         const minDist = radius * 2;
-        const wallDamping = 0.92; // Higher = more natural wall bounce
-        const bounceFactor = 0.85; // Higher = more energetic player-to-player bounce
+        const wallRestitution = 0.75; // Coefficient of restitution for walls (0-1, lower = less bouncy)
+        const playerRestitution = 0.85; // Coefficient of restitution between players
+        const friction = 0.992; // Air resistance (closer to 1 = less friction)
+        const separationForce = 1.1; // Force to push overlapping players apart
 
         // Copy positions
         const newPositions = prev.map(pos => ({ ...pos }));
 
-        // 1. Detect and handle player-to-player collisions (more natural bounce)
+        // 1. Apply friction (air resistance)
+        for (let i = 0; i < newPositions.length; i++) {
+          newPositions[i].vx *= friction;
+          newPositions[i].vy *= friction;
+        }
+
+        // 2. Detect and handle player-to-player collisions with realistic physics
         for (let i = 0; i < newPositions.length; i++) {
           for (let j = i + 1; j < newPositions.length; j++) {
             const dx = newPositions[j].x - newPositions[i].x;
@@ -587,7 +595,7 @@ export const BattleLobbyScreen = ({
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist < minDist && dist > 0.001) {
-              // Normalize collision direction
+              // Collision detected - normalize collision direction
               const nx = dx / dist;
               const ny = dy / dist;
 
@@ -596,61 +604,89 @@ export const BattleLobbyScreen = ({
               const dvy = newPositions[j].vy - newPositions[i].vy;
               const relativeVelocity = dvx * nx + dvy * ny;
 
-              // Only apply bounce if moving towards each other
+              // Only apply impulse if moving towards each other
               if (relativeVelocity < 0) {
-                // More natural elastic collision - conserve momentum
-                const impulse = relativeVelocity * bounceFactor;
-                newPositions[i].vx += impulse * nx;
-                newPositions[i].vy += impulse * ny;
-                newPositions[j].vx -= impulse * nx;
-                newPositions[j].vy -= impulse * ny;
+                // Realistic elastic collision with equal mass
+                // Impulse = -(1 + e) * vrel / 2, where e is coefficient of restitution
+                const impulse = -(1 + playerRestitution) * relativeVelocity / 2;
+                
+                // Apply impulse to both players
+                newPositions[i].vx -= impulse * nx;
+                newPositions[i].vy -= impulse * ny;
+                newPositions[j].vx += impulse * nx;
+                newPositions[j].vy += impulse * ny;
               }
 
-              // Push apart overlapping players immediately
+              // Separate overlapping players to prevent sticking
               const overlap = minDist - dist;
-              const pushDistance = (overlap / 2) * 1.05; // Slight extra push
-              newPositions[i].x -= pushDistance * nx;
-              newPositions[i].y -= pushDistance * ny;
-              newPositions[j].x += pushDistance * nx;
-              newPositions[j].y += pushDistance * ny;
+              if (overlap > 0) {
+                const separation = (overlap / 2) * separationForce;
+                newPositions[i].x -= separation * nx;
+                newPositions[i].y -= separation * ny;
+                newPositions[j].x += separation * nx;
+                newPositions[j].y += separation * ny;
+              }
             }
           }
         }
 
-        // 2. Update positions
+        // 3. Update positions based on velocity
         for (let i = 0; i < newPositions.length; i++) {
           newPositions[i].x += newPositions[i].vx;
           newPositions[i].y += newPositions[i].vy;
         }
 
-        // 3. Handle wall collisions with more natural bounce
+        // 4. Handle wall collisions with realistic bounce
         for (let i = 0; i < newPositions.length; i++) {
+          let collided = false;
+          
           // Left wall
           if (newPositions[i].x - radius <= 0) {
             newPositions[i].x = radius;
-            newPositions[i].vx = Math.abs(newPositions[i].vx) * wallDamping;
+            newPositions[i].vx = -newPositions[i].vx * wallRestitution;
+            collided = true;
           }
+          
           // Right wall
           if (newPositions[i].x + radius >= 100) {
             newPositions[i].x = 100 - radius;
-            newPositions[i].vx = -Math.abs(newPositions[i].vx) * wallDamping;
+            newPositions[i].vx = -newPositions[i].vx * wallRestitution;
+            collided = true;
           }
+          
           // Top wall (adjusted for top bar spacing)
           if (newPositions[i].y - radius <= 10) {
             newPositions[i].y = 10 + radius;
-            newPositions[i].vy = Math.abs(newPositions[i].vy) * wallDamping;
+            newPositions[i].vy = -newPositions[i].vy * wallRestitution;
+            collided = true;
           }
+          
           // Bottom wall (adjusted for bottom controls)
           if (newPositions[i].y + radius >= 85) {
             newPositions[i].y = 85 - radius;
-            newPositions[i].vy = -Math.abs(newPositions[i].vy) * wallDamping;
+            newPositions[i].vy = -newPositions[i].vy * wallRestitution;
+            collided = true;
+          }
+
+          // Apply additional friction on wall collision (sliding friction)
+          if (collided) {
+            newPositions[i].vx *= 0.9;
+            newPositions[i].vy *= 0.9;
           }
         }
 
-        // 4. Safety clamp
+        // 5. Safety clamp to ensure positions stay within bounds
         for (let i = 0; i < newPositions.length; i++) {
           newPositions[i].x = Math.max(radius, Math.min(100 - radius, newPositions[i].x));
           newPositions[i].y = Math.max(10 + radius, Math.min(85 - radius, newPositions[i].y));
+          
+          // Cap maximum velocity to prevent extreme speeds
+          const maxSpeed = 2.0;
+          const speed = Math.sqrt(newPositions[i].vx ** 2 + newPositions[i].vy ** 2);
+          if (speed > maxSpeed) {
+            newPositions[i].vx = (newPositions[i].vx / speed) * maxSpeed;
+            newPositions[i].vy = (newPositions[i].vy / speed) * maxSpeed;
+          }
         }
 
         return newPositions;
