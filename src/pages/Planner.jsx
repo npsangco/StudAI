@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, Plus, Info, X, Calendar, Check, Pencil } from "lucide-react";
+import { ChevronLeft, Plus, Info, X, Calendar, Check, Pencil, Trash2 } from "lucide-react";
 import { plannerService } from "../utils/syncService";
 import { petApi } from "../api/api";
 import ToastContainer from "../components/ToastContainer";
@@ -314,6 +314,43 @@ export default function Planner() {
         } catch (err) {
           console.error("Failed to mark task as done:", err);
           toast.error('Failed to update task. Please try again.');
+        }
+      }
+    });
+  };
+
+  // Delete task
+  const deletePlan = async (planner_id) => {
+    if (!planner_id) return;
+    
+    await confirm({
+      title: 'Delete Task',
+      message: 'Are you sure you want to delete this task? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const result = await plannerService.deletePlan(planner_id);
+          
+          if (result.success) {
+            setPlans(prev => prev.filter(p => 
+              (p.planner_id !== planner_id && p.id !== planner_id)
+            ));
+            
+            if (result.queued) {
+              toast.info('📱 Offline: Deletion will sync when back online');
+            } else {
+              toast.success('Task deleted successfully!');
+            }
+          } else {
+            if (result.error) {
+              toast.error(`Error: ${result.error}`);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to delete task:", err);
+          toast.error('Failed to delete task. Please try again.');
         }
       }
     });
@@ -801,6 +838,25 @@ export default function Planner() {
                           >
                             <Pencil className="w-4 h-4" />
                             Edit
+                          </button>
+                          <button
+                            onClick={() => deletePlan(planId)}
+                            disabled={editDisabled}
+                            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-semibold border-2 transition-all w-full sm:w-auto text-sm sm:text-base cursor-pointer ${
+                              editDisabled
+                                ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                : 'bg-white border-red-200 hover:border-red-400 hover:bg-red-50 text-red-600 shadow-md'
+                            }`}
+                            title={
+                              isTemp
+                                ? 'Plan is pending sync. Try again once it is saved online.'
+                                : editingPlanId && editingPlanId !== planId
+                                  ? 'Finish your current edit first.'
+                                  : 'Delete plan'
+                            }
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
                           </button>
                         </div>
                       </>
