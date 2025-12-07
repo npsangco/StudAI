@@ -55,9 +55,10 @@ export const QuestionCard = ({
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
             data-drag-handle="true"
-            className="w-6 h-6 bg-gray-200 rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-gray-300 transition-colors flex-shrink-0 touch-none"
+            className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-gray-300 transition-colors flex-shrink-0 touch-none"
+            title="Drag to reorder question"
           >
-            <span className="text-xs font-bold text-gray-600" style={{ pointerEvents: 'none' }}>⋮⋮</span>
+            <span className="text-sm font-bold text-gray-600" style={{ pointerEvents: 'none' }}>⋮⋮</span>
           </div>
 
           {/* Question Number */}

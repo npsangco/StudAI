@@ -72,7 +72,7 @@ export const QuizBattles = ({ gamePin, setGamePin, onJoinSuccess }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]" data-tutorial="join-battle">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[800px]" data-tutorial="join-battle">
       {/* Header */}
       <div className="flex-shrink-0 p-6 pb-4 border-b border-gray-100">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">

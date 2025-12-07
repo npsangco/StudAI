@@ -269,15 +269,7 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
         </div>
       )}
 
-      {/* Drag Handle - Outside card */}
-      <div className="hidden lg:block absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <GripVertical className={`w-5 h-5 ${isBeingDragged ? 'text-blue-500' : 'text-gray-400'}`} />
-      </div>
-
       <div
-        draggable
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -289,14 +281,28 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
             : showDropIndicator
             ? 'border-2 border-blue-400 shadow-lg'
             : 'hover:shadow-lg'
-        } ${isBeingDragged ? 'cursor-grabbing' : 'cursor-grab'}`}
+        }`}
         style={{
-          touchAction: 'none',
           borderLeftWidth: '4px'
         }}
       >
         {/* Accent Stripe */}
         <div className={`h-full w-1 absolute left-0 top-0 bottom-0 ${accentColor}`}></div>
+
+        {/* Drag Handle - Top Left Inside Card */}
+        <div
+          draggable
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          className={`absolute top-3 left-3 z-20 p-1.5 rounded-lg transition-all group/drag ${
+            isBeingDragged
+              ? 'cursor-grabbing bg-blue-100'
+              : 'cursor-grab hover:bg-gray-100'
+          }`}
+          title="Drag to reorder quiz"
+        >
+          <GripVertical className={`w-5 h-5 ${isBeingDragged ? 'text-blue-500' : 'text-gray-400 group-hover/drag:text-gray-600'}`} />
+        </div>
 
         {/* ERROR BADGE - Shows if quiz has validation errors */}
         {hasErrors && !isEmpty && (
