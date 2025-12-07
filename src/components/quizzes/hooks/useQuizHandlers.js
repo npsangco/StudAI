@@ -120,7 +120,12 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     }
 
     // MODE-SPECIFIC QUESTION SELECTION
-    if (quizMode === 'casual') {
+    if (quizMode === 'normal') {
+      // NORMAL MODE: Keep original order, limit to requested count
+      if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
+        questionsToUse = questionsToUse.slice(0, requestedQuestionCount);
+      }
+    } else if (quizMode === 'casual') {
       // CASUAL MODE: Always shuffle randomly
       questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
       
@@ -172,7 +177,7 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     countdown.start();
   };
 
-  const handleQuizBattle = async (requestedQuestionCount) => {
+  const handleQuizBattle = async (requestedQuestionCount, quizMode = 'casual') => {
     // Load questions
     const data = await quizAPI.loadQuizWithQuestions(quizData.selected.id);
 
@@ -226,12 +231,21 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       return;
     }
 
-    // Always shuffle questions for variety
-    questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
-
-    // Limit to requested question count if specified
-    if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
-      questionsToUse = questionsToUse.slice(0, requestedQuestionCount);
+    // MODE-SPECIFIC QUESTION SELECTION FOR BATTLE
+    if (quizMode === 'normal') {
+      // NORMAL MODE: Keep original order
+      // Just limit to requested count
+      if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
+        questionsToUse = questionsToUse.slice(0, requestedQuestionCount);
+      }
+    } else if (quizMode === 'casual') {
+      // CASUAL MODE: Shuffle questions
+      questionsToUse = questionsToUse.sort(() => Math.random() - 0.5);
+      
+      // Limit to requested question count if specified
+      if (requestedQuestionCount && requestedQuestionCount < questionsToUse.length) {
+        questionsToUse = questionsToUse.slice(0, requestedQuestionCount);
+      }
     }
 
     // Update selected quiz with fresh data including timer_per_question
