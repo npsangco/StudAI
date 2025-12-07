@@ -325,25 +325,37 @@ const QuizItem = ({ quiz, index, draggedIndex, onDragStart, onDragOver, onDrop, 
         <div className="p-6">
           {/* Title Section */}
           <div className="mb-3">
-            <h3
-              onClick={() => isPlayable && onSelect(quiz)}
-              className={`font-semibold text-lg text-gray-900 mb-1 truncate ${
-                !isPlayable ? 'cursor-not-allowed text-gray-400' : 'cursor-pointer hover:text-indigo-600 transition-colors'
-              }`}
-              title={quiz.title}
-            >
-              {quiz.title}
-              {isEmpty && (
-                <span className="ml-2 text-sm text-red-500 font-normal">(Empty)</span>
+            <div className="flex items-center gap-2 mb-1">
+              <h3
+                onClick={() => isPlayable && onSelect(quiz)}
+                className={`font-semibold text-lg text-gray-900 truncate ${
+                  !isPlayable ? 'cursor-not-allowed text-gray-400' : 'cursor-pointer hover:text-indigo-600 transition-colors'
+                }`}
+                title={quiz.title}
+              >
+                {quiz.title}
+                {isEmpty && (
+                  <span className="ml-2 text-sm text-red-500 font-normal">(Empty)</span>
+                )}
+                {!isEmpty && !isPlayable && (
+                  <span className="ml-2 text-sm text-amber-600 font-normal">(Needs {questionsNeeded} more)</span>
+                )}
+              </h3>
+              {quiz.is_ai_generated && (
+                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded border border-indigo-300 flex-shrink-0">
+                  AI
+                </span>
               )}
-              {!isEmpty && !isPlayable && (
-                <span className="ml-2 text-sm text-amber-600 font-normal">(Needs {questionsNeeded} more)</span>
-              )}
-            </h3>
+            </div>
             {isShared && (
               <p className="text-xs text-indigo-600 font-medium flex items-center gap-1">
                 <Share2 className="w-3 h-3" />
                 Shared by {quiz.shared_by_username}
+              </p>
+            )}
+            {quiz.source_note_title && (
+              <p className="text-xs text-gray-500">
+                From: {quiz.source_note_title}
               </p>
             )}
           </div>

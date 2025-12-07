@@ -52,6 +52,11 @@ const Note = sequelize.define('Note', {
   archived_at: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  is_ai_generated: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   }
 }, {
   tableName: 'note',

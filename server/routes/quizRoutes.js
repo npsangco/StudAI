@@ -996,6 +996,8 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
         description: `AI-generated quiz from "${noteTitle}"`,
         created_by: userId,
         is_public: false,
+        is_ai_generated: true,
+        source_note_title: noteTitle,
         timer_per_question: 30,
         total_questions: 0,
         total_attempts: 0,

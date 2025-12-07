@@ -64,6 +64,15 @@ const Quiz = sequelize.define('Quiz', {
     defaultValue: 0.00,
     allowNull: true
   },
+  is_ai_generated: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  source_note_title: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

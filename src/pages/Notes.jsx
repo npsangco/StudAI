@@ -33,6 +33,7 @@ const normalizeNote = (note) => {
     isPinned: note.isPinned ?? (note.is_pinned === true || note.is_pinned === 1),
     isArchived: note.isArchived ?? (note.is_archived === true || note.is_archived === 1),
     archivedAt: note.archivedAt || note.archived_at || null,
+    isAiGenerated: note.isAiGenerated ?? (note.is_ai_generated === true || note.is_ai_generated === 1),
     category,
     categoryId: resolvedCategoryId,
     fileId: note.fileId || note.file_id || null
@@ -625,6 +626,11 @@ const Notes = () => {
               <h3 className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors text-sm sm:text-base truncate">
                 {note.title}
               </h3>
+              {note.isAiGenerated && (
+                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded border border-indigo-300 flex-shrink-0">
+                  AI
+                </span>
+              )}
               {!exportMode && <Edit3 className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />}
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-slate-500 mb-2">
