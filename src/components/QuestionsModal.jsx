@@ -189,7 +189,6 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                     if (answerData && typeof answerData === 'object' && answerData.primary) {
                         const primary = answerData.primary;
                         const alternatives = answerData.alternatives || [];
-                        const caseSensitive = answerData.caseSensitive;
 
                         return (
                             <div className="space-y-2">
@@ -210,12 +209,6 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                                                 <p key={idx} className="text-sm text-blue-800">• {alt}</p>
                                             ))}
                                         </div>
-                                    </div>
-                                )}
-                                
-                                {caseSensitive !== undefined && (
-                                    <div className="text-xs text-blue-600">
-                                        <span className="font-semibold">Case Sensitive:</span> {caseSensitive ? 'Yes' : 'No'}
                                     </div>
                                 )}
                             </div>
