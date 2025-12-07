@@ -593,11 +593,11 @@ export const BattleLobbyScreen = ({
         <DefaultQuizPattern />
         
         {/* Subtle Indigo Accent Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-indigo-600/10 pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-transparent to-indigo-600 pointer-events-none opacity-5"></div>
         
         {/* Floating Orbs for Visual Interest */}
-        <div className="absolute top-20 left-10 w-32 h-32 bg-indigo-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-40 h-40 bg-purple-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-20 left-10 w-32 h-32 bg-indigo-400 rounded-full blur-2xl animate-pulse opacity-20"></div>
+        <div className="absolute bottom-20 right-10 w-40 h-40 bg-purple-400 rounded-full blur-2xl animate-pulse opacity-20" style={{ animationDelay: '1s' }}></div>
 
         {/* Compact Top Bar */}
         <div className="absolute top-5 left-0 right-0 z-10 px-4 md:px-6 animate-slide-up">
@@ -709,7 +709,7 @@ export const BattleLobbyScreen = ({
                   
                   {/* Player Status Badge */}
                   {player.isReady && (
-                    <div className="mt-1.5 inline-flex items-center gap-1 bg-green-500 bg-opacity-90 px-2.5 py-0.5 rounded-full">
+                    <div className="mt-1.5 inline-flex items-center gap-1 bg-green-500 px-2.5 py-0.5 rounded-full opacity-90">
                       <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
                       <span className="text-white text-[10px] font-semibold tracking-wide">READY</span>
                     </div>
