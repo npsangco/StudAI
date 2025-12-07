@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy, FileText } from 'lucide-react';
+import { X, AlertTriangle, Trash2, AlertCircle, User, Users, Zap, Trophy, FileText, Info } from 'lucide-react';
 
 export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) => {
   const totalQuestions = quiz?.questionCount || 10;
@@ -14,6 +14,12 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   const [showModeSelection, setShowModeSelection] = React.useState(false);
   const [showBattleModeSelection, setShowBattleModeSelection] = React.useState(false);
   const [showModesInfoModal, setShowModesInfoModal] = React.useState(false);
+  const [showAdaptiveTooltip, setShowAdaptiveTooltip] = React.useState(false);
+  const [showBattleAdaptiveTooltip, setShowBattleAdaptiveTooltip] = React.useState(false);
+  
+  // Check if adaptive mode is available
+  const canUseAdaptive = quiz?.canUseAdaptive || quiz?.can_use_adaptive || false;
+  const difficultyDistribution = quiz?.difficultyDistribution || quiz?.difficulty_distribution || { easy: 0, medium: 0, hard: 0 };
 
   React.useEffect(() => {
     if (quiz) {
@@ -58,6 +64,11 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   };
 
   const handleModeSelect = (mode) => {
+    // Prevent adaptive mode if not available
+    if (mode === 'adaptive' && !canUseAdaptive) {
+      return;
+    }
+    
     if (mode === 'normal' || mode === 'casual' || mode === 'adaptive') {
       // Ensure valid question count before starting
       const validCount = Math.max(minSelectableQuestions, Math.min(maxSelectableQuestions, questionCount || minSelectableQuestions));
@@ -77,11 +88,31 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   };
 
   const handleBattleModeSelect = (mode) => {
+    // Prevent adaptive mode if not available
+    if (mode === 'adaptive' && !canUseAdaptive) {
+      return;
+    }
+    
     if (mode === 'normal' || mode === 'casual' || mode === 'adaptive') {
       // Ensure valid question count before starting
       const validCount = Math.max(minSelectableQuestions, Math.min(maxSelectableQuestions, questionCount || minSelectableQuestions));
       onQuizBattle(validCount, mode);
     }
+  };
+
+  // Generate tooltip message explaining why adaptive mode is disabled
+  const getAdaptiveDisabledMessage = () => {
+    const { easy = 0, medium = 0, hard = 0 } = difficultyDistribution;
+    const uniqueDifficulties = [easy > 0, medium > 0, hard > 0].filter(Boolean).length;
+    
+    if (uniqueDifficulties < 2) {
+      // All questions have the same difficulty
+      const singleDifficulty = easy > 0 ? 'Easy' : medium > 0 ? 'Medium' : hard > 0 ? 'Hard' : 'Unknown';
+      return `All ${totalQuestions} questions are ${singleDifficulty} difficulty. Adaptive mode needs at least 2 different difficulty levels.`;
+    }
+    
+    // Generic fallback
+    return 'This quiz needs at least 2 different difficulty levels to use Adaptive mode.';
   };
 
   return (
@@ -239,27 +270,73 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
               </button>
 
               {/* Adaptive Mode */}
-              <button
-                onClick={() => handleModeSelect('adaptive')}
-                className="group w-full bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-2 border-purple-200 hover:border-purple-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+              <div className="relative">
+                <button
+                  onClick={() => canUseAdaptive && handleModeSelect('adaptive')}
+                  onMouseEnter={() => !canUseAdaptive && setShowAdaptiveTooltip(true)}
+                  onMouseLeave={() => setShowAdaptiveTooltip(false)}
+                  disabled={!canUseAdaptive}
+                  className={`group w-full rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 border-2 ${
+                    canUseAdaptive
+                      ? 'bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-purple-200 hover:border-purple-400 hover:shadow-lg active:scale-[0.98] cursor-pointer'
+                      : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md ${
+                      canUseAdaptive
+                        ? 'bg-gradient-to-br from-purple-500 to-pink-600'
+                        : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                    }`}>
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                        Adaptive Mode
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                          canUseAdaptive
+                            ? 'bg-purple-200 text-purple-800'
+                            : 'bg-gray-200 text-gray-600'
+                        }`}>
+                          {canUseAdaptive ? 'Smart' : 'Locked'}
+                        </span>
+                        {!canUseAdaptive && (
+                          <Info className="w-4 h-4 text-gray-500" />
+                        )}
+                      </h3>
+                      <p className={`text-[11px] sm:text-xs leading-snug ${
+                        canUseAdaptive ? 'text-gray-600' : 'text-gray-500'
+                      }`}>
+                        {canUseAdaptive 
+                          ? 'Difficulty adjusts based on your performance - personalized learning'
+                          : 'Requires questions with varied difficulty levels'
+                        }
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 text-left">
-                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
-                      Adaptive Mode
-                      <span className="text-[10px] bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-full font-semibold">Smart</span>
-                    </h3>
-                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
-                      Difficulty adjusts based on your performance - personalized learning
-                    </p>
+                </button>
+                
+                {/* Tooltip */}
+                {!canUseAdaptive && showAdaptiveTooltip && (
+                  <div className="absolute left-0 right-0 top-full mt-2 z-50 pointer-events-none animate-fade-in">
+                    <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-2xl border border-gray-700">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold mb-1">Adaptive Mode Unavailable</p>
+                          <p className="text-gray-300 leading-relaxed">
+                            {getAdaptiveDisabledMessage()}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Arrow */}
+                      <div className="absolute -top-2 left-8 w-4 h-4 bg-gray-900 border-l border-t border-gray-700 transform rotate-45"></div>
+                    </div>
                   </div>
-                </div>
-              </button>
+                )}
+              </div>
             </>
           )}
 
@@ -350,27 +427,73 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
               </button>
 
               {/* Adaptive Mode for Battle */}
-              <button
-                onClick={() => handleBattleModeSelect('adaptive')}
-                className="group w-full bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-2 border-purple-200 hover:border-purple-400 rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+              <div className="relative">
+                <button
+                  onClick={() => canUseAdaptive && handleBattleModeSelect('adaptive')}
+                  onMouseEnter={() => !canUseAdaptive && setShowBattleAdaptiveTooltip(true)}
+                  onMouseLeave={() => setShowBattleAdaptiveTooltip(false)}
+                  disabled={!canUseAdaptive}
+                  className={`group w-full rounded-lg sm:rounded-xl p-3.5 sm:p-4 transition-all duration-200 border-2 ${
+                    canUseAdaptive
+                      ? 'bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-purple-200 hover:border-purple-400 hover:shadow-lg active:scale-[0.98] cursor-pointer'
+                      : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md ${
+                      canUseAdaptive
+                        ? 'bg-gradient-to-br from-purple-500 to-pink-600'
+                        : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                    }`}>
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
+                        Adaptive Mode
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                          canUseAdaptive
+                            ? 'bg-purple-200 text-purple-800'
+                            : 'bg-gray-200 text-gray-600'
+                        }`}>
+                          {canUseAdaptive ? 'Smart' : 'Locked'}
+                        </span>
+                        {!canUseAdaptive && (
+                          <Info className="w-4 h-4 text-gray-500" />
+                        )}
+                      </h3>
+                      <p className={`text-[11px] sm:text-xs leading-snug ${
+                        canUseAdaptive ? 'text-gray-600' : 'text-gray-500'
+                      }`}>
+                        {canUseAdaptive 
+                          ? "Each player's difficulty adjusts independently based on performance"
+                          : 'Requires questions with varied difficulty levels'
+                        }
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 text-left">
-                    <h3 className="font-bold text-gray-900 mb-0.5 flex items-center gap-2 text-sm sm:text-base">
-                      Adaptive Mode
-                      <span className="text-[10px] bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-full font-semibold">Smart</span>
-                    </h3>
-                    <p className="text-[11px] sm:text-xs text-gray-600 leading-snug">
-                      Each player's difficulty adjusts independently based on performance
-                    </p>
+                </button>
+                
+                {/* Tooltip */}
+                {!canUseAdaptive && showBattleAdaptiveTooltip && (
+                  <div className="absolute left-0 right-0 top-full mt-2 z-50 pointer-events-none animate-fade-in">
+                    <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-2xl border border-gray-700">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold mb-1">Adaptive Mode Unavailable</p>
+                          <p className="text-gray-300 leading-relaxed">
+                            {getAdaptiveDisabledMessage()}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Arrow */}
+                      <div className="absolute -top-2 left-8 w-4 h-4 bg-gray-900 border-l border-t border-gray-700 transform rotate-45"></div>
+                    </div>
                   </div>
-                </div>
-              </button>
+                )}
+              </div>
             </>
           )}
         </div>
