@@ -120,13 +120,27 @@ async function applyStatDecay(pet) {
     energy_level: Math.max(0, Math.min(100, pet.energy_level + energyReplenish))
   };
   
-  // Only update last_updated if there was actual decay or regeneration
-  // This prevents database writes on every page reload when nothing changed
-  if (hungerDecay > 0 || happinessDecay > 0 || cleanlinessDecay > 0 || energyReplenish > 0) {
+  // Only update timestamps if there was meaningful decay or regeneration (>0.01 to account for rounding)
+  const hasSignificantChange = hungerDecay > 0.01 || happinessDecay > 0.01 || cleanlinessDecay > 0.01 || energyReplenish > 0.01;
+  
+  if (hasSignificantChange) {
+    // Update last_updated for energy regeneration tracking
     updatedStats.last_updated = now;
+    
+    // Update action timestamps so next calculation starts from NOW, not the original time
+    // This prevents decay from being recalculated on every page refresh
+    if (hungerDecay > 0.01) {
+      updatedStats.last_fed = now;
+    }
+    if (happinessDecay > 0.01) {
+      updatedStats.last_played = now;
+    }
+    if (cleanlinessDecay > 0.01) {
+      updatedStats.last_cleaned = now;
+    }
   }
   
-  // Reset timestamp only when stat first hits zero (prevents continuous decay)
+  // When a stat hits zero, ensure timestamp is set to prevent negative decay
   if (updatedStats.hunger_level === 0 && pet.hunger_level > 0) {
     updatedStats.last_fed = now;
   }
