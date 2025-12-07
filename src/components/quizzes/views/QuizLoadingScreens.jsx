@@ -614,6 +614,57 @@ export const BattleLobbyScreen = ({
           }
         }
 
+        // 1.5. Chase/Avoid Logic - Ready players chase non-ready players!
+        const chaseStrength = 0.08; // Force strength for chasing
+        const avoidStrength = 0.12; // Stronger force for avoiding
+        const chaseRange = 35; // Max distance to chase (in percentage)
+        
+        for (let i = 0; i < newPositions.length; i++) {
+          const currentPlayer = lobbyPlayers[i];
+          if (!currentPlayer) continue;
+
+          // Find nearest player
+          let nearestDist = Infinity;
+          let nearestIdx = -1;
+          let nearestDx = 0;
+          let nearestDy = 0;
+
+          for (let j = 0; j < newPositions.length; j++) {
+            if (i === j) continue;
+            const targetPlayer = lobbyPlayers[j];
+            if (!targetPlayer) continue;
+
+            const dx = newPositions[j].x - newPositions[i].x;
+            const dy = newPositions[j].y - newPositions[i].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < nearestDist && dist < chaseRange) {
+              nearestDist = dist;
+              nearestIdx = j;
+              nearestDx = dx;
+              nearestDy = dy;
+            }
+          }
+
+          // Apply chase/avoid behavior if we found someone nearby
+          if (nearestIdx !== -1 && nearestDist > 0.01) {
+            const targetPlayer = lobbyPlayers[nearestIdx];
+            const nx = nearestDx / nearestDist; // Normalize direction
+            const ny = nearestDy / nearestDist;
+
+            // Ready players CHASE non-ready players
+            if (currentPlayer.isReady && !targetPlayer.isReady) {
+              newPositions[i].vx += nx * chaseStrength;
+              newPositions[i].vy += ny * chaseStrength;
+            }
+            // Non-ready players RUN AWAY from ready players
+            else if (!currentPlayer.isReady && targetPlayer.isReady) {
+              newPositions[i].vx -= nx * avoidStrength;
+              newPositions[i].vy -= ny * avoidStrength;
+            }
+          }
+        }
+
         // 2. Detect and handle player-to-player collisions with realistic physics
         for (let i = 0; i < newPositions.length; i++) {
           for (let j = i + 1; j < newPositions.length; j++) {
@@ -721,7 +772,7 @@ export const BattleLobbyScreen = ({
     }, PHYSICS_UPDATE_INTERVAL);
 
     return () => clearInterval(animationInterval);
-  }, []);
+  }, [lobbyPlayers]);
   
   const userPlayer = lobbyPlayers.find(p => p.id === 'user');
   const totalPlayers = lobbyPlayers.length;
