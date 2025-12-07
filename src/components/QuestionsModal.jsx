@@ -170,17 +170,74 @@ const QuestionsModal = ({ isOpen, onClose, quiz, questions, onDeleteQuestion }) 
                 );
 
             case 'Fill in the blanks':
+                const renderFillInTheBlankAnswer = () => {
+                    const rawAnswer = question.answer || question.correctAnswer || question.correct_answer;
+                    
+                    if (!rawAnswer) {
+                        return <span className="text-gray-500 italic">No answer available</span>;
+                    }
+
+                    // Try to parse the answer if it's a JSON string
+                    let answerData = rawAnswer;
+                    if (typeof rawAnswer === 'string') {
+                        try {
+                            answerData = JSON.parse(rawAnswer);
+                        } catch (e) {
+                            // If it's not JSON, treat it as a simple string answer
+                            return <span className="font-medium text-blue-900">{rawAnswer}</span>;
+                        }
+                    }
+
+                    // If it's an object with primary and alternatives
+                    if (answerData && typeof answerData === 'object' && answerData.primary) {
+                        const primary = answerData.primary;
+                        const alternatives = answerData.alternatives || [];
+                        const caseSensitive = answerData.caseSensitive;
+
+                        return (
+                            <div className="space-y-2">
+                                <div>
+                                    <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
+                                        Primary Answer:
+                                    </span>
+                                    <p className="text-sm font-medium text-blue-900 mt-1">{primary}</p>
+                                </div>
+                                
+                                {alternatives && alternatives.length > 0 && (
+                                    <div>
+                                        <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
+                                            Alternative Answers:
+                                        </span>
+                                        <div className="mt-1 space-y-1">
+                                            {alternatives.map((alt, idx) => (
+                                                <p key={idx} className="text-sm text-blue-800">• {alt}</p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {caseSensitive !== undefined && (
+                                    <div className="text-xs text-blue-600">
+                                        <span className="font-semibold">Case Sensitive:</span> {caseSensitive ? 'Yes' : 'No'}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    }
+
+                    // Fallback for simple string answers
+                    return <span className="font-medium text-blue-900">{String(answerData)}</span>;
+                };
+
                 return (
                     <div className="mt-3">
                         <div className="px-4 py-3 bg-blue-50 border-2 border-blue-300 rounded-lg">
                             <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1">
-                                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">
+                                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2">
                                         Correct Answer:
                                     </p>
-                                    <p className="text-sm font-medium text-blue-900">
-                                        {question.answer || question.correctAnswer || question.correct_answer || 'N/A'}
-                                    </p>
+                                    {renderFillInTheBlankAnswer()}
                                 </div>
                             </div>
                         </div>
