@@ -13,7 +13,6 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
   const [selectedMode, setSelectedMode] = React.useState(null);
   const [showModeSelection, setShowModeSelection] = React.useState(false);
   const [showBattleModeSelection, setShowBattleModeSelection] = React.useState(false);
-  const [showModesInfoModal, setShowModesInfoModal] = React.useState(false);
   const [showAdaptiveTooltip, setShowAdaptiveTooltip] = React.useState(false);
   
   // Check if adaptive mode is available
@@ -219,7 +218,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
         {/* Mode Selection */}
         <div className="px-6 pb-6 space-y-3 bg-white">
           {/* Solo Mode */}
-          {!showModeSelection ? (
+          {!showModeSelection && !showBattleModeSelection ? (
             <button
               onClick={handleSoloClick}
               className="group w-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-500 hover:from-yellow-500 hover:via-yellow-600 hover:to-amber-600 rounded-xl p-4 transition-all duration-300 shadow-lg hover:shadow-2xl active:scale-[0.98] relative overflow-hidden border-2 border-yellow-300"
@@ -273,10 +272,10 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                   <div className="flex-1 text-left">
                     <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2 text-sm">
                       Normal Mode
-                      <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">Original</span>
+                      <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">Original Order</span>
                     </h3>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      Questions in their original order
+                      Questions appear in original order
                     </p>
                   </div>
                 </div>
@@ -299,7 +298,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                       <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">Shuffled</span>
                     </h3>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      Questions shuffled randomly
+                      Questions appear in random order
                     </p>
                   </div>
                 </div>
@@ -347,8 +346,8 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                         canUseAdaptive ? 'text-gray-600' : 'text-gray-500'
                       }`}>
                         {canUseAdaptive 
-                          ? 'Difficulty adjusts to your performance'
-                          : 'Needs varied difficulty questions'
+                          ? 'Gets harder or easier based on your answers'
+                          : 'Requires questions with different difficulty levels'
                         }
                       </p>
                     </div>
@@ -400,13 +399,12 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                 <div className="flex-1 text-left">
                   <h3 className="font-bold text-white mb-1 flex items-center gap-2 text-base drop-shadow-md">
                     Quiz Battle
-                    <span className="text-[10px] bg-yellow-400 text-gray-900 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-md border border-yellow-300">
-                      <Trophy className="w-3 h-3" />
+                    <span className="text-[10px] bg-yellow-400 text-gray-900 px-2 py-0.5 rounded-full font-bold shadow-md border border-yellow-300">
                       Battle
                     </span>
                   </h3>
                   <p className="text-sm text-indigo-100 leading-relaxed drop-shadow">
-                    Compete with friends in real-time
+                    Challenge friends, race to the top!
                   </p>
                 </div>
               </div>
@@ -419,7 +417,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
               {/* Back Button */}
               <button
                 onClick={handleBackToMain}
-                className="text-sm text-yellow-400 hover:text-yellow-300 flex items-center gap-1.5 mb-3 font-semibold transition-colors"
+                className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1.5 mb-2 font-medium transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -441,10 +439,10 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                   <div className="flex-1 text-left">
                     <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2 text-sm">
                       Normal Mode
-                      <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">Original</span>
+                      <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">Original Order</span>
                     </h3>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      Same original order for all players
+                      Everyone sees questions in original order
                     </p>
                   </div>
                 </div>
@@ -467,7 +465,7 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
                       <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">Shuffled</span>
                     </h3>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      Same shuffled order for all players
+                      Everyone sees the same shuffled questions
                     </p>
                   </div>
                 </div>
@@ -476,88 +474,6 @@ export const QuizModal = ({ quiz, isOpen, onClose, onSoloQuiz, onQuizBattle }) =
           )}
         </div>
       </div>
-
-      {/* Quiz Modes Info Modal */}
-      {showModesInfoModal && (
-        <div
-          className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-3"
-          onClick={() => setShowModesInfoModal(false)}
-        >
-          <div
-            className="bg-white rounded-xl shadow-2xl max-w-md w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 px-4 py-3 rounded-t-xl">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" />
-                Quiz Modes: How It Works
-              </h3>
-            </div>
-
-            <div className="p-4 space-y-2">
-              {/* Normal Mode */}
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-start gap-2">
-                  <div className="w-7 h-7 bg-gray-500 rounded flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-900 text-sm mb-1">Normal Mode</h4>
-                    <p className="text-xs text-gray-600 leading-relaxed">
-                      Questions appear in their original order, exactly as designed by the quiz creator. No shuffling or difficulty adjustment.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Casual Mode */}
-              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <div className="flex items-start gap-2">
-                  <div className="w-7 h-7 bg-blue-500 rounded flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-blue-900 text-sm mb-1">Casual Mode</h4>
-                    <p className="text-xs text-gray-600 leading-relaxed">
-                      Questions are shuffled randomly for straightforward practice. Perfect for quick review sessions.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Adaptive Mode */}
-              <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
-                <div className="flex items-start gap-2">
-                  <div className="w-7 h-7 bg-purple-500 rounded flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-purple-900 text-sm mb-1">Adaptive Mode</h4>
-                    <p className="text-xs text-gray-600 leading-relaxed">
-                      Smart system adjusts difficulty based on your performance. Levels up when you excel, scales down when you struggle. Creates a personalized learning experience.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex justify-end rounded-b-xl">
-              <button
-                onClick={() => setShowModesInfoModal(false)}
-                className="px-4 py-2 bg-yellow-500 text-white text-sm font-semibold rounded-lg hover:bg-yellow-600 transition-colors"
-              >
-                Got it!
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <style>{`
         @keyframes fade-in {

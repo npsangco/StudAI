@@ -245,25 +245,13 @@ export const FillInBlanksQuestion = ({ question, onUpdateQuestion }) => {
 
       {/* Alternative Answers Section */}
       <div className="border-t pt-3">
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-xs font-semibold text-gray-700">
-            Alternative Correct Answers
-            <span className="text-gray-500 font-normal ml-1">(Optional)</span>
-          </label>
-          <button
-            type="button"
-            onClick={handleAddAlternative}
-            className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex items-center gap-1"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Alternative
-          </button>
-        </div>
+        <label className="block text-xs font-semibold text-gray-700 mb-2">
+          Alternative Correct Answers
+          <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+        </label>
 
-        {alternativeAnswers.length > 0 ? (
-          <div className="space-y-2">
+        {alternativeAnswers.length > 0 && (
+          <div className="space-y-2 mb-3">
             {alternativeAnswers.map((alt, index) => (
               <div key={index} className="flex items-center gap-2">
                 <input
@@ -286,8 +274,21 @@ export const FillInBlanksQuestion = ({ question, onUpdateQuestion }) => {
               </div>
             ))}
           </div>
-        ) : (
-          <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
+        )}
+
+        <button
+          type="button"
+          onClick={handleAddAlternative}
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-blue-600 bg-yellow-50 hover:bg-blue-100 border border-yellow-200 hover:border-blue-300 cursor-pointer shadow-sm hover:shadow"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Alternative ({alternativeAnswers.length}/7)
+        </button>
+        
+        {alternativeAnswers.length === 0 && (
+          <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded mt-2">
             No alternative answers yet. Add alternatives to accept multiple correct answers (e.g., "USA", "United States", "U.S.A.")
           </p>
         )}
