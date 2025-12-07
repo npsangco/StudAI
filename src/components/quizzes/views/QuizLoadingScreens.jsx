@@ -576,6 +576,18 @@ export const BattleLobbyScreen = ({
     return () => clearInterval(animationInterval);
   }, []);
   
+  // Safety check for lobbyPlayers
+  if (!lobbyPlayers || !Array.isArray(lobbyPlayers)) {
+    return (
+      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-white mx-auto mb-4" />
+          <p className="text-white font-semibold">Loading lobby...</p>
+        </div>
+      </div>
+    );
+  }
+  
   const userPlayer = lobbyPlayers.find(p => p.id === 'user');
   const totalPlayers = lobbyPlayers.length;
   const readyPlayers = lobbyPlayers.filter(p => p.isReady).length;
