@@ -644,25 +644,25 @@ export const QuizList = ({
 
                 {/* Feature Cards - 2x2 Grid */}
                 <div className="grid grid-cols-2 gap-2">
-                  {/* Card 1 - 4 Question Types (Yellow) */}
+                  {/* Card 1 - 3 Quiz Modes (Yellow) */}
                   <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-2.5 border border-yellow-200 hover:shadow-md transition-all">
                     <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
+                      <Target className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-xs mb-0.5">3 Quiz Modes</h3>
+                    <p className="text-[10px] text-gray-600 leading-tight">
+                      Normal (original order), Casual (shuffled), and Adaptive (difficulty-based) - choose your style
+                    </p>
+                  </div>
+
+                  {/* Card 2 - 4 Question Types (Purple) */}
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-2.5 border border-purple-200 hover:shadow-md transition-all">
+                    <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
                       <FileText className="w-4 h-4 text-white" />
                     </div>
                     <h3 className="font-bold text-gray-900 text-xs mb-0.5">4 Question Types</h3>
                     <p className="text-[10px] text-gray-600 leading-tight">
-                      Multiple choice, fill-in-the-blanks, true/false, and matching pairs - mix and match for full experience
-                    </p>
-                  </div>
-
-                  {/* Card 2 - Smart Difficulty System (Purple) */}
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-2.5 border border-purple-200 hover:shadow-md transition-all">
-                    <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
-                      <Zap className="w-4 h-4 text-white" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 text-xs mb-0.5">Smart Difficulty System</h3>
-                    <p className="text-[10px] text-gray-600 leading-tight">
-                      Adaptive mode auto-adjusts based on your accuracy, or choose Classic for traditional fixed-difficulty
+                      Multiple choice, fill-in-the-blanks with alternative answers, true/false, and matching pairs
                     </p>
                   </div>
 
@@ -673,18 +673,18 @@ export const QuizList = ({
                     </div>
                     <h3 className="font-bold text-gray-900 text-xs mb-0.5">Live Quiz Battles</h3>
                     <p className="text-[10px] text-gray-600 leading-tight">
-                      Challenge friends in real-time competitions with instant leaderboards and synchronized questions
+                      Challenge friends in real-time with multiplayer battles - instant leaderboards and live competition
                     </p>
                   </div>
 
-                  {/* Card 4 - Import & Collaborate (Green) */}
+                  {/* Card 4 - Smart Features (Green) */}
                   <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-2.5 border border-green-200 hover:shadow-md transition-all">
                     <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mb-1.5 shadow-sm">
-                      <Share2 className="w-4 h-4 text-white" />
+                      <Sparkles className="w-4 h-4 text-white" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-xs mb-0.5">Import & Collaborate</h3>
+                    <h3 className="font-bold text-gray-900 text-xs mb-0.5">Smart Features</h3>
                     <p className="text-[10px] text-gray-600 leading-tight">
-                      Share quizzes using 6-digit codes - import from friends and study together effortlessly
+                      AI-generated quizzes, customizable timers, question reordering, and share codes for collaboration
                     </p>
                   </div>
                 </div>
