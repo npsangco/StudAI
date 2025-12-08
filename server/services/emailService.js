@@ -201,9 +201,9 @@ export const sendAccountStatusEmail = async (userEmail, username, status, reason
         };
 
         transporter.sendMail(mailOptions).then(() => {
-            console.log(`✅ Account status email sent to ${userEmail}`);
+            console.log(`Account status email sent to ${userEmail}`);
         }).catch(error => {
-            console.error("❌ Failed to send account status email:", error);
+            console.error("Failed to send account status email:", error);
         });
     } catch (error) {
         console.error("❌ Email service error:", error);
@@ -251,9 +251,9 @@ export const sendQuizDeletionEmail = async (userEmail, username, quizTitle, reas
         };
 
         transporter.sendMail(mailOptions).then(() => {
-            console.log(`✅ Quiz deletion email sent to ${userEmail}`);
+            console.log(`Quiz deletion email sent to ${userEmail}`);
         }).catch(error => {
-            console.error("❌ Failed to send quiz deletion email:", error);
+            console.error("Failed to send quiz deletion email:", error);
         });
     } catch (error) {
         console.error("❌ Email service error:", error);
@@ -303,9 +303,9 @@ export const sendQuestionDeletionEmail = async (userEmail, username, quizTitle, 
         };
 
         transporter.sendMail(mailOptions).then(() => {
-            console.log(`✅ Question deletion email sent to ${userEmail}`);
+            console.log(`Question deletion email sent to ${userEmail}`);
         }).catch(error => {
-            console.error("❌ Failed to send question deletion email:", error);
+            console.error("Failed to send question deletion email:", error);
         });
     } catch (error) {
         console.error("❌ Email service error:", error);
@@ -322,9 +322,9 @@ export const sendStreakExpirationEmail = async (userEmail, username, currentStre
         };
 
         transporter.sendMail(mailOptions).then(() => {
-            console.log(`✅ Streak expiration email sent to ${userEmail}`);
+            console.log(`Streak expiration email sent to ${userEmail}`);
         }).catch(error => {
-            console.error("❌ Failed to send streak expiration email:", error);
+            console.error("Failed to send streak expiration email:", error);
         });
     } catch (error) {
         console.error("❌ Streak email service error:", error);
@@ -341,9 +341,9 @@ export const sendInactiveUserEmail = async (userEmail, username, daysSinceActivi
         };
 
         transporter.sendMail(mailOptions).then(() => {
-            console.log(`✅ Inactive user email sent to ${userEmail}`);
+            console.log(`Inactive user email sent to ${userEmail}`);
         }).catch(error => {
-            console.error("❌ Failed to send inactive user email:", error);
+            console.error("Failed to send inactive user email:", error);
         });
     } catch (error) {
         console.error("❌ Inactive user email service error:", error);
@@ -395,9 +395,9 @@ export const sendSessionEndedEmail = async (userEmail, username, sessionTopic, r
         };
 
         transporter.sendMail(mailOptions).then(() => {
-            console.log(`✅ Session ended email sent to ${userEmail}`);
+            console.log(`Session ended email sent to ${userEmail}`);
         }).catch(error => {
-            console.error("❌ Failed to send session ended email:", error);
+            console.error("Failed to send session ended email:", error);
         });
     } catch (error) {
         console.error("❌ Session ended email service error:", error);

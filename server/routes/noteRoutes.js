@@ -266,6 +266,8 @@ router.get('/', requireAuth, async (req, res) => {
           ['createdAt', 'DESC']
         ];
 
+    const limit = status === 'all' ? undefined : 10;
+
     const notes = await Note.findAll({
       where: whereClause,
       include: [{
@@ -274,7 +276,8 @@ router.get('/', requireAuth, async (req, res) => {
         attributes: ['category_id', 'name', 'color'],
         required: false
       }],
-      order
+      order,
+      limit
     });
 
     const notesWithExtras = notes.map(note => {
@@ -312,6 +315,13 @@ router.post('/create', requireAuth, async (req, res) => {
           maxChars: 5000
         });
       }
+    }
+
+    const unarchivedCount = await Note.count({
+      where: { user_id: userId, is_archived: false }
+    });
+    if (unarchivedCount >= 10) {
+      return res.status(400).json({ error: 'Note library limit reached (10 active notes). Archive some notes to create new ones.' });
     }
     
     // Get daily stats

@@ -84,6 +84,16 @@ router.post('/create', async (req, res) => {
       return res.status(400).json({ error: 'Session title is required' });
     }
 
+    const activeSession = await Session.findOne({
+      where: {
+        user_id: req.session.userId,
+        status: ['scheduled', 'active']
+      }
+    });
+    if (activeSession) {
+      return res.status(400).json({ error: 'You already have an active session. Please delete it before creating a new one.' });
+    }
+
     // Note: is_private means "don't show in public list", password is optional
 
     // Create Zoom meeting using user's tokens

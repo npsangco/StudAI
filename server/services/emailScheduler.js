@@ -26,7 +26,7 @@ const transporter = nodemailer.createTransport({
 export function startEmailReminders() {
     // Runs every 2 days at 8am (Monday, Wednesday, Friday, Sunday)
     cron.schedule("0 8 * * 1,3,5,0", async () => {
-        console.log("📬 Checking for upcoming and overdue tasks...");
+        console.log("Checking for upcoming and overdue tasks...");
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -92,7 +92,7 @@ export function startEmailReminders() {
                 plans.upcoming.length > 0
                     ? `
         <div style="margin-bottom: 24px;">
-          <h3 style="color: #1976d2; margin-bottom: 16px;">📅 Upcoming Tasks</h3>
+          <h3 style="color: #1976d2; margin-bottom: 16px;">Upcoming Tasks</h3>
           <div style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <table cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse;">
               <thead>
@@ -125,7 +125,7 @@ export function startEmailReminders() {
                 plans.overdue.length > 0
                     ? `
         <div style="margin-bottom: 24px;">
-          <h3 style="color: #d32f2f; margin-bottom: 16px;">⚠️ Overdue Tasks</h3>
+          <h3 style="color: #d32f2f; margin-bottom: 16px;">Overdue Tasks</h3>
           <div style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <table cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse;">
               <thead>
@@ -158,7 +158,7 @@ export function startEmailReminders() {
                 transporter.sendMail({
                     from: process.env.EMAIL_USER,
                     to: email,
-                    subject: "📋 Task Reminder: Upcoming and Overdue Tasks",
+                    subject: "Task Reminder: Upcoming and Overdue Tasks",
                     html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
               <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
@@ -173,19 +173,19 @@ export function startEmailReminders() {
             </div>
           `,
                 }).then(() => {
-                    console.log(`✅ Sent summary email to ${email}`);
+                    console.log(`Sent summary email to ${email}`);
                 }).catch(err => {
-                    console.error(`❌ Failed to send email to ${email}:`, err);
+                    console.error(`Failed to send email to ${email}:`, err);
                 });
             }
         }
 
-        console.log("✅ Daily email check completed.");
+        console.log("Daily email check completed.");
     });
 
     // Check for expiring streaks - runs once daily at 9pm (3 hours before midnight)
     cron.schedule("0 21 * * *", async () => {
-        console.log("🔥 Checking for expiring streaks...");
+        console.log("Checking for expiring streaks...");
 
         try {
             const now = new Date();
@@ -217,15 +217,15 @@ export function startEmailReminders() {
                 );
             }
 
-            console.log(`✅ Sent ${usersWithExpiringStreaks.length} streak expiration warnings`);
+            console.log(`Sent ${usersWithExpiringStreaks.length} streak expiration warnings`);
         } catch (err) {
-            console.error("❌ Streak check error:", err);
+            console.error("Streak check error:", err);
         }
     });
 
     // Check for inactive users - runs weekly on Mondays at 10am
     cron.schedule("0 10 * * 1", async () => {
-        console.log("👋 Checking for inactive users...");
+        console.log("Checking for inactive users...");
 
         try {
             const now = new Date();
@@ -260,9 +260,9 @@ export function startEmailReminders() {
                 );
             }
 
-            console.log(`✅ Sent ${inactiveUsers.length} inactive user reminders`);
+            console.log(`Sent ${inactiveUsers.length} inactive user reminders`);
         } catch (err) {
-            console.error("❌ Inactive user check error:", err);
+            console.error("Inactive user check error:", err);
         }
     });
 }

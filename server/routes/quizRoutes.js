@@ -691,7 +691,8 @@ router.get('/', requireAuth, async (req, res) => {
         as: 'creator',
         attributes: ['username']
       }],
-      order: [['created_at', 'DESC']]
+      order: [['created_at', 'DESC']],
+      limit: 10
     });
 
     // Enhance each quiz with difficulty distribution for adaptive mode check
@@ -840,6 +841,11 @@ router.post('/', requireAuth, async (req, res) => {
 
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Title is required' });
+    }
+
+    const quizCount = await Quiz.count({ where: { created_by: userId } });
+    if (quizCount >= 10) {
+      return res.status(400).json({ error: 'Quiz limit reached (10 quizzes). Delete some quizzes to create new ones.' });
     }
 
     // Default is PRIVATE, share code generated only when toggled to PUBLIC
