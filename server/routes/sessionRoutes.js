@@ -84,16 +84,23 @@ router.post('/create', async (req, res) => {
       return res.status(400).json({ error: 'Session title is required' });
     }
 
-    const activeSession = await Session.findOne({
+    const existingSession = await Session.findOne({
       where: {
-        user_id: req.session.userId,
-        status: {
-          [Op.in]: ['scheduled', 'active']
-        }
-      }
+        user_id: req.session.userId
+      },
+      order: [['created_at', 'DESC']]
     });
-    if (activeSession) {
-      return res.status(400).json({ error: 'You already have an active session. Please delete it before creating a new one.' });
+
+    if (existingSession) {
+      const now = new Date();
+      const sessionEnd = new Date(existingSession.scheduled_end);
+      
+      if (now < sessionEnd && existingSession.status !== 'ended') {
+        const minutesLeft = Math.ceil((sessionEnd - now) / 60000);
+        return res.status(400).json({ 
+          error: `You already have an active session that ends in ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}. Please wait for it to end or delete it before creating a new one.` 
+        });
+      }
     }
 
     // Note: is_private means "don't show in public list", password is optional
