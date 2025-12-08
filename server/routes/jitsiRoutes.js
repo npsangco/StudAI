@@ -49,19 +49,17 @@ router.post('/sessions', requireAuth, async (req, res) => {
     const now = new Date();
     const startTime = new Date(start_time);
     const durationMinutes = duration || 60;
-    const scheduledEnd = new Date(startTime.getTime() + durationMinutes * 60000);
 
     const existingSession = await JitsiSession.findOne({
       where: {
-        user_id: userId,
-        status: {
-          [Op.ne]: 'ended'
-        }
-      }
+        user_id: userId
+      },
+      order: [['start_time', 'DESC']]
     });
 
     if (existingSession) {
       const sessionEnd = new Date(new Date(existingSession.start_time).getTime() + existingSession.duration * 60000);
+      
       if (now < sessionEnd) {
         const minutesLeft = Math.ceil((sessionEnd - now) / 60000);
         return res.status(400).json({ 
