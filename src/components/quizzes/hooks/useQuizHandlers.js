@@ -520,6 +520,11 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   };
 
   const handleCreateQuiz = () => {
+    if (quizData.list.length >= 10) {
+      toast.error('Quiz limit reached (10 quizzes). Delete some quizzes to create new ones.');
+      return;
+    }
+
     const tempQuiz = {
       id: `temp-${Date.now()}`,
       title: 'New Quiz',
@@ -582,10 +587,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
   };
 
   const handleSaveQuiz = async () => {
-    // Set saving state to disable UI
     setIsSaving(true);
 
-    // Show immediate feedback with question count
     const questionCount = questions.length;
     toast.info(`Saving ${questionCount} question${questionCount !== 1 ? 's' : ''}... Please wait`);
 
@@ -593,9 +596,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
       const success = await quizAPI.saveQuiz();
 
       if (success) {
-        setIsDirty(false); // Reset dirty state after successful save
+        setIsDirty(false);
         toast.success('Quiz saved successfully!');
-        // Small delay to let user see the toast before navigating away
         setTimeout(() => {
           setIsSaving(false);
           handleBackToList();
@@ -605,9 +607,9 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         const errorMessage = error || 'Failed to save quiz. Please try again.';
         toast.error(errorMessage);
       }
-    } catch (error) {
+    } catch (err) {
       setIsSaving(false);
-      const errorMessage = error?.response?.data?.error || 'An error occurred while saving. Please try again.';
+      const errorMessage = err?.response?.data?.error || 'An error occurred while saving. Please try again.';
       toast.error(errorMessage);
     }
   };
