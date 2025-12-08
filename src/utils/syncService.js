@@ -86,7 +86,10 @@ class NotesService {
         await cacheSingleNote(note);
         return { success: true, note };
       } catch (err) {
-        console.error('[Notes] Create failed, queuing:', err);
+        console.error('[Notes] Create failed:', err);
+        if (err.response?.status === 400 && err.response?.data?.error) {
+          throw err;
+        }
         await cacheSingleNote(tempNote);
         await queueOperation({ entityType: 'note', type: 'CREATE', data: { ...noteData, tempId } });
         return { success: true, note: tempNote, queued: true };

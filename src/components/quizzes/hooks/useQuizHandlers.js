@@ -23,7 +23,8 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
     setIsSaving,
     quizData,
     questions,
-    gameState 
+    gameState,
+    error
   } = quizDataHook;
 
   // ============================================
@@ -601,11 +602,13 @@ export function useQuizHandlers(quizDataHook, quizAPI, countdown, currentUser, t
         }, 500);
       } else {
         setIsSaving(false);
-        toast.error('Failed to save quiz. Please try again.');
+        const errorMessage = error || 'Failed to save quiz. Please try again.';
+        toast.error(errorMessage);
       }
     } catch (error) {
       setIsSaving(false);
-      toast.error('An error occurred while saving. Please try again.');
+      const errorMessage = error?.response?.data?.error || 'An error occurred while saving. Please try again.';
+      toast.error(errorMessage);
     }
   };
 

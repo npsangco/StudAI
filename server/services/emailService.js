@@ -1,8 +1,22 @@
-// Email Verification
-export const VerificationEmail = (username, verifyLink) => {
+const emailTemplate = (content) => {
     return `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
             <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <img src="${process.env.CLIENT_URL || 'https://studai.dev'}/StudAI_Logo-black.png" alt="StudAI Logo" style="width: 120px; height: auto;">
+                </div>
+                ${content}
+                <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e0e0e0; text-align: center;">
+                    <img src="${process.env.CLIENT_URL || 'https://studai.dev'}/StudAI_Logo-black.png" alt="StudAI" style="width: 60px; height: auto; opacity: 0.3; margin-bottom: 12px;">
+                    <p style="color: #999; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} StudAI. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+export const VerificationEmail = (username, verifyLink) => {
+    const content = `
                 <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 16px; font-size: 24px;">Welcome to StudAI, ${username}!</h2>
                 <p style="color: #666; margin-bottom: 32px; font-size: 16px; line-height: 1.5;">Please verify your email address to get started with StudAI. Click the button below to complete your registration:</p>
                 
@@ -15,16 +29,12 @@ export const VerificationEmail = (username, verifyLink) => {
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
                     <p style="color: #999; font-size: 14px; margin: 0;">If you didn't create an account with StudAI, you can safely ignore this email.</p>
                 </div>
-            </div>
-        </div>
     `;
+    return emailTemplate(content);
 };
 
-// Password update verification
 export const PasswordUpdateEmail = (confirmLink) => {
-    return `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    const content = `
                 <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 16px; font-size: 24px;">Confirm Your Password Update</h2>
                 <p style="color: #666; margin-bottom: 32px; font-size: 16px; line-height: 1.5;">You requested to update your password for your StudAI account. Click the button below to confirm this change:</p>
                 
@@ -37,34 +47,28 @@ export const PasswordUpdateEmail = (confirmLink) => {
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
                     <p style="color: #999; font-size: 14px; margin: 0;">If you didn't request this password update, please contact our support team at studai.service@gmail.com immediately to secure your account.</p>
                 </div>
-            </div>
-        </div>
     `;
+    return emailTemplate(content);
 };
 
-// Password reset email
 export const PasswordResetEmail = (resetLink) => {
-  return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-            <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 16px; font-size: 24px;">Reset Your Password</h2>
-            <p style="color: #666; margin-bottom: 32px; font-size: 16px; line-height: 1.5;">We received a request to reset your password for your StudAI account. Click the button below to create a new password:</p>
-            
-            <div style="text-align: center; margin: 32px 0;">
-                <a href="${resetLink}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);">Reset Password</a>
-            </div>
-            
-            <p style="color: #999; font-size: 14px; margin-bottom: 0; text-align: center;">This link will expire in 10 minutes.</p>
-            
-            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
-                <p style="color: #999; font-size: 14px; margin: 0;">If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
-            </div>
-        </div>
-    </div>
-  `;
+    const content = `
+                <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 16px; font-size: 24px;">Reset Your Password</h2>
+                <p style="color: #666; margin-bottom: 32px; font-size: 16px; line-height: 1.5;">We received a request to reset your password for your StudAI account. Click the button below to create a new password:</p>
+                
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="${resetLink}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);">Reset Password</a>
+                </div>
+                
+                <p style="color: #999; font-size: 14px; margin-bottom: 0; text-align: center;">This link will expire in 10 minutes.</p>
+                
+                <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
+                    <p style="color: #999; font-size: 14px; margin: 0;">If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+                </div>
+    `;
+    return emailTemplate(content);
 };
 
-// Account status email (lock/unlock)
 export const AccountStatusEmail = (username, status, reason) => {
     const isLocked = status === "locked";
     const title = isLocked ? "Account Locked" : "Account Unlocked";
@@ -73,9 +77,7 @@ export const AccountStatusEmail = (username, status, reason) => {
         : "Your StudAI account has been unlocked and you can now access all features.";
     const bgColor = isLocked ? "#dc2626" : "#16a34a";
     
-    return `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    const content = `
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div style="display: inline-block; background-color: ${bgColor}; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
                         ${title}
@@ -98,16 +100,12 @@ export const AccountStatusEmail = (username, status, reason) => {
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
                     <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">This is an automated notification from StudAI. Please do not reply to this email.</p>
                 </div>
-            </div>
-        </div>
     `;
+    return emailTemplate(content);
 };
 
-// Streak expiration warning email
 export const StreakExpirationEmail = (username, currentStreak, expiresIn) => {
-    return `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    const content = `
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
                         Streak Alert!
@@ -129,16 +127,12 @@ export const StreakExpirationEmail = (username, currentStreak, expiresIn) => {
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
                     <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">Keep up the great work! Consistency is the key to success.</p>
                 </div>
-            </div>
-        </div>
     `;
+    return emailTemplate(content);
 };
 
-// Inactive user reminder email
 export const InactiveUserEmail = (username, daysSinceActivity) => {
-    return `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    const content = `
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div style="display: inline-block; background-color: #818cf8; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
                         We Miss You!
@@ -165,12 +159,10 @@ export const InactiveUserEmail = (username, daysSinceActivity) => {
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
                     <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">We're here whenever you're ready to continue your learning adventure!</p>
                 </div>
-            </div>
-        </div>
     `;
+    return emailTemplate(content);
 };
 
-// Function to send account status email
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
@@ -210,11 +202,8 @@ export const sendAccountStatusEmail = async (userEmail, username, status, reason
     }
 };
 
-// Quiz deletion email
 export const QuizDeletionEmail = (username, quizTitle, reason) => {
-    return `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    const content = `
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
                         Quiz Deleted
@@ -236,9 +225,8 @@ export const QuizDeletionEmail = (username, quizTitle, reason) => {
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
                     <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">This is an automated notification from StudAI. Please do not reply to this email.</p>
                 </div>
-            </div>
-        </div>
     `;
+    return emailTemplate(content);
 };
 
 export const sendQuizDeletionEmail = async (userEmail, username, quizTitle, reason) => {
@@ -260,11 +248,8 @@ export const sendQuizDeletionEmail = async (userEmail, username, quizTitle, reas
     }
 };
 
-// Question deletion email
 export const QuestionDeletionEmail = (username, quizTitle, questionText, reason) => {
-    return `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    const content = `
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
                         Question Deleted
@@ -288,9 +273,8 @@ export const QuestionDeletionEmail = (username, quizTitle, questionText, reason)
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
                     <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">This is an automated notification from StudAI. Please do not reply to this email.</p>
                 </div>
-            </div>
-        </div>
     `;
+    return emailTemplate(content);
 };
 
 export const sendQuestionDeletionEmail = async (userEmail, username, quizTitle, questionText, reason) => {
@@ -350,11 +334,8 @@ export const sendInactiveUserEmail = async (userEmail, username, daysSinceActivi
     }
 };
 
-// Session ended email
 export const SessionEndedEmail = (username, sessionTopic, reason) => {
-    return `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; background-color: #f9f9f9; padding: 32px 16px;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    const content = `
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 18px;">
                         Session Ended
@@ -380,9 +361,8 @@ export const SessionEndedEmail = (username, sessionTopic, reason) => {
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e0e0e0;">
                     <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">This is an automated notification from StudAI. Please do not reply to this email.</p>
                 </div>
-            </div>
-        </div>
     `;
+    return emailTemplate(content);
 };
 
 export const sendSessionEndedEmail = async (userEmail, username, sessionTopic, reason) => {

@@ -177,9 +177,11 @@ const JitsiSessions = () => {
         }, 60000);
       } else {
         const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to create session');
+        const errorMsg = errorData.error || 'Failed to create session';
+        toast.error(errorMsg);
       }
     } catch (err) {
+      console.error('Session creation error:', err);
       toast.error('Failed to create session');
     } finally {
       setLoading(false);

@@ -197,7 +197,8 @@ const Notes = () => {
       await fetchNotesFromDatabase();
     } catch (error) {
       console.error('Error creating note:', error);
-      toast.error('Failed to create note. Please try again.');
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to create note. Please try again.';
+      toast.error(errorMsg);
     }
   };
 

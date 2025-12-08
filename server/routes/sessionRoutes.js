@@ -87,7 +87,9 @@ router.post('/create', async (req, res) => {
     const activeSession = await Session.findOne({
       where: {
         user_id: req.session.userId,
-        status: ['scheduled', 'active']
+        status: {
+          [Op.in]: ['scheduled', 'active']
+        }
       }
     });
     if (activeSession) {
