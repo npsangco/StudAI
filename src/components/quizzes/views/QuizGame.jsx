@@ -1087,22 +1087,6 @@ const QuizGame = ({
     // Reset pet message for next question
     setShowPetMessage(false);
     
-    // EDGE CASE 1: Skip adaptive check if feedback is already showing
-    if (isShowingFeedbackRef.current) {
-
-      // Just proceed with normal transition
-      setIsProcessing(false);
-      timeoutHandledRef.current = false;
-
-      if (game.currentQuestionIndex < questions.length - 1) {
-        game.nextQuestion();
-        resetTimer(quizTimer);
-      } else {
-        finishQuiz();
-      }
-      return;
-    }
-
     // OPTION 1: Adaptive reordering logic
     let shouldShowFeedback = false;
 
@@ -1150,59 +1134,66 @@ const QuizGame = ({
       // Show feedback if we have a message
       // Shows for difficulty changes, staying messages, AND mixed results (to maintain engagement)
       if (result.messageKey) {
-        // 🔥 FIX: Set shouldShowFeedback BEFORE the setTimeout to ensure transitionDelay works
-        shouldShowFeedback = true;
-        
-        // BULLETPROOF: Clear any existing feedback timeout first
-        if (feedbackTimeoutRef.current) {
-          clearTimeout(feedbackTimeoutRef.current);
-          feedbackTimeoutRef.current = null;
-        }
+        // 🔥 GUARD: Don't show new feedback if one is already showing
+        // Let the current one finish first, this check will trigger again in 2 questions
+        if (isShowingFeedbackRef.current) {
+          console.log('⏭️ Adaptive feedback skipped - message already showing');
+          // Don't set shouldShowFeedback, proceed with normal transition
+        } else {
+          // 🔥 FIX: Set shouldShowFeedback BEFORE the setTimeout to ensure transitionDelay works
+          shouldShowFeedback = true;
+          
+          // BULLETPROOF: Clear any existing feedback timeout first
+          if (feedbackTimeoutRef.current) {
+            clearTimeout(feedbackTimeoutRef.current);
+            feedbackTimeoutRef.current = null;
+          }
 
-        // BULLETPROOF: Force clear previous feedback immediately
-        setAdaptiveFeedbackMessage(null);
-        setAdaptiveFeedbackAction(null);
-        isShowingFeedbackRef.current = false;
+          // BULLETPROOF: Force clear previous feedback immediately
+          setAdaptiveFeedbackMessage(null);
+          setAdaptiveFeedbackAction(null);
+          isShowingFeedbackRef.current = false;
 
-        const messages = {
-          easy_to_medium: ["You're crushing it! Moving to Medium difficulty!", "Nice work! Let's step it up a notch!"],
-          medium_to_hard: ["On fire! Time for Hard mode!", "Beast mode activated! Hard questions incoming!"],
-          staying_hard: ["Maintaining excellence! Keep it up!", "Peak performance! You're unstoppable!"],
-          hard_to_medium: ["Let's review some fundamentals!", "Building a stronger foundation!"],
-          medium_to_easy: ["Back to basics - you've got this!", "Let's master the fundamentals first!"],
-          staying_easy: ["Practice makes perfect!", "Keep learning at your pace!"],
-          maintain_steady: [
-            "You're doing great! Keep going!",
-            "Nice effort! Stay focused!",
-            "Good progress! You've got this!",
-            "Keep it up! You're learning!",
-            "Steady wins the race!",
-            "Stay consistent! You're improving!",
-            "One step at a time! Great job!",
-            "You're on the right track!"
-          ]
-        };
-        const messageArray = messages[result.messageKey] || [];
+          const messages = {
+            easy_to_medium: ["You're crushing it! Moving to Medium difficulty!", "Nice work! Let's step it up a notch!"],
+            medium_to_hard: ["On fire! Time for Hard mode!", "Beast mode activated! Hard questions incoming!"],
+            staying_hard: ["Maintaining excellence! Keep it up!", "Peak performance! You're unstoppable!"],
+            hard_to_medium: ["Let's review some fundamentals!", "Building a stronger foundation!"],
+            medium_to_easy: ["Back to basics - you've got this!", "Let's master the fundamentals first!"],
+            staying_easy: ["Practice makes perfect!", "Keep learning at your pace!"],
+            maintain_steady: [
+              "You're doing great! Keep going!",
+              "Nice effort! Stay focused!",
+              "Good progress! You've got this!",
+              "Keep it up! You're learning!",
+              "Steady wins the race!",
+              "Stay consistent! You're improving!",
+              "One step at a time! Great job!",
+              "You're on the right track!"
+            ]
+          };
+          const messageArray = messages[result.messageKey] || [];
 
-        // EDGE CASE 4: Validate message exists before showing
-        if (messageArray.length > 0) {
-          const randomMessage = messageArray[Math.floor(Math.random() * messageArray.length)];
+          // EDGE CASE 4: Validate message exists before showing
+          if (messageArray.length > 0) {
+            const randomMessage = messageArray[Math.floor(Math.random() * messageArray.length)];
 
-          // BULLETPROOF: Small delay to ensure state clears, then show new feedback
-          setTimeout(() => {
-            setAdaptiveFeedbackMessage(randomMessage);
-            setAdaptiveFeedbackAction(result.action);
-            isShowingFeedbackRef.current = true;
+            // BULLETPROOF: Small delay to ensure state clears, then show new feedback
+            setTimeout(() => {
+              setAdaptiveFeedbackMessage(randomMessage);
+              setAdaptiveFeedbackAction(result.action);
+              isShowingFeedbackRef.current = true;
 
-            // BULLETPROOF: Force clear feedback after max duration (failsafe)
-            feedbackTimeoutRef.current = setTimeout(() => {
-              setAdaptiveFeedbackMessage(null);
-              setAdaptiveFeedbackAction(null);
-              isShowingFeedbackRef.current = false;
-              feedbackTimeoutRef.current = null;
-            }, 3000); // Extra 500ms buffer for safety
-          }, 50);
-        }
+              // BULLETPROOF: Force clear feedback after max duration (failsafe)
+              feedbackTimeoutRef.current = setTimeout(() => {
+                setAdaptiveFeedbackMessage(null);
+                setAdaptiveFeedbackAction(null);
+                isShowingFeedbackRef.current = false;
+                feedbackTimeoutRef.current = null;
+              }, 3000); // Extra 500ms buffer for safety
+            }, 50);
+          }
+        } // Close the else block
       }
     }
 
