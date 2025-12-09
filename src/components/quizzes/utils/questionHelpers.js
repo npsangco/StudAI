@@ -104,13 +104,17 @@ export function checkAnswer(question, answer) {
       if (accuracy >= 0.6) {
         const difficultyPoints = getPointsForDifficulty(question.difficulty);
         
-        // Calculate partial points: Use Math.ceil for >= 60%, ensures at least 1 point
+        // 🔥 FAIR SCORING: Proportional to accuracy, but rounded for fairness
+        // 100% → Full points
+        // 75% → Rounded proportional (e.g., 0.75 * 3 = 2.25 → 2 points)
+        // 60% → Minimum threshold (e.g., 0.60 * 3 = 1.8 → 2 points)
         let partialPoints;
         if (allCorrect) {
+          // Perfect score gets full points
           partialPoints = difficultyPoints;
         } else {
-          // For partial credit, ensure at least 1 point if accuracy >= 60%
-          partialPoints = Math.max(1, Math.ceil(accuracy * difficultyPoints));
+          // Partial credit: proportional but rounded, minimum 1 point
+          partialPoints = Math.max(1, Math.round(accuracy * difficultyPoints));
         }
         
         return {
