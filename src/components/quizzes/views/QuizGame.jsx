@@ -20,7 +20,10 @@ import {
 } from '../utils/adaptiveDifficultyManager';
 import {
   canUseAdaptiveMode,
-  buildAdaptiveJourney
+  buildAdaptiveJourney,
+  LEVEL_UP_MESSAGES,
+  LEVEL_DOWN_MESSAGES,
+  MAINTAIN_MESSAGES
 } from '../utils/adaptiveDifficultyEngine';
 import {
   initializeAdaptiveQueue,
@@ -1092,7 +1095,7 @@ const QuizGame = ({
 
     // EDGE CASE 2: Only run adaptive check if we have valid state and enough answers
     if (useAdaptiveMode && adaptiveState && answersHistory.length >= 2) {
-      // 🔥 FIX: Use answersHistory.length instead of currentQuestionIndex + 1
+      // Use answersHistory.length instead of currentQuestionIndex + 1
       // because this runs BEFORE incrementing to next question
       const questionsAnswered = answersHistory.length;
 
@@ -1156,25 +1159,18 @@ const QuizGame = ({
           setAdaptiveFeedbackAction(null);
           isShowingFeedbackRef.current = false;
 
-          const messages = {
-            easy_to_medium: ["You're crushing it! Moving to Medium difficulty!", "Nice work! Let's step it up a notch!"],
-            medium_to_hard: ["On fire! Time for Hard mode!", "Beast mode activated! Hard questions incoming!"],
-            staying_hard: ["Maintaining excellence! Keep it up!", "Peak performance! You're unstoppable!"],
-            hard_to_medium: ["Let's review some fundamentals!", "Building a stronger foundation!"],
-            medium_to_easy: ["Back to basics - you've got this!", "Let's master the fundamentals first!"],
-            staying_easy: ["Practice makes perfect!", "Keep learning at your pace!"],
-            maintain_steady: [
-              "You're doing great! Keep going!",
-              "Nice effort! Stay focused!",
-              "Good progress! You've got this!",
-              "Keep it up! You're learning!",
-              "Steady wins the race!",
-              "Stay consistent! You're improving!",
-              "One step at a time! Great job!",
-              "You're on the right track!"
-            ]
-          };
-          const messageArray = messages[result.messageKey] || [];
+          // Get message array from imported constants
+          let messageArray = [];
+          if (LEVEL_UP_MESSAGES[result.messageKey]) {
+            messageArray = LEVEL_UP_MESSAGES[result.messageKey];
+          } else if (LEVEL_DOWN_MESSAGES[result.messageKey]) {
+            messageArray = LEVEL_DOWN_MESSAGES[result.messageKey];
+          } else if (MAINTAIN_MESSAGES[result.messageKey]) {
+            messageArray = MAINTAIN_MESSAGES[result.messageKey];
+          } else if (result.messageKey?.startsWith('staying_')) {
+            const difficulty = result.messageKey.replace('staying_', '');
+            messageArray = MAINTAIN_MESSAGES[difficulty] || [];
+          }
 
           // EDGE CASE 4: Validate message exists before showing
           if (messageArray.length > 0) {

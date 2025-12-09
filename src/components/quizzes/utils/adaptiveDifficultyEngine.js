@@ -65,6 +65,16 @@ export const MAINTAIN_MESSAGES = {
   hard: [
     "🔥 Handling the challenge well!",
     "⚔️ Conquering the hard ones!"
+  ],
+  maintain_steady: [
+    "You're doing great! Keep going!",
+    "Nice effort! Stay focused!",
+    "Good progress! You've got this!",
+    "Keep it up! You're learning!",
+    "Steady wins the race!",
+    "Stay consistent! You're improving!",
+    "One step at a time! Great job!",
+    "You're on the right track!"
   ]
 };
 
@@ -359,8 +369,11 @@ export const getAdaptiveMessage = (messageKey) => {
   } else if (messageKey.startsWith('staying_')) {
     const difficulty = messageKey.replace('staying_', '');
     messages = MAINTAIN_MESSAGES[difficulty] || [];
+  } else if (MAINTAIN_MESSAGES[messageKey]) {
+    // Handle maintain_steady and other maintain messages
+    messages = MAINTAIN_MESSAGES[messageKey];
   } else {
-    // Maintain messages
+    // Fallback to maintain messages by difficulty
     messages = MAINTAIN_MESSAGES[messageKey] || [];
   }
 
