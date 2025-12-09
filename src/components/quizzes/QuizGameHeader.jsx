@@ -178,8 +178,7 @@ export const QuizGameHeader = ({
   playersCount = 0,
   onBack,
   currentQuestionData,
-  correctAnswersCount = 0, // New prop to track correct answers
-  correctAnswersCountRef, // Add ref prop to prevent flickering
+  answersHistory = [], // Single source of truth for accuracy calculation
   maxPossibleScore = totalQuestions, // New prop for max score calculation
   adaptiveMode = false // Adaptive difficulty enabled
 }) => {
@@ -194,19 +193,21 @@ export const QuizGameHeader = ({
     onBack();
   };
 
-  // Accuracy is based on correct answers out of completed questions
-  // currentQuestion = current question INDEX (0-based)
-  // On Q1 (index 0): no questions completed yet, show 0%
-  // On Q2 (index 1): 1 question completed, calculate correctAnswersCount / 1
-  // Use ref for synchronous access to prevent flickering from React batching
+  // ANTI-FLICKER SOLUTION: Calculate accuracy directly from answersHistory
+  // This is the single source of truth that updates atomically
+  // No race conditions between separate state variables
   const accuracy = useMemo(() => {
-    const questionsCompleted = currentQuestion; // Questions BEFORE current one
-    // Use ref.current if available (always up-to-date), fallback to state prop
-    const correctCount = correctAnswersCountRef?.current ?? correctAnswersCount;
-    return questionsCompleted > 0
-      ? Math.min(100, Math.round((correctCount / questionsCompleted) * 100))
-      : 0;
-  }, [currentQuestion, correctAnswersCount, correctAnswersCountRef]);
+    if (answersHistory.length === 0) return 0;
+    
+    const correctCount = answersHistory.filter(answer => {
+      // Handle matching questions with partial credit
+      if (answer.isCorrect) return true;
+      if (answer.partialCredit && answer.partialCredit >= 1) return true;
+      return false;
+    }).length;
+    
+    return Math.min(100, Math.round((correctCount / answersHistory.length) * 100));
+  }, [answersHistory]);
   
   const progress = useMemo(() => 
     ((currentQuestion + 1) / totalQuestions) * 100,
