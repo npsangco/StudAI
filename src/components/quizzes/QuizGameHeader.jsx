@@ -179,6 +179,7 @@ export const QuizGameHeader = ({
   onBack,
   currentQuestionData,
   correctAnswersCount = 0, // New prop to track correct answers
+  correctAnswersCountRef, // Add ref prop to prevent flickering
   maxPossibleScore = totalQuestions, // New prop for max score calculation
   adaptiveMode = false // Adaptive difficulty enabled
 }) => {
@@ -197,13 +198,15 @@ export const QuizGameHeader = ({
   // currentQuestion = current question INDEX (0-based)
   // On Q1 (index 0): no questions completed yet, show 0%
   // On Q2 (index 1): 1 question completed, calculate correctAnswersCount / 1
-  // Memoize to prevent flickering when props update
+  // Use ref for synchronous access to prevent flickering from React batching
   const accuracy = useMemo(() => {
     const questionsCompleted = currentQuestion; // Questions BEFORE current one
+    // Use ref.current if available (always up-to-date), fallback to state prop
+    const correctCount = correctAnswersCountRef?.current ?? correctAnswersCount;
     return questionsCompleted > 0
-      ? Math.min(100, Math.round((correctAnswersCount / questionsCompleted) * 100))
+      ? Math.min(100, Math.round((correctCount / questionsCompleted) * 100))
       : 0;
-  }, [currentQuestion, correctAnswersCount]);
+  }, [currentQuestion, correctAnswersCount, correctAnswersCountRef]);
   
   const progress = useMemo(() => 
     ((currentQuestion + 1) / totalQuestions) * 100,
