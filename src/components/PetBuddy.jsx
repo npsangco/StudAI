@@ -417,8 +417,10 @@ const getCatSprite = (level) => {
 const getDogSprite = (level) => {
   if (level >= 1 && level <= 16) {
     return "/dog-puppy.gif";
+  } else if (level >= 17 && level <= 33) {
+    return "/dog-teen.gif";
   } else {
-    return "/dog.gif";
+    return "/dog-adult.gif";
   }
 };
 

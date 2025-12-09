@@ -35,12 +35,13 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
     }
   };
 
-  // Get dog sprite based on level
   const getDogSprite = (level) => {
     if (level >= 1 && level <= 16) {
-      return "/dog-puppy.gif"; // Puppy (levels 1-16)
+      return "/dog-puppy.gif";
+    } else if (level >= 17 && level <= 33) {
+      return "/dog-teen.gif";
     } else {
-      return "/dog.gif"; // Adult (levels 17-50)
+      return "/dog-adult.gif";
     }
   };
 
