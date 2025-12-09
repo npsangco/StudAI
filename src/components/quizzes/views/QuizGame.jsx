@@ -1160,14 +1160,14 @@ const QuizGame = ({
           medium_to_easy: ["Back to basics - you've got this!", "Let's master the fundamentals first!"],
           staying_easy: ["Practice makes perfect!", "Keep learning at your pace!"],
           maintain_steady: [
-            "You're doing great! Keep going! 💪",
-            "Nice effort! Stay focused! 🎯",
-            "Good progress! You've got this! ⭐",
-            "Keep it up! You're learning! 📚",
-            "Steady wins the race! 🏃",
-            "Stay consistent! You're improving! 🌟",
-            "One step at a time! Great job! 👏",
-            "You're on the right track! 🚀"
+            "You're doing great! Keep going!",
+            "Nice effort! Stay focused!",
+            "Good progress! You've got this!",
+            "Keep it up! You're learning!",
+            "Steady wins the race!",
+            "Stay consistent! You're improving!",
+            "One step at a time! Great job!",
+            "You're on the right track!"
           ]
         };
         const messageArray = messages[result.messageKey] || [];
