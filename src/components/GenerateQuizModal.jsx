@@ -13,6 +13,7 @@ const QUESTION_TYPES = [
 const TITLE_CHAR_LIMIT = 50;
 const TITLE_LENGTH_ERROR = `Quiz title must be ${TITLE_CHAR_LIMIT} characters or fewer.`;
 const TITLE_REQUIRED_ERROR = 'Please enter a quiz title';
+const MAX_QUIZ_COUNT = 10;
 
 const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +24,8 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const [usageSnapshot, setUsageSnapshot] = useState(null);
   const [isUsageLoading, setIsUsageLoading] = useState(true);
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState(QUESTION_TYPES);
+  const [quizCount, setQuizCount] = useState(0);
+  const [isQuizCountLoading, setIsQuizCountLoading] = useState(true);
   const formatDateForDisplay = useCallback((dateString) => {
     if (!dateString) return null;
     const date = new Date(`${dateString}T00:00:00`);
@@ -39,6 +42,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
   const nextAvailableDate = quizCooldown?.nextAvailableOn || null;
   const formattedNextAvailable = formatDateForDisplay(nextAvailableDate);
   const quizLimitReached = !isUsageLoading && (quizRemaining <= 0 || isQuizCooldownActive);
+  const hasReachedMaxQuizzes = quizCount >= MAX_QUIZ_COUNT;
   const quizAvailabilityMessage = quizLimitReached
     ? formattedNextAvailable
       ? `Next available on ${formattedNextAvailable}.`
@@ -56,9 +60,23 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
     }
   }, []);
 
+  const fetchQuizCount = useCallback(async () => {
+    try {
+      const response = await quizApi.getAll();
+      const quizzes = response.data.quizzes || [];
+      setQuizCount(quizzes.length);
+    } catch (err) {
+      console.error('Failed to fetch quiz count:', err);
+      setQuizCount(0);
+    } finally {
+      setIsQuizCountLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     refreshUsage();
-  }, [refreshUsage]);
+    fetchQuizCount();
+  }, [refreshUsage, fetchQuizCount]);
 
   // Fixed 15-question default
   const questionCount = 15;
@@ -89,6 +107,11 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
 
     if (!selectedQuestionTypes.length) {
       setError('Select at least one question type');
+      return;
+    }
+
+    if (hasReachedMaxQuizzes) {
+      setError(`You have reached the maximum limit of ${MAX_QUIZ_COUNT} quizzes. Please delete a quiz first before generating a new one.`);
       return;
     }
 
@@ -323,7 +346,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
           </button>
           <button
             onClick={handleGenerateQuiz}
-            disabled={isLoading || quizLimitReached || isTitleTooLong}
+            disabled={isLoading || quizLimitReached || isTitleTooLong || hasReachedMaxQuizzes || isQuizCountLoading}
             className="flex-1 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
