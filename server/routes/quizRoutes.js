@@ -889,6 +889,12 @@ router.post('/generate-from-notes', requireAuth, async (req, res) => {
     const userId = req.session.userId;
     const { noteId, noteContent, noteTitle, quizTitle, questionCount, questionTypes } = req.body;
 
+    // Check quiz limit (10 quizzes max)
+    const quizCount = await Quiz.count({ where: { created_by: userId } });
+    if (quizCount >= 10) {
+      return res.status(400).json({ error: 'Quiz limit reached (10 quizzes). Delete some quizzes to create new ones.' });
+    }
+
     const quizQuota = await ensureQuizAvailable(userId);
     if (!quizQuota.allowed) {
       const errorMessage = quizQuota.reason === 'cooldown'
