@@ -4,10 +4,10 @@ import { QUESTION_TYPES } from './constants';
 export function getPointsForDifficulty(difficulty) {
   const difficultyMap = {
     easy: 1,
-    medium: 2,
-    hard: 3
+    medium: 3,    // Fixed: was 2, should be 3
+    hard: 5       // Fixed: was 3, should be 5
   };
-  return difficultyMap[difficulty?.toLowerCase()] || 2;
+  return difficultyMap[difficulty?.toLowerCase()] || 3;  // Fixed: default was 2, should be 3
 }
 
 // Check if answer is correct (with partial credit support for matching)
