@@ -1512,7 +1512,7 @@ const QuizGame = ({
         playersCount={allPlayers.length}
         onBack={handleBackOrForfeit}
         currentQuestionData={currentQ}
-        correctAnswersCount={correctAnswersCount}
+        answersHistory={answersHistory}
         maxPossibleScore={maxPossibleScore}
         adaptiveMode={useAdaptiveMode}
       />

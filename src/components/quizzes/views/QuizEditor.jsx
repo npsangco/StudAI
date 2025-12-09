@@ -204,15 +204,6 @@ const CompactSettingsBar = ({ quiz, onPublicStatusChange, onTimerChange, toast }
 export const validateQuestions = (questions) => {
   const errors = [];
 
-  const MIN_QUESTIONS_FOR_BANK = 15; // Question Bank minimum
-  if (questions.length < MIN_QUESTIONS_FOR_BANK) {
-    errors.push({
-      questionNumber: null,
-      message: `Question Bank needs ${MIN_QUESTIONS_FOR_BANK}+ questions to work its magic!`,
-      details: `Add at least ${MIN_QUESTIONS_FOR_BANK} questions to unlock random selection per session—keeping every attempt fresh and unpredictable.`,
-      isGlobalError: true
-    });
-  }
 
   questions.forEach((question, index) => {
     const questionNumber = index + 1;
