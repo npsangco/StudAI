@@ -1092,8 +1092,10 @@ const QuizGame = ({
 
     // EDGE CASE 2: Only run adaptive check if we have valid state and enough answers
     if (useAdaptiveMode && adaptiveState && answersHistory.length >= 2) {
-      const questionsAnswered = game.currentQuestionIndex + 1;
-      
+      // 🔥 FIX: Use answersHistory.length instead of currentQuestionIndex + 1
+      // because this runs BEFORE incrementing to next question
+      const questionsAnswered = answersHistory.length;
+
       const result = performAdaptiveCheck({
         questionsAnswered,
         allQuestions: questions,
