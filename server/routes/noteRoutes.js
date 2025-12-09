@@ -750,6 +750,14 @@ router.post('/shared/retrieve', requireAuth, async (req, res) => {
       return res.status(409).json({ error: 'You already have this shared note' });
     }
 
+    // Check note limit (10 active notes max)
+    const unarchivedCount = await Note.count({
+      where: { user_id: req.session.userId, is_archived: false }
+    });
+    if (unarchivedCount >= 10) {
+      return res.status(400).json({ error: 'Note library limit reached (10 active notes). Archive some notes to create new ones.' });
+    }
+
     // Add attribution to the content
     const attributionText = `\n\n---\nShared by: ${sharer.username} (${sharer.email})\nAcademic Integrity Reminder: This note was shared for collaborative learning. Always provide proper attribution and use it ethically in accordance with your institution's academic integrity policies.`;
 
