@@ -19,52 +19,52 @@ export const ADAPTIVE_CONFIG = {
 // Feedback messages for difficulty changes
 export const LEVEL_UP_MESSAGES = {
   easy_to_medium: [
-    "🔥 You're crushing it! Moving to Medium difficulty!",
-    "🚀 Nice work! Let's step it up a notch!",
-    "⭐ Impressive! Ready for a bigger challenge?"
+    "You're crushing it! Moving to Medium difficulty!",
+    "Nice work! Let's step it up a notch!",
+    "Impressive! Ready for a bigger challenge?"
   ],
   medium_to_hard: [
-    "🔥 On fire! Time for Hard mode!",
-    "💪 Beast mode activated! Hard questions incoming!",
-    "🏆 You're a natural! Let's see what you're made of!"
+    "On fire! Time for Hard mode!",
+    "Beast mode activated! Hard questions incoming!",
+    "You're a natural! Let's see what you're made of!"
   ],
   staying_hard: [
-    "👑 Maintaining excellence! Keep it up!",
-    "🔥 Peak performance! You're unstoppable!",
-    "⚡ Maximum difficulty conquered!"
+    "Maintaining excellence! Keep it up!",
+    "Peak performance! You're unstoppable!",
+    "Maximum difficulty conquered!"
   ]
 };
 
 export const LEVEL_DOWN_MESSAGES = {
   hard_to_medium: [
-    "👍 Let's review some fundamentals!",
-    "📚 Building a stronger foundation!",
-    "🎯 Adjusting for better learning!"
+    "Let's review some fundamentals!",
+    "Building a stronger foundation!",
+    "Adjusting for better learning!"
   ],
   medium_to_easy: [
-    "💡 Back to basics - you've got this!",
-    "🌱 Let's master the fundamentals first!",
-    "✨ Taking it step by step!"
+    "Back to basics - you've got this!",
+    "Let's master the fundamentals first!",
+    "Taking it step by step!"
   ],
   staying_easy: [
-    "🌟 Practice makes perfect!",
-    "💪 Keep learning at your pace!",
-    "📖 Mastering the basics!"
+    "Practice makes perfect!",
+    "Keep learning at your pace!",
+    "Mastering the basics!"
   ]
 };
 
 export const MAINTAIN_MESSAGES = {
   easy: [
-    "👌 Solid progress! Keep going!",
-    "📈 You're getting the hang of it!"
+    "Solid progress! Keep going!",
+    "You're getting the hang of it!"
   ],
   medium: [
-    "💯 Right on track! Doing great!",
-    "🎯 Perfect balance! Keep it up!"
+    "Right on track! Doing great!",
+    "Perfect balance! Keep it up!"
   ],
   hard: [
-    "🔥 Handling the challenge well!",
-    "⚔️ Conquering the hard ones!"
+    "Handling the challenge well!",
+    "Conquering the hard ones!"
   ],
   maintain_steady: [
     "You're doing great! Keep going!",
