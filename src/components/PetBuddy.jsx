@@ -576,12 +576,22 @@ const CompactPetImage = ({ pet }) => {
     ? getDogSprite(pet.level)
     : getCatSprite(pet.level);
   
+  const getPetSize = (level) => {
+    if (level >= 1 && level <= 16) {
+      return "w-28 h-28 sm:w-32 sm:h-32";
+    } else if (level >= 17 && level <= 33) {
+      return "w-36 h-36 sm:w-44 sm:h-44";
+    } else {
+      return "w-44 h-44 sm:w-52 sm:h-52";
+    }
+  };
+  
   return (
     <div className="flex justify-center mb-3">
       <img 
         src={petImage} 
         alt={`${pet.pet_type} - Level ${pet.level}`}
-        className="w-32 h-32 sm:w-40 sm:h-40 object-contain"
+        className={`${getPetSize(pet.level)} object-contain transition-all duration-500`}
         loading="lazy"
       />
     </div>

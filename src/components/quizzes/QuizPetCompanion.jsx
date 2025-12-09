@@ -7,9 +7,8 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
   const [currentMessage, setCurrentMessage] = useState(null);
   const [messageKey, setMessageKey] = useState(0);
   const [messageType, setMessageType] = useState(null);
-  const hasShownRef = useRef(false); // Track if we already showed message for current answer
+  const hasShownRef = useRef(false);
 
-  // Load pet data once on mount
   useEffect(() => {
     const loadPet = async () => {
       try {
@@ -24,7 +23,6 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
     loadPet();
   }, []);
 
-  // Get cat sprite based on level
   const getCatSprite = (level) => {
     if (level >= 1 && level <= 16) {
       return "/cat-kitten.gif";
@@ -45,7 +43,6 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
     }
   };
 
-  // Motivating messages for quiz
   const motivatingMessages = useMemo(() => ({
     correct: [
       "Amazing! You got it right!",
@@ -85,21 +82,18 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
     ]
   }), []);
 
-  // Show message when triggered - only once per answer, for both correct and incorrect
   useEffect(() => {
     if (showMessage && isCorrect !== null && !hasShownRef.current) {
-      hasShownRef.current = true; // Mark as shown
+      hasShownRef.current = true;
       
-      // Show messages based on correct/incorrect
       const msgType = isCorrect ? 'correct' : 'incorrect';
       const messages = motivatingMessages[msgType];
       const randomMessage = messages[Math.floor(Math.random() * messages.length)];
       
       setMessageType(msgType);
       setCurrentMessage(randomMessage);
-      setMessageKey(prev => prev + 1); // Force animation reset
+      setMessageKey(prev => prev + 1);
       
-      // Clear message after display duration
       const timeout = setTimeout(() => {
         setCurrentMessage(null);
         setMessageType(null);
@@ -122,7 +116,6 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
       setCurrentMessage(randomMessage);
       setMessageKey(prev => prev + 1);
       
-      // Auto-dismiss after 1 second
       const timeout = setTimeout(() => {
         setCurrentMessage(null);
         setMessageType(null);
@@ -135,7 +128,6 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
     }
   }, [showEncouragement, motivatingMessages, onEncouragementShown]);
   
-  // Reset tracking and clear message when moving to new question
   useEffect(() => {
     if (!showMessage && !showEncouragement) {
       hasShownRef.current = false;
@@ -144,7 +136,6 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
     }
   }, [showMessage, showEncouragement]);
 
-  // Don't render if no pet
   if (!pet) return null;
 
   const petImage = pet.pet_type === "Dog" 
@@ -154,13 +145,23 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
   const getBubbleColors = () => {
     if (messageType === 'correct') return 'bg-green-50 border-green-400';
     if (messageType === 'incorrect') return 'bg-orange-50 border-orange-400';
-    return 'bg-blue-50 border-blue-400'; // encouragement
+    return 'bg-blue-50 border-blue-400';
   };
   
   const getTailColors = () => {
     if (messageType === 'correct') return { outer: 'border-t-green-400', inner: 'border-t-green-50' };
     if (messageType === 'incorrect') return { outer: 'border-t-orange-400', inner: 'border-t-orange-50' };
-    return { outer: 'border-t-blue-400', inner: 'border-t-blue-50' }; // encouragement
+    return { outer: 'border-t-blue-400', inner: 'border-t-blue-50' };
+  };
+
+  const getPetSize = (level) => {
+    if (level >= 1 && level <= 16) {
+      return "w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24";
+    } else if (level >= 17 && level <= 33) {
+      return "w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32";
+    } else {
+      return "w-24 h-24 sm:w-28 sm:h-28 md:w-36 md:h-36";
+    }
   };
 
   return (
@@ -168,7 +169,6 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
       className="fixed md:bottom-8 md:right-8 bottom-4 right-4 z-40 flex flex-col items-end pointer-events-none"
       style={{ maxWidth: '280px' }}
     >
-      {/* Speech Bubble */}
       {currentMessage && (
         <div 
           key={messageKey}
@@ -177,18 +177,16 @@ const QuizPetCompanion = ({ isCorrect, showMessage, showEncouragement, onMessage
           <p className="text-sm font-medium text-gray-800 text-center">
             {currentMessage}
           </p>
-          {/* Speech bubble tail */}
           <div className={`absolute -bottom-2 right-8 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent ${getTailColors().outer}`}></div>
           <div className={`absolute -bottom-1.5 right-8 w-0 h-0 border-l-5 border-r-5 border-t-5 border-l-transparent border-r-transparent ${getTailColors().inner}`}></div>
         </div>
       )}
 
-      {/* Pet Image - Always visible */}
       <div className="flex items-center gap-2">
         <img 
           src={petImage} 
           alt={`${pet.pet_name}`}
-          className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 object-contain drop-shadow-lg"
+          className={`${getPetSize(pet.level)} object-contain drop-shadow-lg transition-all duration-500`}
           loading="lazy"
         />
       </div>
