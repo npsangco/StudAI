@@ -47,12 +47,12 @@ export const AdaptiveFeedback = ({ message, action, onComplete }) => {
         }
       }, 100);
 
-      // Step 3: Auto-hide after 2 seconds
+      // Step 3: Auto-hide after 1.3 seconds (speedrunner optimized)
       timersRef.current.hide = setTimeout(() => {
         if (currentMessageId === messageIdRef.current) {
           setIsVisible(false);
         }
-      }, 2100);
+      }, 1300);
 
       // Step 4: Clear message completely after fade out
       timersRef.current.clear = setTimeout(() => {
@@ -61,7 +61,7 @@ export const AdaptiveFeedback = ({ message, action, onComplete }) => {
           setDisplayAction(null);
           if (onComplete) onComplete();
         }
-      }, 2400);
+      }, 1600);
 
     } else {
       // 🔥 FORCE CLEAR: If message is null, nuke everything immediately

@@ -1191,7 +1191,7 @@ const QuizGame = ({
                 setAdaptiveFeedbackAction(null);
                 isShowingFeedbackRef.current = false;
                 feedbackTimeoutRef.current = null;
-              }, 3000); // Extra 500ms buffer for safety
+              }, 2000); // 2s total: 1.5s visible + 500ms buffer
             }, 50);
           }
         } // Close the else block
@@ -1203,8 +1203,8 @@ const QuizGame = ({
     timeoutHandledRef.current = false;
 
     // EDGE CASE: If showing adaptive feedback, delay question transition
-    // Shorter delay (2.5s total) for faster flow while ensuring feedback completes
-    const transitionDelay = shouldShowFeedback ? 2500 : 0;
+    // Adaptive delay: 1.5s for speedrunners, ensuring feedback is visible but not blocking
+    const transitionDelay = shouldShowFeedback ? 1500 : 0;
 
     setTimeout(() => {
       // EDGE CASE 5: Ensure questions array is valid before transitioning
