@@ -178,7 +178,7 @@ export const determineDifficultyAdjustment = (accuracy, currentDifficulty, recen
     return {
       newDifficulty: currentDifficulty,
       action: 'MAINTAIN',
-      messageKey: null,
+      messageKey: 'maintain_steady', // Still show message even on invalid data
       reason: 'Invalid accuracy data'
     };
   }
@@ -206,7 +206,7 @@ export const determineDifficultyAdjustment = (accuracy, currentDifficulty, recen
       return {
         newDifficulty: currentDifficulty,
         action: 'MAINTAIN',
-        messageKey: null,
+        messageKey: 'maintain_steady', // Show encouraging message even for inconsistent patterns
         reason: 'Inconsistent pattern detected'
       };
     }
@@ -273,9 +273,17 @@ export const performAdaptiveCheck = ({
   };
 
   // 🔥 ADAPTIVE CHECK: Should we adjust difficulty?
+  // ALWAYS check every 2 questions to ensure feedback consistency
   if (shouldPerformAdaptiveCheck(questionsAnswered)) {
-    // Calculate accuracy from recent answers
+    // Calculate accuracy from recent answers (last 2)
     const recentAnswers = answersHistory.slice(-2);
+    
+    // SAFEGUARD: Ensure we have exactly 2 answers to evaluate
+    if (recentAnswers.length < 2) {
+      // Not enough data yet, skip this check
+      return result;
+    }
+    
     const correctCount = recentAnswers.filter(a => a.isCorrect).length;
     const accuracy = (correctCount / recentAnswers.length) * 100;
 

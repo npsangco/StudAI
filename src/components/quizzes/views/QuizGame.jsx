@@ -1108,12 +1108,21 @@ const QuizGame = ({
 
     // EDGE CASE 2: Only run adaptive check if we have valid state and enough answers
     if (useAdaptiveMode && adaptiveState && answersHistory.length >= 2) {
+      const questionsAnswered = game.currentQuestionIndex + 1;
+      
       const result = performAdaptiveCheck({
-        questionsAnswered: game.currentQuestionIndex + 1,
+        questionsAnswered,
         allQuestions: questions,
         answersHistory,
         currentDifficulty: adaptiveState.currentDifficulty
       });
+
+      // SAFEGUARD: Ensure messageKey exists for every 2-question checkpoint
+      // If performAdaptiveCheck didn't set a message (shouldn't happen), force maintain_steady
+      if ((questionsAnswered % 2 === 0) && !result.messageKey) {
+        result.messageKey = 'maintain_steady';
+        result.action = 'MAINTAIN';
+      }
 
       // Update adaptive state if difficulty changed
       if (result.newDifficulty !== adaptiveState.currentDifficulty || result.action !== 'MAINTAIN') {
