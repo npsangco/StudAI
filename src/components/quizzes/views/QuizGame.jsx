@@ -907,12 +907,12 @@ const QuizGame = ({
     
     setTimeout(() => {
       setIsProcessing(false);
-      
+
       // Both modes: advance immediately after showing answer
       if (game.currentQuestionIndex >= questions.length - 1) {
         finishQuizWithAnswers(newAnswersHistory);
       } else {
-        handleNextQuestion();
+        handleNextQuestion(newAnswersHistory);
       }
     }, ANSWER_DISPLAY_DURATION);
   };
@@ -990,12 +990,12 @@ const QuizGame = ({
     
     setTimeout(() => {
       setIsProcessing(false);
-      
+
       // Both modes: advance immediately after showing answer
       if (game.currentQuestionIndex >= questions.length - 1) {
         finishQuizWithAnswers(newAnswersHistory);
       } else {
-        handleNextQuestion();
+        handleNextQuestion(newAnswersHistory);
       }
     }, ANSWER_DISPLAY_DURATION);
   };
@@ -1076,33 +1076,36 @@ const QuizGame = ({
     // Auto-proceed after showing color feedback (like MC/TF)
     setTimeout(() => {
       setIsProcessing(false);
-      
+
       // Advance to next question or finish quiz
       if (game.currentQuestionIndex >= questions.length - 1) {
         finishQuizWithAnswers(newAnswersHistory);
       } else {
-        handleNextQuestion();
+        handleNextQuestion(newAnswersHistory);
       }
     }, 800); // 800ms to see RED/GREEN feedback
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = (latestAnswersHistory = null) => {
+    // Use latest answers history if provided (to avoid React state delay)
+    const currentAnswersHistory = latestAnswersHistory || answersHistory;
+
     // Reset pet message for next question
     setShowPetMessage(false);
-    
+
     // OPTION 1: Adaptive reordering logic
     let shouldShowFeedback = false;
 
     // EDGE CASE 2: Only run adaptive check if we have valid state and enough answers
-    if (useAdaptiveMode && adaptiveState && answersHistory.length >= 2) {
+    if (useAdaptiveMode && adaptiveState && currentAnswersHistory.length >= 2) {
       // Use answersHistory.length instead of currentQuestionIndex + 1
       // because this runs BEFORE incrementing to next question
-      const questionsAnswered = answersHistory.length;
+      const questionsAnswered = currentAnswersHistory.length;
 
       const result = performAdaptiveCheck({
         questionsAnswered,
         allQuestions: questions,
-        answersHistory,
+        answersHistory: currentAnswersHistory,
         currentDifficulty: adaptiveState.currentDifficulty
       });
 
