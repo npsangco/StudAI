@@ -1150,6 +1150,9 @@ const QuizGame = ({
       // Show feedback if we have a message
       // Shows for difficulty changes, staying messages, AND mixed results (to maintain engagement)
       if (result.messageKey) {
+        // 🔥 FIX: Set shouldShowFeedback BEFORE the setTimeout to ensure transitionDelay works
+        shouldShowFeedback = true;
+        
         // BULLETPROOF: Clear any existing feedback timeout first
         if (feedbackTimeoutRef.current) {
           clearTimeout(feedbackTimeoutRef.current);
@@ -1189,7 +1192,6 @@ const QuizGame = ({
           setTimeout(() => {
             setAdaptiveFeedbackMessage(randomMessage);
             setAdaptiveFeedbackAction(result.action);
-            shouldShowFeedback = true;
             isShowingFeedbackRef.current = true;
 
             // BULLETPROOF: Force clear feedback after max duration (failsafe)
