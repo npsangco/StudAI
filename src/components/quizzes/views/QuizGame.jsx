@@ -1139,7 +1139,7 @@ const QuizGame = ({
       }
 
       // Show feedback if we have a message
-      // EDGE CASE 3: Only show feedback for actual difficulty changes or staying messages
+      // Shows for difficulty changes, staying messages, AND mixed results (to maintain engagement)
       if (result.messageKey) {
         // BULLETPROOF: Clear any existing feedback timeout first
         if (feedbackTimeoutRef.current) {
@@ -1158,7 +1158,17 @@ const QuizGame = ({
           staying_hard: ["Maintaining excellence! Keep it up!", "Peak performance! You're unstoppable!"],
           hard_to_medium: ["Let's review some fundamentals!", "Building a stronger foundation!"],
           medium_to_easy: ["Back to basics - you've got this!", "Let's master the fundamentals first!"],
-          staying_easy: ["Practice makes perfect!", "Keep learning at your pace!"]
+          staying_easy: ["Practice makes perfect!", "Keep learning at your pace!"],
+          maintain_steady: [
+            "You're doing great! Keep going! 💪",
+            "Nice effort! Stay focused! 🎯",
+            "Good progress! You've got this! ⭐",
+            "Keep it up! You're learning! 📚",
+            "Steady wins the race! 🏃",
+            "Stay consistent! You're improving! 🌟",
+            "One step at a time! Great job! 👏",
+            "You're on the right track! 🚀"
+          ]
         };
         const messageArray = messages[result.messageKey] || [];
 

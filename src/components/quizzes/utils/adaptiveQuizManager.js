@@ -245,8 +245,9 @@ export const determineDifficultyAdjustment = (accuracy, currentDifficulty, recen
     }
   } else {
     // 50% (1/2) - Mixed results, MAINTAIN current level
+    // Show encouraging message to keep engagement
     action = 'MAINTAIN';
-    messageKey = null; // No message for 50%
+    messageKey = 'maintain_steady'; // Add encouraging message for mixed results
   }
 
   return { newDifficulty, action, messageKey };
