@@ -931,7 +931,7 @@ app.post("/api/auth/signup", validateSignupRequest, async (req, res) => {
             expires_at: expiresAt,
         });
 
-        const verifyLink = `${SERVER_URL}/api/auth/verify-email?token=${token}`;
+        const verifyLink = `${CLIENT_URL}/verify-email?token=${token}`;
 
         // Send email asynchronously for instant response
         transporter.sendMail({
@@ -1034,6 +1034,73 @@ app.get("/api/auth/verify-email", async (req, res) => {
         return res.redirect(`${CLIENT_URL}/verify-status?type=verified&token=${authToken}`);
     } catch (err) {
         return res.redirect(`${CLIENT_URL}/verify-status?type=error`);
+    }
+});
+
+// Confirm email verification (POST - scanner-proof)
+app.post("/api/auth/confirm-verification", async (req, res) => {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: "Token is required" });
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        // Find pending user by email only (token is encrypted in DB)
+        const pendingUser = await PendingUser.findOne({
+            where: { email: decoded.email }
+        });
+
+        if (!pendingUser) {
+            return res.status(400).json({ error: "Invalid or expired verification link. Please sign up again." });
+        }
+
+        // Compare decrypted token (getter auto-decrypts)
+        if (pendingUser.verification_token !== token) {
+            return res.status(400).json({ error: "Invalid verification link. Please sign up again." });
+        }
+
+        // Check if token expired
+        if (new Date() > pendingUser.expires_at) {
+            await pendingUser.destroy();
+            return res.status(400).json({ error: "Verification link has expired. Please sign up again." });
+        }
+
+        const existingUser = await User.findOne({ where: { email: decoded.email } });
+        if (existingUser) {
+            await pendingUser.destroy();
+            return res.status(400).json({ error: "Email is already verified. Please log in." });
+        }
+
+        // Create user account
+        const newUser = await User.create({
+            email: pendingUser.email,
+            username: pendingUser.username,
+            password: pendingUser.password,
+            birthday: pendingUser.birthday,
+            status: "active",
+        });
+
+        const authToken = jwt.sign(
+            {
+                userId: newUser.user_id,
+                email: newUser.email,
+                username: newUser.username,
+                role: newUser.role,
+            },
+            process.env.JWT_SECRET || "fallback-secret",
+            { expiresIn: "7d" }
+        );
+
+        // Clean up pending user
+        try {
+            await pendingUser.destroy();
+        } catch (cleanupErr) {
+            // Ignore cleanup errors
+        }
+
+        return res.json({ success: true, authToken });
+    } catch (err) {
+        return res.status(400).json({ error: "Invalid or expired verification link. Please sign up again." });
     }
 });
 

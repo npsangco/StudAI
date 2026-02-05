@@ -16,6 +16,7 @@ import ZoomSessions from "./pages/ZoomSessions";
 import Planner from "./pages/Planner";
 import Profile from "./pages/Profile";
 import EmailStatus from "./components/confirmations/EmailStatus";
+import VerifyEmail from "./pages/VerifyEmail";
 import PasswordStatus from "./components/confirmations/PasswordStatus";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import UserManagement from "./pages/Admin/UserManagement";
@@ -97,6 +98,7 @@ function App() {
           <Route path="/admin/sessions" element={<ProtectedAdminRoute><StudySessions /></ProtectedAdminRoute>} />
           <Route path="/admin/logs" element={<ProtectedAdminRoute><AuditLogs /></ProtectedAdminRoute>} />
 
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/verify-status" element={<EmailStatus />} />
           <Route path="/password-updated" element={<PasswordStatus type="success" />} />
           <Route path="/password-link-expired" element={<PasswordStatus type="error" />} />
