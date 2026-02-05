@@ -977,16 +977,18 @@ app.get("/api/auth/verify-email", async (req, res) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        
-        // Find pending user
-        const pendingUser = await PendingUser.findOne({ 
-            where: { 
-                email: decoded.email,
-                verification_token: token 
-            } 
+
+        // Find pending user by email only (token is encrypted in DB)
+        const pendingUser = await PendingUser.findOne({
+            where: { email: decoded.email }
         });
 
         if (!pendingUser) {
+            return res.redirect(`${CLIENT_URL}/verify-status?type=error`);
+        }
+
+        // Compare decrypted token (getter auto-decrypts)
+        if (pendingUser.verification_token !== token) {
             return res.redirect(`${CLIENT_URL}/verify-status?type=error`);
         }
 
