@@ -1024,11 +1024,16 @@ app.get("/api/auth/verify-email", async (req, res) => {
             { expiresIn: "7d" }
         );
 
-        await pendingUser.destroy();
+        // Clean up pending user (don't fail verification if this errors)
+        try {
+            await pendingUser.destroy();
+        } catch (cleanupErr) {
+            // Ignore cleanup errors
+        }
 
-        res.redirect(`${CLIENT_URL}/verify-status?type=verified&token=${authToken}`);
+        return res.redirect(`${CLIENT_URL}/verify-status?type=verified&token=${authToken}`);
     } catch (err) {
-        res.redirect(`${CLIENT_URL}/verify-status?type=error`);
+        return res.redirect(`${CLIENT_URL}/verify-status?type=error`);
     }
 });
 
