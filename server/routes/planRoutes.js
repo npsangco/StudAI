@@ -223,9 +223,9 @@ router.get('/', requireAuth, async (req, res) => {
 // Create new plan (counts toward daily quest)
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { title, description, due_date, completed } = req.body;
+    const { title, description, due_date, due_time, completed } = req.body;
     const userId = req.session.userId;
-    
+
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
     }
@@ -235,6 +235,7 @@ router.post('/', requireAuth, async (req, res) => {
       title,
       description: description || null,
       due_date: due_date || null,
+      due_time: due_time || null,
       completed: completed || false,
       created_at: new Date()
     });
@@ -284,14 +285,14 @@ router.put('/:id', requireAuth, async (req, res) => {
   const transaction = await sequelize.transaction();
   
   try {
-    const { title, description, due_date, completed } = req.body;
+    const { title, description, due_date, due_time, completed } = req.body;
     const planId = req.params.id;
     const userId = req.session.userId;
 
     const plan = await Plan.findOne({
-      where: { 
+      where: {
         planner_id: planId,
-        user_id: userId 
+        user_id: userId
       },
       transaction
     });
@@ -302,10 +303,11 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
 
     // Allow explicit null/undefined values for due_date (to clear deadline)
-    const updateData = { 
+    const updateData = {
       title: title !== undefined ? title : plan.title,
       description: description !== undefined ? description : plan.description,
-      due_date: due_date !== undefined ? (due_date === null || due_date === '' ? null : due_date) : plan.due_date
+      due_date: due_date !== undefined ? (due_date === null || due_date === '' ? null : due_date) : plan.due_date,
+      due_time: due_time !== undefined ? (due_time === null || due_time === '' ? null : due_time) : plan.due_time
     };
 
     let pointsAwarded = 0;

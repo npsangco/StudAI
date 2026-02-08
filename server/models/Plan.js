@@ -20,7 +20,11 @@ const Plan = sequelize.define("Plan", {
     allowNull: true,
   },
   due_date: {
-    type: DataTypes.DATE,  
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  due_time: {
+    type: DataTypes.STRING(5),
     allowNull: true,
   },
   createdAt: {
