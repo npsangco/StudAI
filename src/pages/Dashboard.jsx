@@ -259,19 +259,31 @@ export default function Dashboard() {
         systemPrompt += " Use the provided content as the primary source, but you may enhance it with relevant additional knowledge when it adds value.";
       }
 
-      const userPrompt = `Please create a comprehensive, well-organized summary of the following educational content titled "${title}".
+      const userPrompt = `Please create a comprehensive, granular, and well-organized summary of the following educational content titled "${title}".
+
+Instructions for the AI: * Prioritize Detail: Do not over-condense. If the content contains specific names, dates, tools, version numbers, or file structures, they must be included.
+
+Elasticity: Ensure the summary captures both broad themes (like social impacts) and specific technicalities (like commands or logic).
 
 Include:
-1. Key Topics and Main Ideas
-2. Important Concepts and Definitions
-3. Critical Points to Remember
-4. Practical Applications (if applicable)
-5. Summary Conclusion
 
-Content to summarize:
-${content}
+1.) Overview and Scope: What is the subject, who are the key figures/developers, and what is its primary purpose or capability? 
 
-Please format the summary in a clear, organized manner with proper headings and bullet points where appropriate.`;
+2.) Key Topics and Main Ideas: A breakdown of the primary themes or periods discussed in the material. 
+
+3.) Important Concepts and Definitions: Detailed definitions of terms, philosophies, or technical components mentioned. 
+
+4.) Processes, Methods, and Sequential Events: A step-by-step summary of how things work, how they are set up, or the chronological timeline of events. 
+
+5.) Real-World Applications and Examples: How is this subject applied in practice? Mention specific companies, case studies, or historical impacts. 
+
+6.) Critical Points to Remember: High-priority facts, common misconceptions, or potential pitfalls for a student to note. 
+
+7.) Summary Conclusion: A brief takeaway on the module's overall significance.
+
+Content to summarize: ${content}
+
+Please format the summary in a clear, organized manner with proper headings and bullet points. If the content includes any lists, processes, or technical details, ensure they are preserved in the summary.`;
 
       const response = await axios.post(
         `${API_URL}/api/openai/summarize`,
