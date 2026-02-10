@@ -556,10 +556,10 @@ Do NOT use Markdown syntax (no *, **, #, etc.). Use plain text with natural line
                 }
             ],
             temperature: 0.7,
-            max_tokens: 2000,
+            max_tokens: 3000,
             top_p: 1.0,
-            frequency_penalty: 0.3,
-            presence_penalty: 0.3
+            frequency_penalty: 0.1,
+            presence_penalty: 0.1
         };
 
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
