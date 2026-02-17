@@ -285,26 +285,27 @@ export default function Dashboard() {
         systemPrompt += " Use the provided content as the primary source, but you may enhance it with relevant additional knowledge when it adds value.";
       }
 
-      const userPrompt = `Please generate a **High-Yield Study Brief** for the educational content titled "${title}". 
+      const userPrompt = `Please generate a High-Yield Study Brief for the educational content titled "${title}". 
 
-**Goal**: Create a document that is fast to read but contains 100% of the "testable" data points for academic review and quiz generation.
+Goal: Create a document that is fast to read but contains 100% of the "testable" data points for academic review and quiz generation.
 
-**Structure**:
-1.) **Executive Summary**: A single, 3-sentence paragraph explaining the "What" and "Why" of the module.
-2.) **Technical/Historical Fact Sheet**: A bulleted list of "Must-Knows." (Include all specific versions, names, commands, dates, and locations).
-3.) **Steps, Methods, and Timelines**: A step-by-step summary of how things work, how they are set up, or the chronological sequence of events. **Constraint**: Keep descriptions under 15 words per step.
-4.) **Quiz-Ready Definitions**: A list of all key terms and their meanings. Do not omit any term mentioned in the text.
-5.) **Exam Warnings**: List common pitfalls, errors, misconceptions, or "trick" points found in the material.
-6.) **Summary Conclusion**: A brief 1-sentence takeaway on the module's overall significance.
+Structure:
+1.) Executive Summary: A single, 3-sentence paragraph explaining the "What" and "Why" of the module.
+2.) Technical/Historical Fact Sheet: A bulleted list of "Must-Knows." (Include all specific versions, names, commands, dates, and locations).
+3.) Steps, Methods, and Timelines: A step-by-step summary of how things work, how they are set up, or the chronological sequence of events.
+4.) Quiz-Ready Definitions: A list of all key terms and their meanings. Do not omit any term mentioned in the text.
+5.) Exam Warnings: List common pitfalls, errors, misconceptions, or "trick" points found in the material.
+6.) Summary Conclusion: A brief 1-sentence takeaway on the module's overall significance.
 
-**Strict Constraints**: 
+Strict Constraints: 
+* No Markdown characters (no asterisks or hashtags).
 * Do not use filler words like "The content discusses..." or "It is important to note..." 
 * Go straight to the data.
 * Preserve all lists, processes, and technical details from the source.
 
-**Content to summarize**: ${content}
+Content to summarize: ${content}
 
-**Final Formatting Requirement**: 
+Final Formatting Requirement: 
 Please format the summary in a clear, organized manner with proper headings and bullet points. 
 
 At the very end of your response, add this exact text:

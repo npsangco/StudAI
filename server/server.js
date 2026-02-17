@@ -532,14 +532,16 @@ app.post("/api/openai/summarize", sessionLockCheck, async (req, res) => {
             return res.status(500).json({ error: "OpenAI API key not configured" });
         }
 
-        const defaultSystemPrompt = `You are a helpful assistant that creates comprehensive, well-structured summaries of educational content.Prioritize exhaustive detail. Capture all specific names, dates, tools, versions, and commands found in the content.
+        const defaultSystemPrompt = `You are a helpful assistant that creates comprehensive, well-structured summaries of educational content.Prioritize granularity over brevity. Capture all specific names, dates, tools, versions, and commands found in the content.
 
 Format your response with clear structure:
 - Use line breaks between paragraphs for readability
 - Start new topics on new lines
 - Use simple indentation (2-4 spaces) for sub-points
+- Use a single dash (-) for list items.
 - Keep sentences detailed and clear
 - Separate major sections with a blank line
+- Preserve every specific technical detail found in the source.
 
 Do NOT use Markdown syntax (no *, **, #, etc.). Use plain text with natural line breaks and spacing only.`;
 
@@ -556,7 +558,7 @@ Do NOT use Markdown syntax (no *, **, #, etc.). Use plain text with natural line
                 }
             ],
             temperature: 0.2,
-            max_tokens: 3000,
+            max_tokens: 4000,
             top_p: 0.7,
             frequency_penalty: 0.0,
             presence_penalty: 0.0
