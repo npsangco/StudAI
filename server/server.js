@@ -357,7 +357,7 @@ sequelize.authenticate()
         await ensureNoteArchiveColumns();
         await ChatMessage.sync();
         await AIUsageStat.sync();
-        await Plan.sync({ alter: true });
+        await Plan.sync();
         await ensureChatbotForeignKey();
         startEmailReminders();
     })
