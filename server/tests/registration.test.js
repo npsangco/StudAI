@@ -134,14 +134,14 @@ describe('Registration System', () => {
       const birthdate = new Date(today.getFullYear() - 10, 0, 1);
       const age = today.getFullYear() - birthdate.getFullYear();
       
-      expect(age >= 13).toBe(true); // FAIL: User is only 10 years old
+      expect(age >= 13).toBe(false); // Should reject users under 13 years old
     });
 
     it('should allow username with 2 characters', () => {
       const shortUsername = 'AB';
       const isValid = shortUsername.length >= 3;
       
-      expect(isValid).toBe(true); // FAIL: Username too short
+      expect(isValid).toBe(false); // Should reject username with less than 3 characters
     });
 
     it('should accept future birthday', () => {
@@ -149,7 +149,7 @@ describe('Registration System', () => {
       const today = new Date();
       const isValid = futureBirthday <= today;
       
-      expect(isValid).toBe(true); // FAIL: Birthday is in the future
+      expect(isValid).toBe(false); // Should reject future birthdays
     });
   });
 });

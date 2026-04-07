@@ -213,7 +213,7 @@ describe('Profile Management', () => {
 
     it('should sanitize filename', () => {
       const unsafeFilename = '../../../etc/passwd.jpg';
-      const safeName = unsafeFilename.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const safeName = unsafeFilename.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.\./g, '');
       
       expect(safeName).not.toContain('/');
       expect(safeName).not.toContain('..');

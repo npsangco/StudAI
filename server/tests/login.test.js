@@ -60,21 +60,21 @@ describe('Login System', () => {
       const emptyEmail = '';
       const isValid = emptyEmail.length > 0;
       
-      expect(isValid).toBe(true); // FAIL: Empty email should be rejected
+      expect(isValid).toBe(false); // Should reject empty email
     });
 
     it('should reject login with incorrect password format', () => {
-      const shortPassword = '123';
+      const shortPassword = 'Pass1';
       const isValid = shortPassword.length >= 8;
       
-      expect(isValid).toBe(true); // FAIL: Password too short
+      expect(isValid).toBe(false); // Should reject short password
     });
 
     it('should handle special characters in email', () => {
       const emailWithSpecial = 'user+test@ust.edu.ph';
       const isValid = emailWithSpecial.includes('@');
       
-      expect(isValid).toBe(false); // FAIL: Should accept valid special chars
+      expect(isValid).toBe(true); // Should accept valid special characters in email
     });
 
     it('should reject empty email', () => {

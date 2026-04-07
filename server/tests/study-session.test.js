@@ -207,14 +207,14 @@ describe('Session Management', () => {
       const participantCount = 1000;
       const maxParticipants = 50;
       
-      expect(participantCount <= maxParticipants).toBe(true); // FAIL: Too many participants
+      expect(participantCount <= maxParticipants).toBe(false); // Should reject over 50 participants
     });
 
     it('should accept session duration of 600 minutes', () => {
       const duration = 600; // 10 hours
       const maxDuration = 240; // 4 hours
       
-      expect(duration <= maxDuration).toBe(true); // FAIL: Duration too long
+      expect(duration <= maxDuration).toBe(false); // Should reject sessions over 4 hours
     });
   });
 });

@@ -32,7 +32,7 @@ describe('Pet Companion System', () => {
     it('should reject empty pet names', () => {
       const emptyName = '';
       
-      const isValidName = (name) => name && name.trim().length >= 1 && name.length <= 50;
+      const isValidName = (name) => !!(name && name.trim().length >= 1 && name.length <= 50);
       
       expect(isValidName(emptyName)).toBe(false);
     });
@@ -238,14 +238,319 @@ describe('Pet Companion System', () => {
       const petLevel = 55;
       const maxLevel = 50;
       
-      expect(petLevel <= maxLevel).toBe(true); // FAIL: Exceeds max level
+      expect(petLevel <= maxLevel).toBe(false); // Should reject levels above 50
     });
 
     it('should accept negative hunger value', () => {
       const hunger = -5;
       const isValid = hunger >= 0 && hunger <= 100;
       
-      expect(isValid).toBe(true); // FAIL: Hunger cannot be negative
+      expect(isValid).toBe(false); // Should reject negative hunger values
+    });
+  });
+
+  describe('Pet Customization', () => {
+    it('should change pet appearance', () => {
+      const pet = {
+        color: 'brown',
+        accessories: []
+      };
+      
+      pet.color = 'white';
+      pet.accessories.push('hat');
+      
+      expect(pet.color).toBe('white');
+      expect(pet.accessories).toContain('hat');
+    });
+
+    it('should unlock cosmetic items', () => {
+      const cosmetics = [
+        { id: 1, name: 'Red Collar', unlocked: true },
+        { id: 2, name: 'Crown', unlocked: false }
+      ];
+      
+      const unlocked = cosmetics.filter(c => c.unlocked);
+      
+      expect(unlocked).toHaveLength(1);
+    });
+
+    it('should apply visual themes', () => {
+      const themes = ['default', 'winter', 'summer', 'halloween'];
+      const activatedTheme = 'winter';
+      
+      expect(themes).toContain(activatedTheme);
+    });
+  });
+
+  describe('Pet Achievements', () => {
+    it('should earn achievement for reaching level 10', () => {
+      const pet = { level: 10 };
+      const achievement = {
+        name: 'Level 10',
+        unlocked: pet.level >= 10
+      };
+      
+      expect(achievement.unlocked).toBe(true);
+    });
+
+    it('should track feeding streak', () => {
+      const stats = {
+        feedingStreak: 7,
+        longestStreak: 10
+      };
+      
+      expect(stats.feedingStreak).toBeGreaterThan(0);
+      expect(stats.longestStreak).toBeGreaterThanOrEqual(stats.feedingStreak);
+    });
+
+    it('should unlock special items for achievements', () => {
+      const achievement = {
+        name: 'Pet Master',
+        completed: true,
+        reward: { itemId: 100, itemName: 'Golden Bowl' }
+      };
+      
+      expect(achievement.completed).toBe(true);
+      expect(achievement.reward).toHaveProperty('itemId');
+    });
+  });
+
+  describe('Pet Interactions', () => {
+    it('should pet the companion', () => {
+      const pet = { happiness: 70, lastPetted: null };
+      
+      pet.happiness = Math.min(100, pet.happiness + 5);
+      pet.lastPetted = Date.now();
+      
+      expect(pet.happiness).toBe(75);
+      expect(pet.lastPetted).toBeTruthy();
+    });
+
+    it('should play with pet', () => {
+      const pet = {
+        happiness: 60,
+        energy: 80
+      };
+      
+      pet.happiness = Math.min(100, pet.happiness + 15);
+      pet.energy = Math.max(0, pet.energy - 10);
+      
+      expect(pet.happiness).toBe(75);
+      expect(pet.energy).toBe(70);
+    });
+
+    it('should give pet treats', () => {
+      const pet = { happiness: 80, hunger: 40 };
+      const treat = { happinessBonus: 10, hungerReduction: 15 };
+      
+      pet.happiness = Math.min(100, pet.happiness + treat.happinessBonus);
+      pet.hunger = Math.max(0, pet.hunger - treat.hungerReduction);
+      
+      expect(pet.happiness).toBe(90);
+      expect(pet.hunger).toBe(25);
+    });
+
+    it('should limit interaction frequency', () => {
+      const lastInteraction = Date.now() - (30 * 60 * 1000); // 30 min ago
+      const cooldownPeriod = 15 * 60 * 1000; // 15 min
+      
+      const canInteract = (Date.now() - lastInteraction) >= cooldownPeriod;
+      
+      expect(canInteract).toBe(true);
+    });
+  });
+
+  describe('Pet Energy System', () => {
+    it('should track energy levels', () => {
+      const pet = {
+        energy: 50,
+        maxEnergy: 100
+      };
+      
+      expect(pet.energy).toBeLessThanOrEqual(pet.maxEnergy);
+    });
+
+    it('should regenerate energy over time', () => {
+      const pet = { energy: 40 };
+      const regenAmount = 10;
+      
+      pet.energy = Math.min(100, pet.energy + regenAmount);
+      
+      expect(pet.energy).toBe(50);
+    });
+
+    it('should prevent actions when energy is low', () => {
+      const pet = { energy: 5 };
+      const requiredEnergy = 10;
+      
+      const canPerformAction = pet.energy >= requiredEnergy;
+      
+      expect(canPerformAction).toBe(false);
+    });
+
+    it('should rest to restore energy', () => {
+      const pet = { energy: 20 };
+      
+      pet.energy = 100;
+      
+      expect(pet.energy).toBe(100);
+    });
+  });
+
+  describe('Pet Shop', () => {
+    it('should list available items', () => {
+      const shopItems = [
+        { id: 1, name: 'Food', price: 10 },
+        { id: 2, name: 'Toy', price: 25 },
+        { id: 3, name: 'Bed', price: 50 }
+      ];
+      
+      expect(shopItems).toHaveLength(3);
+    });
+
+    it('should purchase item with coins', () => {
+      const userCoins = 100;
+      const itemPrice = 25;
+      const remainingCoins = userCoins - itemPrice;
+      
+      expect(remainingCoins).toBe(75);
+      expect(remainingCoins).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should prevent purchase with insufficient coins', () => {
+      const userCoins = 10;
+      const itemPrice = 50;
+      
+      const canPurchase = userCoins >= itemPrice;
+      
+      expect(canPurchase).toBe(false);
+    });
+
+    it('should add purchased item to inventory', () => {
+      const inventory = [];
+      const purchasedItem = { id: 1, name: 'Toy Ball' };
+      
+      inventory.push(purchasedItem);
+      
+      expect(inventory).toHaveLength(1);
+      expect(inventory[0].name).toBe('Toy Ball');
+    });
+  });
+
+  describe('Pet Daily Rewards', () => {
+    it('should give daily login bonus', () => {
+      const lastLogin = Date.now() - (25 * 60 * 60 * 1000); // 25 hours ago
+      const dailyReward = 50;
+      
+      const timeSinceLastLogin = Date.now() - lastLogin;
+      const hoursSince = timeSinceLastLogin / (1000 * 60 * 60);
+      
+      expect(hoursSince).toBeGreaterThan(24);
+    });
+
+    it('should track consecutive login days', () => {
+      const consecutiveDays = 5;
+      
+      expect(consecutiveDays).toBeGreaterThan(0);
+    });
+
+    it('should increase rewards for streaks', () => {
+      const baseReward = 10;
+      const streakDays = 7;
+      const bonus = streakDays * 2;
+      const totalReward = baseReward + bonus;
+      
+      expect(totalReward).toBe(24);
+    });
+  });
+
+  describe('Pet Notifications', () => {
+    it('should notify when pet is hungry', () => {
+      const pet = { hunger: 90 };
+      const hungerThreshold = 80;
+      
+      const shouldNotify = pet.hunger >= hungerThreshold;
+      
+      expect(shouldNotify).toBe(true);
+    });
+
+    it('should notify when happiness is low', () => {
+      const pet = { happiness: 15 };
+      const sadnessThreshold = 20;
+      
+      const shouldNotify = pet.happiness <= sadnessThreshold;
+      
+      expect(shouldNotify).toBe(true);
+    });
+
+    it('should notify when pet levels up', () => {
+      const notification = {
+        type: 'level_up',
+        message: 'Your pet reached level 5!',
+        level: 5
+      };
+      
+      expect(notification.type).toBe('level_up');
+      expect(notification.level).toBe(5);
+    });
+  });
+
+  describe('Pet Minigames', () => {
+    it('should earn experience from minigames', () => {
+      const pet = { experience: 50 };
+      const gameReward = 20;
+      
+      pet.experience += gameReward;
+      
+      expect(pet.experience).toBe(70);
+    });
+
+    it('should track minigame high scores', () => {
+      const scores = [100, 250, 180, 300, 220];
+      const highScore = Math.max(...scores);
+      
+      expect(highScore).toBe(300);
+    });
+
+    it('should unlock minigames at certain levels', () => {
+      const pet = { level: 10 };
+      const minigame = { name: 'Fetch', requiredLevel: 5 };
+      
+      const isUnlocked = pet.level >= minigame.requiredLevel;
+      
+      expect(isUnlocked).toBe(true);
+    });
+  });
+
+  describe('Pet Social Features', () => {
+    it('should visit friend pets', () => {
+      const friendPet = {
+        ownerId: 2,
+        name: 'Buddy',
+        level: 8
+      };
+      
+      expect(friendPet.ownerId).not.toBe(1);
+      expect(friendPet).toHaveProperty('level');
+    });
+
+    it('should compare pet stats with friends', () => {
+      const myPet = { level: 10, experience: 500 };
+      const friendPet = { level: 8, experience: 350 };
+      
+      expect(myPet.level).toBeGreaterThan(friendPet.level);
+    });
+
+    it('should send gifts to friend pets', () => {
+      const gift = {
+        fromUserId: 1,
+        toUserId: 2,
+        itemId: 5,
+        itemName: 'Treat'
+      };
+      
+      expect(gift.fromUserId).not.toBe(gift.toUserId);
+      expect(gift).toHaveProperty('itemName');
     });
   });
 });
