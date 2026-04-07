@@ -285,19 +285,31 @@ export default function Dashboard() {
         systemPrompt += " Use the provided content as the primary source, but you may enhance it with relevant additional knowledge when it adds value.";
       }
 
-      const userPrompt = `Please create a comprehensive, well-organized summary of the following educational content titled "${title}".
+      const userPrompt = `Please generate a High-Yield Study Brief for the educational content titled "${title}". 
 
-Include:
-1. Key Topics and Main Ideas
-2. Important Concepts and Definitions
-3. Critical Points to Remember
-4. Practical Applications (if applicable)
-5. Summary Conclusion
+Goal: Create a document that is fast to read but contains 100% of the "testable" data points for academic review and quiz generation.
 
-Content to summarize:
-${content}
+Structure:
+1.) Executive Summary: A single, 3-sentence paragraph explaining the "What" and "Why" of the module.
+2.) Technical/Historical Fact Sheet: A bulleted list of "Must-Knows." (Include all specific versions, names, commands, dates, and locations).
+3.) Steps, Methods, and Timelines: A step-by-step summary of how things work, how they are set up, or the chronological sequence of events.
+4.) Quiz-Ready Definitions: A list of all key terms and their meanings. Do not omit any term mentioned in the text.
+5.) Exam Warnings: List common pitfalls, errors, misconceptions, or "trick" points found in the material.
+6.) Summary Conclusion: A brief 1-sentence takeaway on the module's overall significance.
 
-Please format the summary in a clear, organized manner with proper headings and bullet points where appropriate.`;
+Strict Constraints: 
+* No Markdown characters (no asterisks or hashtags).
+* Do not use filler words like "The content discusses..." or "It is important to note..." 
+* Go straight to the data.
+* Preserve all lists, processes, and technical details from the source.
+
+Content to summarize: ${content}
+
+Final Formatting Requirement: 
+Please format the summary in a clear, organized manner with proper headings and bullet points. 
+
+At the very end of your response, add this exact text:
+"Need more detail on a specific point? Copy any bullet point above and ask the StudAI Chatbot to 'Expand on this for me'."`;
 
       const response = await api.post('/openai/summarize', {
         text: userPrompt,

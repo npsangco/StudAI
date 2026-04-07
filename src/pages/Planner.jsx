@@ -23,6 +23,7 @@ export default function Planner() {
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [dueTime, setDueTime] = useState("");
   const [loading, setLoading] = useState(false);
   const [showIndicatorsInfo, setShowIndicatorsInfo] = useState(false);
   
@@ -35,6 +36,7 @@ export default function Planner() {
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
+  const [editDueTime, setEditDueTime] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const months = [
@@ -182,7 +184,8 @@ export default function Planner() {
       const result = await plannerService.addPlan({
         title: title.trim(),
         description: desc.trim(),
-        due_date: dueDateValue
+        due_date: dueDateValue,
+        due_time: dueTime || null
       });
 
       if (result.success) {
@@ -199,6 +202,7 @@ export default function Planner() {
         setTitle("");
         setDesc("");
         setDueDate("");
+        setDueTime("");
         setShowForm(false);
       } else {
         // Handle validation errors (like daily limit)
@@ -225,6 +229,7 @@ export default function Planner() {
     // Extract date in YYYY-MM-DD format for date input
     const dueDateStr = plan.due_date ? new Date(plan.due_date).toISOString().split('T')[0] : "";
     setEditDueDate(dueDateStr);
+    setEditDueTime(plan.due_time || "");
   };
 
   const cancelEditing = () => {
@@ -232,6 +237,7 @@ export default function Planner() {
     setEditTitle("");
     setEditDesc("");
     setEditDueDate("");
+    setEditDueTime("");
   };
 
   const savePlanEdits = async () => {
@@ -242,6 +248,7 @@ export default function Planner() {
       title: editTitle.trim(),
       description: editDesc.trim(),
       due_date: editDueDate || null,
+      due_time: editDueTime || null,
     };
 
     try {
@@ -699,16 +706,29 @@ export default function Planner() {
                           placeholder="Plan Description"
                           className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-indigo-200 rounded-xl min-h-[100px] sm:min-h-[120px] text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors resize-none mt-3"
                         />
-                        <div className="mt-3">
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Due Date
-                          </label>
-                          <input
-                            type="date"
-                            value={editDueDate}
-                            onChange={(e) => setEditDueDate(e.target.value)}
-                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-indigo-200 rounded-xl text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors"
-                          />
+                        <div className="mt-3 grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Due Date
+                            </label>
+                            <input
+                              type="date"
+                              value={editDueDate}
+                              onChange={(e) => setEditDueDate(e.target.value)}
+                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-indigo-200 rounded-xl text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Time <span className="text-gray-400 font-normal">(optional)</span>
+                            </label>
+                            <input
+                              type="time"
+                              value={editDueTime}
+                              onChange={(e) => setEditDueTime(e.target.value)}
+                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-indigo-200 rounded-xl text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors"
+                            />
+                          </div>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 mt-4">
                           <button
@@ -775,12 +795,21 @@ export default function Planner() {
                             }`}>
                               <Calendar className="w-4 h-4" />
                               <span className="font-medium">
-                                Due: {new Date(plan.due_date).toLocaleDateString('en-US', { 
+                                Due: {new Date(plan.due_date).toLocaleDateString('en-US', {
                                   weekday: 'short',
-                                  month: 'short', 
+                                  month: 'short',
                                   day: 'numeric',
                                   year: 'numeric'
                                 })}
+                                {plan.due_time && (
+                                  <span className="ml-1">
+                                    at {new Date(`2000-01-01T${plan.due_time}`).toLocaleTimeString('en-US', {
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}
+                                  </span>
+                                )}
                               </span>
                               {!plan.completed && (() => {
                                 const dueDate = new Date(plan.due_date);
@@ -884,18 +913,32 @@ export default function Planner() {
                 onChange={(e) => setDesc(e.target.value)}
                 className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl min-h-[100px] sm:min-h-[120px] text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors resize-none"
               />
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Due Date *
-                </label>
-                <input
-                  type="date"
-                  value={dueDate || `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors"
-                />
-                <p className="text-xs text-gray-500 mt-1">Defaults to selected date, editable to any future date</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Due Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={dueDate || `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Defaults to selected date</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Time <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={dueTime}
+                    onChange={(e) => setDueTime(e.target.value)}
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl text-sm sm:text-base focus:border-indigo-400 focus:outline-none transition-colors"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Set a specific time</p>
+                </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
@@ -916,6 +959,7 @@ export default function Planner() {
                     setTitle("");
                     setDesc("");
                     setDueDate("");
+                    setDueTime("");
                   }}
                   className="px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 text-sm sm:text-base font-semibold transition-all cursor-pointer"
                 >

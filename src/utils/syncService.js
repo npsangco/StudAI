@@ -258,9 +258,10 @@ class PlannerService {
         title: p.title,
         description: p.description || '',
         due_date: p.due_date,
+        due_time: p.due_time || null,
         created_at: p.created_at,
-        completed: p.completed || false,        // ADD THIS
-        completed_at: p.completed_at || null   // ADD THIS
+        completed: p.completed || false,
+        completed_at: p.completed_at || null
       }));
       
       await cachePlans(plans);
@@ -281,9 +282,10 @@ class PlannerService {
       title: planData.title || 'Untitled Plan',
       description: planData.description || '',
       due_date: planData.due_date,
+      due_time: planData.due_time || null,
       created_at: new Date().toISOString(),
-      completed: false,        // ADD THIS
-      completed_at: null      // ADD THIS
+      completed: false,
+      completed_at: null
     };
 
     if (this.isOnline) {
@@ -302,6 +304,7 @@ class PlannerService {
           title: p.title,
           description: p.description || '',
           due_date: p.due_date,
+          due_time: p.due_time || null,
           created_at: p.created_at,
           completed: p.completed || false,
           completed_at: p.completed_at || null
@@ -364,6 +367,7 @@ class PlannerService {
           title: p.title,
           description: p.description || '',
           due_date: p.due_date,
+          due_time: p.due_time || null,
           created_at: p.created_at,
           completed: p.completed || false,
           completed_at: p.completed_at || null
@@ -410,6 +414,7 @@ class PlannerService {
           title: p.title,
           description: p.description || '',
           due_date: p.due_date,
+          due_time: p.due_time || null,
           created_at: p.created_at,
           completed: true,
           completed_at: p.completed_at || new Date().toISOString()
@@ -510,9 +515,10 @@ class PlannerService {
           title: p.title,
           description: p.description || '',
           due_date: p.due_date,
+          due_time: p.due_time || null,
           created_at: p.created_at,
-          completed: p.completed || false,        // ADD THIS
-          completed_at: p.completed_at || null   // ADD THIS
+          completed: p.completed || false,
+          completed_at: p.completed_at || null
         });
         break;
       }
@@ -525,9 +531,10 @@ class PlannerService {
           title: p.title,
           description: p.description || '',
           due_date: p.due_date,
+          due_time: p.due_time || null,
           created_at: p.created_at,
-          completed: p.completed || false,        // ADD THIS
-          completed_at: p.completed_at || null   // ADD THIS
+          completed: p.completed || false,
+          completed_at: p.completed_at || null
         });
         break;
       }
@@ -540,6 +547,7 @@ class PlannerService {
           title: p.title,
           description: p.description || '',
           due_date: p.due_date,
+          due_time: p.due_time || null,
           created_at: p.created_at,
           completed: true,
           completed_at: p.completed_at || new Date().toISOString()

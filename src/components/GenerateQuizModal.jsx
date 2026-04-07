@@ -119,7 +119,7 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
       const cooldownNote = formattedNextAvailable
         ? `You can generate another quiz on ${formattedNextAvailable}.`
         : 'Please try again once your cooldown resets.';
-      setError(`AI quiz generation is limited to once every other day. ${cooldownNote}`);
+      setError(`AI quiz generation is limited to ${quizLimit} time${quizLimit !== 1 ? 's' : ''} per day. ${cooldownNote}`);
       return;
     }
 
@@ -318,13 +318,13 @@ const GenerateQuizModal = ({ note, onClose, onQuizCreated, toast }) => {
         {/* Cooldown Info */}
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
           <p className="text-xs text-amber-800">
-            <strong>⏰ Limit:</strong> {quizLimit} AI quiz{quizLimit !== 1 ? 'zes' : ''} every other day. {quizAvailabilityMessage}
+            <strong>⏰ Limit:</strong> {quizLimit} AI quiz{quizLimit !== 1 ? 'zes' : ''} per day. {quizAvailabilityMessage}
           </p>
         </div>
 
         {quizLimitReached && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6 text-sm text-red-700">
-            You can generate one AI quiz every other day. {quizAvailabilityMessage}
+            You have reached your AI quiz generation limit for today. {quizAvailabilityMessage}
           </div>
         )}
 

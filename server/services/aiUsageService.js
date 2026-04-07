@@ -3,9 +3,9 @@ import sequelize from '../db.js';
 import AIUsageStat from '../models/AIUsageStat.js';
 
 const DEFAULT_SUMMARY_LIMIT = Number(process.env.AI_SUMMARY_DAILY_LIMIT || process.env.AI_SUMMARY_LIMIT) || 2;
-const DEFAULT_QUIZ_LIMIT = Number(process.env.AI_QUIZ_DAILY_LIMIT || process.env.AI_QUIZ_LIMIT) || 1;
+const DEFAULT_QUIZ_LIMIT = Number(process.env.AI_QUIZ_DAILY_LIMIT || process.env.AI_QUIZ_LIMIT) || 2;
 const DEFAULT_CHATBOT_LIMIT = Number(process.env.AI_CHATBOT_TOKEN_LIMIT || process.env.CHATBOT_TOKEN_LIMIT) || 5000;
-const QUIZ_COOLDOWN_DAYS = Number(process.env.AI_QUIZ_COOLDOWN_DAYS) || 2;
+const QUIZ_COOLDOWN_DAYS = Number(process.env.AI_QUIZ_COOLDOWN_DAYS) || 0;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export const DAILY_AI_LIMITS = {
